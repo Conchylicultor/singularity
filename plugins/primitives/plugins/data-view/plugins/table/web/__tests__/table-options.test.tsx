@@ -102,7 +102,7 @@ function renderTable(
     now: 0,
     groupOrder: "asc",
     rowsComplete: true,
-    sectionOrder: "bucket",
+    sectioning: { kind: "bucket" },
     options: undefined,
     ...rest,
   };

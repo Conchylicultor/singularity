@@ -62,7 +62,7 @@ function renderProps(
     now: 0,
     groupOrder: "asc",
     rowsComplete: true,
-    sectionOrder: "bucket",
+    sectioning: { kind: "bucket" },
     options: undefined,
   };
 }

@@ -75,7 +75,7 @@ function renderTree(
     now: 0,
     groupOrder: "asc",
     rowsComplete: true,
-    sectionOrder: "bucket",
+    sectioning: { kind: "bucket" },
     hierarchy: {
       getParentId: (r) => r.parent,
       getRank: (r) => Rank.from(r.id === "readme" ? "a1" : "a0"),

@@ -57,7 +57,7 @@ function renderList(options?: unknown) {
     now: 0,
     groupOrder: "asc",
     rowsComplete: true,
-    sectionOrder: "bucket",
+    sectioning: { kind: "bucket" },
     options,
   };
   return render(

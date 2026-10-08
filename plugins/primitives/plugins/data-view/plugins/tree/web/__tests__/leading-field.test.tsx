@@ -80,7 +80,7 @@ function renderTree(
     now: 0,
     groupOrder: "asc",
     rowsComplete: true,
-    sectionOrder: "bucket",
+    sectioning: { kind: "bucket" },
     hierarchy: {
       getParentId: () => null,
       getRank: () => Rank.from("a0"),

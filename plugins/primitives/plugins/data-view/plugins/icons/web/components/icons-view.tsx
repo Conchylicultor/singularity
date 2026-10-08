@@ -207,7 +207,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
       now: props.now,
       groupOrder: props.groupOrder,
       rowsComplete: props.rowsComplete,
-      sectionOrder: props.sectionOrder,
+      sectioning: props.sectioning,
       openFolds: props.foldLines?.open,
       selectedRowId: props.selectedRowId,
     },

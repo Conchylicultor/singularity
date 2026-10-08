@@ -28681,6 +28681,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewAggregateConfig`
           - `DataViewBaseProps`
           - `DataViewDataOrigin`
+          - `DataViewDeclaredSection`
           - `DataViewDensity`
           - `DataViewFoldLines`
           - `DataViewGroupHeaders`
@@ -28695,6 +28696,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewRowsComplete`
           - `DataViewSearch`
           - `DataViewSection`
+          - `DataViewSectioning`
+          - `DataViewSectionPaging`
           - `DataViewSegmentNotice`
           - `DataViewSurfaceChrome`
           - `DataViewToolbarSpec`

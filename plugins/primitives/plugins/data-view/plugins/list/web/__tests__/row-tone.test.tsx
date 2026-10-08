@@ -52,7 +52,7 @@ function renderList(rowTone?: (row: Row) => "default" | "muted") {
     now: 0,
     groupOrder: "asc",
     rowsComplete: true,
-    sectionOrder: "bucket",
+    sectioning: { kind: "bucket" },
     options: undefined,
     rowTone,
   };

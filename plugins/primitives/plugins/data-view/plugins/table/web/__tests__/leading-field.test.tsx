@@ -60,7 +60,7 @@ describe("data-view table leading field", () => {
       now: 0,
       groupOrder: "asc",
       rowsComplete: true,
-      sectionOrder: "bucket",
+      sectioning: { kind: "bucket" },
       options: undefined,
     };
     const { getByText, getByTestId } = render(

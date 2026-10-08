@@ -5,6 +5,7 @@ import type {
   DataViewSection,
 } from "@plugins/primitives/plugins/data-view/core";
 import { FoldLine } from "./fold-line";
+import { SectionPagingFooter } from "./section-paging-footer";
 
 export interface SectionBodyProps {
   /** The section this band renders. Its fold line (when it carries `fold`) is
@@ -40,6 +41,12 @@ export interface SectionBodyProps {
  * It is also why a view cannot forget the fold line: rendering a section body IS
  * rendering its fold line. `FoldLine` is not exported.
  *
+ * The same holds for a DECLARED section's own paging (`section.paging`): the
+ * band ends in its footer — loading-more, Retry, and the sentinel whose first
+ * sighting starts the section's read — so a section with no row loaded yet
+ * still draws its band, and no view can render a declared section that never
+ * loads.
+ *
  * Its content must not follow the rail again — the band has paid it, and a
  * nested `rail-follow` pays it twice (the rail guard's nested-follower check).
  */
@@ -51,11 +58,17 @@ export function SectionBody({
 }: SectionBodyProps): ReactNode {
   const folds = section.fold != null && foldLines != null;
   const empty = children == null || children === false;
-  if (empty && !folds) return null;
+  if (empty && !folds && !section.paging) return null;
   return (
     <div className={cn("rail-follow", !empty && className)}>
       {children}
       <FoldLine section={section} foldLines={foldLines} />
+      {section.paging ? (
+        <SectionPagingFooter
+          paging={section.paging}
+          shown={section.entries.length}
+        />
+      ) : null}
     </div>
   );
 }

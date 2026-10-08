@@ -1,5 +1,10 @@
 import { useMemo } from "react";
-import type { FieldDef, FieldGroupingSet, GroupByRule } from "../../core";
+import type {
+  FieldDef,
+  FieldGrouping,
+  FieldGroupingSet,
+  GroupByRule,
+} from "../../core";
 import { useGroupingRegistry } from "../grouping-slot";
 import { isGroupableField } from "./use-data-view-sections";
 
@@ -49,11 +54,36 @@ export function useGroupByController<TRow>(
   fields: FieldDef<TRow>[],
   groupBy: GroupByRule | null,
   setGroupBy: (rule: GroupByRule | null) => void,
+  /**
+   * Whether the data origin can render this grouping of this field
+   * (`DataViewControlsContextValue.offersGrouping`): a field none of whose
+   * groupings is offered is not listed, and the granularity band lists only
+   * the offered ones — so the picker never writes a grouping the origin would
+   * render wrong.
+   */
+  offersGrouping: (field: FieldDef<TRow>, grouping: FieldGrouping) => boolean,
 ): GroupByController<TRow> {
   const registry = useGroupingRegistry();
+  // The groupings the origin offers for one field, in its type's order.
+  const offeredFor = useMemo(
+    () =>
+      (field: FieldDef<TRow>): FieldGroupingSet => {
+        const set = registry.setFor(field.type ?? "text");
+        return {
+          ...set,
+          groupings: set.groupings.filter((g) => offersGrouping(field, g)),
+        };
+      },
+    [registry, offersGrouping],
+  );
   const groupableFields = useMemo(
-    () => fields.filter((f) => isGroupableField(f, registry.has)),
-    [fields, registry],
+    () =>
+      fields.filter(
+        (f) =>
+          isGroupableField(f, registry.has) &&
+          offeredFor(f).groupings.length > 0,
+      ),
+    [fields, registry, offeredFor],
   );
 
   // A dangling groupBy (field removed) resolves to no active field, so the UI
@@ -64,8 +94,8 @@ export function useGroupByController<TRow>(
   );
 
   const groupings = useMemo(
-    () => (activeField ? registry.setFor(activeField.type ?? "text") : null),
-    [activeField, registry],
+    () => (activeField ? offeredFor(activeField) : null),
+    [activeField, offeredFor],
   );
 
   // The same tolerance one level down: a persisted `groupingId` the type no
@@ -94,7 +124,12 @@ export function useGroupByController<TRow>(
           return;
         }
         const field = groupableFields.find((f) => f.id === fieldId);
-        const choices = registry.setFor(field?.type ?? "text").groupings;
+        if (!field) {
+          throw new Error(
+            `[data-view] group-by: field "${fieldId}" is not offered for grouping`,
+          );
+        }
+        const choices = offeredFor(field).groupings;
         const kept = choices.find((g) => g.id === groupBy?.groupingId);
         const next = kept ?? choices[0];
         // `setFor` always answers with at least the identity grouping, so an
@@ -102,7 +137,7 @@ export function useGroupByController<TRow>(
         // would silently write `undefined`, so state the floor.
         if (!next) {
           throw new Error(
-            `[data-view] field type "${field?.type ?? "text"}" resolved to zero groupings`,
+            `[data-view] field type "${field.type ?? "text"}" offers zero groupings`,
           );
         }
         setGroupBy({ fieldId, groupingId: next.id });
@@ -119,7 +154,7 @@ export function useGroupByController<TRow>(
       activeField,
       groupings,
       groupingId,
-      registry,
+      offeredFor,
     ],
   );
 }

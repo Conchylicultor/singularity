@@ -1,7 +1,13 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
-import type { DataViewSection } from "../../core";
+import type { DataViewSection, DataViewSectionPaging } from "../../core";
 import { SectionBody } from "../components/section-body";
 
 afterEach(cleanup);
@@ -103,5 +109,77 @@ describe("SectionBody — geometry", () => {
   it("renders nothing for an empty, unfolded section", () => {
     const { container } = renderBody({ section: UNFOLDED, children: null });
     expect(container.firstChild).toBeNull();
+  });
+});
+
+/**
+ * A DECLARED section (server-sectioned live source) pages its own read, and
+ * the band ends in its footer — so a section none of whose rows are loaded
+ * still draws one, and its footer's first sighting is what starts its read.
+ */
+describe("SectionBody — a declared section's own paging", () => {
+  class FakeIntersectionObserver {
+    static live: FakeIntersectionObserver | null = null;
+    constructor(public cb: IntersectionObserverCallback) {
+      FakeIntersectionObserver.live = this;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+  }
+  const paging = (
+    over: Partial<DataViewSectionPaging>,
+  ): DataViewSectionPaging => ({
+    canGrow: true,
+    growing: false,
+    loadMore: () => {},
+    complete: false,
+    stalled: null,
+    truncated: false,
+    notices: [],
+    ...over,
+  });
+
+  it("an empty section still draws its band, and its footer in view asks for the first page", () => {
+    vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
+    const loadMore = vi.fn();
+    const { container } = renderBody({
+      section: { ...UNFOLDED, paging: paging({ loadMore }) },
+      children: null,
+    });
+    expect(container.firstChild).not.toBeNull();
+    const observer = FakeIntersectionObserver.live;
+    expect(observer).not.toBeNull();
+    act(() =>
+      observer!.cb(
+        [
+          {
+            isIntersecting: true,
+            target: container.querySelector("div div") ?? container,
+          } as unknown as IntersectionObserverEntry,
+        ],
+        observer as unknown as IntersectionObserver,
+      ),
+    );
+    expect(loadMore).toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("a failed section read offers Retry in its own footer", () => {
+    vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
+    const retry = vi.fn();
+    renderBody({
+      section: {
+        ...UNFOLDED,
+        paging: paging({ canGrow: false, stalled: { retry } }),
+      },
+      children: null,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(retry).toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });

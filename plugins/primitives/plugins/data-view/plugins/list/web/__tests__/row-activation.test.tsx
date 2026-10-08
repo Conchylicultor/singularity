@@ -56,7 +56,7 @@ function renderList(over: Partial<DataViewRenderProps<Row>>) {
     now: 0,
     groupOrder: "asc",
     rowsComplete: true,
-    sectionOrder: "bucket",
+    sectioning: { kind: "bucket" },
     options: undefined,
     ...over,
   };

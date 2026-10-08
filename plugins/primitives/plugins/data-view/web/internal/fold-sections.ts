@@ -54,6 +54,12 @@ export function makeFoldKeep<TRow>(
  * the section still renders, header plus fold line); while it is open every
  * entry stays, in sorted order. A section with no failing entry carries no
  * `fold` at all. `count` is never touched: it stays the section's total.
+ *
+ * A section paging its own read (`section.paging`, a declared section) stops
+ * paging while its fold line is closed and its last loaded entry is folded —
+ * rule 6 per section: the next page would land behind the line, and the
+ * footer's sentinel, still in view, would page the whole read in. Opening the
+ * line lifts the hold.
  */
 export function foldSections<TRow>(
   sections: DataViewSection<TRow>[],
@@ -67,10 +73,15 @@ export function foldSections<TRow>(
     const hidden = section.entries.length - kept.length;
     if (hidden === 0) return section;
     const open = opts.openKeys.has(foldKeyOf(section));
+    const last = section.entries[section.entries.length - 1];
+    const tailFolded = !open && last !== undefined && !opts.isKept(last);
     return {
       ...section,
       entries: open ? section.entries : kept,
       fold: { hidden, open },
+      ...(section.paging && tailFolded
+        ? { paging: { ...section.paging, canGrow: false } }
+        : {}),
     };
   });
 }

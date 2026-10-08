@@ -1856,19 +1856,64 @@ export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject
   tier is still loading (a contributor may not have registered its field yet —
   the skeleton), and the error arm once it settled
   (`UnavailableSortRuleError` / `UnavailableFilterRuleError`).
-- **Group-by.** A `FieldGrouping` may declare `oneBucketPerValue: true` (identity,
-  enum and bool do; a date bucket never can). Under a live source such a grouping
-  over a sortable column is PREPENDED to the order, and its sections follow first
-  appearance in the rows (`DataViewRenderProps.sectionOrder: "appearance"`): an
-  enum's sections then read in stored-value order, as its sort does. Any other
-  grouping prepends nothing and keeps its bucket order. This rests on the
-  contract every live lowering does (`FieldDef.column`): a field's `value` IS
-  its column's value — a field showing a derived value is offered for none of
-  sort, filter and group-by.
+- **Group-by** lowers per `liveGroupLowering` (`web/internal/live-fields.ts`)
+  — the ONE answer the Group-by control (what it offers, through
+  `DataViewControlsContextValue.offersGrouping` / `groupableField`) and the
+  source (what it reads) both take:
+  - **Server sections** — a `oneBucketPerValue` grouping (identity, enum, bool;
+    never a date bucket) over a **groupable** column: the collection's OWN
+    filterable text / number / boolean column (`LiveFieldPlan.groupColumns`;
+    what live's `checkGroupBy` accepts — a contributed column never is). The
+    origin is `SourceView` `kind: "sectioned"` (`useLiveSource` →
+    `useSectionedReads`): ONE `useLive(c, { groupBy, where, limit: LIST_MAX })`
+    over the SAME lowered `scope ∧ filter ∧ search` the rows use lists every
+    section with its exact, live count (`serverSections`,
+    `web/internal/live-sections.tsx`: each group's bucket from the type's own
+    `grouping.plan`, ordered by bucket ordinal × `groupOrder` — never the
+    server's count order — with NULL, and for text a blank value, merged into
+    the one "None", last). Each section reads its own rows — a `SectionRead`
+    scroll over `where ∧ eq(col, value)` (`isEmpty` for None), in the view's
+    sort with no group prefix — only while it is **active**: its footer asked
+    for its first page (it is expanded and came into view) and it is not
+    collapsed; the latch resets when the query (minus search) does. Thirty
+    groups below the fold read nothing. The reads are sibling components the
+    body mounts (`readers`, the `FacetRead` pattern), so a section opening or
+    closing never remounts the body. A search-only change keeps the last
+    ready groups until the new read settles. Full at `LIST_MAX` groups, the
+    body footer says so ("the smallest groups are not listed"); a filter or
+    search naming a contributed column is the error arm
+    (`UngroupableFilterError` — a `GROUP BY` cannot count it).
+  - **Order prefix** — a `oneBucketPerValue` grouping over a column that only
+    SORTS: it is prepended to the order and its sections follow first
+    appearance (`sectioning: { kind: "appearance" }`).
+  - **Buckets** — any other grouping over a sortable column: partitioned from
+    the loaded rows, in bucket order.
+  - Over neither (a derived value) the grouping is **not offered**: its
+    sections could only say what happens to be loaded.
+
+  This rests on the contract every live lowering does (`FieldDef.column`): a
+  field's `value` IS its column's value — a field showing a derived value is
+  offered for none of sort, filter and group-by.
+- **Declared sections reach the views as data.** `DataViewRenderProps.sectioning`
+  is `{ kind: "bucket" | "appearance" }` (partition the rows) or
+  `{ kind: "declared", sections }` (`DataViewDeclaredSection`: key, label,
+  exact count, the section read's rows, its `paging`); a view hands it to
+  `useDataViewSections` untouched. `partitionIntoSections` then emits every
+  declared section — an empty one too — with the server's count, and
+  `DataViewSection.paging` (`DataViewSectionPaging`) carries the section's own
+  paging. `SectionBody` ends in it (`SectionPagingFooter`: the same
+  `useInfiniteScroll` + `InfiniteScrollFooter` the body footer is made of),
+  so rendering a section body IS rendering its footer — list, gallery and
+  icons through `GroupedSections`, the table in `DataTableGroup.footer`. The
+  fold holds a section's paging while its loaded tail is folded (rule 6, per
+  section); an aggregate over a section still paging is a lower bound. The
+  body-level tail hold does not apply (there is no single tail); the body
+  footer shows only the groups read.
 - **Section counts are a type** (`SectionCount`: `exact` | `atLeast`), printed by
   one formatter (`formatSectionCount`: `n` / `n+`) and derived from loaded rows
   only: exact when every row is loaded (`DataViewRenderProps.rowsComplete` —
   always in memory; a live origin once read to its end), or — sections in row order — when a later section has started.
+  A declared section's count is the server's, exact.
 - **States.** The skeleton while the head segment (or a pending rule) is pending;
   the empty state once every segment settled with no row; an unavailable rule
   (or a filter over the bounds) in place of the view, as its message; a head
@@ -2332,6 +2377,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewAggregateConfig`
     - `DataViewBaseProps`
     - `DataViewDataOrigin`
+    - `DataViewDeclaredSection`
     - `DataViewDensity`
     - `DataViewFoldLines`
     - `DataViewGroupHeaders`
@@ -2346,6 +2392,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewRowsComplete`
     - `DataViewSearch`
     - `DataViewSection`
+    - `DataViewSectioning`
+    - `DataViewSectionPaging`
     - `DataViewSegmentNotice`
     - `DataViewSurfaceChrome`
     - `DataViewToolbarSpec`

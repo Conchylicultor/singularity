@@ -107,7 +107,7 @@ function renderedIds(filterScope: FilterScope | undefined): string[] {
     now: 0,
     groupOrder: "asc",
     rowsComplete: true,
-    sectionOrder: "bucket",
+    sectioning: { kind: "bucket" },
     hierarchy: {
       getParentId: (r) => r.parent,
       getRank: () => Rank.from("a0"),

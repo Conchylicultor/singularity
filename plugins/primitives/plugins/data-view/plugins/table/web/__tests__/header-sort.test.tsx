@@ -54,7 +54,7 @@ function renderTable(setSort: (fieldId: string) => void) {
     now: 0,
     groupOrder: "asc",
     rowsComplete: true,
-    sectionOrder: "bucket",
+    sectioning: { kind: "bucket" },
     options: undefined,
   };
   return render(

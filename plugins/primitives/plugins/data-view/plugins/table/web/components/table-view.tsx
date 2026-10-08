@@ -97,7 +97,7 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
       now: props.now,
       groupOrder: props.groupOrder,
       rowsComplete: props.rowsComplete,
-      sectionOrder: props.sectionOrder,
+      sectioning: props.sectioning,
       openFolds: props.foldLines?.open,
       selectedRowId: props.selectedRowId,
     },
@@ -288,12 +288,14 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
             key,
             collapsed,
             rows: section.entries.map((e) => e.row),
-            // Hidden with the group's rows when collapsed, like GroupedSections.
-            footer: section.fold ? (
-              <SectionBody section={section} foldLines={props.foldLines}>
-                {null}
-              </SectionBody>
-            ) : undefined,
+            // Hidden with the group's rows when collapsed, like GroupedSections:
+            // the fold line, and a declared section's own paging footer.
+            footer:
+              section.fold || section.paging ? (
+                <SectionBody section={section} foldLines={props.foldLines}>
+                  {null}
+                </SectionBody>
+              ) : undefined,
             // The same header node the flat views render (GroupedSections),
             // so `groupHeaders` reads identically here.
             header: (

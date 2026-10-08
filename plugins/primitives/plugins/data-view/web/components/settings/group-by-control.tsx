@@ -33,12 +33,14 @@ export function GroupByControl(): ReactNode {
     activeViewId,
     viewModel,
     activeSupportsGroupBy,
+    offersGrouping,
   } = useDataViewControls();
 
   const controller = useGroupByController(
     fields,
     activeState.groupBy ?? null,
     (rule) => viewModel.setGroupBy(activeViewId, rule),
+    offersGrouping,
   );
 
   if (!activeSupportsGroupBy || controller.groupableFields.length === 0) {

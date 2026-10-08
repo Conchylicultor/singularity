@@ -3,6 +3,8 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   formatSectionCount,
   type DataViewSection,
+  type DataViewSectioning,
+  type DataViewSectionPaging,
   type FieldDef,
   type FieldGrouping,
   type GroupByRule,
@@ -11,21 +13,23 @@ import { IDENTITY_GROUPING } from "./identity-grouping";
 import {
   aggregateSections,
   isGroupableField,
+  NULL_GROUP_KEY,
   orderSectionsByRank,
   partitionIntoSections,
   type PartitionOptions,
 } from "./use-data-view-sections";
+import { foldSections } from "./fold-sections";
 
 /**
  * The grouping registry, stubbed. `partitionIntoSections` never reads a slot —
  * it takes the resolver — which is exactly what lets these run under `bun:test`
  * with no React and no plugin runtime.
  */
-function stubOpts(
+function stubOpts<TRow = unknown>(
   groupings: Record<string, FieldGrouping> = {},
   order: "asc" | "desc" = "asc",
   now = 0,
-): PartitionOptions {
+): PartitionOptions<TRow> {
   return {
     now,
     order,
@@ -721,7 +725,7 @@ describe("a server-ordered rows set: section order and counts", () => {
       rowKey,
       {
         ...stubOpts({ enum: optionOrderGrouping }),
-        sectionOrder: "appearance",
+        sectioning: { kind: "appearance" },
         rowsComplete: false,
       },
     );
@@ -748,7 +752,7 @@ describe("a server-ordered rows set: section order and counts", () => {
       rowKey,
       {
         ...stubOpts({ enum: optionOrderGrouping }),
-        sectionOrder: "appearance",
+        sectioning: { kind: "appearance" },
         rowsComplete: true,
       },
     );
@@ -763,7 +767,7 @@ describe("a server-ordered rows set: section order and counts", () => {
       rowKey,
       {
         ...stubOpts({ enum: optionOrderGrouping }),
-        sectionOrder: "bucket",
+        sectioning: { kind: "bucket" },
         rowsComplete: false,
       },
     );
@@ -783,7 +787,7 @@ describe("a server-ordered rows set: section order and counts", () => {
       [statusField],
       undefined,
       rowKey,
-      { ...stubOpts(), rowsComplete: false },
+      { ...stubOpts<Task>(), rowsComplete: false },
     );
     expect(partial!.count).toEqual({ kind: "atLeast", n: 5 });
     const [whole] = partitionIntoSections(
@@ -919,5 +923,109 @@ describe("aggregateSections — a count covering unloaded rows", () => {
       getKey: () => "same",
     });
     expect(s!.count).toEqual({ kind: "atLeast", n: 1 });
+  });
+});
+
+describe("declared sections (a server-sectioned live source)", () => {
+  const paging = (complete: boolean): DataViewSectionPaging => ({
+    canGrow: !complete,
+    growing: false,
+    loadMore: () => {},
+    complete,
+    stalled: null,
+    truncated: false,
+    notices: [],
+  });
+  const declared: DataViewSectioning<Task> = {
+    kind: "declared",
+    sections: [
+      {
+        key: "doing",
+        label: "Doing",
+        count: 4,
+        rows: [
+          { id: "1", status: "doing" },
+          { id: "2", status: "doing" },
+        ],
+        paging: paging(false),
+      },
+      // Not read yet: listed anyway, with its count and its paging.
+      { key: "done", label: "Done", count: 9, rows: [], paging: paging(false) },
+      {
+        key: NULL_GROUP_KEY,
+        label: "None",
+        count: 1,
+        rows: [{ id: "3", status: null }],
+        paging: paging(true),
+      },
+    ],
+  };
+
+  test("every declared section, in its order, with the server's exact count — empty ones too", () => {
+    const sections = partitionIntoSections(
+      // The rows argument is not read: each section brings its own.
+      [],
+      [statusField],
+      by("status"),
+      rowKey,
+      {
+        ...stubOpts<Task>({ enum: optionOrderGrouping }),
+        sectioning: declared,
+      },
+    );
+    expect(sections.map((s) => [s.key, s.label, s.count])).toEqual([
+      ["doing", "Doing", { kind: "exact", n: 4 }],
+      ["done", "Done", { kind: "exact", n: 9 }],
+      [NULL_GROUP_KEY, "None", { kind: "exact", n: 1 }],
+    ]);
+    expect(sections.map((s) => s.entries.map((e) => e.key))).toEqual([
+      ["1", "2"],
+      [],
+      ["3"],
+    ]);
+    expect(sections.map((s) => s.paging?.complete)).toEqual([
+      false,
+      false,
+      true,
+    ]);
+  });
+
+  // The paged-total rule: a section whose loaded rows collapsed is a lower
+  // bound (its unloaded rows may collapse too); one with nothing collapsed
+  // keeps the server's count for its unloaded rows.
+  test("an aggregate over a section still paging: collapsed is a lower bound, else the server's count", () => {
+    const sections = aggregateSections(
+      partitionIntoSections([], [statusField], by("status"), rowKey, {
+        ...stubOpts<Task>(),
+        sectioning: declared,
+      }),
+      { getKey: () => "same" },
+    );
+    expect(sections.map((s) => s.count)).toEqual([
+      { kind: "atLeast", n: 1 },
+      { kind: "exact", n: 9 },
+      { kind: "exact", n: 1 },
+    ]);
+  });
+
+  test("a section whose loaded tail is folded stops paging until its line opens", () => {
+    const sections = partitionIntoSections(
+      [],
+      [statusField],
+      by("status"),
+      rowKey,
+      { ...stubOpts<Task>(), sectioning: declared },
+    );
+    const keepFirst = (entry: { key: string }) => entry.key === "1";
+    const [closed] = foldSections(sections, {
+      isKept: keepFirst,
+      openKeys: new Set(),
+    });
+    expect(closed!.paging?.canGrow).toBe(false);
+    const [open] = foldSections(sections, {
+      isKept: keepFirst,
+      openKeys: new Set(["doing"]),
+    });
+    expect(open!.paging?.canGrow).toBe(true);
   });
 });

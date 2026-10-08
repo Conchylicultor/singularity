@@ -9,11 +9,13 @@ import {
   type DataViewRenderProps,
   type FieldDef,
   type FieldExtensionsDescriptor,
+  type FieldGrouping,
   type FilterGroup,
   type LiveDataSource,
   type ManualOrderConfig,
   type DataViewFoldLines,
   type DataViewPaging,
+  type DataViewSectioning,
   type DataViewSegmentNotice,
   type SortRule,
 } from "../../core";
@@ -38,7 +40,9 @@ import { useLiveSource, type SourceView } from "../internal/live-source";
 import {
   checkFieldColumns,
   liveColumnScopeOf,
+  liveGroupLowering,
   resolveLiveFields,
+  type LiveFieldPlan,
 } from "../internal/live-fields";
 import { pickPrimaryField } from "../internal/pick-primary-field";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -47,7 +51,10 @@ import { useResolveOperatorSet } from "../filter-slot";
 import { useGroupingClock } from "../internal/use-grouping-clock";
 import { useRowFilter } from "../internal/use-row-filter";
 import { useRowMatcher } from "../internal/use-flat-rows";
-import { partitionIntoSections } from "../internal/use-data-view-sections";
+import {
+  isGroupableField,
+  partitionIntoSections,
+} from "../internal/use-data-view-sections";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { PendingMoveOverlay } from "../internal/use-pending-move-overlay";
 import { CollectFieldExtensions } from "../internal/field-extensions";
@@ -444,6 +451,12 @@ function DataViewBodyInner<TRow>(
   // so its segments replace `rows` and the client pipeline (`useFlatRows`) is
   // neutralized into a pass-through below.
   const groupingRegistry = useGroupingRegistry();
+  // The grouping clock, read ONCE per surface: one quantized `now` (local
+  // midnight) shared by every view child, re-armed at the day boundary. Reading
+  // it per view would give two views of the same surface two different memo keys
+  // for the same day.
+  const now = useGroupingClock();
+  const collapsedSections = viewModel.collapsedSectionsFor(activeViewId);
   const live = useLiveSource({
     source: liveSource,
     plan: livePlan,
@@ -451,6 +464,8 @@ function DataViewBodyInner<TRow>(
     state: activeState,
     resolveOperatorSet,
     resolveGrouping: groupingRegistry.resolve,
+    now,
+    collapsedSections,
   });
   // The server-ordered origin in effect, as the body renders it.
   const origin: SourceView<TRow> | null = live;
@@ -513,11 +528,6 @@ function DataViewBodyInner<TRow>(
   const activeSupportsGroupBy =
     activeInstance.viewType.supportsGroupBy !== false;
 
-  // The grouping clock, read ONCE per surface: one quantized `now` (local
-  // midnight) shared by every view child, re-armed at the day boundary. Reading
-  // it per view would give two views of the same surface two different memo keys
-  // for the same day.
-  const now = useGroupingClock();
   // Which end of a bucket's ordinal the sections read from: the direction of the
   // view's own sort ON THE GROUPED FIELD, so "Upcoming" (startsAt asc) reads
   // Today → Tomorrow → Later, and "All" (startsAt desc) reads newest first, with
@@ -533,12 +543,35 @@ function DataViewBodyInner<TRow>(
   // The `Grouping` registry read, likewise once per surface: the toolbar's
   // group-by control asks "which fields can group?" through it (the settings
   // contribution's `isApplicable` is a pure function and cannot read a slot).
-  const hasGrouping = groupingRegistry.has;
+  // Which groupings the Group-by control offers: every one in memory; under a
+  // live source only a pair that lowers (`liveGroupLowering`) — the picker
+  // can then never write a grouping whose sections would only say what
+  // happens to be loaded.
+  const offersGrouping = useCallback(
+    (field: FieldDef<unknown>, grouping: FieldGrouping): boolean =>
+      livePlan === null ||
+      liveGroupLowering(livePlan as LiveFieldPlan<unknown>, field, grouping)
+        .kind !== "none",
+    [livePlan],
+  );
+  const groupableField = useCallback(
+    (field: FieldDef<unknown>): boolean =>
+      isGroupableField(field, groupingRegistry.has) &&
+      groupingRegistry
+        .setFor(field.type ?? "text")
+        .groupings.some((g) => offersGrouping(field, g)),
+    [groupingRegistry, offersGrouping],
+  );
 
   // The paged read behind the rows, if any: a live source's own scroll, or
-  // the consumer's `paging` over the rows it holds.
+  // the consumer's `paging` over the rows it holds. A sectioned origin has no
+  // single read to page — each section pages its own (`DataViewSection.paging`)
+  // — so the body's footer is its groups read's, which never pages and says
+  // when it is full.
   const paging: DataViewPaging<TRow> | undefined = origin
-    ? origin.paging
+    ? origin.kind === "sectioned"
+      ? origin.groupsPaging
+      : origin.paging
     : heldPaging;
   const loadedRows: readonly TRow[] = origin
     ? origin.rows
@@ -587,10 +620,11 @@ function DataViewBodyInner<TRow>(
         : () => true,
       rowKey,
     });
-  //  - in a collapsed section;
-  const collapsedSections = viewModel.collapsedSectionsFor(activeViewId);
+  //  - in a collapsed section (a sectioned origin has no single tail: each
+  //    section's read stops with it);
   const tailCollapsed =
     tail !== null &&
+    origin?.kind !== "sectioned" &&
     activeState.groupBy !== undefined &&
     collapsedSections.size > 0 &&
     isSectionCollapsed(
@@ -700,8 +734,13 @@ function DataViewBodyInner<TRow>(
     activeInstance.viewType.hierarchical === true;
   const hasNoRows = useMemo(() => {
     if (!decideEmptiness) return false;
-    // A live origin already filtered in SQL.
-    if (origin) return origin.rows.length === 0;
+    // A live origin already filtered in SQL — and a sectioned one says how
+    // many sections exist whether or not any of their rows are loaded.
+    if (origin) {
+      return origin.kind === "sectioned"
+        ? origin.sections.length === 0
+        : origin.rows.length === 0;
+    }
     const matches = emptinessFilter ?? (() => true);
     if (!rows) return true;
     if (!rootsScoped || !hierarchy) return !rows.some((row) => matches(row));
@@ -747,7 +786,28 @@ function DataViewBodyInner<TRow>(
       }
     : undefined;
 
-  if (sectionHidden) return null;
+  // Where grouped sections come from: declared by a sectioned origin, else
+  // partitioned from the rows (by appearance when the server orders by the
+  // grouped column).
+  // Keyed on the parts, not the origin object (a fresh one each render), so
+  // the views' section pipeline re-partitions only when they change.
+  const declaredSections =
+    origin?.kind === "sectioned" ? origin.sections : null;
+  const rowSectionOrder =
+    origin?.kind === "flat" ? origin.sectionOrder : "bucket";
+  const sectioning = useMemo(
+    (): DataViewSectioning<TRow> =>
+      declaredSections !== null
+        ? { kind: "declared", sections: declaredSections }
+        : { kind: rowSectionOrder },
+    [declaredSections, rowSectionOrder],
+  );
+
+  // A hidden section still runs a sectioned origin's reads: whether it has
+  // any section is what those reads answer.
+  if (sectionHidden) {
+    return origin?.kind === "sectioned" ? origin.readers : null;
+  }
 
   // Fold the global `RowOrder` slot around the whole render. The children-callback
   // is a plain function call (invoked in the fold's base case), NOT a component —
@@ -845,7 +905,7 @@ function DataViewBodyInner<TRow>(
                 growable: paging.isPaged ?? ALL_ROWS,
                 total: matchesView === null ? (paging.total ?? null) : null,
               }) as DataViewRenderProps<unknown>["rowsComplete"],
-          sectionOrder: origin ? origin.sectionOrder : "bucket",
+          sectioning: sectioning as DataViewRenderProps<unknown>["sectioning"],
           collapsedSections: viewModel.collapsedSectionsFor(activeViewId),
           setSectionCollapsed: (key, collapsed) =>
             viewModel.setSectionCollapsed(activeViewId, key, collapsed),
@@ -878,7 +938,8 @@ function DataViewBodyInner<TRow>(
           viewModel,
           activeSupportsGroupBy,
           activeSupportsFold,
-          hasGrouping,
+          groupableField,
+          offersGrouping,
           activeSupportsSort,
           activeSupportsManualOrder,
           manualOrderOverridden,
@@ -950,6 +1011,10 @@ function DataViewBodyInner<TRow>(
                 spinner, Retry on a failed page, the IntersectionObserver
                 sentinel, and — for a read at its cap — the line saying it
                 stops). */}
+            {/* A sectioned origin's reads (they draw nothing). Mounted
+                beside the view, so a read starting or stopping never
+                remounts it. */}
+            {origin?.kind === "sectioned" ? origin.readers : null}
             {paging ? (
               <InfiniteScrollFooter
                 handle={scrollHandle}
@@ -957,7 +1022,10 @@ function DataViewBodyInner<TRow>(
                   paging.truncated === false
                     ? false
                     : {
-                        shown: pagedTail?.count ?? 0,
+                        shown:
+                          origin?.kind === "sectioned"
+                            ? origin.sections.length
+                            : (pagedTail?.count ?? 0),
                         hint: paging.truncated.hint,
                       }
                 }

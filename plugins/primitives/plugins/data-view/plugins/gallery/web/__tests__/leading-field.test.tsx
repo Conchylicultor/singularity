@@ -79,7 +79,7 @@ function renderGallery(
     now: 0,
     groupOrder: "asc",
     rowsComplete: true,
-    sectionOrder: "bucket",
+    sectioning: { kind: "bucket" },
     options:
       opts.own === false
         ? undefined

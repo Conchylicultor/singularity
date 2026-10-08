@@ -7,6 +7,7 @@ import {
   type DataViewRowEntry,
   type DataViewRowsComplete,
   type DataViewSection,
+  type DataViewSectioning,
   type FieldDef,
   type FieldGrouping,
   type FieldValue,
@@ -22,8 +23,13 @@ import { foldSections, makeFoldKeep } from "./fold-sections";
 import { useRowFilter } from "./use-row-filter";
 
 /** Sentinel bucket key for rows whose group-by value is null/undefined. Holds a
- *  control char so it can never collide with a real stringified field value. */
-const NULL_GROUP_KEY = " __dataview_none__";
+ *  control char so it can never collide with a real stringified field value.
+ *  A live source's declared "None" section uses it too, so a collapsed "None"
+ *  stays collapsed whichever way the sections were computed. */
+export const NULL_GROUP_KEY = " __dataview_none__";
+
+/** The one label of the one "None" section. */
+export const NULL_GROUP_LABEL = "None";
 
 /**
  * Default groupable policy: a field with a `value` projection **whose type says
@@ -72,11 +78,12 @@ export interface PartitionOptions<TRow = unknown> {
    */
   rowsComplete?: DataViewRowsComplete<TRow>;
   /**
-   * `"appearance"` — sections follow first appearance in `rows`, which the
-   * server sorted by the grouped column first; `"bucket"` (default) — by the
-   * bucket's ordinal. See `DataViewRenderProps.sectionOrder`.
+   * Where the sections come from (`DataViewRenderProps.sectioning`). Absent ⇒
+   * `bucket`. `appearance` — sections follow first appearance in `rows`, which
+   * the server sorted by the grouped column first; `declared` — the server
+   * listed them, each with its own rows (`rows` is then not read).
    */
-  sectionOrder?: "bucket" | "appearance";
+  sectioning?: DataViewSectioning<TRow>;
 }
 
 /**
@@ -115,6 +122,23 @@ export function partitionIntoSections<TRow>(
     ];
   }
 
+  // Declared by the server: every section it listed, in its order, with the
+  // rows of its own read — an empty one too (its header, count and footer are
+  // what start its read). The count is the server's, so it is exact.
+  if (opts.sectioning?.kind === "declared") {
+    let index = 0;
+    return opts.sectioning.sections.map((declared) => ({
+      key: declared.key,
+      label: declared.label,
+      count: exactCount(declared.count),
+      entries: declared.rows.map((row) => ({
+        row,
+        key: rowKey(row, index++),
+      })),
+      paging: declared.paging,
+    }));
+  }
+
   // Project once: the plan phase needs the whole value set before it can order
   // its sections, and re-projecting per row afterwards would run the consumer's
   // accessor twice.
@@ -142,7 +166,12 @@ export function partitionIntoSections<TRow>(
   // The ONE catch-all: no value, and a value the grouping cannot bucket. Both
   // read as "None" to the user, and giving them one section is what stops a
   // grouping from minting a rival "None" with an ordinal of its own.
-  const nullBucket: Bucket = { label: "None", order: 0, seq: -1, rows: [] };
+  const nullBucket: Bucket = {
+    label: NULL_GROUP_LABEL,
+    order: 0,
+    seq: -1,
+    rows: [],
+  };
   rows.forEach((row, i) => {
     const value = values[i] as FieldValue;
     const bucketed = value == null ? null : bucketOf(value);
@@ -172,7 +201,7 @@ export function partitionIntoSections<TRow>(
   });
 
   const dir = opts.order === "desc" ? -1 : 1;
-  const byAppearance = opts.sectionOrder === "appearance";
+  const byAppearance = opts.sectioning?.kind === "appearance";
   // In row order, a section's first row is where the server's sort placed it;
   // otherwise the bucket's ordinal decides, discovery order breaking ties.
   const ordered: [string, Bucket][] = [...buckets.entries()].sort(
@@ -372,8 +401,8 @@ export function useDataViewSections<TRow>(
     groupOrder: "asc" | "desc";
     /** `DataViewRenderProps.rowsComplete` — whether section counts may be exact. */
     rowsComplete: DataViewRowsComplete<TRow>;
-    /** `DataViewRenderProps.sectionOrder` — how grouped sections are ordered. */
-    sectionOrder: "bucket" | "appearance";
+    /** `DataViewRenderProps.sectioning` — where grouped sections come from. */
+    sectioning: DataViewSectioning<TRow>;
     /**
      * `DataViewRenderProps.foldLines?.open` — the section keys whose fold line is
      * open. The fold rule itself is read off `state.fold` (which the host already
@@ -406,7 +435,7 @@ export function useDataViewSections<TRow>(
     openFolds,
     selectedRowId,
     rowsComplete,
-    sectionOrder,
+    sectioning,
   } = opts;
   const fold = state.fold;
   // The fold rule's `keep` tree, lowered once per (tree, clock) like the filter.
@@ -437,7 +466,7 @@ export function useDataViewSections<TRow>(
       fields,
       groupBy,
       rowKey ?? ((_row: TRow, i: number) => String(i)),
-      { resolveGrouping, now, order: groupOrder, rowsComplete, sectionOrder },
+      { resolveGrouping, now, order: groupOrder, rowsComplete, sectioning },
     );
     // Order each section's entries by rank (within-section manual order) BEFORE
     // aggregating, so the representative defaults to the first rank-ordered member.
@@ -470,7 +499,7 @@ export function useDataViewSections<TRow>(
     now,
     groupOrder,
     rowsComplete,
-    sectionOrder,
+    sectioning,
     fold,
     openFolds,
     selectedRowId,

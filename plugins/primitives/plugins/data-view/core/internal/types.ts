@@ -638,7 +638,56 @@ export interface DataViewSection<TRow> {
    * otherwise its folded rows would vanish.
    */
   fold?: { hidden: number; open: boolean };
+  /**
+   * Present only on a DECLARED section ({@link DataViewSectioning}): the section
+   * pages its own read. A view draws it as the section's footer — `SectionBody`
+   * (web) ends in it, so rendering a section body IS rendering its footer. Its
+   * first `loadMore()` starts the read: a section reads nothing until it is
+   * expanded and its footer has come into view.
+   */
+  paging?: DataViewSectionPaging;
 }
+
+/**
+ * How one section pages its own read: a {@link DataViewPaging} with no
+ * `isPaged` — every row of the section came from its read.
+ */
+export type DataViewSectionPaging = Omit<DataViewPaging<unknown>, "isPaged">;
+
+/**
+ * A section whose existence and count the SERVER declared (a live source
+ * grouped by a groupable column — one `GROUP BY` read), with the rows of its
+ * own read. It is listed whether or not any of its rows are loaded: the header
+ * and its exact count come from the declaration, the rows from `rows`, the
+ * next page from `paging`.
+ */
+export interface DataViewDeclaredSection<TRow> {
+  /** The bucket key (`GroupBucket.key`), or the partition's one "None" key. */
+  key: string;
+  label: string;
+  /** Exact: the server counted it. */
+  count: number;
+  /** The rows of this section's own read loaded so far, in its order. */
+  rows: readonly TRow[];
+  paging: DataViewSectionPaging;
+}
+
+/**
+ * Where a grouped view's sections come from (`DataViewRenderProps.sectioning`):
+ *
+ * - `bucket` — partitioned from the rows, ordered by each bucket's ordinal (in
+ *   memory, and a live grouping the server neither declares nor orders by);
+ * - `appearance` — partitioned from the rows, ordered by first appearance,
+ *   because the server sorts by the grouped column first (a one-bucket-per-value
+ *   grouping over a sortable, non-groupable live column) — which also makes
+ *   every section but the last complete;
+ * - `declared` — the server listed every section with its exact count, and each
+ *   section's rows come from its own read ({@link DataViewDeclaredSection}).
+ */
+export type DataViewSectioning<TRow> =
+  | { kind: "bucket" }
+  | { kind: "appearance" }
+  | { kind: "declared"; sections: readonly DataViewDeclaredSection<TRow>[] };
 
 /**
  * How many rows a section holds, as far as the loaded rows can say: `exact`
@@ -902,7 +951,7 @@ export interface DataViewRenderProps<TRow> {
    * Whether `rows` is the whole set: always in memory without `paging`; a
    * server-ordered list (live) only once read to its end. Section counts are
    * exact only when it is (or when a later section has started — see
-   * `sectionOrder`). `{ growable }`: a list some (or all) of whose rows are a
+   * `sectioning`; a declared section's count is the server's). `{ growable }`: a list some (or all) of whose rows are a
    * paged read not read to its end ({@link DataViewPaging.isPaged}) — only a
    * section holding a `growable` row can gain rows, so only its count is a
    * lower bound — unless the read's `total` makes it exact
@@ -910,13 +959,12 @@ export interface DataViewRenderProps<TRow> {
    */
   rowsComplete: DataViewRowsComplete<TRow>;
   /**
-   * How grouped sections are ordered: `"bucket"` — by their bucket's ordinal
-   * (in memory, and a grouping the server does not order by); `"appearance"` —
-   * by first appearance in the rows, because the server sorts by the grouped
-   * column first (a one-bucket-per-value grouping under a live source), which
-   * also makes every section but the last complete.
+   * Where grouped sections come from — partitioned from `rows` (ordered by
+   * bucket, or by appearance), or declared by a live source's server with
+   * their own reads. See {@link DataViewSectioning}; a view hands it to
+   * `useDataViewSections` untouched.
    */
-  sectionOrder: "bucket" | "appearance";
+  sectioning: DataViewSectioning<TRow>;
   /** Device-local set of collapsed group-by section keys (absence = expanded).
    *  Flat views render group headers and hide a section's members when collapsed. */
   collapsedSections?: ReadonlySet<string>;

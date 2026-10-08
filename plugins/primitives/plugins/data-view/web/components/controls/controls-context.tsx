@@ -1,5 +1,10 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import type { DataViewId, FieldDef, ViewState } from "../../../core";
+import type {
+  DataViewId,
+  FieldDef,
+  FieldGrouping,
+  ViewState,
+} from "../../../core";
 import type { ReadyViewModel } from "../../internal/use-data-view-model";
 import type { FilterController } from "../../internal/use-filter-controller";
 import type { SortController } from "../../internal/use-sort-controller";
@@ -36,11 +41,24 @@ export interface DataViewControlsContextValue {
   activeSupportsGroupBy: boolean;
   /** Whether the active view draws fold lines (false → the fold setting hides). */
   activeSupportsFold: boolean;
-  /** `(typeId) => boolean` read of the `Grouping` slot — does this field type
-   *  declare how it buckets? The group-by setting's `isApplicable` is a pure
-   *  function and cannot read a slot itself, so the host resolves it once here.
-   *  Pass it to `isGroupableField(field, hasGrouping)`. */
-  hasGrouping: (typeId: string) => boolean;
+  /**
+   * Can the view be grouped by this field — its type buckets it
+   * (`isGroupableField` over the `Grouping` slot) AND at least one of its
+   * groupings is {@link offersGrouping offered}? The group-by setting's
+   * `isApplicable` is a pure function and cannot read a slot itself, so the
+   * host resolves it once here.
+   */
+  groupableField: (field: FieldDef<unknown>) => boolean;
+  /**
+   * Is this grouping of this field offered? Always in memory; under a live
+   * source only a pair that lowers (`liveGroupLowering`: server sections, an
+   * order prefix, or buckets over a sortable column) — a grouping that could
+   * only partition what happens to be loaded is never offered.
+   */
+  offersGrouping: (
+    field: FieldDef<unknown>,
+    grouping: FieldGrouping,
+  ) => boolean;
   /** Whether the active view honors `ViewState.sort` (false → no Sort control). */
   activeSupportsSort: boolean;
   /** Whether the active view can render a flat rank-ordered, draggable body. */
@@ -75,7 +93,8 @@ export function DataViewControlsProvider({
   viewModel,
   activeSupportsGroupBy,
   activeSupportsFold,
-  hasGrouping,
+  groupableField,
+  offersGrouping,
   activeSupportsSort,
   activeSupportsManualOrder,
   manualOrderOverridden,
@@ -91,7 +110,8 @@ export function DataViewControlsProvider({
       viewModel,
       activeSupportsGroupBy,
       activeSupportsFold,
-      hasGrouping,
+      groupableField,
+      offersGrouping,
       activeSupportsSort,
       activeSupportsManualOrder,
       manualOrderOverridden,
@@ -106,7 +126,8 @@ export function DataViewControlsProvider({
       viewModel,
       activeSupportsGroupBy,
       activeSupportsFold,
-      hasGrouping,
+      groupableField,
+      offersGrouping,
       activeSupportsSort,
       activeSupportsManualOrder,
       manualOrderOverridden,

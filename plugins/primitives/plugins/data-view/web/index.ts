@@ -1,6 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { dataViewConfigContributions } from "./internal/config-registrations";
-import { isGroupableField } from "./internal/use-data-view-sections";
 import { DataViewSlots } from "./slots";
 import { GroupByControl } from "./components/settings/group-by-control";
 import { PropertiesControl } from "./components/settings/properties-control";
@@ -189,7 +188,7 @@ export default {
       order: 1,
       isApplicable: (ctx) =>
         ctx.activeSupportsGroupBy &&
-        ctx.fields.some((f) => isGroupableField(f, ctx.hasGrouping)),
+        ctx.fields.some((f) => ctx.groupableField(f)),
       component: GroupByControl,
     }),
     // Fold rows: rows not matching a filter rule fold behind "… N more" at the

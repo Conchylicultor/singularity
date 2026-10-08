@@ -32,7 +32,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { QueryClient } from "@tanstack/react-query";
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { z } from "zod";
 import { markDeferredLoadComplete } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
@@ -45,6 +45,7 @@ import {
 import {
   liveCollection,
   type LiveQuery,
+  type LiveWhere,
 } from "@plugins/network/plugins/live/core";
 import {
   and,
@@ -54,6 +55,7 @@ import {
   liveStringArray,
   liveText,
   or,
+  type Filter,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   type FieldDef,
@@ -63,8 +65,13 @@ import {
   type ViewState,
 } from "../../core";
 import { liveDataSource } from "../internal/live-data-source";
-import { resolveLiveFields } from "../internal/live-fields";
-import { useLiveSource } from "../internal/live-source";
+import { liveGroupLowering, resolveLiveFields } from "../internal/live-fields";
+import {
+  useLiveSource,
+  type FlatSourceView,
+  type SectionedSourceView,
+  type SourceView,
+} from "../internal/live-source";
 import { UnavailableSortRuleError } from "../internal/live-filter";
 import { resolveBodyState } from "../internal/body-state";
 import { BodyFallback } from "../components/body-fallback";
@@ -72,6 +79,8 @@ import { BodyFallback } from "../components/body-fallback";
 const Thread = z.object({
   id: z.string(),
   subject: z.string(),
+  /** Sorts, but no grouping can count it (not filterable). */
+  folder: z.string(),
   labelIds: z.array(z.string()),
   unread: z.boolean(),
   lastMessageAt: z.date(),
@@ -89,7 +98,7 @@ const threads = () =>
       unread: liveBoolean(),
       lastMessageAt: liveInstant(),
     },
-    sortable: ["subject", "lastMessageAt"],
+    sortable: ["subject", "lastMessageAt", "folder"],
     default: { orderBy: [["lastMessageAt", "desc"]], limit: 2 },
     maxLimit: 6,
     scroll: true,
@@ -150,6 +159,7 @@ const resolveGrouping = (_type: string, groupingId: string) =>
 function fieldsOf(c: C): FieldDef<Thread>[] {
   return [
     { id: "subject", label: "Subject", type: "text", value: (t) => t.subject },
+    { id: "folder", label: "Folder", type: "text", value: (t) => t.folder },
     {
       id: "labels",
       label: "Labels",
@@ -168,6 +178,14 @@ function fieldsOf(c: C): FieldDef<Thread>[] {
 }
 
 const baseState: ViewState = { sort: [], filter: null, query: "" };
+const NO_COLLAPSED: ReadonlySet<string> = new Set();
+
+/** The flat arm of a source view — the one a scroll over the whole query reads. */
+function flat<T>(view: SourceView<T> | null): FlatSourceView<T> {
+  if (view?.kind !== "flat")
+    throw new Error(`expected a flat view, got ${view?.kind}`);
+  return view;
+}
 
 function makeClient(): QueryClient {
   return new QueryClient({
@@ -208,6 +226,8 @@ function mount(
         state: p.state,
         resolveOperatorSet,
         resolveGrouping,
+        now: 0,
+        collapsedSections: NO_COLLAPSED,
       }),
     { wrapper, initialProps: { state: initial.state } },
   );
@@ -228,13 +248,14 @@ function tuples(client: QueryClient, c: C): unknown[] {
 const expectTuple = (
   client: QueryClient,
   c: C,
-  query: LiveQuery<C["filterable"], "subject" | "lastMessageAt">,
+  query: LiveQuery<C["filterable"], "subject" | "lastMessageAt" | "folder">,
 ) => expect(tuples(client, c)).toContainEqual(c.window.window.encode(query));
 
 const wire = (ids: number[]) =>
   ids.map((i) => ({
     id: `t${i}`,
     subject: `s${i}`,
+    folder: "inbox",
     labelIds: [],
     unread: true,
     lastMessageAt: new Date(i * 1000),
@@ -311,23 +332,23 @@ describe("useLiveSource — lowering", () => {
     expect(result.current!.loading).toBe(false);
   });
 
-  it("a one-bucket-per-value grouping leads the order (the default after it), sections by appearance", () => {
+  it("a one-bucket-per-value grouping over a column no grouping counts leads the order (the default after it), sections by appearance", () => {
     const c = threads();
     const client = makeClient();
     const { result } = mount(client, c, {
       state: {
         ...baseState,
-        groupBy: { fieldId: "subject", groupingId: "value" },
+        groupBy: { fieldId: "folder", groupingId: "value" },
       },
     });
     expectTuple(client, c, {
       orderBy: [
-        ["subject", "asc"],
+        ["folder", "asc"],
         ["lastMessageAt", "desc"],
       ],
       limit: 2,
     });
-    expect(result.current!.sectionOrder).toBe("appearance");
+    expect(flat(result.current).sectionOrder).toBe("appearance");
   });
 
   it("a grouped column the sort already names is not named twice", () => {
@@ -338,14 +359,14 @@ describe("useLiveSource — lowering", () => {
         ...baseState,
         sort: [
           { fieldId: "lastMessageAt", direction: "asc" },
-          { fieldId: "subject", direction: "desc" },
+          { fieldId: "folder", direction: "desc" },
         ],
-        groupBy: { fieldId: "subject", groupingId: "value" },
+        groupBy: { fieldId: "folder", groupingId: "value" },
       },
     });
     expectTuple(client, c, {
       orderBy: [
-        ["subject", "desc"],
+        ["folder", "desc"],
         ["lastMessageAt", "asc"],
       ],
       limit: 2,
@@ -363,7 +384,7 @@ describe("useLiveSource — lowering", () => {
       },
     });
     expectTuple(client, c, { orderBy: [["subject", "asc"]], limit: 2 });
-    expect(result.current!.sectionOrder).toBe("bucket");
+    expect(flat(result.current).sectionOrder).toBe("bucket");
   });
 });
 
@@ -406,7 +427,7 @@ describe("useLiveSource — states", () => {
     });
     await waitFor(() => expect(result.current!.loading).toBe(false));
     expect(result.current!.rows).toEqual([]);
-    expect(result.current!.paging.complete).toBe(true);
+    expect(flat(result.current).paging.complete).toBe(true);
   });
 
   it("the paging can grow while the scroll can", async () => {
@@ -416,8 +437,8 @@ describe("useLiveSource — states", () => {
     act(() => {
       client.setQueryData(queryKeyFor(c.key, { limit: "2" }), wire([1, 2]));
     });
-    await waitFor(() => expect(result.current!.paging.canGrow).toBe(true));
-    expect(result.current!.paging.complete).toBe(false);
+    await waitFor(() => expect(flat(result.current).paging.canGrow).toBe(true));
+    expect(flat(result.current).paging.complete).toBe(false);
     expect(result.current!.rows.map((r) => r.id)).toEqual(["t1", "t2"]);
     // `$key` never reaches the view.
     expect(Object.keys(result.current!.rows[0]!)).not.toContain("$key");
@@ -445,6 +466,8 @@ function LiveBody(props: {
     state: baseState,
     resolveOperatorSet,
     resolveGrouping,
+    now: 0,
+    collapsedSections: NO_COLLAPSED,
   });
   const state = resolveBodyState({
     server: origin,
@@ -525,5 +548,284 @@ describe("useLiveSource — a failed head read", () => {
     expect(result.current!.error).toBeNull();
     expect(result.current!.loading).toBe(false);
     expect(result.current!.readError!.error).toBeInstanceOf(ResourceError);
+  });
+});
+
+/**
+ * Grouped by a GROUPABLE column (an own filterable text / number / boolean
+ * one), the source is server-sectioned: one grouping read lists the sections
+ * with exact counts, and a section reads its own rows only once its footer
+ * asked for them (expanded and in view), until it is collapsed.
+ */
+describe("useLiveSource — server sections", () => {
+  function Sectioned(props: {
+    source: LiveDataSource<Thread>;
+    fields: FieldDef<Thread>[];
+    state: ViewState;
+    collapsed: ReadonlySet<string>;
+    onView: (view: SourceView<Thread> | null) => void;
+  }) {
+    const plan = resolveLiveFields(
+      props.fields,
+      props.source,
+      resolveOperatorSet,
+      "host",
+    );
+    const view = useLiveSource<Thread>({
+      source: props.source,
+      plan,
+      fields: props.fields,
+      state: props.state,
+      resolveOperatorSet,
+      resolveGrouping,
+      now: 0,
+      collapsedSections: props.collapsed,
+    });
+    const { onView } = props;
+    useEffect(() => onView(view));
+    return view?.kind === "sectioned" ? <>{view.readers}</> : null;
+  }
+
+  function mountSectioned(
+    client: QueryClient,
+    c: C,
+    initial: { state: ViewState; scoped?: boolean },
+  ) {
+    const all = liveDataSource(c, { searchable: ["subject"] });
+    const source = initial.scoped
+      ? all.scoped({ where: { labelIds: { hasAny: ["INBOX"] } } })
+      : all;
+    const fields = fieldsOf(c);
+    let latest: SourceView<Thread> | null = null;
+    const onView = (view: SourceView<Thread> | null) => {
+      latest = view;
+    };
+    const tree = (state: ViewState, collapsed: ReadonlySet<string>) => (
+      <NotificationsProvider queryClient={client}>
+        <Sectioned
+          source={source}
+          fields={fields}
+          state={state}
+          collapsed={collapsed}
+          onView={onView}
+        />
+      </NotificationsProvider>
+    );
+    const rendered = render(tree(initial.state, NO_COLLAPSED));
+    const notifications = getNotificationsClient();
+    if (!notifications) throw new Error("NotificationsClient not created");
+    vi.spyOn(notifications, "hasEverBeenReady").mockReturnValue(true);
+    return {
+      view(): SectionedSourceView<Thread> {
+        const v = latest as SourceView<Thread> | null;
+        if (v?.kind !== "sectioned") {
+          throw new Error(`expected a sectioned view, got ${v?.kind}`);
+        }
+        return v;
+      },
+      rerender(state: ViewState, collapsed: ReadonlySet<string>) {
+        rendered.rerender(tree(state, collapsed));
+      },
+    };
+  }
+
+  const groupsKey = (c: C, groupBy: "unread" | "subject", where?: Filter) =>
+    queryKeyFor(
+      `${c.key}:groups`,
+      c.groups.groups.encode({
+        groupBy,
+        ...(where === undefined
+          ? {}
+          : { where: where as LiveWhere<C["filterable"]> }),
+        limit: c.groups.groups.maxLimit,
+      }),
+    );
+  const sectionKey = (c: C, where: Filter) =>
+    queryKeyFor(
+      c.key,
+      c.window.window.encode({
+        where: where as LiveWhere<C["filterable"]>,
+        limit: 2,
+      }),
+    );
+  const observers = (client: QueryClient, key: readonly unknown[]) =>
+    client
+      .getQueryCache()
+      .find({ queryKey: key, exact: true })
+      ?.getObserversCount() ?? 0;
+
+  const byUnread: ViewState = {
+    ...baseState,
+    groupBy: { fieldId: "unread", groupingId: "value" },
+  };
+
+  it("reads ONE grouping over the view's whole where, and no rows until a section asks", async () => {
+    const c = threads();
+    const client = makeClient();
+    const state: ViewState = {
+      ...byUnread,
+      filter: {
+        kind: "group",
+        id: "g",
+        conjunction: "and",
+        children: [
+          {
+            kind: "rule",
+            id: "r",
+            fieldId: "subject",
+            operatorId: "is",
+            value: "hello",
+          },
+        ],
+      },
+    };
+    const m = mountSectioned(client, c, { state, scoped: true });
+    const where = and(
+      clause("labelIds", "hasAny", ["INBOX"]),
+      clause("subject", "eq", "hello"),
+    );
+    await waitFor(() =>
+      expect(observers(client, groupsKey(c, "unread", where))).toBeGreaterThan(
+        0,
+      ),
+    );
+    // One grouping read, and it is that one.
+    expect(
+      client
+        .getQueryCache()
+        .findAll()
+        .filter((q) => (q.queryKey as unknown[])[0] === `${c.key}:groups`),
+    ).toHaveLength(1);
+    expect(m.view().loading).toBe(true);
+    // The body's own scroll reads nothing: each section reads its own.
+    expect(tuples(client, c)).toEqual([]);
+
+    act(() => {
+      client.setQueryData(groupsKey(c, "unread", where), [
+        { value: true, count: 3 },
+        { value: false, count: 2 },
+        { value: null, count: 1 },
+      ]);
+    });
+    await waitFor(() => expect(m.view().loading).toBe(false));
+    const sections = m.view().sections;
+    // Every section, with the server's exact count; "None" last.
+    expect(sections.map((s) => [s.label, s.count])).toEqual([
+      ["true", 3],
+      ["false", 2],
+      ["None", 1],
+    ]);
+    expect(sections.every((s) => s.rows.length === 0)).toBe(true);
+    expect(sections.every((s) => s.paging.canGrow)).toBe(true);
+    expect(tuples(client, c)).toEqual([]);
+  });
+
+  it("a section reads its value only once its footer asks; collapsing it unsubscribes", async () => {
+    const c = threads();
+    const client = makeClient();
+    const m = mountSectioned(client, c, { state: byUnread });
+    act(() => {
+      client.setQueryData(groupsKey(c, "unread"), [
+        { value: true, count: 3 },
+        { value: false, count: 2 },
+        { value: null, count: 1 },
+      ]);
+    });
+    await waitFor(() => expect(m.view().sections).toHaveLength(3));
+
+    // The footer of "false" came into view: its first page starts its read.
+    act(() => m.view().sections[1]!.paging.loadMore());
+    const falseKey = sectionKey(c, clause("unread", "eq", false));
+    await waitFor(() => expect(observers(client, falseKey)).toBe(1));
+    expect(tuples(client, c)).toHaveLength(1);
+    expect(m.view().sections[1]!.paging.growing).toBe(true);
+
+    act(() => {
+      client.setQueryData(falseKey, wire([7, 8]));
+    });
+    await waitFor(() =>
+      expect(m.view().sections[1]!.rows.map((r) => r.id)).toEqual(["t7", "t8"]),
+    );
+    expect(m.view().rows.map((r) => r.id)).toEqual(["t7", "t8"]);
+
+    // "None" reads the empty value.
+    act(() => m.view().sections[2]!.paging.loadMore());
+    await waitFor(() =>
+      expect(
+        observers(client, sectionKey(c, clause("unread", "isEmpty"))),
+      ).toBe(1),
+    );
+
+    // Collapsing "false" stops its read.
+    m.rerender(byUnread, new Set(["false"]));
+    await waitFor(() => expect(observers(client, falseKey)).toBe(0));
+    expect(m.view().sections[1]!.rows).toEqual([]);
+  });
+
+  it("a blank text value is the one None; the grouping full at its max says so", async () => {
+    const c = threads();
+    const client = makeClient();
+    const m = mountSectioned(client, c, {
+      state: {
+        ...baseState,
+        groupBy: { fieldId: "subject", groupingId: "value" },
+      },
+    });
+    const max = c.groups.groups.maxLimit;
+    act(() => {
+      client.setQueryData(groupsKey(c, "subject"), [
+        { value: "", count: 2 },
+        { value: null, count: 1 },
+        ...Array.from({ length: max - 2 }, (_, i) => ({
+          value: `s${i}`,
+          count: 1,
+        })),
+      ]);
+    });
+    await waitFor(() => expect(m.view().loading).toBe(false));
+    const sections = m.view().sections;
+    expect(sections).toHaveLength(max - 2 + 1);
+    expect(sections.at(-1)).toMatchObject({ label: "None", count: 3 });
+    expect(m.view().groupsPaging.truncated).not.toBe(false);
+    expect(m.view().groupsPaging.complete).toBe(false);
+  });
+});
+
+describe("liveGroupLowering — what the Group-by control offers under a live source", () => {
+  const c = threads();
+  const source = liveDataSource(c, { searchable: ["subject"] });
+  const fields: FieldDef<Thread>[] = [
+    ...fieldsOf(c),
+    // A derived value: bound to no column.
+    { id: "derived", label: "Derived", type: "text", value: (t) => t.id },
+  ];
+  const plan = resolveLiveFields(fields, source, resolveOperatorSet, "host");
+  const field = (id: string) => fields.find((f) => f.id === id)!;
+
+  it("server sections over a groupable column", () => {
+    expect(liveGroupLowering(plan, field("unread"), PER_VALUE)).toMatchObject({
+      kind: "sections",
+      column: { name: "unread", domain: "boolean" },
+    });
+    expect(liveGroupLowering(plan, field("subject"), PER_VALUE).kind).toBe(
+      "sections",
+    );
+  });
+
+  it("an order prefix over a column that only sorts", () => {
+    expect(liveGroupLowering(plan, field("folder"), PER_VALUE)).toEqual({
+      kind: "prefix",
+      column: "folder",
+    });
+  });
+
+  it("buckets over a sortable column; nothing over a derived value", () => {
+    expect(liveGroupLowering(plan, field("lastMessageAt"), BY_DAY).kind).toBe(
+      "buckets",
+    );
+    expect(liveGroupLowering(plan, field("derived"), PER_VALUE).kind).toBe(
+      "none",
+    );
+    expect(liveGroupLowering(plan, field("unread"), BY_DAY).kind).toBe("none");
   });
 });

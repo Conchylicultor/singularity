@@ -7,8 +7,16 @@ import {
   filterColumns,
   isFilterGroup,
 } from "@plugins/network/plugins/live/plugins/filter/core";
-import type { LiveColumnsDeclaration } from "@plugins/network/plugins/live/core";
-import type { FieldDef, FilterOperatorSet, LiveDataSource } from "../../core";
+import type {
+  LiveColumnsDeclaration,
+  LiveGroupableDomain,
+} from "@plugins/network/plugins/live/core";
+import type {
+  FieldDef,
+  FieldGrouping,
+  FilterOperatorSet,
+  LiveDataSource,
+} from "../../core";
 
 // A live DataView source's field resolution — pure, so the checks run wherever
 // a field is declared (the host's body, or a field-extension contributor's
@@ -44,6 +52,65 @@ export interface LiveFieldPlan<TRow> {
    * name — a query naming one of their columns hands the codec that handle.
    */
   handles: ReadonlyMap<string, LiveColumnsDeclaration>;
+  /**
+   * Field id → the column a `GROUP BY` can count it by: the collection's OWN
+   * filterable column of a text / number / boolean domain (what the live
+   * codec's `checkGroupBy` accepts). A contributed column is never one — a
+   * grouping reads the collection's own columns only.
+   */
+  groupColumns: ReadonlyMap<string, LiveGroupColumn>;
+}
+
+/** A column a live grouping counts by. */
+export interface LiveGroupColumn {
+  name: string;
+  domain: LiveGroupableDomain;
+}
+
+const GROUPABLE_DOMAINS: ReadonlySet<string> = new Set<LiveGroupableDomain>([
+  "text",
+  "number",
+  "boolean",
+]);
+
+/**
+ * How a `(field, grouping)` pair lowers under a live source — the ONE answer
+ * both the Group-by control (what it offers) and the source (what it reads)
+ * take, so the control cannot offer a grouping the source would render wrong.
+ *
+ * - `sections` — a one-bucket-per-value grouping over a groupable column: the
+ *   server lists every section with its exact count, each section pages its
+ *   own rows (`DataViewSectioning` `declared`);
+ * - `prefix` — a one-bucket-per-value grouping over a sortable column no
+ *   grouping can count (a contributed one): the column leads the order, so the
+ *   sections are contiguous and follow appearance;
+ * - `buckets` — any other grouping over a sortable column (a date by day): its
+ *   buckets over the loaded rows, as in memory;
+ * - `none` — over no sortable or groupable column (a derived value): the
+ *   sections would say only what happens to be loaded, so it is not offered.
+ */
+export type LiveGroupLowering =
+  | { kind: "sections"; column: LiveGroupColumn }
+  | { kind: "prefix"; column: string }
+  | { kind: "buckets" }
+  | { kind: "none" };
+
+export function liveGroupLowering<TRow>(
+  plan: LiveFieldPlan<TRow>,
+  field: FieldDef<TRow>,
+  grouping: FieldGrouping,
+): LiveGroupLowering {
+  const sortable = plan.sortFields.some((f) => f.id === field.id);
+  if (grouping.oneBucketPerValue === true) {
+    const groupColumn = plan.groupColumns.get(field.id);
+    if (groupColumn !== undefined) {
+      return { kind: "sections", column: groupColumn };
+    }
+    return sortable
+      ? { kind: "prefix", column: plan.columnOf.get(field.id)! }
+      : { kind: "none" };
+  }
+  return sortable ? { kind: "buckets" } : { kind: "none" };
 }
 
 /** The collection column a field reads: its declared ref, else a column of the same name, else none. */
@@ -118,6 +185,11 @@ export function resolveLiveFields<TRow>(
   const filterable: Record<string, FilterColumn> = {};
   const columnOf = new Map<string, string>();
   const handles = new Map<string, LiveColumnsDeclaration>();
+  const groupColumns = new Map<string, LiveGroupColumn>();
+  const ownFilterable = source.collection.filterable as Record<
+    string,
+    FilterColumn | undefined
+  >;
   const scopeColumns: ReadonlySet<string> =
     source.scope.kind === "where"
       ? filterColumns(source.scope.filter)
@@ -127,6 +199,20 @@ export function resolveLiveFields<TRow>(
     if (column === null) continue;
     columnOf.set(field.id, column.name);
     if (column.handle) handles.set(column.handle.name, column.handle);
+    const own = Object.hasOwn(ownFilterable, column.name)
+      ? ownFilterable[column.name]
+      : undefined;
+    if (
+      field.value !== undefined &&
+      column.handle === undefined &&
+      own !== undefined &&
+      GROUPABLE_DOMAINS.has(own.domain)
+    ) {
+      groupColumns.set(field.id, {
+        name: column.name,
+        domain: own.domain as LiveGroupableDomain,
+      });
+    }
     if (field.value !== undefined && field.sortable !== false) {
       if (column.sortable) sortFields.push(field);
       else if (field.sortable === true) {
@@ -147,7 +233,14 @@ export function resolveLiveFields<TRow>(
       filterable[field.id] = { domain: column.domain } as FilterColumn;
     }
   }
-  return { filterFields, filterable, sortFields, columnOf, handles };
+  return {
+    filterFields,
+    filterable,
+    sortFields,
+    columnOf,
+    handles,
+    groupColumns,
+  };
 }
 
 /**
