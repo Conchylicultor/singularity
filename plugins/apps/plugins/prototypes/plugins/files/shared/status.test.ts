@@ -26,17 +26,41 @@ afterEach(async () => {
 
 describe("openStatusStore", () => {
   test("no file is not done, and readAll is empty", async () => {
-    expect(await store.read(ID)).toEqual({ done: false });
+    expect(await store.read(ID)).toEqual({ done: false, pinned: false });
     expect(await store.readAll()).toEqual({});
   });
 
   test("marking done writes the file under _status/; unmarking removes it", async () => {
-    expect(await store.write(ID, { done: true })).toEqual({ done: true });
+    expect(await store.write(ID, { done: true })).toEqual({
+      done: true,
+      pinned: false,
+    });
     expect(store.fileOf(ID)).toBe(join(root, STATUS_DIR_NAME, `${ID}.json`));
     expect(existsSync(store.fileOf(ID))).toBe(true);
 
-    expect(await store.write(ID, { done: false })).toEqual({ done: false });
+    expect(await store.write(ID, { done: false })).toEqual({
+      done: false,
+      pinned: false,
+    });
     expect(existsSync(store.fileOf(ID))).toBe(false);
+  });
+
+  test("a pin and Done are set independently; a change never clobbers the other", async () => {
+    await store.write(ID, { pinned: true });
+    expect(await store.write(ID, { done: true })).toEqual({
+      done: true,
+      pinned: true,
+    });
+    expect(await store.write(ID, { pinned: false })).toEqual({
+      done: true,
+      pinned: false,
+    });
+  });
+
+  test("a file written before pins existed reads as not pinned", async () => {
+    await mkdir(join(root, STATUS_DIR_NAME), { recursive: true });
+    await writeFile(store.fileOf(ID), '{"done": true}');
+    expect(await store.read(ID)).toEqual({ done: true, pinned: false });
   });
 
   test("readAll keys every recorded status by id, skipping foreign files", async () => {
@@ -44,8 +68,8 @@ describe("openStatusStore", () => {
     await store.write(OTHER, { done: true });
     await writeFile(join(root, STATUS_DIR_NAME, "notes.json"), "{}");
     expect(await store.readAll()).toEqual({
-      [ID]: { done: true },
-      [OTHER]: { done: true },
+      [ID]: { done: true, pinned: false },
+      [OTHER]: { done: true, pinned: false },
     });
   });
 

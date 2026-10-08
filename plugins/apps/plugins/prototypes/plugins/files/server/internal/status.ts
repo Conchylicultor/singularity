@@ -7,6 +7,7 @@ import {
   isPrototypeId,
   prototypeStatuses,
   setPrototypeStatus,
+  type PrototypeStatusChange,
 } from "../../core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { openStatusStore, type StatusStore } from "../../shared/status";
@@ -64,8 +65,17 @@ const statusLedger = defineAgentWriteLedger<"status">({
   },
 });
 
+/** The ledger's words for one change (`mark done, pin`). */
+function describeChange(change: PrototypeStatusChange): string {
+  const words: string[] = [];
+  if (change.done !== undefined)
+    words.push(change.done ? "mark done" : "mark not done");
+  if (change.pinned !== undefined) words.push(change.pinned ? "pin" : "unpin");
+  return words.join(", ");
+}
+
 /**
- * `PUT /api/prototypes/:name/status` — apply one change (`{ done }`). 404 for
+ * `PUT /api/prototypes/:name/status` — apply one change (`{ done?, pinned? }`). 404 for
  * an unknown prototype. Snapshotted for the agent-write ledger inside the
  * store's lock, around the one write.
  */
@@ -84,7 +94,7 @@ export const handleSetStatus = implement(
           writer,
           name,
           { status: s.fileOf(name) },
-          body.done ? "mark done" : "mark not done",
+          describeChange(body),
         ),
       afterWrite: () => statusLedger.noteComplete(writer, name),
     });

@@ -1,6 +1,7 @@
 // @hash 6ec84829688d
-// The gallery is grouped by `status`: the prototypes still being worked on come
-// first ("In progress"), the finished ones after ("Done"). Done cards also read
+// The gallery is grouped by `status`: the pinned prototypes come first
+// ("Pinned"), then the ones still being worked on ("In progress"), the finished
+// ones last ("Done"). Done cards also read
 // muted, so the second section is visibly a pile you are finished with rather
 // than more of the same.
 {

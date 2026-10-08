@@ -8,7 +8,8 @@ import {
 import { openRecordStore, type RecordStore } from "./record-store";
 
 // The status store: ONE JSON file per prototype, `<prototypes>/_status/<id>.json`
-// (`{ "done": true }`), absent while the prototype has no status (not Done).
+// (`{ "done": true, "pinned": false }`), absent while the prototype has no
+// status (neither Done nor pinned).
 // One kind of per-prototype record (`record-store.ts`), like the picks.
 
 /** The status dir's name inside the prototypes data dir. */
@@ -24,6 +25,6 @@ export function openStatusStore(root: string): StatusStore {
     schema: PrototypeStatusSchema,
     empty: NO_PROTOTYPE_STATUS,
     apply: applyPrototypeStatusChange,
-    equal: (a, b) => a.done === b.done,
+    equal: (a, b) => a.done === b.done && a.pinned === b.pinned,
   });
 }

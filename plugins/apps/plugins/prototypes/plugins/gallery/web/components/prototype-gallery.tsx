@@ -95,7 +95,7 @@ export function PrototypeGallery() {
   const result = useCombinedResources({
     prototypes: useLive(prototypesList),
     thumbnails: usePrototypeThumbnails(),
-    // Whether each prototype is marked Done — joined onto the rows below, and
+    // Whether each prototype is pinned / marked Done — joined onto the rows below, and
     // awaited with the list so a Done card never paints as not done first.
     statuses: useLive(prototypeStatuses),
   });
@@ -131,19 +131,22 @@ export function PrototypeGallery() {
       cell: (p) => <RelativeTime date={new Date(p.modifiedAt)} />,
       visible: false,
     },
-    // Filter / group-by only — the card already shows it, as its checkbox.
-    // An enum of two rather than a bool, because this field is READ as section
-    // headings (the gallery groups by it by default) and as filter values, and
-    // "In progress" / "Done" say there what "No" / "Yes" cannot.
+    // Filter / group-by only — the card already shows it, as its pin and
+    // checkbox. An enum rather than two bools, because this field is READ as
+    // section headings (the gallery groups by it by default, in this options
+    // order) and as filter values, where "Pinned" / "In progress" / "Done" say
+    // what "No" / "Yes" cannot. A pin outranks Done: pinning a finished
+    // prototype is asking to keep it in view.
     {
       id: "status",
       label: "Status",
       type: "enum",
       options: [
+        { value: "pinned", label: "Pinned" },
         { value: "in-progress", label: "In progress" },
         { value: "done", label: "Done" },
       ],
-      value: (p) => (p.done ? "done" : "in-progress"),
+      value: (p) => (p.pinned ? "pinned" : p.done ? "done" : "in-progress"),
       visible: false,
     },
   ];
@@ -221,10 +224,10 @@ export function PrototypeGallery() {
     error: () => renderList([], {}),
     ready: ({ prototypes, thumbnails, statuses }) =>
       renderList(
-        prototypes.map((p) => ({
-          ...p,
-          done: statusOf(statuses, p.name).done,
-        })),
+        prototypes.map((p) => {
+          const { done, pinned } = statusOf(statuses, p.name);
+          return { ...p, done, pinned };
+        }),
         thumbnails,
       ),
   });

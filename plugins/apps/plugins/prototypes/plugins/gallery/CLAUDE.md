@@ -21,7 +21,7 @@ The Prototypes app's gallery: the list of every prototype, and New prototype.
   guaranteed swatch-then-screenshot swap on every load. Side by side they are
   answered in parallel, and the cover is right the first time it is painted.
   **Done.** A third resource joins them: `files`' `prototypes.statuses`. The
-  gallery maps it onto the rows (`PrototypeGalleryRow = PrototypeMeta & { done }`)
+  gallery maps it onto the rows (`PrototypeGalleryRow = PrototypeMeta & { done, pinned }`)
   so everything reads one value: a hidden `status` field (the gallery groups by
   it by default — see `config/apps/prototypes/gallery/prototypes.gallery.jsonc`
   — and can be filtered on it; no card body cell, the checkbox already shows
@@ -32,9 +32,17 @@ The Prototypes app's gallery: the list of every prototype, and New prototype.
   canvas's `prototypeDetailPane.Actions` — with a fixed "Done" label so ticking
   it never changes the header's width.
 
-  `status` is an enum of two ("In progress" / "Done") rather than the `done`
-  bool it projects: the field is read as SECTION HEADINGS and as filter values,
-  where the bool type's own "No" / "Yes" says nothing about what it is No of.
+  `status` is an enum of three ("Pinned" / "In progress" / "Done") rather than
+  the `pinned` / `done` bools it projects: the field is read as SECTION HEADINGS
+  and as filter values, where the bool type's own "No" / "Yes" says nothing
+  about what it is No of. A pin outranks Done (a pinned, finished prototype
+  sits under Pinned).
+
+  **Pinned.** The second field of the same status record (`{ done, pinned }`;
+  a change sets one field and never clobbers the other). A pin icon beside the
+  Done checkbox on every card (`PinCardAction`, `persistent`), and beside the
+  Done toggle in the canvas header (`PinHeaderAction`); both write through
+  `useSetPrototypeStatus` (`set-status.ts`).
 
 The detail pane itself — the canvas of frames, its version steppers, option
 picks, size and zoom — is the sibling `canvas` plugin. The gallery depends on
@@ -84,7 +92,7 @@ honest — the prototype does exist — and it self-corrects.
 
 ## Plugin reference
 
-- Description: Prototypes gallery list pane — one card per prototype over its rendered preview, grouped and filterable by a Done checkbox on every card (and in the detail pane's header) — plus New prototype, which mints the folder before launching the agent that designs it.
+- Description: Prototypes gallery list pane — one card per prototype over its rendered preview, grouped (Pinned / In progress / Done) and filterable by a pin and a Done checkbox on every card (and in the detail pane's header) — plus New prototype, which mints the folder before launching the agent that designs it.
 - Web:
   - Slots:
     - `prototypesGalleryPane.Actions`
@@ -94,7 +102,9 @@ honest — the prototype does exist — and it self-corrects.
     - `PrototypeCardActions` ← `apps.prototypes.gallery`
   - Contributes:
     - `Pane.Register` "prototypes-gallery"
+    - `prototypeDetailPane.Actions` "pin" → `PinHeaderAction`
     - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
+    - `PrototypeCardActions` "pin" → `PinCardAction`
     - `PrototypeCardActions` "done" → `DoneCardAction`
   - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×4
@@ -119,7 +129,7 @@ honest — the prototype does exist — and it self-corrects.
     - `newPrototypePrompt`
     - `PrototypeCardActions`
     - `prototypesGalleryPane`
-    - `useSetPrototypeDone`
+    - `useSetPrototypeStatus`
 - Cross-plugin:
   - Imported by: `apps/home/app-cards`
 

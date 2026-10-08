@@ -1,4 +1,4 @@
-// @hash 1cc1ddb37eac
+// @hash 11df3c8abebc
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
     "apps.prototypes.canvas:layout",
     "apps.prototypes.canvas:add",
     "apps.prototypes.copy-id:copy-id",
+    "apps.prototypes.gallery:pin",
     "apps.prototypes.gallery:done",
     "apps.prototypes.present:open-canvas",
     "primitives.pane:title"

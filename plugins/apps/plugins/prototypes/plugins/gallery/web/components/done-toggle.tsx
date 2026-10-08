@@ -1,16 +1,15 @@
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import {
   prototypeStatuses,
-  setPrototypeStatus,
   statusOf,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { usePrototypeDetail } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { PrototypeGalleryRow } from "../slots";
+import { useSetPrototypeStatus } from "./set-status";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const checkBoxIcon = symbol("check-box");
@@ -18,24 +17,8 @@ const checkBoxOutlineBlankIcon = symbol("check-box-outline-blank");
 const checkCircleIcon = symbol("check-circle");
 const radioButtonUncheckedIcon = symbol("radio-button-unchecked");
 
-// Marking a prototype Done: one shared record per prototype (`files`'
-// `prototypes.statuses`, `_status/<id>.json`), toggled from the gallery card and
-// from the detail pane's header. A failed write surfaces through the endpoint
-// layer's global error toast; the checkbox keeps showing the stored value, since
-// it reads the live value the server re-broadcasts on every write.
-
-/** Set one prototype's Done flag. */
-export function useSetPrototypeDone(): {
-  pending: boolean;
-  setDone: (name: string, done: boolean) => void;
-} {
-  const mutation = useEndpointMutation(setPrototypeStatus);
-  return {
-    pending: mutation.isPending,
-    setDone: (name: string, done: boolean) =>
-      mutation.mutate({ params: { name }, body: { done } }),
-  };
-}
+// Marking a prototype Done — one field of its shared status record
+// (`set-status.ts`).
 
 /**
  * The card's at-rest checkbox (a `persistent` item action, so it is painted in
@@ -43,7 +26,7 @@ export function useSetPrototypeDone(): {
  * the gallery joins the statuses onto the list before it renders.
  */
 export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
-  const { pending, setDone } = useSetPrototypeDone();
+  const { pending, setStatus } = useSetPrototypeStatus();
   return (
     <ControlSizeProvider size="sm">
       <IconButton
@@ -56,7 +39,7 @@ export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
         onClick={(e) => {
           // The card's own click opens the prototype; ticking it must not.
           e.stopPropagation();
-          setDone(row.name, !row.done);
+          setStatus(row.name, { done: !row.done });
         }}
       />
     </ControlSizeProvider>
@@ -72,7 +55,7 @@ export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
 export function DoneHeaderAction() {
   const { name } = usePrototypeDetail();
   const statuses = useLive(prototypeStatuses);
-  const { pending, setDone } = useSetPrototypeDone();
+  const { pending, setStatus } = useSetPrototypeStatus();
   if (statuses.status === "loading") {
     return (
       <IconButton
@@ -101,7 +84,7 @@ export function DoneHeaderAction() {
       aria-pressed={done}
       loading={pending}
       className={done ? "text-success" : undefined}
-      onClick={() => setDone(name, !done)}
+      onClick={() => setStatus(name, { done: !done })}
     />
   );
 }

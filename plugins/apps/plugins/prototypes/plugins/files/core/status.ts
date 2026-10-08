@@ -3,30 +3,42 @@ import { liveValue } from "@plugins/network/plugins/live/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
-// The wire half of a prototype's status: whether the user has marked it Done.
+// The wire half of a prototype's status: whether the user has marked it Done,
+// and whether they pinned it (the gallery's Pinned section, above the rest).
 // ONE record per prototype, shared by every surface (main, every worktree
 // deploy, every browser, the CLI), stored beside the picks as
 // `_status/<id>.json` (`shared/status.ts`). Like the picks, it is about the
 // prototype, not part of its design, so it never enters the folder.
 
-/** A prototype's status as STORED. No file is `{ done: false }`. */
+/** A prototype's status as STORED. No file is `{ done: false, pinned: false }`. */
 export interface PrototypeStatus {
   /** The user has marked this prototype Done. */
   readonly done: boolean;
+  /** The user has pinned this prototype — grouped above the rest in the gallery. */
+  readonly pinned: boolean;
 }
 
 export const PrototypeStatusSchema = z.object({
-  done: z.boolean(),
+  done: z.boolean().default(false),
+  // Files written before pins existed hold `done` alone: not pinned.
+  pinned: z.boolean().default(false),
 }) satisfies ZodParser<PrototypeStatus>;
 
 /** The status of a prototype that has none recorded. */
-export const NO_PROTOTYPE_STATUS: PrototypeStatus = { done: false };
+export const NO_PROTOTYPE_STATUS: PrototypeStatus = {
+  done: false,
+  pinned: false,
+};
 
 /**
- * One change to a prototype's status. A field per change (only `done` today),
- * never the whole record, so a later field set elsewhere cannot be clobbered.
+ * One change to a prototype's status: the fields it sets, never the whole
+ * record, so ticking Done cannot clobber a pin set elsewhere (and vice versa).
  */
-export const PrototypeStatusChangeSchema = z.object({ done: z.boolean() });
+export const PrototypeStatusChangeSchema = z
+  .object({ done: z.boolean().optional(), pinned: z.boolean().optional() })
+  .refine((c) => c.done !== undefined || c.pinned !== undefined, {
+    message: "a status change sets `done`, `pinned`, or both",
+  });
 export type PrototypeStatusChange = z.infer<typeof PrototypeStatusChangeSchema>;
 
 /** `status` with `change` applied — the one fold. */
@@ -34,7 +46,10 @@ export function applyPrototypeStatusChange(
   status: PrototypeStatus,
   change: PrototypeStatusChange,
 ): PrototypeStatus {
-  return { ...status, done: change.done };
+  return {
+    done: change.done ?? status.done,
+    pinned: change.pinned ?? status.pinned,
+  };
 }
 
 /**
