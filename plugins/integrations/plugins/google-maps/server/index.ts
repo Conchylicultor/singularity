@@ -11,7 +11,7 @@ export { getMapsKey, type MapsKeyResult } from "./internal/key";
 
 export default {
   description:
-    "Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key + optional Map ID) as a live value, with its write/clear endpoints.",
+    "Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints.",
   contributions: [...mapsBrowserConfigServed.declare],
   register: [mapsBrowserConfigWatcher],
   httpRoutes: {

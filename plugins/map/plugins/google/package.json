@@ -1,9 +1,10 @@
 {
   "name": "@singularity/plugin-map-google",
-  "description": "Google Maps JavaScript API renderer for the map primitive: draws GeoMap overlays (AdvancedMarker pins, polylines, polygons) and gates itself on the Google Maps browser key.",
+  "description": "Google Maps JavaScript API renderer for the map primitive: draws GeoMap overlays (overlay pins, polylines, polygons) with Google's own places hidden and gates itself on the Google Maps browser key.",
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "@vis.gl/react-google-maps": "^1.10.1"
+    "@vis.gl/react-google-maps": "^1.10.1",
+    "@types/google.maps": "^3.66.4"
   }
 }

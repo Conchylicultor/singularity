@@ -11,16 +11,14 @@ import { liveValue } from "@plugins/network/plugins/live/core";
 export const BROWSER_KEY_PATTERN = /^AIza[0-9A-Za-z_-]{35}$/;
 
 /**
- * What the user submits: a browser key, and optionally a Map ID. An absent Map
- * ID means "use `DEMO_MAP_ID`" (the renderer's default) — never `""`, which
- * would reach Google as a real, invalid id.
+ * What the user submits: the browser key. There is no Map ID: the renderer
+ * styles the map inline, which Google only honours on a map without one.
  */
 export const MapsBrowserConfigInputSchema = z.object({
   browserKey: z
     .string()
     .trim()
     .regex(BROWSER_KEY_PATTERN, "Not a Google API key (expected AIza…)"),
-  mapId: z.string().trim().min(1).max(200).optional(),
 });
 export type MapsBrowserConfigInput = z.infer<
   typeof MapsBrowserConfigInputSchema
@@ -36,7 +34,6 @@ export const MapsBrowserConfigValueSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("set"),
     browserKey: z.string(),
-    mapId: z.string().nullable(),
   }),
 ]);
 export type MapsBrowserConfigValue = z.infer<

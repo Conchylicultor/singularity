@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   APIProvider,
-  AdvancedMarker,
   Map as GoogleMap,
   Polygon,
   Polyline,
@@ -32,12 +31,24 @@ import {
 } from "../internal/tone-colors";
 import { MapErrorCard } from "./map-error-card";
 import { GOOGLE_COLOR_SCHEME, GOOGLE_TILES } from "../internal/tiles";
+import { OverlayPin } from "./overlay-pin";
 
 /**
- * Google's shared demo style: Advanced Markers need SOME map id, and this one
- * works for any key until the user sets a cloud-styled map id of their own.
+ * Google's own places (shops, museums, restaurants, parks' names) are hidden:
+ * on a map whose content is the user's pins, they read as more pins and crowd
+ * the real ones out. Streets, districts and transit stay as context, and parks
+ * keep their green.
+ *
+ * Inline styles only apply to a map WITHOUT a Map ID, which is why pins are
+ * `OverlayPin`s rather than Advanced Markers.
  */
-const DEMO_MAP_ID = "DEMO_MAP_ID";
+const BASEMAP_STYLES: google.maps.MapTypeStyle[] = [
+  {
+    featureType: "poi",
+    elementType: "labels",
+    stylers: [{ visibility: "off" }],
+  },
+];
 /** Room kept around fitted overlays, so an edge pin's bubble is not clipped. */
 const FIT_PADDING_PX = 48;
 /** Stroke width when an overlay does not say. */
@@ -71,24 +82,17 @@ export function GoogleMapRenderer(props: MapRendererProps) {
         </Center>
       );
     case "set":
-      return (
-        <GoogleMapCanvas
-          {...props}
-          browserKey={config.browserKey}
-          mapId={config.mapId}
-        />
-      );
+      return <GoogleMapCanvas {...props} browserKey={config.browserKey} />;
   }
 }
 
 function GoogleMapCanvas({
   browserKey,
-  mapId,
   overlays,
   renderPin,
   onActivate,
   activeId,
-}: MapRendererProps & { browserKey: string; mapId: string | null }) {
+}: MapRendererProps & { browserKey: string }) {
   // Held in state, not a ref: the tone colours are read off this element, and
   // a ref cannot trigger the render that reads them.
   const [host, setHost] = useState<HTMLDivElement | null>(null);
@@ -121,7 +125,7 @@ function GoogleMapCanvas({
         }
       >
         <GoogleMap
-          mapId={mapId ?? DEMO_MAP_ID}
+          styles={BASEMAP_STYLES}
           colorScheme={GOOGLE_COLOR_SCHEME[GOOGLE_TILES]}
           defaultCenter={center}
           defaultZoom={initial.kind === "point" ? initial.zoom : 2}
@@ -198,16 +202,16 @@ function OverlayNode({
   switch (overlay.kind) {
     case "pin":
       return (
-        <AdvancedMarker
+        <OverlayPin
           position={overlay.position}
-          title={overlay.label}
+          label={overlay.label}
           // The active pin sits above its neighbours, so a grown bubble is
           // never half-hidden under the next one.
           zIndex={active ? 2 : 1}
-          onClick={() => onActivate(overlay.id)}
+          onActivate={() => onActivate(overlay.id)}
         >
           {renderPin(overlay, active)}
-        </AdvancedMarker>
+        </OverlayPin>
       );
     case "path":
       return <PathNode path={overlay} colors={colors} />;

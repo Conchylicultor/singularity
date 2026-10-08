@@ -3646,6 +3646,7 @@
       "name": "@singularity/plugin-map-google",
       "version": "0.0.1",
       "dependencies": {
+        "@types/google.maps": "^3.66.4",
         "@vis.gl/react-google-maps": "^1.10.1",
       },
     },

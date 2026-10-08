@@ -7,7 +7,7 @@ import { liveMapSetupPane } from "../panes";
 
 /**
  * The "set up the live map" affordance for the `"map"` capability: opens the
- * Live map setup pane (browser key + Map ID). The map's only prerequisite is
+ * Live map setup pane (browser key). The map's only prerequisite is
  * the browser key — the Places key is irrelevant to drawing a map — so this
  * never routes to the Places wizard.
  *

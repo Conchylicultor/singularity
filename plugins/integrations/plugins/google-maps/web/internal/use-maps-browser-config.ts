@@ -12,7 +12,7 @@ export type MapsBrowserConfigState =
   | { kind: "loading" }
   | { kind: "error"; error: ResourceError; refetch: () => Promise<void> }
   | { kind: "unset" }
-  | { kind: "set"; browserKey: string; mapId: string | null };
+  | { kind: "set"; browserKey: string };
 
 export function useMapsBrowserConfig(): MapsBrowserConfigState {
   const result = useLive(mapsBrowserConfig);

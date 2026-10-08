@@ -22343,7 +22343,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `GMAIL_SCOPES`
           - `GOOGLE_PROVIDER_ID`
-    - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane. Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key + optional Map ID) as a live value, with its write/clear endpoints.
+    - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane. Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints.
       - Web:
         - Slots: `google-maps-live-map-setup.actions`
         - Slot contributors: `google-maps-live-map-setup.actions` ← `primitives.pane`
@@ -22753,7 +22753,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `positionsKey`
       - `SINGLE_POINT_ZOOM`
   - Plugins:
-    - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as AdvancedMarkers holding each pin's contributed content, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them only when the set of positions changes, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Lazily loaded off the boot wave.
+    - **`google`** — Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them only when the set of positions changes, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Lazily loaded off the boot wave.
       - Web:
         - Contributes: `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
         - Uses:

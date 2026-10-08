@@ -35,8 +35,8 @@ const CONSOLE = "https://console.cloud.google.com";
 const LOCAL_REFERRER = "http://*.localhost:9000/*";
 
 /**
- * Guided setup for the live map's public browser key (Maps JavaScript API) and
- * optional Map ID. Separate from the Places key wizard on purpose: that key is
+ * Guided setup for the live map's public browser key (Maps JavaScript API).
+ * Separate from the Places key wizard on purpose: that key is
  * server-only and must never be restricted to referrers, this one must be.
  */
 export function LiveMapSetupPane() {
@@ -64,36 +64,26 @@ function LiveMapSetupSteps({
 }) {
   const saved = config.kind === "set";
   // A draft only exists once the user types; until then the inputs show what is
-  // stored (the key is public config, so showing it back is fine), so changing
-  // just the Map ID does not mean re-pasting the key.
+  // stored (the key is public config, so showing it back is fine).
   const [keyDraft, setKeyDraft] = useState<string | null>(null);
-  const [mapIdDraft, setMapIdDraft] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const keyValue = keyDraft ?? (saved ? config.browserKey : "");
-  const mapIdValue = mapIdDraft ?? (saved ? (config.mapId ?? "") : "");
   const trimmedKey = keyValue.trim();
   const keyValid = BROWSER_KEY_PATTERN.test(trimmedKey);
-  const dirty = keyDraft !== null || mapIdDraft !== null;
+  const dirty = keyDraft !== null;
 
   const stepState: StepState = saved ? "done" : "active";
 
   async function handleSave() {
     setSaveError(null);
-    const mapId = mapIdValue.trim();
     try {
       await fetchEndpoint(
         setMapsBrowserConfig,
         {},
-        {
-          body: {
-            browserKey: trimmedKey,
-            ...(mapId ? { mapId } : {}),
-          },
-        },
+        { body: { browserKey: trimmedKey } },
       );
       setKeyDraft(null);
-      setMapIdDraft(null);
     } catch (err) {
       setSaveError(getEndpointErrorMessage(err));
     }
@@ -104,7 +94,6 @@ function LiveMapSetupSteps({
     try {
       await fetchEndpoint(clearMapsBrowserConfig, {});
       setKeyDraft(null);
-      setMapIdDraft(null);
     } catch (err) {
       setSaveError(getEndpointErrorMessage(err));
     }
@@ -114,10 +103,7 @@ function LiveMapSetupSteps({
     <Stack gap="xl" className="p-lg max-w-lg">
       <Stack gap="xs">
         {saved ? (
-          <StepDone>
-            Browser key saved
-            {config.mapId ? ` · Map ID ${config.mapId}` : " · demo Map ID"}
-          </StepDone>
+          <StepDone>Browser key saved</StepDone>
         ) : (
           <Text as="p" variant="caption" className="text-muted-foreground">
             No browser key on this machine yet. The live map is drawn in your
@@ -187,21 +173,6 @@ function LiveMapSetupSteps({
               Nothing is checked here: a referrer-restricted key can only be
               verified by a real page, so a wrong key shows up as an error on
               the map itself.
-            </StepNote>
-          </Stack>
-        </Step>
-
-        <Step title="Map ID (optional)" state={stepState}>
-          <Stack gap="sm">
-            <StepLink href={`${CONSOLE}/google/maps-apis/studio/maps`} />
-            <Input
-              placeholder="DEMO_MAP_ID"
-              value={mapIdValue}
-              onChange={(e) => setMapIdDraft(e.target.value)}
-            />
-            <StepNote>
-              Until you set one, the map uses Google&apos;s DEMO_MAP_ID. Create
-              your own Map ID to apply a cloud map style.
             </StepNote>
           </Stack>
         </Step>

@@ -20,8 +20,9 @@ for the other:
   by design: it is restricted to HTTP referrers (`http://*.localhost:9000/*`
   plus any published domain) and to the Maps JavaScript API only, and its
   spend is bounded by a daily quota. Setup: this plugin's **Live map** pane
-  (`settings/accounts/google-maps/live-map`), with an optional Map ID
-  (`DEMO_MAP_ID` until set; a real one is needed for cloud styling).
+  (`settings/accounts/google-maps/live-map`). There is no Map ID: the
+  renderer hides Google's own places with an inline map style, which Google
+  ignores on a map that has one.
 
 The same split holds for a hosted deployment: one operator browser key
 restricted to the hosted domain, and the expensive Places calls kept proxied
@@ -30,7 +31,7 @@ and rate-limitable on the server.
 ### Where the browser config lives, and why
 
 A host-global JSON file, `state/google-maps/browser-config.json`
-(`{ browserKey, mapId? }`), declared in `data-dirs/`. Shared by every checkout
+(`{ browserKey }`), declared in `data-dirs/`. Shared by every checkout
 — main and every agent worktree — exactly like the Places key. The
 alternatives each fail one way:
 
@@ -77,7 +78,7 @@ Google adapter, the live map renderer) go through it and **never** import
     prerequisite. `"not-configured"` arises only for `"places"`,
     `"no-browser-key"` only for `"map"`. Pending is `loading`, never a blocker.
   - `useMapsBrowserConfig(): MapsBrowserConfigState` — `loading` / `unset` /
-    `set { browserKey, mapId | null }`, for the renderer.
+    `set { browserKey }`, for the renderer.
   - `MapsAccessAction` — opens the Places setup wizard, or `null` when Places
     is ready. `MapsMapAccessAction` — opens the Live map pane, or `null` when
     the map is ready. A Maps surface that cannot work renders the matching one
@@ -105,7 +106,7 @@ over:
 
 ## Plugin reference
 
-- Description: Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane. Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key + optional Map ID) as a live value, with its write/clear endpoints.
+- Description: Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane. Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints.
 - Web:
   - Slots: `google-maps-live-map-setup.actions`
   - Slot contributors: `google-maps-live-map-setup.actions` ← `primitives.pane`

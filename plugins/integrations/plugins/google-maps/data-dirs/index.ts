@@ -2,7 +2,7 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
 
 /**
  * The host-global Google Maps config: `browser-config.json`, the public browser
- * key (Maps JavaScript API) and optional Map ID the live map renders with.
+ * key (Maps JavaScript API) the live map renders with.
  *
  * Host-global rather than per namespace because the key is a property of the
  * user's Google Cloud project, not of a checkout: main and every agent worktree
@@ -15,7 +15,7 @@ export const googleMapsDir = defineDataDir({
   name: "google-maps",
   owner: "integrations/google-maps",
   description:
-    "browser-config.json — the public Maps JavaScript API browser key and optional Map ID the live map renders with, shared by every checkout",
+    "browser-config.json — the public Maps JavaScript API browser key the live map renders with, shared by every checkout",
   // The key was pasted by the user from their Google Cloud console and exists
   // nowhere else on this machine; deleting it silently turns every live map back
   // into a "set up Maps" prompt until they find it again.

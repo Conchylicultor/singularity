@@ -15,10 +15,11 @@ export const BROWSER_CONFIG_FILENAME = "browser-config.json";
 const configPath = (): string => googleMapsDir.file(BROWSER_CONFIG_FILENAME);
 
 // The on-disk shape. A hand-edited file that no longer parses throws from the
-// loader rather than reading as `unset` — a broken file is not "no key".
+// loader rather than reading as `unset` — a broken file is not "no key". A
+// `mapId` written by an older build is stripped on read, and dropped by the
+// next save.
 const StoredSchema = z.object({
   browserKey: z.string().min(1),
-  mapId: z.string().min(1).optional(),
 });
 
 export async function readBrowserConfig(): Promise<MapsBrowserConfigValue> {
@@ -32,11 +33,7 @@ export async function readBrowserConfig(): Promise<MapsBrowserConfigValue> {
     throw err;
   }
   const stored = StoredSchema.parse(JSON.parse(raw));
-  return {
-    kind: "set",
-    browserKey: stored.browserKey,
-    mapId: stored.mapId ?? null,
-  };
+  return { kind: "set", browserKey: stored.browserKey };
 }
 
 /**
