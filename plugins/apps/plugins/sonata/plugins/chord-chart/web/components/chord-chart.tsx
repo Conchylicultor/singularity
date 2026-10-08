@@ -125,8 +125,13 @@ function ChordChartInner({ score }: ChordChartProps) {
   // With the option on and lyrics in the score, each group's bars as rows
   // that start at a lyric line, the line printed under its row; otherwise
   // `null` and every group renders as one grid of its bars, as without the
-  // option.
-  const lines = useMemo(() => lyricLines(score), [score]);
+  // option. A line with no letters (an imported tab's chord-only line, its
+  // bars drawn as `|`) is not sung: the grid already shows its chords, so it
+  // neither breaks a row nor prints under one.
+  const lines = useMemo(
+    () => lyricLines(score).filter((l) => /\p{L}/u.test(l.data.text)),
+    [score],
+  );
   const rows = useMemo(
     () =>
       lyricsOn && lines.length > 0
