@@ -4,8 +4,11 @@ import { selectionRange } from "@plugins/primitives/plugins/dom/plugins/dom-sele
 /** A finished text selection inside the transcript, and what to anchor a surface to. */
 export interface TranscriptSelection {
   text: string;
-  /** The live range's box, read on every reposition so the surface follows a scroll. */
-  anchor: { getBoundingClientRect: () => DOMRect };
+  /**
+   * The live range's box, read on every reposition, in the transcript's
+   * scroller (`contextElement`) so the surface follows that scroller's scroll.
+   */
+  anchor: { getBoundingClientRect: () => DOMRect; contextElement: Element };
 }
 
 /**
@@ -54,7 +57,9 @@ function rowKeysWithSelectedText(range: Range, scope: HTMLElement): string[] {
  * The document selection's part inside `root`, when every row it selects
  * text in is one `accepts` takes — else null. Settles on release: while a pointer is
  * down the selection is still being made, so nothing is reported until it
- * comes up (a keyboard selection reports as it changes).
+ * comes up (a keyboard selection reports as it changes). Scrolling the
+ * transcript hides it until the scroll ends, when it is read again where the
+ * selection now sits.
  */
 export function useTranscriptSelection(
   root: HTMLElement | null,
@@ -78,7 +83,10 @@ export function useTranscriptSelection(
       if (!text) return setSelection(null);
       setSelection({
         text,
-        anchor: { getBoundingClientRect: () => range.getBoundingClientRect() },
+        anchor: {
+          getBoundingClientRect: () => range.getBoundingClientRect(),
+          contextElement: scope,
+        },
       });
     }
     function onSelectionChange() {
@@ -91,14 +99,21 @@ export function useTranscriptSelection(
       pointerDown = false;
       read();
     }
+    function onScroll() {
+      setSelection(null);
+    }
 
     document.addEventListener("selectionchange", onSelectionChange);
     document.addEventListener("pointerdown", onPointerDown, true);
     document.addEventListener("pointerup", onPointerUp, true);
+    scope.addEventListener("scroll", onScroll, { passive: true });
+    scope.addEventListener("scrollend", read);
     return () => {
       document.removeEventListener("selectionchange", onSelectionChange);
       document.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("pointerup", onPointerUp, true);
+      scope.removeEventListener("scroll", onScroll);
+      scope.removeEventListener("scrollend", read);
     };
   }, [root, accepts]);
 

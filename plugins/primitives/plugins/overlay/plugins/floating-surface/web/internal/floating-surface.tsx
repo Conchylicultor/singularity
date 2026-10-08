@@ -45,8 +45,19 @@ import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewpor
  * only scans `className` strings) — no eslint-disable anywhere.
  */
 
-/** Caret/selection rect, or any object exposing one (a Floating UI virtual element). */
-export type FloatingAnchor = DOMRect | { getBoundingClientRect: () => DOMRect };
+/**
+ * Caret/selection rect, or any object exposing one (a Floating UI virtual element).
+ * A virtual element names the DOM node it lives in as `contextElement`, so
+ * `autoUpdate` follows the scroll of that node's scroll containers — without it,
+ * only the window's scroll is followed, and an anchor inside a scrolling pane
+ * leaves the surface behind.
+ */
+export type FloatingAnchor = DOMRect | VirtualAnchor;
+
+interface VirtualAnchor {
+  getBoundingClientRect: () => DOMRect;
+  contextElement?: Element;
+}
 
 export interface FloatingSurfaceProps {
   /** Whether the surface is shown. Returns `null` when false (or `anchor` is null). */
@@ -81,9 +92,7 @@ export interface FloatingSurfaceProps {
 }
 
 /** A DOMRect anchor is wrapped into a virtual element; a virtual element passes through. */
-function toVirtualElement(anchor: FloatingAnchor): {
-  getBoundingClientRect: () => DOMRect;
-} {
+function toVirtualElement(anchor: FloatingAnchor): VirtualAnchor {
   if (anchor instanceof DOMRect) {
     return { getBoundingClientRect: () => anchor };
   }
