@@ -929,7 +929,13 @@ no switcher. The Pages sidebar is the reference.
   line of its `⋯` panel.
 - **`selectedRowId` stays surface-level.** It highlights the row in EVERY
   section that shows it — a starred page is selected in Favorites and in the
-  tree at once, as in Notion.
+  tree at once, as in Notion. **The reveal is not**: the sections body records
+  which section a row was activated in (`beforeOpen`, so the record lands with
+  the navigation), and every OTHER section gets
+  `DataViewRenderProps.revealSelection: false` for that row — the tree neither
+  expands to a favourite clicked above it nor scrolls the sidebar away from the
+  click. A selection arriving from outside (a link, a deep link) still reveals
+  everywhere; the tree's own clicks and arrow keys still reveal in the tree.
 - `title` / `actions` / `pinnedView` are type errors beside it (no band; a
   pinned surface has one instance). `MergedDataView` takes
   `DataViewActiveChrome`, the union without this arm, so it cannot be spelled

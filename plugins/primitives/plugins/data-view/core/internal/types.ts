@@ -837,6 +837,15 @@ export interface DataViewRenderProps<TRow> {
   onRowOpen?: (row: TRow) => void;
   /** Currently-selected row id (tree highlight + auto-expand-to-selected). */
   selectedRowId?: string;
+  /**
+   * Whether this view should bring `selectedRowId` into view (expand its
+   * ancestors, scroll to it). `false` when the selection was made by clicking
+   * the row in ANOTHER section of the same `sections` surface — a starred page
+   * clicked in Favorites must not jerk the tree below to its place. The
+   * selection still highlights; only the reveal is withheld. Always `true`
+   * outside a `sections` surface.
+   */
+  revealSelection: boolean;
   /** viewOptions[activeViewId] — opaque to the host, typed by each view. */
   options: unknown;
   /** Custom search accessor; each view passes it into its own `useFlatRows`. */

@@ -38,6 +38,7 @@ afterEach(cleanup);
 
 function renderTable(setSort: (fieldId: string) => void) {
   const props: DataViewRenderProps<Row> = {
+    revealSelection: true,
     rows: [{ id: "1", name: "alpha", url: "https://a" }],
     fields: FIELDS,
     rowKey: (r) => r.id,

@@ -62,6 +62,7 @@ function renderIcons(
   over: Partial<DataViewRenderProps<Row>> = {},
 ) {
   const props: DataViewRenderProps<Row> = {
+    revealSelection: true,
     rows: ROWS,
     fields,
     rowKey: (r) => r.id,

@@ -65,7 +65,10 @@ import { DataViewToolbar } from "./toolbar/data-view-toolbar";
 import { HostedOptions } from "./toolbar/hosted-options";
 import { hostedCreators } from "./creators-control";
 import { ViewSection } from "./view-section";
-import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  beforeOpen,
+  type Activation,
+} from "@plugins/primitives/plugins/link-gesture/core";
 import {
   DataViewControlsProvider,
   type DataViewControlsContextValue,
@@ -119,6 +122,14 @@ export function DataViewSectionsBody<TRow>(
   },
 ): ReactNode {
   const { instances } = props;
+  // Which section the last row activation came from. A row can show in several
+  // sections at once (a starred page in Favorites AND in the tree), and the
+  // selection highlights in all of them — but only the section the user
+  // clicked in may reveal it. Without this, clicking a favourite made the tree
+  // below expand to the page and scroll the sidebar away from the click.
+  const [activatedIn, setActivatedIn] = useState<SectionActivation | null>(
+    null,
+  );
   return (
     <CollectBodyFields source={props}>
       {(fields, rowKeyOf) =>
@@ -129,6 +140,10 @@ export function DataViewSectionsBody<TRow>(
             activeInstance={instance}
             fields={fields as FieldDef<TRow>[]}
             rowKeyOf={rowKeyOf}
+            sectionActivation={{
+              last: activatedIn,
+              record: setActivatedIn,
+            }}
           />
         ))
       }
@@ -243,12 +258,24 @@ function liveRowKey<TRow>(
   return (row) => String((row as Record<string, unknown>)[id]);
 }
 
+/** A row activation made inside one section of a `sections` surface. */
+interface SectionActivation {
+  viewId: string;
+  rowKey: string;
+}
+
 /** All body hooks, unconditional — the only gate is the shell's placeholder
  *  early-return, which unmounts the whole body (a separate component). */
 function DataViewBodyInner<TRow>(
   props: DataViewBodyProps<TRow> & {
     /** The row key the origin implies (`rowKey`, or a live collection's id). */
     rowKeyOf: (row: TRow, index: number) => string;
+    /** Present only on a `sections` surface: the surface-wide record of which
+     *  section the last row activation came from. */
+    sectionActivation?: {
+      last: SectionActivation | null;
+      record: (activation: SectionActivation) => void;
+    };
   },
 ): ReactNode {
   const {
@@ -276,6 +303,7 @@ function DataViewBodyInner<TRow>(
     viewModel,
     activeInstance,
     chrome,
+    sectionActivation,
   } = props;
 
   // The schema is already fully merged: `props.fields` here arrives AFTER
@@ -329,10 +357,34 @@ function DataViewBodyInner<TRow>(
           "(per row), never both — they are two answers to one question.",
       );
     }
-    if (rowActivation) return rowActivation;
-    if (onRowActivate) return (row) => () => onRowActivate(row);
-    return undefined;
-  }, [rowActivation, onRowActivate]);
+    const base: ((row: TRow) => Activation | undefined) | undefined =
+      rowActivation ??
+      (onRowActivate ? (row) => () => onRowActivate(row) : undefined);
+    const record = sectionActivation?.record;
+    if (!base || !record) return base;
+    // `undefined` passes straight through: a non-activating row stays one.
+    return (row) => {
+      const activation = base(row);
+      return activation === undefined
+        ? undefined
+        : beforeOpen(activation, () =>
+            record({ viewId: activeViewId, rowKey: rowKey(row, 0) }),
+          );
+    };
+  }, [
+    rowActivation,
+    onRowActivate,
+    sectionActivation?.record,
+    activeViewId,
+    rowKey,
+  ]);
+  // Reveal the selection unless it was just activated in ANOTHER section.
+  const lastActivation = sectionActivation?.last;
+  const revealSelection = !(
+    lastActivation != null &&
+    lastActivation.viewId !== activeViewId &&
+    lastActivation.rowKey === selectedRowId
+  );
 
   // Computed here (not in the shell): `stateFor` mints a fresh object per call,
   // so the body reads it off the model itself and stays live on state writes.
@@ -695,6 +747,7 @@ function DataViewBodyInner<TRow>(
             resolveRowActivation as DataViewRenderProps<unknown>["rowActivation"],
           onRowOpen: onRowOpen as DataViewRenderProps<unknown>["onRowOpen"],
           selectedRowId,
+          revealSelection,
           options: mergedOptions,
           searchAccessor:
             searchAccessor as DataViewRenderProps<unknown>["searchAccessor"],

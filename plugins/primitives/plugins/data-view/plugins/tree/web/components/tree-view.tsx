@@ -719,6 +719,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     <TreeList<Projected<unknown>>
       rows={treeRows}
       selectedId={props.selectedRowId}
+      revealSelected={props.revealSelection}
       rootId={options.rootId}
       onSelect={(id) => {
         // A row created from the tree ("add child" / "add below") is activated

@@ -43,6 +43,7 @@ const ROW: Row = { id: "1", name: "alpha", status: "todo", when: "5m" };
 
 function renderList(options?: unknown) {
   const props: DataViewRenderProps<Row> = {
+    revealSelection: true,
     rows: [ROW],
     fields: FIELDS,
     rowKey: (r) => r.id,

@@ -88,6 +88,7 @@ function renderProps(
   options: DataViewRenderProps<Row>["options"],
 ): DataViewRenderProps<Row> {
   return {
+    revealSelection: true,
     rows: [{ id: "1", name: "alpha" }],
     fields,
     rowKey: (r) => r.id,

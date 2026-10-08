@@ -50,6 +50,8 @@ export type TreeListContextValue<T extends TreeItem> = {
    * view exactly once, while incidental row REmounts stay inert.
    */
   takeInitialReveal: () => boolean;
+  /** Whether the selected row scrolls itself into view (`TreeListProps.revealSelected`). */
+  revealSelected: boolean;
   /** Activating (body-clicking) a matching row toggles its expansion instead of
    *  selecting it (see `TreeListProps.expandOnActivate`). Absent → every row
    *  selects, today's behavior. */
@@ -239,7 +241,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
   // remount that happens to be already-selected (background live-state churn).
   // The one legitimate mount-reveal (a tree first appearing with a deep-linked
   // selection below the fold) is preserved via the per-instance one-shot.
-  const setRevealRef = useRevealOnActive(isSelected, {
+  const setRevealRef = useRevealOnActive(isSelected && ctx.revealSelected, {
     revealOnMount: ctx.takeInitialReveal,
   });
   const wrappedChildRef = useCallback(

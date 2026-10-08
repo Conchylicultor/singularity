@@ -46,6 +46,7 @@ afterEach(cleanup);
 describe("data-view table leading field", () => {
   it("renders the leading field as an ordinary column", () => {
     const props: DataViewRenderProps<Row> = {
+      revealSelection: true,
       rows: [{ id: "1", name: "alpha", glyph: "★" }],
       fields: FIELDS,
       rowKey: (r) => r.id,

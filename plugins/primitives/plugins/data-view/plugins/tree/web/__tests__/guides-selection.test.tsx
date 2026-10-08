@@ -62,6 +62,7 @@ function renderTree(
 ) {
   const { lazy, ...rest } = over;
   const props: DataViewRenderProps<Row> = {
+    revealSelection: true,
     rows: ROWS,
     fields,
     rowKey: (r) => r.id,

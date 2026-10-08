@@ -58,6 +58,13 @@ const ROW_ESTIMATE_PX = 32;
 export type TreeListProps<T extends TreeItem> = {
   rows: readonly T[];
   selectedId?: string;
+  /**
+   * Whether a change of `selectedId` brings the row into view — expanding its
+   * collapsed ancestors and scrolling to it. Default `true`. A host passes
+   * `false` when the selection was made somewhere the user can already see it
+   * (the same row clicked in a sibling list), so the tree keeps its place.
+   */
+  revealSelected?: boolean;
   rootId?: string;
   onSelect: (id: string) => void;
   /**
@@ -181,6 +188,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   const {
     rows,
     selectedId,
+    revealSelected = true,
     rootId,
     onSelect,
     selectHref,
@@ -326,12 +334,12 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     [keyboardRef],
   );
   const selectedIndex = useMemo(() => {
-    if (!windowed || !selectedId) return undefined;
+    if (!windowed || !selectedId || !revealSelected) return undefined;
     const i = flatVisible.findIndex(
       (f) => f.kind === "node" && f.node.id === selectedId,
     );
     return i >= 0 ? i : undefined;
-  }, [windowed, selectedId, flatVisible]);
+  }, [windowed, selectedId, revealSelected, flatVisible]);
 
   // The toolbar's whole-tree expand-all. Shared with the grouped tree view's
   // hoisted toolbar and its per-section header toggle, which hold row buckets
@@ -426,6 +434,8 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     const byId = new Map(rows.map((r) => [r.id, r]));
     if (!byId.has(selectedId)) return;
     lastRevealedId.current = selectedId;
+    // Selected where the user already sees it: leave the tree as it is.
+    if (!revealSelected) return;
     // Collect the whole collapsed-ancestor chain first, then write it ONCE —
     // the walk is one gesture, not one gesture per ancestor.
     const changes: ExpandChange[] = [];
@@ -439,7 +449,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     if (changes.length === 0) return;
     // reveal-on-select: expands the collapsed ancestors of selectedId in one batched call so the row is visible; `setExpanded` writes the host's expand map, so it is a controlled imperative side-effect, not derivable in render; the walk needs the full rows map and is gated idempotent by the lastRevealedId ref to avoid re-running
     void setExpanded(changes);
-  }, [selectedId, rows, setExpanded]);
+  }, [selectedId, revealSelected, rows, setExpanded]);
 
   const showSearchInput = !!toolbar?.search && !hideSearchInput;
   const hasToolbar = showExpandAll || !!toolbar?.start || showSearchInput;
@@ -460,6 +470,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       onCreate,
       Row,
       takeInitialReveal,
+      revealSelected,
       expandOnActivate,
       openOnActivate,
       lazyChildren,
@@ -484,6 +495,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       onCreate,
       Row,
       takeInitialReveal,
+      revealSelected,
       expandOnActivate,
       openOnActivate,
       lazyChildren,

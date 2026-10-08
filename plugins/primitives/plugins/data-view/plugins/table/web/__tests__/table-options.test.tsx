@@ -82,6 +82,7 @@ function renderTable(
   const { grouped = true, ...rest } = overrides;
   const setSort = vi.fn();
   const props: DataViewRenderProps<Row> = {
+    revealSelection: true,
     rows: ROWS,
     fields: FIELDS,
     rowKey: (r) => r.id,

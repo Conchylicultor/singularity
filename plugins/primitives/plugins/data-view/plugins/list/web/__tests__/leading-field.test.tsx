@@ -59,6 +59,7 @@ function renderList(
   opts: { visibleFields?: string[]; own?: boolean } = {},
 ) {
   const props: DataViewRenderProps<Row> = {
+    revealSelection: true,
     rows: [ROW],
     fields,
     rowKey: (r) => r.id,

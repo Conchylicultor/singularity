@@ -127,7 +127,10 @@ row the new listing put under the pointer.
 tempted to persist an `expanded` flag server-side just to force a parent open):
 
 - **Reveal-on-select** — when `selectedId` changes, every collapsed ancestor
-  expands, in one batched call, guarded idempotent by a `lastRevealedId` ref.
+  expands, in one batched call, guarded idempotent by a `lastRevealedId` ref,
+  and the row scrolls into view. `revealSelected={false}` withholds both (the
+  host knows the user picked the row somewhere they can already see it — a
+  sibling list); the row still highlights.
 - **Drag-reparent** — `onDragEnd` expands a collapsed destination parent in the
   same batch as the move. Without this the dragged row simply vanishes: a drag
   does not change `selectedId`, so reveal-on-select never fires.

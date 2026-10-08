@@ -29796,6 +29796,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `activationHref`
           - `afterOpen`
+          - `beforeOpen`
           - `runActivation`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel. useQueryResource / useInfiniteQueryResource read a plain TanStack query (e.g. a POST endpoint via fetchEndpoint) as a ResourceResult.
       - Web:

@@ -38,6 +38,7 @@ const ROWS: Row[] = [
 
 function renderList(rowTone?: (row: Row) => "default" | "muted") {
   const props: DataViewRenderProps<Row> = {
+    revealSelection: true,
     rows: ROWS,
     fields: FIELDS,
     rowKey: (r) => r.id,

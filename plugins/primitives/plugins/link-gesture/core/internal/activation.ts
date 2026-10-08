@@ -60,3 +60,28 @@ export function afterOpen(
     href: () => activation.href(),
   };
 }
+
+/**
+ * The same activation with `effect` run just BEFORE its plain open — for a
+ * record the destination's first render must already see (which list the pick
+ * was made in). A link stays a link with the same `href`; an "elsewhere"
+ * gesture does not run `effect`, since this tab does not navigate.
+ */
+export function beforeOpen(
+  activation: Activation,
+  effect: () => void,
+): Activation {
+  if (typeof activation === "function") {
+    return () => {
+      effect();
+      activation();
+    };
+  }
+  return {
+    open: () => {
+      effect();
+      activation.open();
+    },
+    href: () => activation.href(),
+  };
+}
