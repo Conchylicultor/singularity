@@ -91,6 +91,19 @@ Rules:
   when the rest of the URL then parses to nothing — but a URL whose next part
   belongs to a pane that has not loaded yet reads as the optional value. Change
   it from inside the pane with `pane.useSetParams()` (below), not a `swap`.
+- A **keyed** param `;name` — after the positional parts, any number of them:
+  `song/:songId/:bar?;view;zoom` — is the unbounded form of the same idea, for
+  when a pane has more than one view of its entity, or one beside an optional
+  `:param?`. Each is an optional key, written as a matrix parameter on the
+  pane's LAST URL part (`/song/abc/12;view=notation`), in declaration order,
+  only when supplied. Matrix rather than `?query`: in a multi-pane URL each part
+  belongs to one pane, so the key is scoped to the pane declaring it (a query
+  string is one bag every column would compete for), and it stays in the
+  pathname every routing consumer already carries. An undeclared key in the
+  address bar is dropped (the pane shows its default view, never a dead link);
+  a pane declaring no keyed params reads a raw `;` as text, as it always did.
+  Keyed params do not change a segment's collision shape and do not count
+  toward "paramful" (`useResolve`): they view an entity, never address one.
 - `useResolve` is required exactly when the route's own segment has a `:param`, and
   forbidden when it does not — a paramful pane must be able to say "no such
   entity". Opt out with `useResolve: false`. The key is `use`-named because its
@@ -263,7 +276,8 @@ bound-to-this-instance hook forms.
 `useSetParams()` rewrites THIS instance's own params in place: the URL changes
 (with a history entry per `chrome.history`), the instance does not — no remount,
 and the column keeps its collapse / maximize state, options and the panes to its
-right. Use it for an optional `:param?` view switch. Showing a different entity
+right. Use it for an optional `:param?` or keyed `;name` view switch. It replaces
+the instance's whole own param set, so pass the ones you keep. Showing a different entity
 is a `swap`, which mints a fresh instance so nothing of the old one leaks.
 
 ### `useOpenPane` — caller-aware navigation
@@ -1040,6 +1054,7 @@ See "Open questions" in the design doc.
 - Core:
   - Exports (types):
     - `AppRef`
+    - `PositionalRouteParams`
     - `RouteDef`
     - `RouteParams`
   - Exports (values):
@@ -1049,9 +1064,12 @@ See "Open questions" in the design doc.
     - `MissingRouteParamError`
     - `normalizeRoutePath`
     - `parseSegmentParts`
+    - `readKeyedParams`
+    - `segmentKeyedParamNames`
     - `segmentMatchPatterns`
     - `segmentParamNames`
     - `segmentRequiredParamNames`
+    - `splitKeyedPart`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/pane/web/testing`
     - `createTestSurfaceStore` — A surface store, bound as the live store so the imperative free functions and the module-level history listener agree with it.

@@ -76,6 +76,93 @@ export function usePlayerView(): PlayerView {
   return ctx;
 }
 
+/**
+ * The player's own display pick (`null` = none yet), below the resolved
+ * {@link PlayerView.displayId}. Internal: read only by
+ * {@link PlayerDisplayBinding}, which lays a host's pick (a URL param) over it.
+ */
+const DisplayPickContext = createContext<{
+  picked: string | null;
+  setPicked: (id: string | null) => void;
+} | null>(null);
+
+type DisplayItem = ReturnType<
+  typeof SonataPlayer.Display.useContributions
+>[number];
+
+/** The default-flagged display, else the first; `null` when none is contributed. */
+function defaultDisplayId(displays: readonly DisplayItem[]): string | null {
+  return (displays.find((d) => d.default) ?? displays[0])?.id ?? null;
+}
+
+/**
+ * The lens a pick shows: the pick when a display by that id is contributed,
+ * else the default. A pick is not always trustworthy — a URL can name a
+ * display that was removed, or whose plugin has not loaded yet — and either
+ * way the player shows a lens rather than nothing (and shows the named one the
+ * moment it arrives, since this is derived in render).
+ */
+function resolveDisplayId(
+  displays: readonly DisplayItem[],
+  picked: string | null,
+): string | null {
+  if (picked !== null && displays.some((d) => d.id === picked)) return picked;
+  return defaultDisplayId(displays);
+}
+
+/**
+ * Binds the player's display pick to a host-owned value — the song pane's
+ * `;view` URL param — for everything rendered inside it (the pane's header
+ * picker and its body's display), so the lens survives a reload, a bookmark or
+ * a shared link.
+ *
+ * `displayId` is the host's pick (`null`: the host names none). With none, the
+ * player's own pick shows through, so a lens chosen on one song stays up when
+ * the next one opens. A pick writes BOTH: the player's (for that carry-over)
+ * and the host's, through `onDisplayChange` — handed `null` for the default
+ * lens, so a host's address stays bare in the default case.
+ */
+export function PlayerDisplayBinding({
+  displayId: boundId,
+  onDisplayChange,
+  children,
+}: {
+  displayId: string | null;
+  onDisplayChange: (id: string | null) => void;
+  children: ReactNode;
+}) {
+  const outer = usePlayerView();
+  const pick = useContext(DisplayPickContext);
+  if (!pick) {
+    throw new Error(
+      "PlayerDisplayBinding must be used within <SonataPlayerScope>",
+    );
+  }
+  const { picked, setPicked } = pick;
+  const displays = SonataPlayer.Display.useContributions();
+  const displayId = resolveDisplayId(displays, boundId ?? picked);
+  const fallbackId = defaultDisplayId(displays);
+  const onChangeRef = useLatestRef(onDisplayChange);
+
+  const setDisplay = useCallback(
+    (id: string | null) => {
+      setPicked(id);
+      onChangeRef.current(id === fallbackId ? null : id);
+    },
+    [setPicked, fallbackId],
+  );
+
+  const value = useMemo<PlayerView>(
+    () => ({ ...outer, displayId, setDisplay }),
+    [outer, displayId, setDisplay],
+  );
+  return (
+    <PlayerViewContext.Provider value={value}>
+      {children}
+    </PlayerViewContext.Provider>
+  );
+}
+
 /** Mark-shown registration, separate from {@link PlayerView} so only the
  *  player's own `PlayerDisplay` marks it (not on the barrel). */
 const MarkShownContext = createContext<(() => () => void) | null>(null);
@@ -98,10 +185,7 @@ export function PlayerViewProvider({ children }: { children: ReactNode }) {
   // The effective lens is derived in render, not mirrored into state, so there
   // is never a frame where no lens is selected.
   const [pickedDisplayId, setPickedDisplayId] = useState<string | null>(null);
-  const displayId =
-    pickedDisplayId ??
-    (displays.find((d) => d.default) ?? displays[0])?.id ??
-    null;
+  const displayId = resolveDisplayId(displays, pickedDisplayId);
 
   // Seeded from pianoRollConfig.spread by the display on load; the 1 here is a
   // pre-seed placeholder for the brief first frame.
@@ -160,11 +244,18 @@ export function PlayerViewProvider({ children }: { children: ReactNode }) {
     [displayId, effectiveSpread, spreadMin, setSpread, setSpreadFloor, shown],
   );
 
+  const pick = useMemo(
+    () => ({ picked: pickedDisplayId, setPicked: setPickedDisplayId }),
+    [pickedDisplayId],
+  );
+
   return (
     <MarkShownContext.Provider value={markShown}>
-      <PlayerViewContext.Provider value={value}>
-        {children}
-      </PlayerViewContext.Provider>
+      <DisplayPickContext.Provider value={pick}>
+        <PlayerViewContext.Provider value={value}>
+          {children}
+        </PlayerViewContext.Provider>
+      </DisplayPickContext.Provider>
     </MarkShownContext.Provider>
   );
 }

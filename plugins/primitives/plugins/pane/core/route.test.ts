@@ -4,7 +4,9 @@ import {
   defineRoute,
   MissingRouteParamError,
   normalizeRoutePath,
+  readKeyedParams,
   segmentMatchPatterns,
+  splitKeyedPart,
 } from "./route";
 
 const agents = defineApp({
@@ -168,6 +170,61 @@ describe("an optional :param?", () => {
     ]);
     expect(segmentMatchPatterns("f/:path*")).toEqual(["f/:*"]);
     expect(segmentMatchPatterns("t/:taskId")).toEqual(["t/:"]);
+  });
+});
+
+describe("keyed params (`;name`)", () => {
+  const song = defineRoute({
+    id: "kp-song",
+    segment: "song/:songId/:bar?;view",
+  });
+
+  test("are optional keys, written on the pane's last URL part", () => {
+    expect(song.path({ songId: "a" })).toBe("/song/a");
+    expect(song.path({ songId: "a", view: "notation" })).toBe(
+      "/song/a;view=notation",
+    );
+    expect(song.path({ songId: "a", bar: "12", view: "notation" })).toBe(
+      "/song/a/12;view=notation",
+    );
+  });
+
+  test("have one spelling: declaration order, values encoded", () => {
+    const r = defineRoute({ id: "kp-two", segment: "t/:id;b;a" });
+    expect(r.path({ id: "x", a: "1", b: "x;y=z" })).toBe(
+      "/t/x;b=x%3By%3Dz;a=1",
+    );
+  });
+
+  test("read back only the declared names", () => {
+    expect(readKeyedParams("view=notation;stale=1;junk", ["view"])).toEqual({
+      view: "notation",
+    });
+    expect(readKeyedParams("b=x%3By%3Dz", ["b"])).toEqual({ b: "x;y=z" });
+    expect(splitKeyedPart("12;view=a")).toEqual({
+      base: "12",
+      keyed: "view=a",
+    });
+    expect(splitKeyedPart("12")).toEqual({ base: "12", keyed: null });
+  });
+
+  test("do not change a segment's URL shape", () => {
+    expect(segmentMatchPatterns("song/:songId/:bar?;view")).toEqual([
+      "song/:",
+      "song/:/:",
+    ]);
+  });
+
+  test("reject a malformed declaration", () => {
+    expect(() =>
+      defineRoute({ id: "kp-dup", segment: "t/:view;view" }),
+    ).toThrow(/declared twice/);
+    expect(() => defineRoute({ id: "kp-bad", segment: "t;a-b" })).toThrow(
+      /not an identifier/,
+    );
+    expect(() => defineRoute({ id: "kp-empty", segment: ";view" })).toThrow(
+      /URL part/,
+    );
   });
 });
 

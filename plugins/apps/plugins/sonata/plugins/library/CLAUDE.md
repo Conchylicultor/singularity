@@ -11,7 +11,13 @@ them without a `shell → library` import that would cycle with the existing
 - `sonataLibraryPane` — index pane at bare `/sonata` (`appIndex: true`,
   standard chrome titled "Library"). Renders the gallery via
   `Sonata.Home` inside `PaneChrome`.
-- `sonataPlayerPane` — player pane at `/sonata/song/:songId`. Its own header
+- `sonataPlayerPane` — player pane at `/sonata/song/:songId;bar;view`. Both
+  are keyed (named) views of the song, absent by default: `;bar=12` opens it
+  with the playhead at that bar (`sonataSongLink(id, bar)`), and `;view` is the
+  display lens (`…;view=notation`, absent for the default lens) — the surface
+  wraps its chrome in the player's `PlayerDisplayBinding`, so the header's
+  display switcher writes it in place and a reload, bookmark or shared link
+  reopens the same lens. Its own header
   slot (`sonataPlayerPane.Actions`) IS the player's header — ← Library, the song
   title as the pane's title item, then the tools: the speed wheel, metronome,
   transpose, volume, the spread (zoom) wheel and, far right, the display
@@ -184,12 +190,12 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses: 61 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 62 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×10
     - `primitives/css/ui-kit` ×6
     - `primitives/data-view` ×6
+    - `apps/sonata/player` ×5
     - `apps/sonata/document` ×4
-    - `apps/sonata/player` ×4
     - `network/live` ×4
     - `apps/sonata/shell` ×3
     - `primitives/css/spacing` ×2

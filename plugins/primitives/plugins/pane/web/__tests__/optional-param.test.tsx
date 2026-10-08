@@ -81,6 +81,25 @@ const convPane = Pane.define({
   component: () => null,
 });
 
+/** Keyed `;view`: a view of the song, beside the positional optional bar. */
+const songRoute = defineRoute({
+  id: "opt-song",
+  segment: "song/:id/:bar?;view",
+});
+const songPane = Pane.define({
+  route: songRoute,
+  app: optApp,
+  useResolve: false,
+  component: () => null,
+});
+/** Keyed params alone address no entity, so no `useResolve` is asked for. */
+const listRoute = defineRoute({ id: "opt-list", segment: "list;filter" });
+const listPane = Pane.define({
+  route: listRoute,
+  app: optApp,
+  component: () => null,
+});
+
 const plugins = [
   {
     id: "optional-param-test-plugin",
@@ -91,6 +110,8 @@ const plugins = [
       Pane.Register({ pane: shortPane }),
       Pane.Register({ pane: longPane }),
       Pane.Register({ pane: convPane }),
+      Pane.Register({ pane: songPane }),
+      Pane.Register({ pane: listPane }),
     ],
   } as unknown as LoadedPlugin,
 ];
@@ -241,5 +262,54 @@ describe("useSetParams", () => {
         </TestSurface>,
       ),
     ).toThrow(/outside a pane instance/);
+  });
+});
+
+describe("keyed `;name` params", () => {
+  it("parse off the pane's last part, beside the positional ones", () => {
+    expect(parsed("/song/a")).toEqual([["opt-song", { id: "a" }]]);
+    expect(parsed("/song/a;view=notation")).toEqual([
+      ["opt-song", { id: "a", view: "notation" }],
+    ]);
+    expect(parsed("/song/a/3;view=notation")).toEqual([
+      ["opt-song", { id: "a", bar: "3", view: "notation" }],
+    ]);
+    expect(parsed("/list;filter=open")).toEqual([
+      ["opt-list", { filter: "open" }],
+    ]);
+  });
+
+  it("stay scoped to their pane in a multi-pane URL", () => {
+    expect(parsed("/song/a;view=notation/kid/7")).toEqual([
+      ["opt-song", { id: "a", view: "notation" }],
+      ["opt-kid", { id: "7" }],
+    ]);
+  });
+
+  it("drop an undeclared key rather than making the URL unroutable", () => {
+    expect(parsed("/song/a;stale=1")).toEqual([["opt-song", { id: "a" }]]);
+  });
+
+  it("are not read off a part before the pane's last", () => {
+    // `fillSegment` never writes `/song/a;view=n/3` — the bar arm rejects it,
+    // and without the bar the trailing `3` matches no pane.
+    expect(parsed("/song/a;view=n/3")).toBe("unresolved");
+  });
+
+  it("leave a pane that declares none reading `;` as plain text", () => {
+    expect(parsed("/c/a;b=1")).toEqual([["opt-conv", { convId: "a;b=1" }]]);
+  });
+
+  it("round-trip through the builder", () => {
+    store.restoreRoute([
+      { paneId: "opt-song", params: { id: "a", bar: "3", view: "notation" } },
+      { paneId: "opt-kid", params: { id: "7" } },
+    ]);
+    const url = buildRouteUrl(store.getRoute());
+    expect(url).toBe("/song/a/3;view=notation/kid/7");
+    expect(parsed(url)).toEqual([
+      ["opt-song", { id: "a", bar: "3", view: "notation" }],
+      ["opt-kid", { id: "7" }],
+    ]);
   });
 });

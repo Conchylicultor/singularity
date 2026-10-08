@@ -4733,12 +4733,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
-            - Uses: 61 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses: 62 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `primitives/pane` ×10
               - `primitives/css/ui-kit` ×6
               - `primitives/data-view` ×6
+              - `apps/sonata/player` ×5
               - `apps/sonata/document` ×4
-              - `apps/sonata/player` ×4
               - `network/live` ×4
               - `apps/sonata/shell` ×3
               - `primitives/css/spacing` ×2
@@ -5123,7 +5123,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `playbackColumns`
           - Exemptions:
             - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/record-play-observer.tsx` (sanctioned)
-        - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown).
+        - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown), whose display pick a host can bind to its own value (a URL param) with PlayerDisplayBinding.
           - Web:
             - Slots:
               - `SonataPlayer.Display`
@@ -5160,6 +5160,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `PlayerView`
             - Exports (values):
               - `PlayerDisplay`
+              - `PlayerDisplayBinding`
               - `PlayerTime`
               - `PlayerTransport`
               - `SonataPlayer`
@@ -31192,6 +31193,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types):
           - `AppRef`
+          - `PositionalRouteParams`
           - `RouteDef`
           - `RouteParams`
         - Exports (values):
@@ -31201,9 +31203,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MissingRouteParamError`
           - `normalizeRoutePath`
           - `parseSegmentParts`
+          - `readKeyedParams`
+          - `segmentKeyedParamNames`
           - `segmentMatchPatterns`
           - `segmentParamNames`
           - `segmentRequiredParamNames`
+          - `splitKeyedPart`
       - Test helpers:
         - Web: `@plugins/primitives/plugins/pane/web/testing`
           - `createTestSurfaceStore` — A surface store, bound as the live store so the imperative free functions and the module-level history listener agree with it.

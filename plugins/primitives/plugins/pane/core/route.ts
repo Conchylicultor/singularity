@@ -26,6 +26,33 @@ type ExtractParams<Path extends string> =
     ? PartParams<Seg> & ExtractParams<Rest>
     : PartParams<Path>;
 
+// Keyed params — the `;name` suffix of a segment (`song/:songId;view`). Every
+// one is optional: a keyed param is a VIEW of the entity, absent by default.
+type KeyedParams<Names extends string> =
+  Names extends `${infer N};${infer Rest}`
+    ? { [K in N]?: string } & KeyedParams<Rest>
+    : { [K in Names]?: string };
+
+// A segment's positional (`/`-separated) params and its keyed ones, joined.
+type SegmentParams<Path extends string> =
+  Path extends `${infer Positional};${infer Keyed}`
+    ? ExtractParams<Positional> & KeyedParams<Keyed>
+    : ExtractParams<Path>;
+
+/**
+ * Only the POSITIONAL params of a segment — the `/`-separated `:name`s, without
+ * the `;name` keyed suffix. What decides whether a pane addresses an entity
+ * (and so must declare `useResolve`): a keyed param is a view of whatever the
+ * positional ones name, never an entity of its own.
+ */
+export type PositionalRouteParams<Path extends string> = {
+  [
+    K in keyof (Path extends `${infer P};${string}`
+      ? ExtractParams<P>
+      : ExtractParams<Path>)
+  ]: string;
+};
+
 // Param inference for a route's own segment. The empty case is a plain `{}`
 // with no index signature, deliberately: routes CHAIN their params
 // (`ParentParams & RouteParams<Seg>`), and intersecting `Record<string, never>`
@@ -51,7 +78,7 @@ type ExtractParams<Path extends string> =
 // an optional key — and `{ stage?: string }` still satisfies
 // `Record<string, string>`.
 export type RouteParams<Path extends string> = {
-  [K in keyof ExtractParams<Path>]: string;
+  [K in keyof SegmentParams<Path>]: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -117,7 +144,7 @@ type SegmentPart =
  * collision patterns — so what a `:name?` means cannot drift between them.
  */
 export function parseSegmentParts(segment: string): SegmentPart[] {
-  return segment
+  return positionalOf(segment)
     .split("/")
     .filter(Boolean)
     .map((part): SegmentPart => {
@@ -128,6 +155,107 @@ export function parseSegmentParts(segment: string): SegmentPart[] {
         return { kind: "optional", name: part.slice(1, -1) };
       return { kind: "param", name: part.slice(1) };
     });
+}
+
+// ---------------------------------------------------------------------------
+// Keyed params — `segment;name;other`. A positional `:name?` can only be the
+// segment's last part (anything after it would be ambiguous), so a pane gets at
+// most ONE optional view of its entity that way. A keyed param is the
+// unbounded form: named in the URL, so any number of them are unambiguous, in
+// any combination. Each is written as a matrix parameter on the pane's LAST URL
+// part — `/song/abc/12;view=notation` — so it is scoped to the pane that
+// declares it: in a Miller URL holding several panes each part belongs to one
+// pane, where a `?query` would be one bag every pane competes for. And it stays
+// in the pathname, the one thing every routing consumer (tabs, history,
+// pane-restore, links) already carries.
+//
+// `encodeURIComponent` escapes `;` and `=`, so neither ever appears raw inside
+// a written value: a raw `;` in a part is always the keyed suffix.
+// ---------------------------------------------------------------------------
+
+/** The segment without its `;name` keyed suffix. */
+function positionalOf(segment: string): string {
+  const i = segment.indexOf(";");
+  return i < 0 ? segment : segment.slice(0, i);
+}
+
+/** The `;name`s a segment declares, in declaration order. */
+export function segmentKeyedParamNames(segment: string): string[] {
+  const i = segment.indexOf(";");
+  return i < 0 ? [] : segment.slice(i + 1).split(";");
+}
+
+/**
+ * One URL part split into what the positional matcher compares (`base`) and its
+ * keyed suffix (`keyed`, the text after the first raw `;`, or `null`).
+ */
+export function splitKeyedPart(part: string): {
+  base: string;
+  keyed: string | null;
+} {
+  const i = part.indexOf(";");
+  return i < 0
+    ? { base: part, keyed: null }
+    : { base: part.slice(0, i), keyed: part.slice(i + 1) };
+}
+
+/**
+ * Read a part's keyed suffix (`view=notation;zoom=2`) against the names a
+ * segment declares. A name the segment does not declare is dropped, as is a
+ * pair with no `=`: the address bar is untrusted input, and an unknown view
+ * key — a stale bookmark, a removed option — must not make the URL unroutable.
+ * The pane falls back to its default view, exactly as for an absent key.
+ */
+export function readKeyedParams(
+  keyed: string,
+  names: readonly string[],
+): Record<string, string> {
+  const params: Record<string, string> = {};
+  for (const pair of keyed.split(";")) {
+    const eq = pair.indexOf("=");
+    if (eq < 0) continue;
+    const name = decodeURIComponent(pair.slice(0, eq));
+    if (!names.includes(name)) continue;
+    params[name] = decodeURIComponent(pair.slice(eq + 1));
+  }
+  return params;
+}
+
+const KEYED_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/**
+ * Throws on a malformed keyed suffix: a name that is not an identifier, one
+ * declared twice or also used positionally, or keyed params on a segment with
+ * no URL part of its own to carry them. Called by `defineRoute`.
+ */
+function assertKeyedParams(id: string, segment: string): void {
+  const names = segmentKeyedParamNames(segment);
+  if (names.length === 0) return;
+  if (parseSegmentParts(segment).length === 0) {
+    throw new Error(
+      `Route "${id}": keyed params in segment "${segment}" need a URL part of the ` +
+        `segment's own to be written on.`,
+    );
+  }
+  const positional = new Set(
+    parseSegmentParts(segment).flatMap((p) =>
+      p.kind === "static" ? [] : [p.name],
+    ),
+  );
+  const seen = new Set<string>();
+  for (const name of names) {
+    if (!KEYED_NAME.test(name)) {
+      throw new Error(
+        `Route "${id}": keyed param ";${name}" in segment "${segment}" is not an identifier.`,
+      );
+    }
+    if (seen.has(name) || positional.has(name)) {
+      throw new Error(
+        `Route "${id}": param "${name}" is declared twice in segment "${segment}".`,
+      );
+    }
+    seen.add(name);
+  }
 }
 
 /**
@@ -192,14 +320,28 @@ export function fillSegment(
       parts.push(encodeURIComponent(val));
     }
   }
+  // Keyed params ride the last part written (`assertKeyedParams` guarantees the
+  // segment has one), in declaration order so a route has ONE spelling.
+  const keyed = segmentKeyedParamNames(segment).flatMap((name) => {
+    const val = params[name];
+    return val === undefined
+      ? []
+      : [`${encodeURIComponent(name)}=${encodeURIComponent(val)}`];
+  });
+  if (keyed.length > 0) {
+    parts[parts.length - 1] += ";" + keyed.join(";");
+  }
   return parts;
 }
 
-/** The `:name`s a segment declares — required, optional and wildcard alike. */
+/** The names a segment declares — required, optional, wildcard and keyed alike. */
 export function segmentParamNames(segment: string): string[] {
-  return parseSegmentParts(segment).flatMap((part) =>
-    part.kind === "static" ? [] : [part.name],
-  );
+  return [
+    ...parseSegmentParts(segment).flatMap((part) =>
+      part.kind === "static" ? [] : [part.name],
+    ),
+    ...segmentKeyedParamNames(segment),
+  ];
 }
 
 /** The `:name`s a segment cannot be filled without (every name but `:name?`). */
@@ -329,6 +471,7 @@ export function defineRoute<
   type Params = ParentParams & RouteParams<Seg>;
 
   assertOptionalIsLast(def.id, def.segment);
+  assertKeyedParams(def.id, def.segment);
 
   // Root-first chain of RouteDefs, this route last.
   const chain: RouteDef<any, any>[] = [];

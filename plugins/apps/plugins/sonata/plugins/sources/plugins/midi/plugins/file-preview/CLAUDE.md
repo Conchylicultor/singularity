@@ -27,7 +27,7 @@ renderer is the native tab.
 - **Open in Sonata:** stops the preview, imports the bytes with the MIDI
   source's `importMidiBytes` (content-hash dedupe on the server, so a second
   press reuses the first press's song) and navigates the focused tab to
-  `sonataSongLink(songId, bar)` — the player route's `:bar?` is the playhead's
+  `sonataSongLink(songId, bar)` — the player route's `;bar` is the playhead's
   bar, omitted while the playhead is in the first bar.
 
 A checkout (`git`) file is not offered: code-api's raw route serves image

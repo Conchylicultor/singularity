@@ -20,6 +20,7 @@ import { barStartBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   PlayerDisplay,
+  PlayerDisplayBinding,
   PlayerTransport,
 } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { sonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/core";
@@ -59,10 +60,14 @@ function SonataLibraryBody(): ReactElement {
 }
 
 /**
- * The player pane at `/sonata/song/:songId/:bar?` — a real URL that survives
- * reload and back/forward. The optional `bar` opens the song with its playhead
- * parked at that bar (see {@link useSonataPlayerResolve}); build such a link
- * with {@link sonataSongLink}. Opened with `mode:"root"` so each open replaces the route
+ * The player pane at `/sonata/song/:songId;bar;view` — a real URL that survives
+ * reload and back/forward. Both keyed params are views of the song, absent by
+ * default: `;bar=12` opens it with the playhead parked at that bar (see
+ * {@link useSonataPlayerResolve}; build such a link with
+ * {@link sonataSongLink}), and `;view=notation` is the display lens on screen,
+ * absent for the default lens — bound to the player by
+ * {@link SonataPlayerSurface}. Named rather than positional, so neither can be
+ * read as the other: `/sonata/song/<id>;bar=12;view=notation`. Opened with `mode:"root"` so each open replaces the route
  * with a single full-surface pane (a fresh instance, hence a remount). The
  * optimistic `title` rides in `hint` purely as a DISPLAY value for `title.text`
  * (the browser-tab / tab-strip label before the song's live row settles) —
@@ -72,7 +77,7 @@ function SonataLibraryBody(): ReactElement {
  */
 const sonataPlayerRoute = defineRoute({
   id: "sonata-player",
-  segment: "song/:songId/:bar?",
+  segment: "song/:songId;bar;view",
 });
 
 export const sonataPlayerPane = Pane.define({
@@ -132,13 +137,13 @@ function useSongTitle(
 /**
  * Resolve hook: hydrate every registered source's raw for `songId` and gate the
  * pane on the song existing. Lifted out of `useSongLink` so hydration also runs
- * on direct navigation / reload (a deep-linked `/sonata/song/:id`), not only on a
+ * on direct navigation / reload (a deep-linked `/sonata/song/<id>`), not only on a
  * library click. Source-agnostic: a source with no data for the song returns
  * `undefined` and is skipped.
  *
- * Also places the playhead at the URL's `:bar?`: with the load (a seek-on-load
+ * Also places the playhead at the URL's `;bar`: with the load (a seek-on-load
  * intent the session's content reset honours), or — when only the bar changed
- * on the song already loaded — by a direct seek. A malformed bar segment is no
+ * on the song already loaded — by a direct seek. A malformed bar value is no
  * bar ({@link parseBarParam}); a bar past the song's end clamps to its last bar.
  */
 function useSonataPlayerResolve({
@@ -208,7 +213,7 @@ function useSonataPlayerResolve({
     loadedSong.kind === "library" && loadedSong.songId === songId;
   const ready = hydrated && content.kind === "ready";
 
-  // A bar change on the song already loaded here (`/song/X/3` → `/song/X/9`
+  // A bar change on the song already loaded here (`;bar=3` → `;bar=9`
   // in place) reloads nothing, so no content reset runs to honour a load
   // intent: seek directly. The bar a load armed is already placed (see
   // `placedForRef`), so this never fights the reset; a URL that drops its bar
@@ -243,33 +248,56 @@ function placementKey(songId: string, bar: number | undefined): string {
  * display (`PlayerDisplay`), and the collapsible `SectionPane`.
  */
 function SonataPlayerSurface(): ReactElement {
+  const params = sonataPlayerPane.useParams();
+  const setParams = sonataPlayerPane.useSetParams();
   return (
-    // The player bar IS the pane header — one slot, title included. The
-    // full-width Transport progress strip stays OUT of it, in the body top (the
-    // first child below), and the display + Section panels fill the rest. The
-    // body is a single `h-full` column under the chrome's inert `PaneScroll`.
-    <PaneChrome pane={sonataPlayerPane}>
-      <Column
-        fill
-        scrollBody={false}
-        className="h-full bg-background text-foreground"
-        header={
-          /* Transport strip: play / pause, the progression bar, loop (the
-             SonataPlayer.Transport contributions, in its reorder order).
-             Renders nothing when no contributor is present. */
-          <PlayerTransport />
-        }
-        body={
-          /* Main area: the active display + free-floating Section panels. */
-          <Stack direction="row" gap="none" align="stretch" className="h-full">
-            <PlayerDisplay />
+    // The display lens lives in the URL's `;view`: the binding wraps the whole
+    // chrome, so the header's picker and the body's display both read and
+    // write it. A pick rewrites the address in place (no remount); the default
+    // lens drops the key so the bare song URL stays the canonical one.
+    <PlayerDisplayBinding
+      displayId={params.view ?? null}
+      onDisplayChange={(view) =>
+        setParams({
+          songId: params.songId,
+          ...(params.bar !== undefined && { bar: params.bar }),
+          ...(view !== null && { view }),
+        })
+      }
+    >
+      {/* The player bar IS the pane header — one slot, title included. The
+          full-width Transport progress strip stays OUT of it, in the body top
+          (the first child below), and the display + Section panels fill the
+          rest. The body is a single `h-full` column under the chrome's inert
+          `PaneScroll`. */}
+      <PaneChrome pane={sonataPlayerPane}>
+        <Column
+          fill
+          scrollBody={false}
+          className="h-full bg-background text-foreground"
+          header={
+            /* Transport strip: play / pause, the progression bar, loop (the
+               SonataPlayer.Transport contributions, in its reorder order).
+               Renders nothing when no contributor is present. */
+            <PlayerTransport />
+          }
+          body={
+            /* Main area: the active display + free-floating Section panels. */
+            <Stack
+              direction="row"
+              gap="none"
+              align="stretch"
+              className="h-full"
+            >
+              <PlayerDisplay />
 
-            {/* Free-floating panels (current-chord readout, controls, …),
+              {/* Free-floating panels (current-chord readout, controls, …),
                 collapsible to a thin rail. */}
-            <SectionPane />
-          </Stack>
-        }
-      />
-    </PaneChrome>
+              <SectionPane />
+            </Stack>
+          }
+        />
+      </PaneChrome>
+    </PlayerDisplayBinding>
   );
 }

@@ -18,10 +18,14 @@ import {
   MissingRouteParamError,
   normalizeRoutePath,
   parseSegmentParts,
+  readKeyedParams,
+  segmentKeyedParamNames,
   segmentMatchPatterns,
   segmentParamNames,
   segmentRequiredParamNames,
+  splitKeyedPart,
   type AppRef,
+  type PositionalRouteParams,
   type RouteDef,
   type RouteParams,
 } from "../core";
@@ -473,6 +477,43 @@ export interface PaneMatch {
  * one when the longer leaves a remainder no pane matches.
  */
 function matchSegmentParts(
+  segment: string,
+  urlSegments: string[],
+  cursor: number,
+): Array<{ params: Record<string, string>; consumed: number }> {
+  const keyedNames = segmentKeyedParamNames(segment);
+  // A segment with no keyed params reads the URL parts as they are — a raw `;`
+  // in them is just text, exactly as before keyed params existed.
+  if (keyedNames.length === 0) {
+    return matchPositionalParts(segment, urlSegments, cursor);
+  }
+  // Otherwise the positional matcher compares each part WITHOUT its keyed
+  // suffix, and each way it matches then reads the suffix off the last part it
+  // consumed — the only part `fillSegment` writes one on. A suffix on any
+  // earlier part is not this pane's spelling, so that way does not match.
+  const split = urlSegments.map(splitKeyedPart);
+  return matchPositionalParts(
+    segment,
+    split.map((p) => p.base),
+    cursor,
+  ).flatMap((m) => {
+    const last = cursor + m.consumed - 1;
+    for (let i = cursor; i < last; i++) {
+      if (split[i]!.keyed !== null) return [];
+    }
+    const keyed = split[last]!.keyed;
+    if (keyed === null) return [m];
+    return [
+      {
+        params: { ...m.params, ...readKeyedParams(keyed, keyedNames) },
+        consumed: m.consumed,
+      },
+    ];
+  });
+}
+
+/** {@link matchSegmentParts} over the positional (`/`-separated) parts only. */
+function matchPositionalParts(
   segment: string,
   urlSegments: string[],
   cursor: number,
@@ -2561,10 +2602,14 @@ type Closed<P> = keyof P extends never ? Record<string, never> : P;
 // Keyed on the route's OWN params, not its chained ones, because own-only is
 // what the hook is actually handed: `PaneBox` passes `entry.params`, which
 // `extractOwnParams` filtered to this pane's own segment names.
-type RouteResolveField<Own extends Record<string, string>> =
-  keyof Own extends never
+//
+// Only POSITIONAL params count toward "paramful": a keyed `;name` is a view of
+// the entity the positional ones address, never an entity to resolve itself —
+// a paramless list pane with a keyed `;filter` addresses nothing.
+type RouteResolveField<Seg extends string> =
+  keyof PositionalRouteParams<Seg> extends never
     ? { useResolve?: never }
-    : { useResolve: ResolveHook<Own> | false };
+    : { useResolve: ResolveHook<OwnRouteParams<Seg>> | false };
 
 // A route's OWN params: what its own `segment` declares, and nothing an
 // ancestor contributed. Derived from the `RouteDef`'s segment LITERAL — see the
@@ -2656,7 +2701,7 @@ type RouteDefineArgs<
    * columns). The leaf column ignores this and flex-grows. Defaults to 400.
    */
   width?: number;
-} & RouteResolveField<OwnRouteParams<Seg>> &
+} & RouteResolveField<Seg> &
   AppIndexField<Seg>;
 
 // Identity comes from the `RouteDef`, so a pane always carries a `.link`.

@@ -53,7 +53,7 @@ the scope, so the player cannot import the shell).
 
 ## Plugin reference
 
-- Description: Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown).
+- Description: Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown), whose display pick a host can bind to its own value (a URL param) with PlayerDisplayBinding.
 - Web:
   - Slots:
     - `SonataPlayer.Display`
@@ -90,6 +90,7 @@ the scope, so the player cannot import the shell).
   - Exports (types): `PlayerView`
   - Exports (values):
     - `PlayerDisplay`
+    - `PlayerDisplayBinding`
     - `PlayerTime`
     - `PlayerTransport`
     - `SonataPlayer`
