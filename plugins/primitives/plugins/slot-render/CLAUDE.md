@@ -219,6 +219,8 @@ the outcome too, with no separate code path.
     - `primitives/css/grow-relay.GrowRelay`
     - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/dom/layout-host.flowAxis`
+    - `primitives/dom/layout-host.layoutHost`
   - Exports (types):
     - `DispatchContribution`
     - `DispatchOutcome`

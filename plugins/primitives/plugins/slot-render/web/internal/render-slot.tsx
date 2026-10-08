@@ -31,6 +31,10 @@ import {
 } from "./registry";
 import { DispatchOutcomeContext } from "./dispatch-outcome";
 import { useSlotItemLayout } from "./item-layout";
+import {
+  flowAxis,
+  layoutHost,
+} from "@plugins/primitives/plugins/dom/plugins/layout-host/web";
 
 /**
  * The ONE element a slot draws around each contribution — its box.
@@ -281,20 +285,15 @@ export function defineRenderSlot<P>(
     const sentinelRef = useRef<HTMLSpanElement>(null);
     const [horizontal, setHorizontal] = useState(false);
     useLayoutEffect(() => {
-      const parent = sentinelRef.current?.parentElement;
-      if (!parent) return;
-      // `flex-direction`'s computed value is `row` for EVERY element — it's the
-      // CSS initial value, reported regardless of `display`. So a plain block or
-      // grid host reports `row` and would be wrongly treated as horizontal,
-      // wrapping each contribution in a `min-w-0` cell that collapses wide
-      // block-level content to its min-content width. Gate on the parent being
-      // an actual flex container first; non-flex hosts fall through to the
-      // untouched vertical path.
-      const style = getComputedStyle(parent);
-      const isFlex =
-        style.display === "flex" || style.display === "inline-flex";
-      const dir = style.flexDirection;
-      setHorizontal(isFlex && (dir === "row" || dir === "row-reverse"));
+      // The host is the box that lays the contributions out — past any
+      // `display: contents` wrapper — and it is horizontal only when it is a
+      // row flex container: a plain block or grid host treated as a row would
+      // wrap each contribution in a `min-w-0` cell that collapses wide
+      // block-level content to its min-content width.
+      const sentinel = sentinelRef.current;
+      const host = sentinel ? layoutHost(sentinel) : null;
+      if (!host) return;
+      setHorizontal(flowAxis(host) === "row");
     }, []);
 
     const renderItem = useCallback(

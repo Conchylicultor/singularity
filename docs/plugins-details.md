@@ -29210,6 +29210,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane`
           - Exemptions:
             - Exempts itself from: `intersection-observer-safety/no-raw-intersection-observer` — `web/internal/in-view.ts` (sanctioned)
+        - **`layout-host`** — Which box lays a node out, and along which axis: layoutHost(node) is the nearest ancestor that draws a box (skipping display: contents wrappers, whose width is 0 and which never resize), flowAxis(host) is row only for a row flex container (computed flex-direction alone says row for every element). Shared by the slot renderer and the reorder middleware so neither misreads a wrapped host.
+          - Cross-plugin:
+            - Imported by:
+              - `primitives/slot-render`
+              - `reorder`
+          - Web:
+            - Exports (types): `FlowAxis`
+            - Exports (values):
+              - `flowAxis`
+              - `layoutHost`
         - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
           - Web:
             - Contributes: `Core.Root` → `OverscrollHintController`
@@ -31735,6 +31745,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/grow-relay.GrowRelay`
           - `primitives/css/ui-kit.ControlSize`
           - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/dom/layout-host.flowAxis`
+          - `primitives/dom/layout-host.layoutHost`
         - Exports (types):
           - `DispatchContribution`
           - `DispatchOutcome`
@@ -32703,6 +32715,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/badge.Badge`
       - `primitives/css/ui-kit.Button`
       - `primitives/dom/element-size.useResizeObserver`
+      - `primitives/dom/layout-host.flowAxis`
+      - `primitives/dom/layout-host.layoutHost`
       - `primitives/edit-mode-signal.useEditMode`
       - `primitives/latest-ref.useLatestRef`
       - `primitives/overlay/popover.InlinePopover`

@@ -24,6 +24,10 @@ import {
 import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import {
+  flowAxis,
+  layoutHost,
+} from "@plugins/primitives/plugins/dom/plugins/layout-host/web";
 import { reorderDescriptors } from "./descriptors";
 import { useReorderConfig } from "./use-reorder-config";
 import { useEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
@@ -237,22 +241,23 @@ function ReorderInner({
   // `null` until first measured — regime defaults to wrap (never overlaps) until
   // a real width is known, so we don't flash a collapse-into-popover on mount.
   const [hostWidth, setHostWidth] = useState<number | null>(null);
-  // Measure the host (the sentinel's parent) for BOTH flex-direction and width.
+  // Measure the host for BOTH flow axis and width. The host is the box that
+  // lays the sentinel out (`layoutHost`), not its `parentElement`: a
+  // `display: contents` wrapper (the app-shell sidebar's) has no box — width 0,
+  // never resizes — and would fold every sidebar into the narrow-row popover.
   // The primitive RAF-debounces resizes and runs the initial measure
-  // synchronously (no timers; repo rule). The getter resolves the parent at
+  // synchronously (no timers; repo rule). The getter resolves the host at
   // observe time, since the sentinel may not be mounted on the first render.
-  useResizeObserver(
-    () => sentinelRef.current?.parentElement,
-    () => {
-      const parent = sentinelRef.current?.parentElement;
-      if (!parent) return;
-      const dir = getComputedStyle(parent).flexDirection;
-      setOrientation(
-        dir === "row" || dir === "row-reverse" ? "horizontal" : "vertical",
-      );
-      setHostWidth(parent.clientWidth);
-    },
-  );
+  const host = () => {
+    const sentinel = sentinelRef.current;
+    return sentinel ? layoutHost(sentinel) : null;
+  };
+  useResizeObserver(host, () => {
+    const el = host();
+    if (!el) return;
+    setOrientation(flowAxis(el) === "row" ? "horizontal" : "vertical");
+    setHostWidth(el.clientWidth);
+  });
 
   const state = useMemo(
     () => applyTree(contributions, items),
