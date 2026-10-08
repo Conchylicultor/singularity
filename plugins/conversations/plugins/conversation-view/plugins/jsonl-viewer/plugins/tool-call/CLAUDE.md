@@ -66,7 +66,7 @@
     - `ToolCallEvent`
     - `ToolRendererProps`
 - Sub-plugins:
-  - **`add-task`** [exempt] — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
+  - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
   - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
   - **`ask-user-question`** [exempt] — Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
   - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.

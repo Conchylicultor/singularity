@@ -526,8 +526,6 @@ serves them.
     - `tasks/task-title` (table `tasks_ext_short_title`)
     - `tasks/task-source-url` (table `tasks_ext_source_url`)
     - `tasks/task-track` (table `tasks_ext_track`)
-- Exemptions:
-  - Exempts itself from: `live/no-legacy-resource-spelling` — `core/resources.ts`, `server/internal/resources.ts`, `web/hooks.ts` (debt)
 - Test helpers:
   - Server: `@plugins/tasks/plugins/tasks-core/server/testing`
     - `canonical` — JSON with sorted keys, so a row compares by content whatever its key order.

@@ -183,11 +183,9 @@
     - `page/annotations/agent-notes/agent-page`
   - Endpoint callers: `transcript-api`
 - Exemptions:
-  - Exempts itself from:
-    - `timer/no-unlisted-timer` — `server/internal/status-shadow-audit.ts` (debt)
-    - `live/no-legacy-resource-spelling` — `web/use-conversations.ts` (debt)
+  - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/status-shadow-audit.ts` (debt)
 - Sub-plugins:
-  - **`agents`** [exempt] — Named agent definitions that launch conversations.
+  - **`agents`** — Named agent definitions that launch conversations.
   - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the…
   - **`conversation-category`** [exempt] — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. Classifies each conversation along a user-defined set of…
   - **`conversation-preprompt`** — Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with…
@@ -197,7 +195,7 @@
       - **`chip`** — A conversation as a clickable chip that opens its run: a ghost ToggleChip around an inline ConversationItem, active while that run is the open column.
       - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
       - **`row`** — A conversation as a full-width list line that opens its run: a Row around a ConversationItem, selected while that run is the column this surface opened.
-  - **`conversation-view`** [exempt] — Conversation pane host. The header is the pane's own Actions slot (title plus chips); the prompt bar is slot-driven.
+  - **`conversation-view`** — Conversation pane host. The header is the pane's own Actions slot (title plus chips); the prompt bar is slot-driven.
     - Plugins:
       - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
       - **`allow-monitor`** — Flags when an agent has created a guard-bypass file (.allow-main, .allow-postgres, …) in its worktree.
@@ -213,7 +211,7 @@
         - Plugins:
           - **`file-pane`** — Hosts the file-peek pane: a checkout file opened from a conversation (chat file links, review, commits), shown through primitives/file-viewer with the conversation's edited-file status as context.
       - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
-      - **`dependencies`** [exempt] — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
+      - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
       - **`dependent-count`** — Per-row "N blocked" chip on a conversation item: how many tasks are transitively blocked by that conversation's task. The conversation toolbar shows the same count inside its Tasks button instead of…
       - **`drop-and-exit`** — Exit-menu entry that marks the top task as dropped and closes the conversation.
       - **`drop-dependents`** — Exit-menu entry that drops the task and all its transitive dependents, then closes the conversation.
@@ -282,7 +280,7 @@
       - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point.…
         - Plugins:
           - **`history`** — Contributes the History list (a live source over the `conversations.history` collection) as the History source of the merged conversation-sidebar DataView.
-          - **`queue`** [exempt] — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the…
+          - **`queue`** — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the…
       - **`grouped`** — Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
       - **`queue`** — Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); a user-set pin lifts a waiting task group into…
   - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
@@ -293,7 +291,7 @@
   - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
   - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a…
   - **`question-relay`** — Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form (answered as the tool's real result) with an Answer in terminal release…
-  - **`recover`** [exempt] — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
+  - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
   - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
   - **`runtime-tmux`** [exempt] — Runs Claude CLI sessions inside tmux panes.
   - **`session-chain`** — Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.

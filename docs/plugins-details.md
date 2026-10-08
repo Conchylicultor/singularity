@@ -116,8 +116,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses: `active-data.inlineBoundary`
         - Exports (values): `ATTEMPT_ID_RE`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/attempt-chip.tsx` (debt)
     - **`commit-link`** — Renders commit shas in backtick-wrapped inline code as clickable chips that open the commit-detail pane, with the subject, author and date on hover. Resolves the sha against the main checkout's object database and declines when it names no commit.
       - Web:
         - Contributes: `ActiveData.Tag` "commit-link"
@@ -265,8 +263,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/attempt-status.AttemptStatusBadge`
           - `tasks/task-detail.taskDetailPane`
           - `tasks/tasks-core.useTaskAttempts`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/task-card.tsx` (debt)
     - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed. The task-id token at the page-editor's server boundary: locates `task-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its task's title for model-read text (InlineTokenReferentSource).
       - Web:
         - Contributes: `InlineChip.Tag` "task-link" → `TaskLinkChip`
@@ -292,8 +288,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses: `active-data.inlineBoundary`
         - Exports (values): `TASK_ID_RE`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/task-link-chip.tsx` (debt)
 
 - **`apps`** — Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
   - Plugins:
@@ -9628,9 +9622,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `page/annotations/agent-notes/agent-page`
     - Endpoint callers: `transcript-api`
   - Exemptions:
-    - Exempts itself from:
-      - `timer/no-unlisted-timer` — `server/internal/status-shadow-audit.ts` (debt)
-      - `live/no-legacy-resource-spelling` — `web/use-conversations.ts` (debt)
+    - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/status-shadow-audit.ts` (debt)
   - Plugins:
     - **`agents`** — Named agent definitions that launch conversations.
       - Web:
@@ -9790,8 +9782,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MoveAgentBodySchema`
           - `updateAgent`
           - `UpdateAgentBodySchema`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `server/internal/resources.ts`, `shared/resources.ts`, `web/components/agent-avatar-row.tsx`, `web/components/agent-avatar-title-prefix.tsx`, `web/components/agent-detail.tsx`, `web/components/agent-launches.tsx`, `web/components/agent-status.tsx` (debt)
     - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar. Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
       - Web:
         - Slots: `allConversationsPane.Actions`
@@ -10217,8 +10207,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/launch`
           - `review`
           - `stats/cost`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/panes.tsx` (debt)
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Web:
@@ -10560,8 +10548,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/overlay/tooltip.WithTooltip`
               - `shell/notifications.toast`
               - `ui/icons.Icon`
-          - Exemptions:
-            - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/dependencies-button.tsx` (debt)
         - **`dependent-count`** — Per-row "N blocked" chip on a conversation item: how many tasks are transitively blocked by that conversation's task. The conversation toolbar shows the same count inside its Tasks button instead of as a chip of its own.
           - Web:
             - Contributes: `Item.Chips` → `DependentCountItemChip`
@@ -11600,8 +11586,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/pane.useOpenPane`
                       - `tasks/task-detail.taskDetailPane`
                       - `tasks/task-status.StatusIcon`
-                  - Exemptions:
-                    - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/add-task-tool-view.tsx` (debt)
                 - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
                   - Web:
                     - Slots: `agentReportPane.Actions`
@@ -12658,8 +12642,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/live-state.combineResources`
                   - `primitives/live-state.ResourceReadiness`
                   - `primitives/optimistic-mutation.useOptimisticResource`
-              - Exemptions:
-                - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/use-queue-rows.ts` (debt)
         - **`grouped`** — Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
           - Server:
             - Uses:
@@ -13119,8 +13101,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations.resumeConversation`
           - `infra/endpoints.implement`
         - Routes: `POST /api/conversations-recover/restore-batch`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/recovery-view.tsx` (debt)
       - Shared:
         - Exports (types): `RestoreBatchBody`
         - Exports (values):
@@ -22851,46 +22831,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
         - Exempted by:
-          - `active-data/attempt` (1 debt)
           - `active-data/page-link` (1 debt)
-          - `active-data/task` (1 debt)
-          - `active-data/task-link` (1 debt)
           - `apps/pages/page-author` (1 debt)
           - `apps/pages/page-tree` (7 debt)
           - `apps/pages/prompt-origin` (1 debt)
           - `apps/pages/welcome/recent-pages` (1 debt)
-          - `conversations` (1 debt)
-          - `conversations/agents` (7 debt)
-          - `conversations/conversation-view` (1 debt)
-          - `conversations/conversation-view/dependencies` (1 debt)
-          - `conversations/conversation-view/jsonl-viewer/tool-call/add-task` (1 debt)
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools` (1 debt)
-          - `conversations/conversations-view/data-view/queue` (1 debt)
-          - `conversations/recover` (1 debt)
           - `framework/central-core` (0 debt)
           - `framework/resource-runtime` (0 debt)
           - `framework/server-core` (0 debt)
           - `infra/query-resource` (0 debt)
           - `network/live` (0 debt)
           - `page/annotations/instructions/instructions-page` (1 debt)
-          - `page/annotations/todo/task-link` (1 debt)
           - `page/editor` (3 debt)
           - `page/inline-page-link` (2 debt)
           - `page/links` (2 debt)
           - `page/page-link` (1 debt)
           - `primitives/live-state` (0 debt)
           - `primitives/optimistic-mutation` (0 debt)
-          - `tasks` (1 debt)
-          - `tasks/attempt-view` (3 debt)
-          - `tasks/task-category` (3 debt)
-          - `tasks/task-dependencies` (1 debt)
-          - `tasks/task-deps-tree` (1 debt)
-          - `tasks/task-detail` (1 debt)
-          - `tasks/task-draft-form` (1 debt)
-          - `tasks/task-graph` (1 debt)
-          - `tasks/task-list` (2 debt)
-          - `tasks/tasks-core` (3 debt)
-          - `tasks/worktree-identity` (1 debt)
       - Central:
         - Exports (types): `CentralServedValue`
         - Exports (values): `serveValue`
@@ -23457,8 +23415,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `useTodoTaskState`
               - Cross-plugin:
                 - Imported by: `page/annotations/todo`
-              - Exemptions:
-                - Exempts itself from: `live/no-legacy-resource-spelling` — `web/hooks.ts` (debt)
               - Shared:
                 - Exports (types):
                   - `CreateTodoBlockTaskBody`
@@ -34324,8 +34280,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/task-graph`
       - `tasks/task-header`
       - `tasks/task-list`
-  - Exemptions:
-    - Exempts itself from: `live/no-legacy-resource-spelling` — `web/client.ts` (debt)
   - Plugins:
     - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge tint, dot tint and sentence-case label, so a chip and a badge for the same attempt cannot disagree.
       - Web:
@@ -34374,8 +34328,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `active-data/attempt`
           - `debug/profiling/ops`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/attempt-pane.tsx`, `web/components/attempt-switch-button.tsx`, `web/panes.tsx` (debt)
     - **`attempt-work`** — The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger, as one live resource plus a direct read for the server-side exit-drop guard.
       - Server:
         - Contributes: `resource.declare` "attempt-work"
@@ -34828,8 +34780,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/reports-investigation`
           - `tasks/task-dependencies`
           - `toolchain`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `server/internal/resource.ts`, `shared/resources.ts`, `web/hooks.ts` (debt)
     - **`task-dependencies`** — Both ends of the task's dependency edges in one card: the tasks it runs after and the tasks it blocks, as removable chips, with prerequisite / follow-up add affordances (and a quick-add for the folder task when applicable) in the header.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
@@ -34852,8 +34802,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-draft-form.TaskDraftPopover`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/task-dependencies.tsx` (debt)
     - **`task-deps-tree`** — Dependency tree section for the task detail: a merged DataView whose sources render task_dependencies as a nesting = runs-after tree (atomic drag-to-reorder, per-row detach, 'also after' fan-in chips) or the read-only creation tree.
       - Web:
         - Slots:
@@ -34881,8 +34829,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane.useOpenPane`
           - `tasks/task-status.StatusIcon`
           - `ui/icons.Icon`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/deps-tree-section.tsx` (debt)
       - Core:
         - Exports (types): `DepsTreeRow`
         - Exports (values):
@@ -34968,8 +34914,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-events`
           - `tasks/task-graph`
           - `tasks/task-header`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/panes.tsx` (debt)
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Web:
         - Slots: `TaskDraftFormSlots.Action`
@@ -35024,8 +34968,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `improve`
           - `improve/element-picker`
           - `tasks/task-dependencies`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/task-draft-popover.tsx` (debt)
     - **`task-effort`** — Per-task thinking-mode (effort) picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is applied to Claude Code on launch. Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.
       - Web:
         - Contributes: `TaskLaunch.Option` "Thinking mode" → `EffortLaunchControl`
@@ -35124,9 +35066,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-status.STATUS_META`
           - `ui/icons.Icon`
       - Exemptions:
-        - Exempts itself from:
-          - `endpoints/no-void-fetch-endpoint` — `web/components/task-graph.tsx` (sanctioned)
-          - `live/no-legacy-resource-spelling` — `web/hooks.ts` (debt)
+        - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/task-graph.tsx` (sanctioned)
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, track (main | sidequest, click to switch), author, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
@@ -35199,8 +35139,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-deps-tree`
           - `tasks/task-detail`
           - `tasks/task-track`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/child-count-action.tsx`, `web/components/tasks-list-view.tsx` (debt)
     - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
       - Web:
         - Contributes: `TaskLaunch.Option` "Preprompt" → `PrepromptLaunchControl`
@@ -35672,8 +35610,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-title` (table `tasks_ext_short_title`)
           - `tasks/task-source-url` (table `tasks_ext_source_url`)
           - `tasks/task-track` (table `tasks_ext_track`)
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `core/resources.ts`, `server/internal/resources.ts`, `web/hooks.ts` (debt)
       - Test helpers:
         - Server: `@plugins/tasks/plugins/tasks-core/server/testing`
           - `canonical` — JSON with sorted keys, so a row compares by content whatever its key order.
@@ -35695,8 +35631,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.foldResource`
           - `shell/health-report.HealthReport`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/internal/use-worktree-identity.ts` (debt)
 
 - **`toolchain`** — Registers the legacy Toolchain task category, so upgrade tasks filed before the toolchain loop moved onto infra/deps' updater runner still render under it. New upgrade tasks are filed by the Dependency upgrades automation under Dependencies.
   - Server:

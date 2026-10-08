@@ -54,8 +54,6 @@ now"), the opposite of the monotone one here.
     - `primitives/pane.useOpenPane`
     - `tasks/task-status.StatusIcon`
     - `ui/icons.Icon`
-- Exemptions:
-  - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/deps-tree-section.tsx` (debt)
 - Core:
   - Exports (types): `DepsTreeRow`
   - Exports (values):
