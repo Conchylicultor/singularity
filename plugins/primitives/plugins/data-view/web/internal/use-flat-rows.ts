@@ -10,6 +10,42 @@ function isSearchable<TRow>(field: FieldDef<TRow>): boolean {
   return type === "text" || type === "enum" || type === "tags";
 }
 
+/**
+ * The view's search and filter as ONE row predicate — the rows `useFlatRows`
+ * keeps — or `null` when neither constrains.
+ */
+export function useRowMatcher<TRow>(
+  fields: FieldDef<TRow>[],
+  state: Pick<ViewState, "query" | "filter">,
+  resolveOperatorSet: (typeId: string) => FilterOperatorSet | undefined,
+  searchAccessor?: (row: TRow) => string,
+): ((row: TRow) => boolean) | null {
+  // The filter tree lowered into the filter language once per (tree, clock),
+  // never per row; null ⇒ nothing constrains.
+  const matchesFilter = useRowFilter(state.filter, fields, resolveOperatorSet);
+  const query = state.query.trim();
+  return useMemo(() => {
+    // --- Search (substring, case-insensitive) ---
+    const accessor =
+      searchAccessor ??
+      ((row: TRow) =>
+        fields
+          .filter((f) => isSearchable(f))
+          .map((f) =>
+            f.values ? f.values(row).join(" ") : String(f.value?.(row) ?? ""),
+          )
+          .join(" "));
+    const lc = query.toLowerCase();
+    const matchesSearch = query
+      ? (row: TRow) => accessor(row).toLowerCase().includes(lc)
+      : null;
+    // --- Filter (the tree lowered through the data-view.filter operator sets) ---
+    if (matchesSearch && matchesFilter)
+      return (row) => matchesSearch(row) && matchesFilter(row);
+    return matchesSearch ?? matchesFilter;
+  }, [query, fields, matchesFilter, searchAccessor]);
+}
+
 export function useFlatRows<TRow>(
   rows: readonly TRow[],
   fields: FieldDef<TRow>[],
@@ -17,35 +53,19 @@ export function useFlatRows<TRow>(
   resolveOperatorSet: (typeId: string) => FilterOperatorSet | undefined,
   searchAccessor?: (row: TRow) => string,
 ): readonly TRow[] {
-  // The filter tree lowered into the filter language once per (tree, clock),
-  // never per row; null ⇒ nothing constrains.
-  const matchesFilter = useRowFilter(state.filter, fields, resolveOperatorSet);
+  const matches = useRowMatcher(
+    fields,
+    state,
+    resolveOperatorSet,
+    searchAccessor,
+  );
   return useMemo(() => {
-    let result = [...rows];
-
-    // --- Search (substring, case-insensitive) ---
-    const query = state.query.trim();
-    if (query) {
-      const lc = query.toLowerCase();
-      const accessor =
-        searchAccessor ??
-        ((row: TRow) =>
-          fields
-            .filter((f) => isSearchable(f))
-            .map((f) =>
-              f.values ? f.values(row).join(" ") : String(f.value?.(row) ?? ""),
-            )
-            .join(" "));
-      result = result.filter((row) => accessor(row).toLowerCase().includes(lc));
-    }
-
-    // --- Filter (the tree lowered through the data-view.filter operator sets) ---
-    if (matchesFilter) result = result.filter(matchesFilter);
+    const result = matches ? rows.filter(matches) : [...rows];
 
     // --- Sort (multi-level, stable; null when no rule resolves) ---
     const comparator = makeSortComparator(state.sort, fields);
     if (comparator) result.sort(comparator);
 
     return result;
-  }, [rows, fields, state, matchesFilter, searchAccessor]);
+  }, [rows, fields, state.sort, matches]);
 }

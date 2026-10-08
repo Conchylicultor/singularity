@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDeferredLoadState } from "@plugins/framework/plugins/web-sdk/core";
 import {
   and,
@@ -14,17 +14,10 @@ import type {
   LiveSortDirection,
   LiveWhere,
 } from "@plugins/network/plugins/live/core";
-import {
-  useLiveScroll,
-  type LiveSegmentError,
-  type ScrollTruncation,
-} from "@plugins/network/plugins/live/web";
+import { useLiveScroll } from "@plugins/network/plugins/live/web";
 import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
-import {
-  useInfiniteScroll,
-  type InfiniteScrollHandle,
-} from "@plugins/primitives/plugins/cursor-pagination/web";
 import type {
+  DataViewPaging,
   FieldDef,
   FieldGrouping,
   LiveDataSource,
@@ -41,6 +34,7 @@ import {
   UnavailableSortRuleError,
   useViewFilter,
 } from "./live-filter";
+import { scrollPaging } from "./scroll-paging";
 
 // The DataView → live-window adapter (research/2026-09-29-global-scoped-change-routing.md,
 // "P2 — DataView live-window adapter"): a `source` DataView reads its collection
@@ -56,15 +50,6 @@ function useDebounced<T>(value: T, delayMs: number): T {
     return () => clearTimeout(id);
   }, [value, delayMs]);
   return debounced;
-}
-
-/** A read failing under rows that stay on screen, above them (not one paging stopped on — that is the footer's). */
-export interface LiveSegmentNotice {
-  /** Unique among the notices (the failing read's identity). */
-  key: string;
-  afterRowId: string | null;
-  error: Error;
-  retry: () => void;
 }
 
 /** A live origin's answer, as the body renders it. */
@@ -83,18 +68,12 @@ export interface SourceView<TRow> {
    * a stale tab needs).
    */
   readError: Extract<ResourceReadiness, { status: "error" }> | null;
-  scroll: InfiniteScrollHandle;
-  /** Every row of the query is loaded — section counts may be exact. */
-  rowsComplete: boolean;
+  /** How the scroll pages; `complete` once every row of the query is loaded. */
+  paging: DataViewPaging<TRow>;
   sectionOrder: "bucket" | "appearance";
-  /** The tail cannot be paged past (the footer says so). */
-  truncated: false | { reason: ScrollTruncation };
-  notices: readonly LiveSegmentNotice[];
 }
 
 const SEARCH_DEBOUNCE_MS = 200;
-const NO_NOTICES: readonly LiveSegmentNotice[] = [];
-const NO_ERRORS: readonly LiveSegmentError[] = [];
 
 /**
  * Read a live `source` for the active view: lower its sort, filter, search and
@@ -117,7 +96,6 @@ export function useLiveSource<TRow>(args: {
   state: ViewState;
   resolveOperatorSet: ResolveOperatorSet;
   resolveGrouping: (typeId: string, groupingId: string) => FieldGrouping;
-  holdPaging: (rows: readonly TRow[]) => boolean;
 }): SourceView<TRow> | null {
   const { source, plan, fields, state, resolveOperatorSet, resolveGrouping } =
     args;
@@ -289,35 +267,8 @@ export function useLiveSource<TRow>(args: {
   const settled =
     scroll.status === "loading" || scroll.status === "error" ? null : scroll;
   const rows = (settled?.rows ?? NO_ROWS) as readonly TRow[];
-  // The failures paging stopped on are the footer's "couldn't load more",
-  // whose Retry re-reads each of them; the rest are notices above the rows.
-  const blocking: readonly LiveSegmentError[] = useMemo(
-    () => settled?.segmentErrors.filter((e) => e.blocksPaging) ?? NO_ERRORS,
-    [settled],
-  );
-  const retryBlocking = useCallback(() => {
-    for (const e of blocking) e.retry();
-  }, [blocking]);
-  const held = args.holdPaging(rows);
-  const handle = useInfiniteScroll({
-    hasNextPage: (settled?.canGrow ?? false) && !held,
-    isFetchingNextPage: settled?.growing ?? false,
-    isFetchNextPageError: blocking.length > 0,
-    fetchNextPage: settled?.loadMore ?? NOOP,
-    ...(blocking.length > 0 ? { retry: retryBlocking } : {}),
-  });
-  const notices = useMemo(
-    () =>
-      settled === null
-        ? NO_NOTICES
-        : settled.segmentErrors
-            .filter((e) => !e.blocksPaging)
-            .map((e) => ({
-              key: e.key,
-              afterRowId: e.afterRowId,
-              error: e.error,
-              retry: e.retry,
-            })),
+  const paging = useMemo(
+    () => (settled === null ? NOT_PAGING : scrollPaging<TRow>(settled)),
     [settled],
   );
 
@@ -328,11 +279,8 @@ export function useLiveSource<TRow>(args: {
       loading: false,
       error: lowering.error,
       readError: null,
-      scroll: handle,
-      rowsComplete: false,
+      paging: NOT_PAGING,
       sectionOrder: "bucket",
-      truncated: false,
-      notices: NO_NOTICES,
     };
   }
   return {
@@ -340,15 +288,24 @@ export function useLiveSource<TRow>(args: {
     loading: lowering.kind !== "ok" || scroll.status === "loading",
     error: null,
     readError: scroll.status === "error" ? scroll : null,
-    scroll: handle,
-    rowsComplete: settled?.exhausted ?? false,
+    paging,
     sectionOrder: lowering.kind === "ok" ? lowering.sectionOrder : "bucket",
-    truncated: settled?.truncated ?? false,
-    notices,
   };
 }
+
+/** A scroll with nothing settled yet: no page to ask for, and not complete. */
+const NOT_PAGING: DataViewPaging<unknown> = {
+  canGrow: false,
+  growing: false,
+  loadMore: () => {
+    throw new Error("live-source: loadMore() before the scroll settled");
+  },
+  complete: false,
+  stalled: null,
+  truncated: false,
+  notices: [],
+};
 
 const NO_FIELDS: FieldDef<never>[] = [];
 const NO_FILTERABLE: Filterable = {};
 const NO_ROWS: readonly unknown[] = [];
-const NOOP = () => {};

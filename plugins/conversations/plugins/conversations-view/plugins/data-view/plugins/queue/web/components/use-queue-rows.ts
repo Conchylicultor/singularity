@@ -1,4 +1,4 @@
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveScroll } from "@plugins/network/plugins/live/web";
 import { useMemo, useState } from "react";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
@@ -13,6 +13,10 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  scrollPaging,
+  type DataViewPaging,
+} from "@plugins/primitives/plugins/data-view/web";
 import {
   queueRanks,
   reorderQueue,
@@ -71,7 +75,8 @@ type QueueDisplay = {
 };
 
 /**
- * Combines the queue's live resources — active + gone conversations, tasks, and
+ * Combines the queue's live resources — active + gone conversations (gone read
+ * as a live scroll, so the Done section pages as the user scrolls), tasks, and
  * the bounded POINT ranks (subscribed to the LIVE conversation id set, replayed
  * through the optimistic overlay) — runs the shared {@link classifyQueue}, and
  * flattens the classification into one `QueueRow[]` in display order (Pinned,
@@ -84,10 +89,32 @@ export function useQueueRows(): {
   dispatchReorder: (vars: ReorderVars) => void;
   /** The state of the reads behind `rows` — hand it to DataView's `readiness`. */
   readiness: ResourceReadiness;
+  /** How the Done section pages — hand it to DataView's `paging`. */
+  paging: DataViewPaging<QueueRow> | undefined;
 } {
   const activeResult = useLive(conversationsActive);
-  // The default window: the newest ended conversations (the Done section).
-  const goneResult = useLive(conversationsGone);
+  // The ended conversations (the Done section), newest first, as a scroll:
+  // its first segment is the default window, and the rest load as the user
+  // scrolls past the tail. Gated like the other reads through a `ResourceResult`
+  // view of it.
+  const goneScroll = useLiveScroll(conversationsGone, GONE_QUERY);
+  const goneResult = useMemo(
+    () =>
+      goneScroll.status === "ready"
+        ? { status: "ready" as const, data: [...goneScroll.rows] }
+        : goneScroll,
+    [goneScroll],
+  );
+  const paging = useMemo(
+    () =>
+      goneScroll.status === "ready"
+        ? {
+            ...scrollPaging<QueueRow>(goneScroll),
+            isPaged: (r: QueueRow) => r.section === "done",
+          }
+        : undefined,
+    [goneScroll],
+  );
   const tasksResult = useLive(taskRows);
 
   // The live conversation id set the queue already tracks — `null` (not a fake
@@ -289,8 +316,12 @@ export function useQueueRows(): {
     rows: display?.rows ?? [],
     dispatchReorder: display?.dispatchReorder ?? noReorder,
     readiness,
+    paging,
   };
 }
+
+// The scroll's query: the collection's default order, every ended conversation.
+const GONE_QUERY = {};
 
 // No display yet: nothing is on screen to drag, so there is nothing to reorder.
 function noReorder(): void {

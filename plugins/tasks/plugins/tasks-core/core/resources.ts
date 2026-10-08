@@ -176,17 +176,20 @@ export const conversationsSystem = liveCollection("conversations-system", {
 // The ended conversations, newest first by `endedAt`: a WINDOW (bounded by
 // construction — the history is unbounded), the default the newest
 // `RECENT_GONE_LIMIT` (the queue's Done section, the welcome recents), grown
-// by a reader that wants more (Recovery reads 50). A close is an entrant at
-// the top, a restore an exit; it is not L2-persisted (a bounded window
-// leaves L2). Nothing filters it (`filterable: {}`). Boot-critical: the
-// default window paints from the boot snapshot.
+// by a reader that wants more (Recovery reads 50). A `scroll` collection, so
+// the queue's Done section pages through the whole history as the user
+// scrolls (`useLiveScroll`: its first segment IS the default window). A close
+// is an entrant at the top, a restore an exit; it is not L2-persisted (a
+// bounded window leaves L2). Nothing filters it (`filterable: {}`).
+// Boot-critical: the default window paints from the boot snapshot.
 export const conversationsGone = liveCollection("conversations-gone", {
   row: ConversationSchema,
   id: "id",
   filterable: {},
   sortable: ["endedAt"],
   default: { orderBy: [["endedAt", "desc"]], limit: RECENT_GONE_LIMIT },
-  maxLimit: 100,
+  maxLimit: 500,
+  scroll: true,
   preload: "boot",
 });
 // One conversation by id, whatever its status or age (`useLiveRow`): the

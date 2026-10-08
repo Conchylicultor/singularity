@@ -5,6 +5,7 @@ import {
   exactCount,
   type DataViewAggregateConfig,
   type DataViewRowEntry,
+  type DataViewRowsComplete,
   type DataViewSection,
   type FieldDef,
   type FieldGrouping,
@@ -44,7 +45,7 @@ export function isGroupableField<TRow>(
 
 /** What `partitionIntoSections` needs beyond the rows: the injected grouping
  *  resolver, the injected clock, and the reading direction. */
-export interface PartitionOptions {
+export interface PartitionOptions<TRow = unknown> {
   /**
    * `(typeId, groupingId) => FieldGrouping` — resolve the grouping a
    * `GroupByRule` names for a field of this type. Injected so the partition
@@ -64,9 +65,10 @@ export interface PartitionOptions {
   /**
    * Whether `rows` is the whole set (`DataViewRenderProps.rowsComplete`).
    * Absent ⇒ true (in memory). When not, a section's count is a lower bound
-   * unless a later section has started (under `"appearance"` order).
+   * unless a later section has started (under `"appearance"` order) — or, for
+   * `{ growable }`, unless the section holds no growable row.
    */
-  rowsComplete?: boolean;
+  rowsComplete?: DataViewRowsComplete<TRow>;
   /**
    * `"appearance"` — sections follow first appearance in `rows`, which the
    * server sorted by the grouped column first; `"bucket"` (default) — by the
@@ -93,19 +95,26 @@ export function partitionIntoSections<TRow>(
   fields: FieldDef<TRow>[],
   groupBy: GroupByRule | undefined,
   rowKey: (row: TRow, index: number) => string,
-  opts: PartitionOptions,
+  opts: PartitionOptions<TRow>,
 ): DataViewSection<TRow>[] {
   const field = groupBy
     ? fields.find((f) => f.id === groupBy.fieldId)
     : undefined;
 
-  const complete = opts.rowsComplete ?? true;
+  const completeness = opts.rowsComplete ?? true;
+  // Whether a section holding these rows has them all.
+  const complete = (sectionRows: readonly TRow[]): boolean =>
+    typeof completeness === "boolean"
+      ? completeness
+      : !sectionRows.some(completeness.growable);
   // Ungrouped (or an unresolvable/value-less group field): one implicit section.
   if (!groupBy || !field?.value) {
     return [
       {
         key: null,
-        count: complete ? exactCount(rows.length) : atLeastCount(rows.length),
+        count: complete(rows)
+          ? exactCount(rows.length)
+          : atLeastCount(rows.length),
         entries: rows.map((row, i) => ({ row, key: rowKey(row, i) })),
       },
     ];
@@ -188,7 +197,7 @@ export function partitionIntoSections<TRow>(
     // Exact when every row is loaded — or, sections in row order, when a later
     // section has started: a later page can only add sections after the tail.
     count:
-      complete || (byAppearance && i < ordered.length - 1)
+      complete(bucket.rows) || (byAppearance && i < ordered.length - 1)
         ? exactCount(bucket.rows.length)
         : atLeastCount(bucket.rows.length),
     entries: bucket.rows.map((row) => ({
@@ -324,7 +333,7 @@ export function useDataViewSections<TRow>(
     /** `DataViewRenderProps.groupOrder` — the section reading direction. */
     groupOrder: "asc" | "desc";
     /** `DataViewRenderProps.rowsComplete` — whether section counts may be exact. */
-    rowsComplete: boolean;
+    rowsComplete: DataViewRowsComplete<TRow>;
     /** `DataViewRenderProps.sectionOrder` — how grouped sections are ordered. */
     sectionOrder: "bucket" | "appearance";
     /**

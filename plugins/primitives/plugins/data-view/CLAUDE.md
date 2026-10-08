@@ -727,12 +727,12 @@ The rules, each enforced in exactly one place:
    end, and opening it re-inserts them in sorted order.
 5. **Open state is ephemeral** — in memory in `DataViewBodyInner`, keyed by the
    active view id; a view switch or reload re-closes every fold. Never config.
-6. **Live sources stop paging behind a folded tail** — while a fold is in
-   effect, none is open and the LAST loaded row is folded (`isTailFolded`), the
-   host passes `holdPaging` to `useLiveSource`, which feeds it into the
-   scroll observer's own `hasNextPage` gate. It is a gate, not a hidden footer:
-   unmounting the sentinel behind the observer's back would never re-observe it
-   and paging would stall silently. Opening any fold lifts the hold.
+6. **Paging stops behind a folded tail** — while a fold is in effect, none is
+   open and the paged read's tail is folded (`isTailFolded`), the body gates
+   the scroll observer's own `hasNextPage` (see *Paging* below). It is a gate,
+   not a hidden footer: unmounting the sentinel behind the observer's back
+   would never re-observe it and paging would stall silently. Opening any fold
+   lifts the hold.
 7. **The fold runs last** — after partition, manual order and aggregation
    (`foldSections` in `useDataViewSections`), so an aggregate's representative
    decides. `section.count` stays the total; `section.fold = { hidden, open }` is
@@ -765,6 +765,27 @@ group opened from the fold editor would edit the view's filter instead.
 
 "Fold line" / "folded rows" is unrelated to the tree's fold-children header
 action (which collapses subtrees).
+
+## Paging (`paging`)
+
+A live `source` pages its own scroll. A consumer that must derive its rows in
+memory from a paged read — the conversation Queue, whose Done section is the
+`conversations-gone` scroll merged with ranked/active rows — passes
+`paging={…}` beside `rows` (`DataViewPaging`; `scrollPaging(settledScroll)`
+maps a `useLiveScroll` read onto it). Both reach the body as one `paging`, so
+the footer (loading-more, Retry, the cap line), the notices and the hold are
+one code path.
+
+- `isPaged(row)` names the rows the read supplies (absent: all). They sit in
+  `rows` in the read's order, so the last one is the **tail**.
+- **The next page loads only while the tail is on screen**: not folded (rule
+  6 above), not in a collapsed section, and — in memory — not hidden by the
+  view's search or filter — and not before any paged row is drawn (the
+  consumer's other reads still loading). Otherwise a sentinel still in view
+  would page the whole read in behind a collapsed header.
+- Counts: until the read is `complete`, `rowsComplete` is `{ growable:
+  isPaged }` — only a section holding a paged row reads as a lower bound
+  ("30+"); the others stay exact.
 
 ## Create affordances (`creators`)
 
@@ -2095,20 +2116,20 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ConfigV2.WebRegister` ×46
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
-  - Uses: 74 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 71 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×7
-    - `network/live` ×4
     - `primitives/css/control-panel` ×4
     - `primitives/live-state` ×4
     - `primitives/slot-render` ×4
-    - `primitives/cursor-pagination` ×3
     - `config_v2` ×2
+    - `network/live` ×2
     - `primitives/collapsible` ×2
     - `primitives/css/row` ×2
     - `primitives/css/sticky/stack` ×2
     - `primitives/css/sticky` ×2
     - `primitives/css/text` ×2
+    - `primitives/cursor-pagination` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/latest-ref` ×2
     - `primitives/loading` ×2
@@ -2143,10 +2164,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewDensity`
     - `DataViewFoldLines`
     - `DataViewId`
+    - `DataViewPaging`
     - `DataViewProps`
     - `DataViewRenderProps`
     - `DataViewRowEntry`
     - `DataViewSection`
+    - `DataViewSegmentNotice`
     - `DataViewSettingContribution`
     - `DataViewSourceBundle`
     - `DataViewSourceContribution`
@@ -2234,6 +2257,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `readFallback`
     - `resolveBodyFields`
     - `rowToneClass`
+    - `scrollPaging`
     - `SectionBody`
     - `UNGROUPED_FOLD_KEY`
     - `useDataViewControls`
@@ -2303,11 +2327,14 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewId`
     - `DataViewInMemoryOrigin`
     - `DataViewLiveOrigin`
+    - `DataViewPaging`
     - `DataViewProps`
     - `DataViewRenderProps`
     - `DataViewRowEntry`
+    - `DataViewRowsComplete`
     - `DataViewSearch`
     - `DataViewSection`
+    - `DataViewSegmentNotice`
     - `DataViewSurfaceChrome`
     - `DataViewToolbarSpec`
     - `FieldDef`

@@ -27,7 +27,7 @@ export function QueueSource({
   render,
 }: DataViewSourceProps<ConversationSidebarProps>): ReactElement {
   const { activeId, linkTo, onCloseConversation } = hostProps;
-  const { rows, dispatchReorder, readiness } = useQueueRows();
+  const { rows, dispatchReorder, readiness, paging } = useQueueRows();
   const fields = useQueueFields();
 
   return (
@@ -37,6 +37,7 @@ export function QueueSource({
         fields,
         rowKey: (c) => c.id,
         readiness,
+        ...(paging ? { paging } : {}),
         selectedRowId: activeId ?? undefined,
         rowActivation: (r) => linkTo(r.id),
         viewOptions: {

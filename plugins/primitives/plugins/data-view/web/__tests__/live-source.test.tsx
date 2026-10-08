@@ -11,7 +11,7 @@
  * - a saved rule on a field that does not resolve is pending while the
  *   deferred tier loads, and the error arm once it settled;
  * - the skeleton until the head settles, then an empty set is empty;
- * - the footer: `hasNextPage` from `canGrow` and the paging hold;
+ * - the paging: `canGrow` / `complete` from the scroll;
  * - a failed head read is the body's read-error arm: the failure with Retry,
  *   whose click re-reads the head (never a bare "Couldn't load" line).
  */
@@ -184,7 +184,6 @@ function mount(
     state: ViewState;
     scoped?: boolean;
     awaiting?: boolean;
-    hold?: boolean;
   },
 ) {
   const all = liveDataSource(c, { searchable: ["subject"] });
@@ -201,7 +200,7 @@ function mount(
     </NotificationsProvider>
   );
   const rendered = renderHook(
-    (p: { state: ViewState; hold?: boolean }) =>
+    (p: { state: ViewState }) =>
       useLiveSource<Thread>({
         source,
         plan,
@@ -209,9 +208,8 @@ function mount(
         state: p.state,
         resolveOperatorSet,
         resolveGrouping,
-        holdPaging: () => p.hold === true,
       }),
-    { wrapper, initialProps: { state: initial.state, hold: initial.hold } },
+    { wrapper, initialProps: { state: initial.state } },
   );
   const notifications = getNotificationsClient();
   if (!notifications) throw new Error("NotificationsClient not created");
@@ -293,7 +291,7 @@ describe("useLiveSource — lowering", () => {
     });
     await waitFor(() => expect(result.current!.loading).toBe(false));
 
-    rerender({ state: { ...baseState, query: "hello" }, hold: false });
+    rerender({ state: { ...baseState, query: "hello" } });
     // Not yet: the keystroke has not settled.
     expect(tuples(client, c)).toHaveLength(1);
     const searched = c.window.window.encode({
@@ -408,23 +406,21 @@ describe("useLiveSource — states", () => {
     });
     await waitFor(() => expect(result.current!.loading).toBe(false));
     expect(result.current!.rows).toEqual([]);
-    expect(result.current!.rowsComplete).toBe(true);
+    expect(result.current!.paging.complete).toBe(true);
   });
 
-  it("the footer pages while the scroll can grow — and not while the paging is held", async () => {
+  it("the paging can grow while the scroll can", async () => {
     const c = threads();
     const client = makeClient();
-    const { result, rerender } = mount(client, c, { state: baseState });
+    const { result } = mount(client, c, { state: baseState });
     act(() => {
       client.setQueryData(queryKeyFor(c.key, { limit: "2" }), wire([1, 2]));
     });
-    await waitFor(() => expect(result.current!.scroll.hasNextPage).toBe(true));
-    expect(result.current!.rowsComplete).toBe(false);
+    await waitFor(() => expect(result.current!.paging.canGrow).toBe(true));
+    expect(result.current!.paging.complete).toBe(false);
     expect(result.current!.rows.map((r) => r.id)).toEqual(["t1", "t2"]);
     // `$key` never reaches the view.
     expect(Object.keys(result.current!.rows[0]!)).not.toContain("$key");
-    rerender({ state: baseState, hold: true });
-    expect(result.current!.scroll.hasNextPage).toBe(false);
   });
 });
 
@@ -449,7 +445,6 @@ function LiveBody(props: {
     state: baseState,
     resolveOperatorSet,
     resolveGrouping,
-    holdPaging: () => false,
   });
   const state = resolveBodyState({
     server: origin,

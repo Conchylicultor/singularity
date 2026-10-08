@@ -5,6 +5,7 @@ export { mapRow } from "./internal/map-row";
 export { useLiveScroll } from "./internal/use-live-scroll";
 export type {
   LiveScrollOptions,
+  LiveScrollResult,
   LiveSegmentError,
 } from "./internal/use-live-scroll";
 export type { ScrollTruncation } from "../shared/scroll-plan";

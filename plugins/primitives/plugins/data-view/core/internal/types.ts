@@ -899,11 +899,15 @@ export interface DataViewRenderProps<TRow> {
    */
   groupOrder: "asc" | "desc";
   /**
-   * Whether `rows` is the whole set: always in memory; a server-ordered list
-   * (live) only once read to its end. Section counts are exact
-   * only when it is (or when a later section has started — see `sectionOrder`).
+   * Whether `rows` is the whole set: always in memory without `paging`; a
+   * server-ordered list (live) only once read to its end. Section counts are
+   * exact only when it is (or when a later section has started — see
+   * `sectionOrder`). `{ growable }`: an in-memory list some of whose rows are a
+   * paged read not read to its end ({@link DataViewPaging.isPaged}) — only a
+   * section holding a `growable` row can gain rows, so only its count is a
+   * lower bound.
    */
-  rowsComplete: boolean;
+  rowsComplete: DataViewRowsComplete<TRow>;
   /**
    * How grouped sections are ordered: `"bucket"` — by their bucket's ordinal
    * (in memory, and a grouping the server does not order by); `"appearance"` —
@@ -1211,7 +1215,59 @@ export interface DataViewInMemoryOrigin<
    * as a confirmed-empty one (`emptyState` needs `ready` and zero rows).
    */
   readiness?: ResourceReadiness;
+  /**
+   * `rows` hold a loaded prefix of a longer read that pages as the user
+   * scrolls: the body renders the same infinite-scroll footer a live `source`
+   * does (loading-more, Retry on a failed page, the line saying it stops),
+   * and section counts holding paged rows read as lower bounds until the read
+   * is complete. For a consumer that must derive its rows in memory from a
+   * paged read (a live scroll, `scrollPaging`) — a list whose rows ARE one
+   * collection's is a live `source` instead.
+   */
+  paging?: DataViewPaging<TRow>;
   source?: never;
+}
+
+/** See {@link DataViewRenderProps.rowsComplete}. */
+export type DataViewRowsComplete<TRow> =
+  boolean | { growable: (row: TRow) => boolean };
+
+/** A read failing under rows that stay on screen — a notice above them, with its own Retry. */
+export interface DataViewSegmentNotice {
+  /** Unique among the notices (the failing read's identity). */
+  key: string;
+  /** The row key of the last row before the failing read; `null` = it is the head. */
+  afterRowId: string | null;
+  error: Error;
+  retry: () => void;
+}
+
+/**
+ * The paging state of a read whose loaded rows a DataView shows — see
+ * {@link DataViewInMemoryOrigin.paging}. A live `source` produces one
+ * internally; `scrollPaging` maps a `useLiveScroll` read onto it.
+ */
+export interface DataViewPaging<TRow> {
+  /** A next page would add rows. */
+  canGrow: boolean;
+  /** A next page is loading; the rows shown are the previous ones. */
+  growing: boolean;
+  loadMore: () => void;
+  /** Every row of the read is loaded. */
+  complete: boolean;
+  /** Paging stopped on a failed read: the footer's Retry re-reads it (never a new page). */
+  stalled: { retry: () => void } | null;
+  /** Rows exist past the tail that cannot be paged to; `hint` says how to reach them. */
+  truncated: false | { hint: string };
+  /** Reads failing under rows that stay on screen. */
+  notices: readonly DataViewSegmentNotice[];
+  /**
+   * Which of `rows` came from the paged read — absent: all of them. They must
+   * appear in `rows` in the read's order, so the LAST one is the read's tail:
+   * the page after it loads only while that tail is on screen (not folded,
+   * not in a collapsed section, not hidden by the view's search or filter).
+   */
+  isPaged?: (row: TRow) => boolean;
 }
 
 /**
@@ -1223,6 +1279,7 @@ export interface DataViewLiveOrigin<TRow> {
   source: LiveDataSource<TRow>;
   rows?: never;
   readiness?: never;
+  paging?: never;
   rowKey?: never;
   searchAccessor?: never;
   hierarchy?: never;

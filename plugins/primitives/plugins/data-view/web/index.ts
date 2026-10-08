@@ -22,13 +22,18 @@ export type {
   DataViewSourceProps,
 } from "./internal/define-data-view-sources";
 export type { DataViewSourceBundle } from "./internal/body-types";
+export { scrollPaging } from "./internal/scroll-paging";
 export {
   defineDataView,
   DATA_VIEW_HEADER_OFFSET_VAR,
   IDENTITY_CODEC,
   UNGROUPED_FOLD_KEY,
 } from "../core";
-export type { DataViewId } from "../core";
+export type {
+  DataViewId,
+  DataViewPaging,
+  DataViewSegmentNotice,
+} from "../core";
 export type {
   FieldGrouping,
   FieldGroupingSet,

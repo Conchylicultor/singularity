@@ -12697,7 +12697,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversations-view/queue.TaskGroup`
                   - `infra/endpoints.fetchEndpoint`
                   - `network/live.useLive`
+                  - `network/live.useLiveScroll`
+                  - `primitives/data-view.DataViewPaging`
                   - `primitives/data-view.defineItemActions`
+                  - `primitives/data-view.scrollPaging`
                   - `primitives/icon-button.IconButton`
                   - `primitives/live-state.combineResources`
                   - `primitives/live-state.ResourceReadiness`
@@ -22730,6 +22733,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveListResult`
           - `LiveRowResult`
           - `LiveScrollOptions`
+          - `LiveScrollResult`
           - `LiveSegmentError`
           - `ScrollTruncation`
         - Exports (values):
@@ -28371,20 +28375,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` ×46
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
-        - Uses: 74 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 71 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `primitives/css/ui-kit` ×11
           - `primitives/data-view/view-core` ×7
-          - `network/live` ×4
           - `primitives/css/control-panel` ×4
           - `primitives/live-state` ×4
           - `primitives/slot-render` ×4
-          - `primitives/cursor-pagination` ×3
           - `config_v2` ×2
+          - `network/live` ×2
           - `primitives/collapsible` ×2
           - `primitives/css/row` ×2
           - `primitives/css/sticky/stack` ×2
           - `primitives/css/sticky` ×2
           - `primitives/css/text` ×2
+          - `primitives/cursor-pagination` ×2
           - `primitives/hover-reveal` ×2
           - `primitives/latest-ref` ×2
           - `primitives/loading` ×2
@@ -28419,10 +28423,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewDensity`
           - `DataViewFoldLines`
           - `DataViewId`
+          - `DataViewPaging`
           - `DataViewProps`
           - `DataViewRenderProps`
           - `DataViewRowEntry`
           - `DataViewSection`
+          - `DataViewSegmentNotice`
           - `DataViewSettingContribution`
           - `DataViewSourceBundle`
           - `DataViewSourceContribution`
@@ -28510,6 +28516,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readFallback`
           - `resolveBodyFields`
           - `rowToneClass`
+          - `scrollPaging`
           - `SectionBody`
           - `UNGROUPED_FOLD_KEY`
           - `useDataViewControls`
@@ -28579,11 +28586,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewId`
           - `DataViewInMemoryOrigin`
           - `DataViewLiveOrigin`
+          - `DataViewPaging`
           - `DataViewProps`
           - `DataViewRenderProps`
           - `DataViewRowEntry`
+          - `DataViewRowsComplete`
           - `DataViewSearch`
           - `DataViewSection`
+          - `DataViewSegmentNotice`
           - `DataViewSurfaceChrome`
           - `DataViewToolbarSpec`
           - `FieldDef`

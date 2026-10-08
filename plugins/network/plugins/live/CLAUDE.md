@@ -852,6 +852,7 @@ for a new reader of the two page resources.
     - `LiveListResult`
     - `LiveRowResult`
     - `LiveScrollOptions`
+    - `LiveScrollResult`
     - `LiveSegmentError`
     - `ScrollTruncation`
   - Exports (values):

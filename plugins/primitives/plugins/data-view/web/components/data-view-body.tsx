@@ -1,6 +1,5 @@
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
-import type { ScrollTruncation } from "@plugins/network/plugins/live/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import {
@@ -14,11 +13,16 @@ import {
   type LiveDataSource,
   type ManualOrderConfig,
   type DataViewFoldLines,
+  type DataViewPaging,
+  type DataViewSegmentNotice,
   type SortRule,
 } from "../../core";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import { DataViewSlots, type DataViewContribution } from "../slots";
-import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
+import {
+  InfiniteScrollFooter,
+  useInfiniteScroll,
+} from "@plugins/primitives/plugins/cursor-pagination/web";
 import { fieldsReadByView, resolveBodyState } from "../internal/body-state";
 import { BodyFallback } from "./body-fallback";
 import {
@@ -30,11 +34,7 @@ import {
   type SortController,
 } from "../internal/use-sort-controller";
 import { useGroupingRegistry } from "../grouping-slot";
-import {
-  useLiveSource,
-  type LiveSegmentNotice,
-  type SourceView,
-} from "../internal/live-source";
+import { useLiveSource, type SourceView } from "../internal/live-source";
 import {
   checkFieldColumns,
   liveColumnScopeOf,
@@ -46,6 +46,8 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResolveOperatorSet } from "../filter-slot";
 import { useGroupingClock } from "../internal/use-grouping-clock";
 import { useRowFilter } from "../internal/use-row-filter";
+import { useRowMatcher } from "../internal/use-flat-rows";
+import { partitionIntoSections } from "../internal/use-data-view-sections";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { PendingMoveOverlay } from "../internal/use-pending-move-overlay";
 import { CollectFieldExtensions } from "../internal/field-extensions";
@@ -73,16 +75,6 @@ import {
   DataViewControlsProvider,
   type DataViewControlsContextValue,
 } from "./controls/controls-context";
-
-/**
- * What a live list that stopped short tells the user (`InfiniteScrollFooter`'s
- * `hint`) — in their terms, per reason; the scroll's own wording goes to its log.
- */
-const TRUNCATION_HINT: Readonly<Record<ScrollTruncation, string>> = {
-  "segment-cap": "narrow the filter to see the rest",
-  "long-sort-key":
-    "the rest cannot be scrolled to in this sort — narrow the filter, or sort by another field",
-};
 
 /**
  * The per-active-instance body: everything downstream of "which instance is
@@ -291,6 +283,7 @@ function DataViewBodyInner<TRow>(
     emptyState,
     loadingState,
     readiness,
+    paging: heldPaging,
     errorState,
     hierarchy,
     viewOptions,
@@ -446,21 +439,6 @@ function DataViewBodyInner<TRow>(
     [liveSource, fields, resolveOperatorSet],
   );
 
-  // While the fold is closed everywhere and the LAST loaded row is folded,
-  // stop auto-fetching: the next page would only land behind "…". Opening any
-  // fold lifts the hold (and brings the sentinel back).
-  const holdPaging = (loaded: readonly TRow[]) =>
-    isTailFolded(loaded, {
-      fold,
-      openCount: openFolds.size,
-      isKept: fold
-        ? makeFoldKeep(matchesFoldKeep, {
-            selectedRowId,
-            rowKey: (row) => rowKey(row, 0),
-          })
-        : () => true,
-      rowKey,
-    });
   // Optional live source (always called; `null` without one). When present,
   // filter/sort/search/paginate run server-side over the live `activeState`,
   // so its segments replace `rows` and the client pipeline (`useFlatRows`) is
@@ -473,7 +451,6 @@ function DataViewBodyInner<TRow>(
     state: activeState,
     resolveOperatorSet,
     resolveGrouping: groupingRegistry.resolve,
-    holdPaging,
   });
   // The server-ordered origin in effect, as the body renders it.
   const origin: SourceView<TRow> | null = live;
@@ -557,6 +534,96 @@ function DataViewBodyInner<TRow>(
   // group-by control asks "which fields can group?" through it (the settings
   // contribution's `isApplicable` is a pure function and cannot read a slot).
   const hasGrouping = groupingRegistry.has;
+
+  // The paged read behind the rows, if any: a live source's own scroll, or
+  // the consumer's `paging` over the rows it holds.
+  const paging: DataViewPaging<TRow> | undefined = origin
+    ? origin.paging
+    : heldPaging;
+  const loadedRows: readonly TRow[] = origin
+    ? origin.rows
+    : (rows ?? (NO_ROWS as readonly TRow[]));
+  // The read's tail — its last loaded row (the last paged one, in `rows`
+  // order) — and how many of the rows it has loaded.
+  const pagedTail = useMemo(() => {
+    if (!paging) return null;
+    const isPaged = paging.isPaged;
+    if (!isPaged) {
+      const i = loadedRows.length - 1;
+      return {
+        tail:
+          i < 0
+            ? null
+            : { row: loadedRows[i]!, key: rowKey(loadedRows[i]!, i) },
+        count: loadedRows.length,
+      };
+    }
+    let tail: { row: TRow; key: string } | null = null;
+    let count = 0;
+    loadedRows.forEach((row, i) => {
+      if (!isPaged(row)) return;
+      count++;
+      tail = { row, key: rowKey(row, i) };
+    });
+    return { tail, count };
+  }, [paging, loadedRows, rowKey]);
+  const tail = pagedTail?.tail ?? null;
+  // Paging waits while the tail is off screen — the next page would land
+  // where nobody can see it, and the sentinel, still in view, would page the
+  // whole read in. A gate on `hasNextPage`, not a hidden footer: unmounting
+  // the sentinel behind the observer's back would never re-observe it.
+  //  - folded: the fold is closed everywhere and the tail is folded (opening
+  //    any fold lifts the hold);
+  const tailFolded =
+    tail !== null &&
+    isTailFolded([tail.row], {
+      fold,
+      openCount: openFolds.size,
+      isKept: fold
+        ? makeFoldKeep(matchesFoldKeep, {
+            selectedRowId,
+            rowKey: (row) => rowKey(row, 0),
+          })
+        : () => true,
+      rowKey,
+    });
+  //  - in a collapsed section;
+  const collapsedSections = viewModel.collapsedSectionsFor(activeViewId);
+  const tailCollapsed =
+    tail !== null &&
+    activeState.groupBy !== undefined &&
+    collapsedSections.size > 0 &&
+    isSectionCollapsed(
+      partitionIntoSections(loadedRows, fields, activeState.groupBy, rowKey, {
+        resolveGrouping: groupingRegistry.resolve,
+        now,
+        order: groupOrder,
+      }),
+      tail.key,
+      collapsedSections,
+    );
+  //  - hidden by the view's search or filter (in memory: a live source
+  //    already searched and filtered in SQL).
+  const matchesView = useRowMatcher(
+    fields,
+    origin ? NO_QUERY : activeState,
+    resolveOperatorSet,
+    searchAccessor,
+  );
+  //  - or not drawn at all: no paged row is on screen yet (the consumer's
+  //    other reads still loading), so there is no tail to page past.
+  const tailHidden =
+    tail === null ||
+    tailFolded ||
+    tailCollapsed ||
+    (matchesView !== null && !matchesView(tail.row));
+  const scrollHandle = useInfiniteScroll({
+    hasNextPage: (paging?.canGrow ?? false) && !tailHidden,
+    isFetchingNextPage: paging?.growing ?? false,
+    isFetchNextPageError: paging?.stalled != null,
+    fetchNextPage: paging?.loadMore ?? NOOP,
+    ...(paging?.stalled ? { retry: paging.stalled.retry } : {}),
+  });
 
   // Whether a row-order contributor may own this view's order. Each clause is a
   // structural exclusion, not a preference:
@@ -768,9 +835,14 @@ function DataViewBodyInner<TRow>(
             viewModel.setExpanded(activeViewId, changes),
           now,
           groupOrder,
-          // In memory the rows are the whole set; a server-ordered origin says
-          // when it has read to the end.
-          rowsComplete: origin ? origin.rowsComplete : true,
+          // In memory without paging the rows are the whole set; a paged read
+          // says when it has read to the end (and, over held rows, which of
+          // them it pages).
+          rowsComplete: (!paging || paging.complete
+            ? true
+            : paging.isPaged
+              ? { growable: paging.isPaged }
+              : false) as DataViewRenderProps<unknown>["rowsComplete"],
           sectionOrder: origin ? origin.sectionOrder : "bucket",
           collapsedSections: viewModel.collapsedSectionsFor(activeViewId),
           setSectionCollapsed: (key, collapsed) =>
@@ -847,9 +919,9 @@ function DataViewBodyInner<TRow>(
                 <>
                   {/* A live segment that could not refresh keeps its rows on
                       screen; its notice sits above them, naming where. */}
-                  {origin && origin.notices.length > 0 ? (
+                  {paging && paging.notices.length > 0 ? (
                     <SegmentNotices
-                      notices={origin.notices}
+                      notices={paging.notices}
                       rows={effectiveRows}
                       fields={fields as FieldDef<unknown>[]}
                       rowKey={rowKey as (row: unknown, index: number) => string}
@@ -871,19 +943,20 @@ function DataViewBodyInner<TRow>(
                 </>
               )}
             </ControlSizeProvider>
-            {/* Server-ordered infinite scroll: the error-gated footer (loading-more
-                spinner, Retry on a failed page, the IntersectionObserver sentinel,
-                and — for a live scroll at its cap — the line saying it stops).
-                Rendered only on a server-ordered origin. */}
-            {origin ? (
+            {/* Infinite scroll over a paged read (a live source, or the
+                consumer's `paging`): the error-gated footer (loading-more
+                spinner, Retry on a failed page, the IntersectionObserver
+                sentinel, and — for a read at its cap — the line saying it
+                stops). */}
+            {paging ? (
               <InfiniteScrollFooter
-                handle={origin.scroll}
+                handle={scrollHandle}
                 truncated={
-                  origin.truncated === false
+                  paging.truncated === false
                     ? false
                     : {
-                        shown: effectiveRows.length,
-                        hint: TRUNCATION_HINT[origin.truncated.reason],
+                        shown: pagedTail?.count ?? 0,
+                        hint: paging.truncated.hint,
                       }
                 }
               />
@@ -986,7 +1059,7 @@ function DataViewBodyInner<TRow>(
  * rows would need a non-row entry kind in every view.
  */
 function SegmentNotices(props: {
-  notices: readonly LiveSegmentNotice[];
+  notices: readonly DataViewSegmentNotice[];
   rows: readonly unknown[];
   fields: FieldDef<unknown>[];
   rowKey: (row: unknown, index: number) => string;
@@ -1018,6 +1091,21 @@ function SegmentNotices(props: {
 }
 
 const NO_ROWS: readonly unknown[] = [];
+
+/** Whether the section holding the entry keyed `key` is collapsed. */
+function isSectionCollapsed(
+  sections: readonly {
+    key: string | null;
+    entries: readonly { key: string }[];
+  }[],
+  key: string,
+  collapsed: ReadonlySet<string>,
+): boolean {
+  const section = sections.find((s) => s.entries.some((e) => e.key === key));
+  return section?.key != null && collapsed.has(section.key);
+}
+const NO_QUERY = { query: "", filter: null };
+const NOOP = () => {};
 
 /** The shared "no fold open" set — one identity, so an idle view's `openFolds`
  *  never changes between renders. */
