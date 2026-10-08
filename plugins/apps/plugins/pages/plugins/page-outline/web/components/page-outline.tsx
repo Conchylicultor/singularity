@@ -39,7 +39,7 @@ function useHeadingTypes(): ReadonlyMap<string, HeadingType> {
     for (const c of contributions) {
       const semantics = c.block.semantics;
       // A non-string `match` (RegExp / predicate) claims no single type id, so
-      // there is no key to file it under — same rule `useFramedBlockTypes` uses.
+      // there is no key to file it under — same rule `useIsFramedBlock` uses.
       if (typeof c.match !== "string" || semantics?.role !== "heading")
         continue;
       out.set(c.match, { level: semantics.level, handle: c.block });

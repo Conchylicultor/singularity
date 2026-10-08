@@ -233,7 +233,7 @@ const blockSlot = defineOrderedDispatchSlot<
  *
  * Both ride on the frame registration rather than getting slots of their own on
  * purpose: containerhood is already derived from *who actually paints a box*
- * (`useFramedBlockTypes`), precisely so it cannot drift from a second flag; a
+ * (`useIsFramedBlock`), precisely so it cannot drift from a second flag; a
  * separate anchor (or menu) slot would reintroduce exactly that drift in a new
  * coat — a type could claim a decoration while framing nothing, or frame
  * without one.
@@ -262,6 +262,20 @@ const blockSlot = defineOrderedDispatchSlot<
  * discovered.
  */
 export type BlockFrameMeta = BlockFrameDecoration & {
+  /**
+   * Which blocks of the matched type are containers. Absent: every one. A pure
+   * function of the block's own row — `type`, `data` and the fold — so every
+   * surface answers it from the forest it already holds, the read-only one
+   * included, with no read of its own.
+   *
+   * For a type that is a container only in some STATES: an agent-authored
+   * sub-page is a card while it is expanded inline (its content is the agent's,
+   * so the wash must cover it) and a plain row while collapsed. It is read
+   * wherever membership is: the spans, and so every pad, inset, foot and
+   * rail-seat count derived from them. A block it answers no for is exactly an
+   * unframed block — no box, no pad, its subtree flat.
+   */
+  applies?: (block: FrameCandidate) => boolean;
   /**
    * How far this container's CONTENT sits from the box it paints — see
    * `FramePad`. REQUIRED: the surface is the only thing that can make the space
@@ -301,6 +315,17 @@ export type BlockFrameMeta = BlockFrameDecoration & {
    */
   foot?: ComponentType<BlockFootProps>;
 };
+
+/**
+ * What a frame's `applies` may read: the row facts every surface holds — the
+ * editable forest's `Block` and the read-only renderer's node alike.
+ */
+export interface FrameCandidate {
+  type: string;
+  /** Optional, as on both `Block` and the read-only node (absent reads as `{}`). */
+  data?: unknown;
+  expanded: boolean;
+}
 
 /**
  * A container's decoration and, by which field it is spelled, its SEAT. Exactly
@@ -401,7 +426,7 @@ export const Editor = {
    * container's own row PLUS its whole visible subtree (the callout's tint).
    * Contributing here is what makes a block type a container — the surfaces
    * derive the framed-type set from this slot's registered matches
-   * (`useFramedBlockTypes`), so there is no second "I am a container" flag to
+   * (`useIsFramedBlock`), so there is no second "I am a container" flag to
    * drift from it.
    *
    * Deliberately NOT a fallback dispatch: a type with no contribution is not
@@ -473,23 +498,30 @@ export const Editor = {
 };
 
 /**
- * The set of block types that are container frames, derived from the
- * `Editor.BlockFrame` registrations themselves. A surface asks "should I group
- * this block's subtree under it?" and gets an answer that cannot disagree with
- * who actually paints a frame — adding or removing a container plugin updates
- * every surface with zero code changes.
+ * Whether a block is a container frame, derived from the `Editor.BlockFrame`
+ * registrations themselves. A surface asks "should I group this block's subtree
+ * under it?" and gets an answer that cannot disagree with who actually paints a
+ * frame — adding or removing a container plugin updates every surface with zero
+ * code changes.
+ *
+ * A predicate over the BLOCK rather than a set of types, because a contribution
+ * may declare `applies` — a type that is a container only in some states.
  */
-export function useFramedBlockTypes(): ReadonlySet<string> {
+export function useIsFramedBlock(): (block: FrameCandidate) => boolean {
   const contributions = Editor.BlockFrame.useContributions();
-  return useMemo(
-    () =>
-      new Set(
-        contributions
-          .map((c) => c.match)
-          .filter((m): m is string => typeof m === "string"),
-      ),
-    [contributions],
-  );
+  return useMemo(() => {
+    const byType = new Map<
+      string,
+      ((block: FrameCandidate) => boolean) | true
+    >();
+    for (const c of contributions) {
+      if (typeof c.match === "string") byType.set(c.match, c.applies ?? true);
+    }
+    return (block: FrameCandidate) => {
+      const applies = byType.get(block.type);
+      return applies === true || (applies !== undefined && applies(block));
+    };
+  }, [contributions]);
 }
 
 /**
@@ -524,7 +556,7 @@ export function useFrameGeometry(): ReadonlyMap<string, FrameGeometry> {
 
 /**
  * Block type → its container DECORATION and the seat it asked for, derived from
- * the same `Editor.BlockFrame` registrations `useFramedBlockTypes()` reads. Twin
+ * the same `Editor.BlockFrame` registrations `useIsFramedBlock()` reads. Twin
  * of that hook, on the same single source of truth: a type has a decoration
  * exactly when the registration that makes it a container also supplies one.
  *
@@ -584,7 +616,7 @@ export function useBlockFrameMenus(): ReadonlyMap<
 
 /**
  * Block type → the FOOT it renders at the bottom of its box, derived from the
- * same `Editor.BlockFrame` registrations `useFramedBlockTypes()` /
+ * same `Editor.BlockFrame` registrations `useIsFramedBlock()` /
  * `useFrameGeometry()` / `useBlockDecorations()` / `useBlockFrameMenus()` read.
  * Fourth twin on that one source of truth, for the same reason as the other
  * three: who has a foot cannot drift from who actually paints the box the foot

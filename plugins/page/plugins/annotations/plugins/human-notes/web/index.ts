@@ -29,7 +29,7 @@ export default {
       component: ContainerNoRow,
     }),
     // Contributing a frame is what MAKES this a container: the framed-type set is
-    // derived from this slot's registered matches (`useFramedBlockTypes()`), so
+    // derived from this slot's registered matches (`useIsFramedBlock()`), so
     // there is no second "I am a container" flag to drift from who actually
     // paints a box. the DECORATION rides on the SAME registration, so the handle's
     // `anchor: true` cannot claim one that nothing supplies. This family asks for

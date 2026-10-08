@@ -6,7 +6,9 @@ may write in full. What the user sees:
 
 - in the parent page, an ordinary sub-page row (icon, title, the rail chevron
   that expands it inline) tinted with the agent-notes card's blue wash, even
-  collapsed;
+  collapsed — and, expanded, a blue CARD around the row and all of the page's
+  content, so the agent's lines never read as the parent's prose (`page/sub-page`
+  draws it from this plugin's tint);
 - at that row's right edge, always visible, a chip naming the conversation that
   **created** the page — clicking it opens that run;
 - the same tint on the page's row in the Pages sidebar (no chip there);

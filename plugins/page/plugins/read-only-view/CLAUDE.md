@@ -106,8 +106,8 @@ declares the token. This plugin renders chips; it owns none.
 
 - Description: Faithful, non-editable renderer for a page block forest, with optional per-block diff highlighting. Reuses the editor's block-handle metadata + rich-text runs model without mounting Lexical.
 - Web:
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page/editor` ×17
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×18
     - `primitives/overlay/image-viewer` ×4
     - `primitives/css/spacing` ×3
     - `primitives/css/text` ×2

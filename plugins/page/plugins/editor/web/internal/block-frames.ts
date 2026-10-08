@@ -69,13 +69,12 @@ export interface FrameSpan {
  */
 export function computeFrameSpans(
   flat: readonly FlatBlock[],
-  framedTypes: ReadonlySet<string>,
+  isFramed: (block: Block) => boolean,
 ): FrameSpan[] {
-  if (framedTypes.size === 0) return [];
   const spans: FrameSpan[] = [];
   for (let i = 0; i < flat.length; i += 1) {
     const item = flat[i]!;
-    if (!framedTypes.has(item.block.type)) continue;
+    if (!isFramed(item.block)) continue;
     let end = i;
     while (end + 1 < flat.length && flat[end + 1]!.depth > item.depth) end += 1;
     spans.push({ block: item.block, depth: item.depth, start: i, end });

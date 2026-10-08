@@ -3,9 +3,14 @@ import type { Block } from "../../core";
 import { computeFrameSpans, type FlatBlock } from "./block-frames";
 
 /** A flatten entry; only `id`/`type`/`depth` matter to the span computation. */
-function entry(id: string, type: string, depth: number): FlatBlock {
+function entry(
+  id: string,
+  type: string,
+  depth: number,
+  data: unknown = {},
+): FlatBlock {
   return {
-    block: { id, type } as unknown as Block,
+    block: { id, type, data } as unknown as Block,
     depth,
     childCount: 0,
     ordinal: 1,
@@ -14,16 +19,18 @@ function entry(id: string, type: string, depth: number): FlatBlock {
 }
 
 /** Spans as readable `id:start-end` triples. */
-function spans(flat: FlatBlock[], framed: Set<string>): string[] {
-  return computeFrameSpans(flat, framed).map((s) => `${s.block.id}:${s.start}-${s.end}`);
+function spans(flat: FlatBlock[], framed: (block: Block) => boolean): string[] {
+  return computeFrameSpans(flat, framed).map(
+    (s) => `${s.block.id}:${s.start}-${s.end}`,
+  );
 }
 
-const FRAMED = new Set(["callout"]);
+const FRAMED = (block: Block) => block.type === "callout";
 
 describe("computeFrameSpans", () => {
   it("returns nothing when no container types are registered", () => {
     const flat = [entry("a", "callout", 0), entry("b", "text", 1)];
-    expect(computeFrameSpans(flat, new Set())).toEqual([]);
+    expect(computeFrameSpans(flat, () => false)).toEqual([]);
   });
 
   it("ignores a non-container block's children", () => {
@@ -99,5 +106,18 @@ describe("computeFrameSpans", () => {
     const [span] = computeFrameSpans(flat, FRAMED);
     expect(span).toBeDefined();
     expect(span!.end).toBe(1);
+  });
+
+  it("frames only the blocks the predicate admits, not their whole type", () => {
+    // A type that is a container in some states only (an expanded agent page):
+    // membership is per BLOCK, so a sibling of the same type stays flat.
+    const flat = [
+      entry("card", "page", 0, { framed: true }),
+      entry("inside", "text", 1),
+      entry("plain", "page", 0, { framed: false }),
+      entry("below", "text", 1),
+    ];
+    const framed = (b: Block) => (b.data as { framed: boolean }).framed;
+    expect(spans(flat, framed)).toEqual(["card:0-1"]);
   });
 });

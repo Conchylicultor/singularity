@@ -3,7 +3,7 @@ import { Editor as EditorSlots } from "./slots";
 
 export {
   Editor,
-  useFramedBlockTypes,
+  useIsFramedBlock,
   useFrameGeometry,
   useBlockDecorations,
   useBlockFeet,
@@ -12,6 +12,7 @@ export type {
   BlockContribution,
   BlockView,
   BlockFrameMeta,
+  FrameCandidate,
   BlockDecoration,
   BlockDecorationSeat,
   FramePad,

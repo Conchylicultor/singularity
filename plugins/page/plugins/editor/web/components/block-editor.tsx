@@ -72,7 +72,7 @@ import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import {
   Editor,
   useBlockFeet,
-  useFramedBlockTypes,
+  useIsFramedBlock,
   useFrameGeometry,
 } from "../slots";
 import { computeFrameSpans, type FlatBlock } from "../internal/block-frames";
@@ -1731,11 +1731,11 @@ function SelectionLayer({
   // by grid line number — never an ancestor. See `internal/block-frames.ts`:
   // wrapping the rows would change their DOM parent on every Tab across a frame
   // boundary, remounting the block's Lexical instance and losing the caret.
-  const framedTypes = useFramedBlockTypes();
+  const isFramed = useIsFramedBlock();
   const frameGeometry = useFrameGeometry();
   const frameSpans = useMemo(
-    () => computeFrameSpans(flat, framedTypes),
-    [flat, framedTypes],
+    () => computeFrameSpans(flat, isFramed),
+    [flat, isFramed],
   );
 
   // Every row's RAIL SEAT — where its hover controls sit, WHICH BLOCK they act

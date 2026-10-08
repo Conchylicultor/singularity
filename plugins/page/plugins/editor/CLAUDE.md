@@ -129,11 +129,17 @@ you collapse it), and containers nest.
 
 Three rules keep the exception from eating the rule it excepts:
 
-- **Only contributing types are grouped.** The framed-type set is derived from
-  the slot's own registered matches (`useFramedBlockTypes`), not from a separate
-  flag that could drift from it, and `groupFrames` short-circuits to the
-  byte-identical flat mapping when the set is empty. Every non-container block
-  keeps the flat guarantee exactly as before.
+- **Only contributing types are grouped.** Membership is derived from the
+  slot's own registered matches (`useIsFramedBlock`), not from a separate flag
+  that could drift from it. Every non-container block keeps the flat guarantee
+  exactly as before.
+- **Membership is per BLOCK, not per type.** A registration may declare
+  `applies(block)` — a pure function of the row's `type`, `data` and fold — for a
+  type that is a container only in some states: an agent-authored or
+  instructions sub-page is a card while expanded inline (`page/sub-page`) and a
+  plain row otherwise. Spans read it, so every pad, inset, foot and rail-seat
+  count follows; a block it answers no for is exactly an unframed block. The
+  geometry maps stay keyed by type — they are only ever read over spans.
 - **A frame is appearance only, and geometry is not its to touch.** It is a
   BACKDROP: it has no flow of its own, so it cannot shift a row and cannot make
   the space its own padding needs. Left padding or a left border in the *flow*
@@ -4016,9 +4022,9 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor.BlockMenuItem`
     - `Editor.FormatAction`
     - `Editor.InsertAction`
-  - Slot contributors: 49 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 50 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Editor.Block` ×30
-    - `Editor.BlockFrame` ×7
+    - `Editor.BlockFrame` ×8
     - `Editor.FormatAction` ×7
     - `Editor.InsertAction` ×3
     - `Editor.BlockMenuItem` ← `page.open-as-page`
@@ -4102,6 +4108,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `CollabHydrationReport`
     - `EditorScope`
     - `FormatToolbarValue`
+    - `FrameCandidate`
     - `FrameGeometry`
     - `FramePad`
     - `InsertAction`
@@ -4163,11 +4170,11 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `useCaretEscape`
     - `useEditorScope`
     - `useFormatToolbar`
-    - `useFramedBlockTypes`
     - `useFrameGeometry`
     - `useFrameHovered`
     - `useGroupedInsertableBlocks`
     - `useInsertableBlocks`
+    - `useIsFramedBlock`
     - `usePageMarkdownContext`
     - `usePageOptions`
     - `useSelectionControl`

@@ -23672,6 +23672,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/annotations/todo`
           - `page/callout`
           - `page/quote`
+          - `page/sub-page`
     - **`cover`** — Links a page's cover image: registers the cover attachment-id collector with the shared block↔attachment reconcile so the cover isn't orphan-swept.
       - Server:
         - Contributes: `page.attachment-block.collector`
@@ -23705,9 +23706,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.BlockMenuItem`
           - `Editor.FormatAction`
           - `Editor.InsertAction`
-        - Slot contributors: 49 contributors — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Slot contributors: 50 contributors — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `Editor.Block` ×30
-          - `Editor.BlockFrame` ×7
+          - `Editor.BlockFrame` ×8
           - `Editor.FormatAction` ×7
           - `Editor.InsertAction` ×3
           - `Editor.BlockMenuItem` ← `page.open-as-page`
@@ -23791,6 +23792,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CollabHydrationReport`
           - `EditorScope`
           - `FormatToolbarValue`
+          - `FrameCandidate`
           - `FrameGeometry`
           - `FramePad`
           - `InsertAction`
@@ -23852,11 +23854,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useCaretEscape`
           - `useEditorScope`
           - `useFormatToolbar`
-          - `useFramedBlockTypes`
           - `useFrameGeometry`
           - `useFrameHovered`
           - `useGroupedInsertableBlocks`
           - `useInsertableBlocks`
+          - `useIsFramedBlock`
           - `usePageMarkdownContext`
           - `usePageOptions`
           - `useSelectionControl`
@@ -25093,8 +25095,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `quoteDataSchema`
     - **`read-only-view`** — Faithful, non-editable renderer for a page block forest, with optional per-block diff highlighting. Reuses the editor's block-handle metadata + rich-text runs model without mounting Lexical.
       - Web:
-        - Uses: 35 symbols — full list in [`plugins/page/plugins/read-only-view/REFERENCE.md`](../plugins/page/plugins/read-only-view/REFERENCE.md)
-          - `page/editor` ×17
+        - Uses: 36 symbols — full list in [`plugins/page/plugins/read-only-view/REFERENCE.md`](../plugins/page/plugins/read-only-view/REFERENCE.md)
+          - `page/editor` ×18
           - `primitives/overlay/image-viewer` ×4
           - `primitives/css/spacing` ×3
           - `primitives/css/text` ×2
@@ -25121,10 +25123,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/pages/history`
           - `page/table`
-    - **`sub-page`** — Sub-page block type: renders a child page inline in its parent's content flow as a clickable Notion-style page row. A void, text-less block — selectable and arrow-navigable, but Enter/Backspace can never originate in it.
+    - **`sub-page`** — Sub-page block type: renders a child page inline in its parent's content flow as a clickable Notion-style page row. A void, text-less block — selectable and arrow-navigable, but Enter/Backspace can never originate in it. A page of a special kind (agent-authored, instructions) expanded inline is drawn as a card: its reference's tint washes the row and all of its content.
       - Web:
-        - Contributes: `Editor.Block` "page" → `SubPageBlock`
+        - Contributes:
+          - `Editor.Block` "page" → `SubPageBlock`
+          - `Editor.BlockFrame` "page" → `SubPageFrame`
         - Uses:
+          - `page/container.ContainerBackdrop`
           - `page/editor.BlockRendererProps`
           - `page/editor.Editor`
           - `page/editor.PageIcon`
@@ -25133,12 +25138,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/page-reference.usePageNavigation`
           - `page/page-reference.usePageReferenceActions`
           - `page/page-reference.usePageReferenceDecoration`
+          - `page/page-reference.usePageReferenceTint`
           - `primitives/css/center.Center`
           - `primitives/css/row.Row`
           - `primitives/css/row.RowFocus`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/row-actions.RowActions`
         - Exports (values): `subPageBlock`
       - Core:
@@ -28078,12 +28085,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 377 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 378 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×100
               - `apps` ×66
               - `conversations` ×50
+              - `page` ×24
               - `debug` ×23
-              - `page` ×23
               - `ui` ×23
               - `apps-core` ×13
               - `tasks` ×13

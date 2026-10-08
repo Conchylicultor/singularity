@@ -43,7 +43,7 @@ const hasFoot = (type: string) =>
 function slotsOf(flat: FlatBlock[]) {
   return resolveClosingSlots(
     flat,
-    computeFrameSpans(flat, framedTypes),
+    computeFrameSpans(flat, (b) => framedTypes.has(b.type)),
     padsBox,
     hasFoot,
   );
@@ -57,7 +57,7 @@ function landings(flat: FlatBlock[]): Record<string, string> {
 function feetOf(flat: FlatBlock[]) {
   return resolveFrameFeet(
     flat,
-    computeFrameSpans(flat, framedTypes),
+    computeFrameSpans(flat, (b) => framedTypes.has(b.type)),
     padsBox,
     absorbsIndent,
     hasFoot,

@@ -29,12 +29,13 @@ import {
   useBlockDecorations,
   useBlockFeet,
   FrameHoverProvider,
-  useFramedBlockTypes,
+  useIsFramedBlock,
   BLOCK_INDENT,
   BLOCK_INSET,
   FRAME_PAD_X,
   FRAME_PAD_Y,
   useFrameGeometry,
+  type FrameCandidate,
   type FrameGeometry,
   type BlockDecoration,
   type BlockFootProps,
@@ -408,7 +409,7 @@ function NodeView({
   node,
   ordinal,
   contributions,
-  framedTypes,
+  isFramed,
   frameGeometry,
   decorations,
   feet,
@@ -422,8 +423,8 @@ function NodeView({
    * the contribution, not the handle.
    */
   contributions: BlockEntry[];
-  /** Container block types, derived from the live `Editor.BlockFrame` registry. */
-  framedTypes: ReadonlySet<string>;
+  /** Whether a block is a container, from the live `Editor.BlockFrame` registry. */
+  isFramed: (block: FrameCandidate) => boolean;
   /**
    * Per container type: whether its box holds its content off its edges, and
    * whether it reclaims its children's indent step to pay for that. From the
@@ -448,7 +449,12 @@ function NodeView({
   // `pad: "box"` container. A quote's bar has no edge to clear, so it reserves
   // nothing and its passage keeps the full column.
   //
-  const geometry = frameGeometry.get(node.type);
+  const framed = isFramed({
+    type: node.type,
+    data: node.data,
+    expanded: node.expanded,
+  });
+  const geometry = framed ? frameGeometry.get(node.type) : undefined;
   const framePad: CSSProperties = geometry?.pads
     ? {
         paddingRight: FRAME_PAD_X,
@@ -475,7 +481,7 @@ function NodeView({
         <ForestView
           forest={node.children}
           contributions={contributions}
-          framedTypes={framedTypes}
+          isFramed={isFramed}
           frameGeometry={frameGeometry}
           decorations={decorations}
           feet={feet}
@@ -643,7 +649,7 @@ function NodeView({
   // detached snapshot (a version-history preview, the public site) — that is the
   // documented degradation, not a gap: a frame reading a side table keyed by
   // block id falls back to its static appearance there.
-  const withFrame = framedTypes.has(node.type) ? (
+  const withFrame = framed ? (
     // `group/frame` is this surface's half of the corner decoration's reveal:
     // here the frame and the lines it covers DO share an ancestor (nesting is a
     // real wrapper div, not a grid span), so a card's name can appear on plain
@@ -683,7 +689,7 @@ function NodeView({
 function ForestView({
   forest,
   contributions,
-  framedTypes,
+  isFramed,
   frameGeometry,
   decorations,
   feet,
@@ -691,7 +697,7 @@ function ForestView({
 }: {
   forest: ReadOnlyNode[];
   contributions: BlockEntry[];
-  framedTypes: ReadonlySet<string>;
+  isFramed: (block: FrameCandidate) => boolean;
   frameGeometry: ReadonlyMap<string, FrameGeometry>;
   decorations: ReadonlyMap<string, BlockDecoration>;
   feet: ReadonlyMap<string, ComponentType<BlockFootProps>>;
@@ -713,7 +719,7 @@ function ForestView({
           node={node}
           ordinal={ordinals[i] ?? 1}
           contributions={contributions}
-          framedTypes={framedTypes}
+          isFramed={isFramed}
           frameGeometry={frameGeometry}
           decorations={decorations}
           feet={feet}
@@ -750,7 +756,7 @@ export function ReadOnlyBlocks({ forest, diff }: ReadOnlyBlocksProps) {
   // box and its regions — lives on the contribution's `chrome`, and this surface
   // renders it through the same `TextBlockLayout` the editor uses.
   const contributions = Editor.Block.useContributions();
-  const framedTypes = useFramedBlockTypes();
+  const isFramed = useIsFramedBlock();
   const frameGeometry = useFrameGeometry();
   const decorations = useBlockDecorations();
   const feet = useBlockFeet();
@@ -764,7 +770,7 @@ export function ReadOnlyBlocks({ forest, diff }: ReadOnlyBlocksProps) {
       <ForestView
         forest={forest}
         contributions={contributions}
-        framedTypes={framedTypes}
+        isFramed={isFramed}
         frameGeometry={frameGeometry}
         decorations={decorations}
         feet={feet}

@@ -9,7 +9,7 @@
 // differently on each side and can never confirm.
 //
 // Derived from the slot's own registrations (never a second hand-maintained
-// list), exactly as `useFramedBlockTypes` derives the container set from
+// list), exactly as `useIsFramedBlock` derives the container set from
 // `Editor.BlockFrame` — adding or removing a block-type plugin updates every
 // consumer with zero code changes.
 

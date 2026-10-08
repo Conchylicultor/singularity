@@ -93,7 +93,7 @@ function seats(rows: Block[]): RailSeat[] {
   const flat = flattenVisible(buildTree(sortByRank(rows)), anchorTypes);
   return resolveRailSeats(
     flat,
-    computeFrameSpans(flat, framedTypes),
+    computeFrameSpans(flat, (b) => framedTypes.has(b.type)),
     handleOf,
     padsBox,
     absorbsIndent,
@@ -498,7 +498,7 @@ describe("resolveFramePadInsets — a box's three sides do not share a count", (
     const flat = flattenVisible(buildTree(sortByRank(rows)), anchorTypes);
     const out = resolveFramePadInsets(
       flat,
-      computeFrameSpans(flat, framedTypes),
+      computeFrameSpans(flat, (b) => framedTypes.has(b.type)),
       handleOf,
       padsBox,
       hasFoot,

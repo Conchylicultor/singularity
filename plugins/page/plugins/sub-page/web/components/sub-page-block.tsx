@@ -9,6 +9,7 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import { pageData } from "@plugins/page/plugins/editor/core";
 import {
@@ -22,6 +23,7 @@ import {
   usePageReferenceActions,
   usePageReferenceDecoration,
 } from "@plugins/page/plugins/page-reference/web";
+import { isPageCard } from "../internal/page-card";
 
 /**
  * A sub-page rendered inline in its parent's content flow: icon + title, click
@@ -53,6 +55,15 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
   // plugin's answer, read off the page's own data: a tint for the row and
   // perhaps a chip naming something about it. This row knows no kind.
   const decoration = usePageReferenceDecoration(block.id, page);
+  // Expanded, a decorated page is a card (`isPageCard`): the frame paints the
+  // wash over this row and the content below it, so the row gives up its own
+  // FILL — washed twice, the title line would read as a second, darker box. It
+  // keeps the rest of the tint: the `--scrim` a pinned action cluster dissolves
+  // into is the same wash either way (`cn` merges the fill away, nothing else).
+  const tint =
+    decoration && isPageCard(block)
+      ? cn(decoration.tint, "bg-transparent")
+      : decoration?.tint;
 
   // The whole void-block caret plumbing — register the focus handle, pull DOM
   // focus when the editor says the caret is here, report focus back — is the
@@ -118,7 +129,7 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
         // caller's class last: kept, the tint would erase the caret cue. Hover
         // still wins over it on its own (a `hover:` variant outranks a plain
         // utility), so the row answers the pointer exactly like any other.
-        className={isFocused ? undefined : decoration?.tint}
+        className={isFocused ? undefined : tint}
         onClick={() => nav?.open(block.id)}
         onKeyDown={onKeyDown}
         onFocus={onFocus}
