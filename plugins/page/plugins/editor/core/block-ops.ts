@@ -1915,9 +1915,10 @@ export function planBulkMove(
  * to what the server's writer commits.
  *
  * Deliberately does NOT recompute `pageId` — the same in-page invariant
- * `applyMove` holds. The composite client store refuses a cross-page bulk move
- * outright rather than guessing, and the server refuses an out-of-page
- * destination loudly, so a `bulkMove` op never crosses a boundary.
+ * `applyMove` holds. The composite client store routes a cross-page selection
+ * drop to the `moveBlocks` endpoint instead (and throws on a `bulkMove` that
+ * would cross anyway), and the op endpoint refuses an out-of-page destination
+ * loudly, so a `bulkMove` op never crosses a boundary.
  *
  * A refused plan is the identity — its `placements` are empty by construction.
  * Kept separate from `planBulkMove` because the plan carries the typed
@@ -1951,9 +1952,9 @@ export function applyBulkMove(
  *
  * `planBulkMove`'s `destSiblings` defaults to `blocks`, which is exactly right
  * here: a `bulkMove` op's destination lies inside the op's own page (the
- * composite refuses a cross-page selection drag, the server refuses an
- * out-of-page destination), so the page-scoped forest IS the complete sibling
- * set on both sides.
+ * composite sends a cross-page selection drop to `moveBlocks`, the server
+ * refuses an out-of-page destination), so the page-scoped forest IS the
+ * complete sibling set on both sides.
  */
 function applyBulkMoveOp(
   blocks: BlockNode[],

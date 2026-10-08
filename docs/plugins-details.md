@@ -23942,6 +23942,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PATCH /api/blocks/:id`
           - `DELETE /api/blocks/:id`
           - `POST /api/blocks/:id/move`
+          - `POST /api/blocks/move-many`
           - `POST /api/blocks/:id/turn-into-page`
           - `POST /api/blocks/:id/page-kind`
           - `POST /api/pages/:pageId/blocks/op`
@@ -24064,6 +24065,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `mergeRuns`
           - `moveBlock`
           - `MoveBlockBodySchema`
+          - `moveBlocks`
           - `namesField`
           - `newBlockId`
           - `nextVisibleLine`

@@ -10,6 +10,7 @@ import { loadLiveSiblings } from "./forest";
 import { withPageForest } from "./page-forest";
 import { updateBlockFields } from "./forest-writer";
 import { computePageId, recomputePageIdSubtree } from "./page-id";
+import { assertNotIntoOwnSubtree } from "./ancestry";
 
 export const handleMoveBlock = implement(
   moveBlock,
@@ -52,6 +53,7 @@ export const handleMoveBlock = implement(
           .where(eq(liveBlocks.id, params.id))
           .limit(1);
         if (!before) throw new HttpError(404, "Not found");
+        await assertNotIntoOwnSubtree(ctx.tx, [params.id], body.parentId);
 
         // Guards that the destination parent is LIVE (404 otherwise) and returns it
         // alongside its complete live sibling set — see `loadLiveSiblings`.

@@ -35,6 +35,7 @@ export {
   updateBlock,
   deleteBlock,
   moveBlock,
+  moveBlocks,
   turnIntoPage,
   setPageKind,
   applyBlockOpEndpoint,

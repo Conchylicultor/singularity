@@ -18,7 +18,13 @@ import {
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { enqueueResourceWrite } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { moveBlock, pageBlocks, patchBlocks, type Block } from "../core";
+import {
+  moveBlock,
+  moveBlocks,
+  pageBlocks,
+  patchBlocks,
+  type Block,
+} from "../core";
 import {
   BlockEditorProviderGate,
   type ProviderHostViewProps,
@@ -40,6 +46,7 @@ import {
   pageByAnchor,
   remapUnionParents,
   rowOwnerPage,
+  singleOwnerPage,
   splitOpByOwnerPage,
   translateOpForStore,
   translatePatchForStore,
@@ -301,15 +308,29 @@ export function CompositeServerProviderHost({
   const moveAcrossPages = useCallback(
     (
       sourcePageId: string,
-      op: Extract<BlockOverlayOp, { tag: "op" }>["op"],
+      op: Extract<
+        Extract<BlockOverlayOp, { tag: "op" }>["op"],
+        { kind: "move" | "bulkMove" }
+      >,
     ) => {
-      if (op.kind !== "move") throw new Error(`Not a move op: ${op.kind}`);
       const parentId = translateUnionParentId(op.parentId, mountsRef.current);
+      if (op.kind === "move") {
+        void enqueueResourceWrite(pageBlocks, { pageId: sourcePageId }, () =>
+          fetchEndpoint(
+            moveBlock,
+            { id: op.blockId },
+            { body: { parentId, targetId: op.targetId, zone: op.zone } },
+          ),
+        );
+        return;
+      }
+      // A dragged SELECTION crossing pages: the same reasoning, one write for
+      // the whole set so it lands atomically.
       void enqueueResourceWrite(pageBlocks, { pageId: sourcePageId }, () =>
         fetchEndpoint(
-          moveBlock,
-          { id: op.blockId },
-          { body: { parentId, targetId: op.targetId, zone: op.zone } },
+          moveBlocks,
+          {},
+          { body: { ids: op.ids, parentId, afterId: op.afterId } },
         ),
       );
     },
@@ -356,11 +377,14 @@ export function CompositeServerProviderHost({
         }
         return;
       }
-      // A cross-page single-block drop is the ONE structural write no page's
-      // overlay can carry — see `moveAcrossPages`.
-      if (v.op.kind === "move") {
+      // A cross-page drop — one block or a whole selection — is the ONE
+      // structural write no page's overlay can carry — see `moveAcrossPages`.
+      if (v.op.kind === "move" || v.op.kind === "bulkMove") {
         const rows = dataRef.current;
-        const sourcePageId = rowOwnerPage(rows, v.op.blockId);
+        const sourcePageId =
+          v.op.kind === "move"
+            ? rowOwnerPage(rows, v.op.blockId)
+            : singleOwnerPage(rows, v.op.ids);
         const destPageId = insertOwnerPage(
           rows,
           v.op.parentId,

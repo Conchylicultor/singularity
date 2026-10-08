@@ -126,6 +126,31 @@ export const moveBlock = defineEndpoint({
   response: BlockSchema,
 });
 
+/**
+ * The selection twin of {@link MoveBlockBodySchema}: move a set of blocks (the
+ * roots of a dragged selection, all on ONE page) under `parentId`, right after
+ * `afterId` (or at the start of its children when null). Positional intent,
+ * never a rank — the server runs `planBulkMove` against the destination's
+ * complete live sibling set.
+ *
+ * Its one caller is the composite editor's CROSS-PAGE selection drop: the
+ * `bulkMove` op cannot carry it, since its destination lies outside the op's
+ * own page (the op endpoint refuses that with a 400), and no single page's
+ * overlay can predict a write that moves rows out of its forest.
+ */
+export const MoveBlocksBodySchema = z.object({
+  ids: z.array(z.string()).min(1),
+  parentId: z.string().nullable(),
+  afterId: z.string().nullable(),
+});
+export type MoveBlocksBody = z.infer<typeof MoveBlocksBodySchema>;
+
+export const moveBlocks = defineEndpoint({
+  route: "POST /api/blocks/move-many",
+  body: MoveBlocksBodySchema,
+  response: z.array(BlockSchema),
+});
+
 export const TurnIntoPageBodySchema = z.object({
   title: z.string(),
   /**

@@ -259,11 +259,23 @@ export function resolveOpOwnerPage(
     case "indent":
     case "outdent":
       return singleOwnerPage(rows, op.blockIds);
-    // A bulk move's roots must share a page (its destination is checked against
-    // that page separately), so the same single-page rule applies — and its
-    // refusal is the same loud one, from the same helper.
-    case "bulkMove":
-      return singleOwnerPage(rows, op.ids);
+    // A bulk move's roots must share a page — the same single-page rule, and
+    // the same loud refusal, from the same helper. Its DESTINATION must be that
+    // page too: the op endpoint refuses an out-of-page parent with a 400, which
+    // would leave a never-confirming op on the lane. The composite routes a
+    // cross-page selection drop to `moveBlocks` before it gets here, so a
+    // mismatch is a routing bug — fail before it reaches the network.
+    case "bulkMove": {
+      const owner = singleOwnerPage(rows, op.ids);
+      const dest = insertOwnerPage(rows, op.parentId, mounts, basePageId);
+      if (dest !== owner) {
+        throw new Error(
+          `bulkMove from page ${owner} into page ${dest} is cross-page; ` +
+            `it must go through the moveBlocks endpoint`,
+        );
+      }
+      return owner;
+    }
     // A delete set CAN legitimately span pages (a selection reaching into an
     // expanded sub-page), which `splitOpByOwnerPage` resolves by issuing one op
     // per owner BEFORE this is reached. So by the time a delete gets here it is

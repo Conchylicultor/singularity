@@ -1998,7 +1998,18 @@ two bulk endpoints are deleted. What each one had to keep:
   fans it out per owner (`splitOpByOwnerPage`).
 - **`bulkMove`** carries `{ ids, parentId, afterId }` and reduces through
   `planBulkMove`; a refusal is the identity, so a refused drag never reaches the
-  undo stack or the network. Cross-page selection drags are refused loudly.
+  undo stack or the network. A **cross-page** selection drop (into an expanded
+  sub-page, or out of one) is not a `bulkMove` op, for `move`'s reason: the
+  composite routes it to the id-scoped `moveBlocks` endpoint
+  (`POST /api/blocks/move-many`), which locks both forests, runs `planBulkMove`
+  against the destination's complete live sibling set and re-scopes each root's
+  `page_id`, in one transaction. `resolveOpOwnerPage` throws on a `bulkMove`
+  whose destination is another page, so one can never reach a page's lane — it
+  used to, and the op endpoint's 400 left it rendered but unsaveable.
+- **A cross-page move asks the DATABASE whether it is a cycle**
+  (`server/internal/ancestry.ts`): a dragged sub-page's content is keyed to that
+  sub-page, so a page-scoped forest cannot see a destination inside it. Both
+  `moveBlock` and `moveBlocks` walk the destination's ancestors.
 
 ## With nothing selected, the caret's block IS the selection
 
@@ -4258,6 +4269,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `PATCH /api/blocks/:id`
     - `DELETE /api/blocks/:id`
     - `POST /api/blocks/:id/move`
+    - `POST /api/blocks/move-many`
     - `POST /api/blocks/:id/turn-into-page`
     - `POST /api/blocks/:id/page-kind`
     - `POST /api/pages/:pageId/blocks/op`
@@ -4380,6 +4392,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `mergeRuns`
     - `moveBlock`
     - `MoveBlockBodySchema`
+    - `moveBlocks`
     - `namesField`
     - `newBlockId`
     - `nextVisibleLine`
