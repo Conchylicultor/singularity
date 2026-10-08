@@ -152,18 +152,27 @@ export function useViewModel<T extends ViewTypeMeta>(
     [cfg.instances, entries],
   );
 
+  // Adding or duplicating a view makes the new view the active one — every
+  // surface that creates a view (the strip's `+`, the chip's "Add view", the
+  // settings popover's Duplicate) lands on it, rather than each caller having
+  // to remember to select the id it gets back.
+  const { setActiveView } = active;
   const actions = useMemo<ViewActionsCore>(
     () => ({
       availableSources,
       variantsFor,
-      addView: cfg.addView,
+      addView: (type, sourceId) => {
+        setActiveView(cfg.addView(type, sourceId));
+      },
       renameView: cfg.renameView,
-      duplicateView: cfg.duplicateView,
+      duplicateView: (id) => {
+        setActiveView(cfg.duplicateView(id));
+      },
       deleteView: cfg.deleteView,
       reorderView: cfg.reorderView,
       updateView: cfg.updateView,
     }),
-    [availableSources, variantsFor, cfg],
+    [availableSources, variantsFor, cfg, setActiveView],
   );
 
   return useMemo(
