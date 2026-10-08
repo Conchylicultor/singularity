@@ -16,8 +16,10 @@ never touches playback:
   gain, the per-track channel strips, the `registerClock` registration, and all
   scheduling.
 - **`VolumeControl`** (`sonataPlayerPane.Actions`, `components/volume-control.tsx`)
-  — the master-volume slider pinned into the Sonata player pane's header. Owns
-  **no** audio.
+  — the master-volume control pinned into the Sonata player pane's header: the
+  speaker (mute) at rest, its slider folded away and opening on hover / focus
+  (and held open while dragged) through `primitives/toolbar-control`'s
+  hover-expand rule, the one the jog wheels use. Owns **no** audio.
 
 They communicate through a **per-surface** `audio-store` (`audio-store.ts`, built
 on the `scoped-store` primitive): the control writes `volume`, the engine reads
@@ -137,6 +139,8 @@ the metronome too):
     - `apps/sonata/audio/instruments.InstrumentVoices`
     - `apps/sonata/audio/instruments.SonataAudio`
     - `apps/sonata/library.sonataPlayerPane`
+    - `apps/sonata/primitives/toolbar-control.hoverExpandHost`
+    - `apps/sonata/primitives/toolbar-control.HoverExpandPanel`
     - `apps/sonata/session.DriverReading`
     - `apps/sonata/session.SonataSession`
     - `apps/sonata/session.useCursorApi`
@@ -145,6 +149,7 @@ the metronome too):
     - `apps/sonata/track-mixer.useTrackInstrumentMap`
     - `apps/sonata/track-mixer.useTrackVolumeMap`
     - `primitives/css/slider.Slider`
+    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`

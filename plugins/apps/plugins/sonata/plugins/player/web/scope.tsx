@@ -24,7 +24,7 @@ import { PlayerViewProvider, usePlayerView } from "./view";
  * live player, the metronome) and, for a library song, the per-song setting
  * observers, and — while a `PlayerDisplay` is shown — the per-player
  * `SonataPlayer.Effect`s (the keyboard transport). Load into it with `useLoadDocument()`; compose the parts
- * (`PlayerDisplay`, `PlayerTransport`, `PlayToggle`, `PlayerTime`) inside it.
+ * (`PlayerDisplay`, `PlayerTransport`, `PlayerTime`) inside it.
  *
  * The stores wrap from the OUTSIDE because the components below read them in
  * their own bodies (the session writes the cursor; the document composer reads

@@ -1,4 +1,4 @@
-// @hash be126a7f61c3
+// @hash f60169436a8c
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -6,20 +6,22 @@
 //   Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items stacked above and below it (a sidebar's footer rows).
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
-// The Sonata player's header, read left to right. It is one row now — the
-// leading group, a spacer, then the trailing cluster — so what used to be two
-// zones is an arrangement in this file.
+// The Sonata player's header, read left to right: identity and tools. Playback
+// itself — play / pause, the time, the chord timeline, loop — is the transport
+// strip below the header (`config/apps/sonata/player/transport.jsonc`), not
+// this row.
 //
 // Leading: ← Library (the way out), then the song title, which is the pane's own
 // title item and the row's give — it holds the slack and ellipsizes rather than
-// pushing the controls out.
+// pushing the tools out.
 //
-// Trailing, and each entry is named for its role: the display picker first
-// (WHICH lens you are looking at — a choice about the content, so it sits
-// nearest it), then volume, spread (zoom), loop, metronome, the pedal indicator
-// (a passive status chip that glows while the sustain pedal is engaged), the
-// transport, and transpose. Transport + transpose are the performance controls
-// and stay together beside the speed wheel.
+// After the spacer, the tools, each named for its role: time — how fast (the
+// speed wheel) and the beat that goes with it (the metronome, whose popover
+// shows the live tempo) — then pitch (transpose), then output (volume), then the
+// view: its zoom (the spread wheel) and, far right after every tool, which view
+// it is (the display switcher). The wheels and volume fold to icon + value at
+// rest and open on hover, so the row stays short. There is no divider node for a
+// row; the controls' own pill borders separate the wheels.
 //
 // Node forms:
 // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
@@ -33,13 +35,11 @@
     "apps.sonata.library:back",
     "primitives.pane:title",
     { "type": "spacer", "id": "spacer-1" },
-    "apps.sonata.library:display-picker",
+    "apps.sonata.transport-bar:speed",
+    "apps.sonata.audio.metronome:metronome",
+    "apps.sonata.transpose:transpose",
     "apps.sonata.audio.engine:volume",
     "apps.sonata.piano-roll:spread",
-    "apps.sonata.progress.loop:loop-toggle",
-    "apps.sonata.audio.metronome:metronome",
-    "apps.sonata.pedal.indicator:pedal-indicator",
-    "apps.sonata.transport-bar:playback",
-    "apps.sonata.transpose:transpose"
+    "apps.sonata.library:display-picker"
   ]
 }

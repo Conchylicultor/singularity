@@ -29,8 +29,8 @@ anonymous index signature. See
     - `SegmentedControl`
     - `ToggleChip`
 - Cross-plugin:
-  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×21
+  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×22
     - `primitives` ×8
     - `stats` ×5
     - `apps-core` ×3

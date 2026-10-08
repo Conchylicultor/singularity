@@ -52,6 +52,7 @@ export function TempoWheel() {
       // across the whole range (matching the linear-space drag).
       ribOffsetPx={tempoScale * RIB_SCALE}
       readout={asPercent(tempoScale)}
+      collapsible
       aria={{
         label: "Playback speed",
         valueMin: Math.round(MIN_SCALE * 100),

@@ -1,4 +1,4 @@
-// @hash e6d517a9b65e
+// @hash fb7155a22617
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -6,11 +6,17 @@
 //   Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items stacked above and below it (a sidebar's footer rows).
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+// The player's transport strip, read left to right: play / pause, then the
+// scrubber (the growing middle — the playhead's time and the song's markers),
+// then the loop toggle that closes it. Playback first, navigation in the
+// middle, repetition last.
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "apps.sonata.progress.scrubber:progress-bar"
+    "apps.sonata.transport-bar:play",
+    "apps.sonata.progress.scrubber:progress-bar",
+    "apps.sonata.progress.loop:loop-toggle"
   ]
 }

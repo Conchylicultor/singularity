@@ -9,16 +9,12 @@ import {
   scoreEndBeat,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { formatElapsed } from "@plugins/primitives/plugins/relative-time/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 import { SonataPlayer } from "../slots";
 import { useMarkPlayerShown, usePlayerView } from "../view";
 import { NoDisplay } from "./no-display";
-
-const pauseIcon = symbol("pause");
-const playArrowIcon = symbol("play-arrow");
 
 /**
  * The display lens over the session's score — `displayId`, else the player
@@ -51,29 +47,27 @@ export function PlayerDisplay({ displayId }: { displayId?: string }) {
 }
 
 /**
- * The transport strip — every `SonataPlayer.Transport` contribution (the
- * progress scrubber with its markers). Renders nothing with no contributor.
+ * The transport strip — one row holding every `SonataPlayer.Transport`
+ * contribution (play / pause, the progress scrubber with its markers, the loop
+ * toggle), in the order the slot's reorder config gives. The strip owns the
+ * row: its rule and inset, and the alignment. A contribution that should take
+ * the row's slack (the scrubber) declares `fill` on itself. Renders nothing
+ * with no contributor.
  */
 export function PlayerTransport() {
+  const items = SonataPlayer.Transport.useContributions();
+  if (items.length === 0) return null;
   return (
-    <SonataPlayer.Transport.Render>
-      {(t) => <t.component key={t.id} />}
-    </SonataPlayer.Transport.Render>
-  );
-}
-
-/**
- * Play / pause from the live cursor — a plain toggle, with no count-in (the
- * deliberate-play path with the metronome lead-in is the transport bar's).
- */
-export function PlayToggle() {
-  const { isPlaying, play, stop } = useSession();
-  return (
-    <IconButton
-      icon={isPlaying ? pauseIcon : playArrowIcon}
-      label={isPlaying ? "Pause" : "Play"}
-      onClick={() => (isPlaying ? stop() : play())}
-    />
+    <Stack
+      direction="row"
+      align="center"
+      gap="md"
+      className="border-b border-border px-xl py-md"
+    >
+      <SonataPlayer.Transport.Render>
+        {(t) => <t.component key={t.id} />}
+      </SonataPlayer.Transport.Render>
+    </Stack>
   );
 }
 

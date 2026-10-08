@@ -10,7 +10,12 @@ export default {
   description:
     "Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress.Marker slot for timeline markers (bars, sections, keys, …).",
   contributions: [
-    SonataPlayer.Transport({ id: "progress-bar", component: ProgressBar }),
+    // `fill`: the scrubber is the strip's growing cell, between play and loop.
+    SonataPlayer.Transport({
+      id: "progress-bar",
+      component: ProgressBar,
+      fill: true,
+    }),
   ],
   slots: SonataProgress,
 } satisfies PluginDefinition;

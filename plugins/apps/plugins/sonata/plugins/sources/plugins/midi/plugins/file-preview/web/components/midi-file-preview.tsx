@@ -12,7 +12,6 @@ import {
 import {
   PlayerDisplay,
   PlayerTransport,
-  PlayToggle,
   SonataPlayerScope,
 } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import {
@@ -196,13 +195,9 @@ function PlayerPreview({
       }
       footer={
         <Inset x="lg" y="md">
-          <Stack direction="row" gap="md" align="center">
-            {/* No PlayerTime: the scrubber shows the playhead and duration. */}
-            <PlayToggle />
-            <Fill>
-              <PlayerTransport />
-            </Fill>
-          </Stack>
+          {/* The player's transport strip: play / pause, the scrubber (which
+              shows the playhead and duration, so no PlayerTime) and loop. */}
+          <PlayerTransport />
         </Inset>
       }
     />

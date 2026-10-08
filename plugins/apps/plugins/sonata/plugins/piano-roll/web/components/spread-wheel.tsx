@@ -77,6 +77,7 @@ export function SpreadWheel() {
       // (matching the log-space drag), not faster at high zoom.
       ribOffsetPx={Math.log(spread) * RIB_SCALE}
       readout={asZoom(spread)}
+      collapsible
       aria={{
         label: "Note spread",
         valueMin: Math.round(spreadMin * 100),

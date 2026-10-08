@@ -1,8 +1,5 @@
 import type { ReactNode } from "react";
-import {
-  PlayerTransport,
-  PlayToggle,
-} from "@plugins/apps/plugins/sonata/plugins/player/web";
+import { PlayerTransport } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -27,7 +24,7 @@ const musicNoteIcon = symbol("music-note");
  * loaded in the app's player — a card/row "Play" loaded one in the background,
  * or the user left the player with its song still loaded — and `null` before
  * any. It surfaces the playback that outlives the player pane: the song
- * identity, a play/pause toggle, and the shared transport scrubber for seeking.
+ * identity and the shared transport strip (play / pause, scrubber, loop).
  * Clicking the title reopens the player on it, still playing where it was. The title is read from the canonical library
  * row (`useCurrentSong`), never a shell-context mirror.
  */
@@ -88,8 +85,8 @@ export function NowPlayingBar() {
               </NowPlayingTitle>
             </div>
           )}
-          <PlayToggle />
-          {/* Reuse the shared transport scrubber as the interactive seek bar. */}
+          {/* The shared transport strip: play / pause, the scrubber for
+              seeking, and the loop toggle. */}
           <Fill>
             <PlayerTransport />
           </Fill>

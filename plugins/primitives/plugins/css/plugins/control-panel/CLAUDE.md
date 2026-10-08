@@ -650,8 +650,8 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `useControlPanelHost`
     - `usePanelStack`
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×9
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×10
     - `page` ×4
     - `primitives` ×4
     - `config_v2` ×2

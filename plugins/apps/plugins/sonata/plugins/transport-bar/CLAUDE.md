@@ -4,19 +4,17 @@
 
 ## Plugin reference
 
-- Description: Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to the Sonata player pane's header.
+- Description: Sonata transport controls: the play/pause button at the head of the player's transport strip (togglePlay, count-in aware) and the playback-speed jog wheel in the player header, folded to its readout at rest.
 - Web:
-  - Contributes: `sonataPlayerPane.Actions` "playback" → `PlaybackControls`
+  - Contributes:
+    - `SonataPlayer.Transport` "play" → `PlayButton`
+    - `sonataPlayerPane.Actions` "speed" → `TempoWheel`
   - Uses:
     - `apps/sonata/library.sonataPlayerPane`
+    - `apps/sonata/player.SonataPlayer`
     - `apps/sonata/primitives/inertial-drag.useInertialDrag`
     - `apps/sonata/primitives/jog-wheel.JogWheel`
-    - `apps/sonata/session.useCursorSelector`
     - `apps/sonata/session.useSession`
-    - `primitives/css/center.Center`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `ui/icons.Icon`
 

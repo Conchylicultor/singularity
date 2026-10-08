@@ -37,6 +37,7 @@ export {
   scoreStartBeat,
   leadInBeats,
   beatToSeconds,
+  bpmAtBeat,
   scaleTempo,
   bars,
   beatGrid,

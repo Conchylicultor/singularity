@@ -232,6 +232,21 @@ export function beatToSeconds(score: Score, beat: number): number {
 }
 
 /**
+ * The tempo in effect at `beat`, in BPM. Derived from `beatToSeconds` (the same
+ * source of truth the audio scheduler uses) rather than reading `tempoMap`
+ * directly — so it is correct for sources that author no tempo (the 120-BPM
+ * default) and for a score whose map `scaleTempo` folded a playback speed into:
+ * on the session's scaled score this is the *live* BPM, halving at 50% and
+ * tracking any tempo change within the song.
+ */
+export function bpmAtBeat(score: Score, beat: number): number {
+  const EPS = 0.001;
+  const secondsPerBeat =
+    (beatToSeconds(score, beat + EPS) - beatToSeconds(score, beat)) / EPS;
+  return 60 / secondsPerBeat;
+}
+
+/**
  * Derive bar boundaries from `timeSigMap` and `meta.pickupBeats`. Bars are never
  * stored on notes (that desyncs); always derive them. Returns the start beat of
  * each bar covering the span of the score's notes/annotations.

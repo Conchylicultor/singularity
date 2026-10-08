@@ -18,8 +18,8 @@ renderer is the native tab.
   (`h-full`), with a floor for a host whose body has no definite height.
 - **Plays on open:** the load arms the session's `requestPlayOnLoad`, so the
   song starts as soon as its score is composed.
-- **Footer:** `PlayToggle` and `PlayerTransport` (no `PlayerTime`: the
-  scrubber already shows the playhead and duration).
+- **Footer:** `PlayerTransport` — play / pause, the scrubber and loop (no
+  `PlayerTime`: the scrubber already shows the playhead and duration).
 - **Keyboard:** Space plays / pauses and ←/→ jump a bar (hold to scrub). The
   preview wires nothing for this: they are `controls`' `SonataPlayer.Effect`s,
   which every shown player gets (see `player/CLAUDE.md`), focus-scoped to this
@@ -45,10 +45,10 @@ preview, then the same in Sonata after Open in Sonata.
 - Description: Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi host files) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
 - Web:
   - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/sonata/player` ×4
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/sources/midi` ×4
     - `primitives/file-viewer` ×4
+    - `apps/sonata/player` ×3
     - `apps/sonata/document` ×2
     - `apps/sonata/session` ×2
     - `primitives/css/spacing` ×2

@@ -15,6 +15,7 @@ import {
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { SonataProgress } from "../slots";
 import { RAIL_HEIGHT } from "../rail-geometry";
 
@@ -32,8 +33,8 @@ function formatTime(seconds: number): string {
 }
 
 /**
- * The Sonata Transport progression bar: a full-width horizontal scrubber over
- * the whole song `[0, endBeat]`. Reads the shared cursor and drives the
+ * The Sonata Transport progression bar: a horizontal scrubber over the whole
+ * song `[0, endBeat]`, the growing middle of the player's transport strip. Reads the shared cursor and drives the
  * absolute `seekTo` primitive on click/drag. Hosts the open
  * `SonataProgress.Marker` slot as a pointer-transparent overlay so contributed
  * markers (bar ticks, section bands, …) layer on without intercepting seeks.
@@ -172,13 +173,12 @@ export function ProgressBar() {
     [ready, seekToPointer],
   );
 
+  // The growing cell of the transport strip: `PlayerTransport` owns the row
+  // (its rule, inset and alignment), this bar takes the slack between its
+  // neighbours (play / pause, the loop toggle) — the contribution declares
+  // `fill`, so the slot's cell grows and this box fills it.
   return (
-    <Stack
-      direction="row"
-      align="center"
-      gap="md"
-      className="border-b border-border px-xl py-md"
-    >
+    <Stack direction="row" align="center" gap="md" className={fillClasses("x")}>
       {/* Interactive track. Extra vertical height (py) reserves headroom above
           and below for markers; the track itself is centered within it. */}
       <div

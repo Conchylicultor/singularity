@@ -12,11 +12,12 @@ them without a `shell → library` import that would cycle with the existing
   standard chrome titled "Library"). Renders the gallery via
   `Sonata.Home` inside `PaneChrome`.
 - `sonataPlayerPane` — player pane at `/sonata/song/:songId`. Its own header
-  slot (`sonataPlayerPane.Actions`) IS the whole player bar — ← Library, the
-  display picker, transport, volume, the jog wheel, and the song title as the
-  pane's title item — rendered by `PaneChrome` as one overflow-collapsing row;
-  the full-width Transport progress strip lives at the body top, above the
-  display. **This plugin's barrel is where every other Sonata plugin reaches
+  slot (`sonataPlayerPane.Actions`) IS the player's header — ← Library, the song
+  title as the pane's title item, then the tools: the speed wheel, metronome,
+  transpose, volume, the spread (zoom) wheel and, far right, the display
+  switcher — rendered by `PaneChrome` as one overflow-collapsing row. Playback
+  is the transport strip at the body top, above the display (`PlayerTransport`:
+  play / pause, the scrubber, loop — the `SonataPlayer.Transport` slot). **This plugin's barrel is where every other Sonata plugin reaches
   that header**: it exports `sonataPlayerPane`, and a control is contributed as
   `sonataPlayerPane.Actions({ id, component })`. Which side of the row an item
   lands on is the slot's reorder config
@@ -171,9 +172,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `sonataPlayerPane.Actions` ← `apps.sonata.audio.engine`
     - `sonataPlayerPane.Actions` ← `apps.sonata.audio.metronome`
     - `sonataPlayerPane.Actions` ← `apps.sonata.library`
-    - `sonataPlayerPane.Actions` ← `apps.sonata.pedal.indicator`
     - `sonataPlayerPane.Actions` ← `apps.sonata.piano-roll`
-    - `sonataPlayerPane.Actions` ← `apps.sonata.progress.loop`
     - `sonataPlayerPane.Actions` ← `apps.sonata.transport-bar`
     - `sonataPlayerPane.Actions` ← `apps.sonata.transpose`
     - `sonataPlayerPane.Actions` ← `primitives.pane`
@@ -185,16 +184,15 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses: 62 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 61 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×10
     - `primitives/css/ui-kit` ×6
     - `primitives/data-view` ×6
-    - `apps/sonata/player` ×5
     - `apps/sonata/document` ×4
+    - `apps/sonata/player` ×4
     - `network/live` ×4
     - `apps/sonata/shell` ×3
     - `primitives/css/spacing` ×2
-    - `primitives/css/text` ×2
     - `primitives/latest-ref` ×2
     - `primitives/live-state` ×2
     - `apps/sonata/session.useSession`
@@ -206,6 +204,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/css/grid.Grid`
     - `primitives/css/line.Line`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/text.Text`
+    - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.linkProps`
@@ -276,10 +276,8 @@ the title — a chord-grid save endpoint physically cannot carry one.
   - Imported by:
     - `apps/sonata/audio/engine`
     - `apps/sonata/audio/metronome`
-    - `apps/sonata/pedal/indicator`
     - `apps/sonata/piano-roll`
     - `apps/sonata/playback-history`
-    - `apps/sonata/progress/loop`
     - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/key-mode`
     - `apps/sonata/rich/rhythm-controls`

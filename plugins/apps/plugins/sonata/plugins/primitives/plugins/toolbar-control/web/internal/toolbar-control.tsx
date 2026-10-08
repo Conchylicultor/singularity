@@ -5,6 +5,7 @@ import {
   Inset,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { hoverExpandHost } from "./hover-expand";
 
 export interface ToolbarControlProps {
   /** Leading category icon (already sized, e.g. `<MdSpeed className="size-3.5" />`). */
@@ -13,6 +14,13 @@ export interface ToolbarControlProps {
   tooltip: ReactNode;
   /** Dim + disable interaction (e.g. no song loaded). */
   disabled?: boolean;
+  /**
+   * Make the pill a hover-expand host: a `HoverExpandPanel` among the segments
+   * opens while the pill is hovered or focused, and stays open while `held`
+   * (e.g. a jog wheel mid-drag or mid-coast). Omit for a pill with nothing
+   * folded away.
+   */
+  hoverExpand?: { held: boolean };
   /** The control's segments — buttons, a ribbed wheel face, a readout, … */
   children: ReactNode;
 }
@@ -31,16 +39,20 @@ export function ToolbarControl({
   icon,
   tooltip,
   disabled,
+  hoverExpand,
   children,
 }: ToolbarControlProps) {
+  const host = hoverExpand ? hoverExpandHost(hoverExpand.held) : null;
   return (
     <WithTooltip content={tooltip}>
       <Stack
         direction="row"
         align="center"
         gap="none"
+        {...host}
         className={cn(
           "rounded-md border border-border",
+          host?.className,
           disabled && "pointer-events-none opacity-40",
         )}
       >

@@ -1,4 +1,4 @@
-// @hash be126a7f61c3
+// @hash f60169436a8c
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -11,10 +11,8 @@
     "apps.sonata.audio.metronome:metronome",
     "apps.sonata.library:back",
     "apps.sonata.library:display-picker",
-    "apps.sonata.pedal.indicator:pedal-indicator",
     "apps.sonata.piano-roll:spread",
-    "apps.sonata.progress.loop:loop-toggle",
-    "apps.sonata.transport-bar:playback",
+    "apps.sonata.transport-bar:speed",
     "apps.sonata.transpose:transpose",
     "primitives.pane:title"
   ]

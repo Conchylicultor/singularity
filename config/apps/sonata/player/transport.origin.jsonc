@@ -1,4 +1,4 @@
-// @hash e6d517a9b65e
+// @hash fb7155a22617
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,8 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "apps.sonata.progress.scrubber:progress-bar"
+    "apps.sonata.progress.loop:loop-toggle",
+    "apps.sonata.progress.scrubber:progress-bar",
+    "apps.sonata.transport-bar:play"
   ]
 }

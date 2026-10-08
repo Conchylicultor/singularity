@@ -1,6 +1,4 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { usePaneStore } from "@plugins/primitives/plugins/pane/web";
 import {
   SonataPlayer,
@@ -30,9 +28,10 @@ export function BackToLibrary() {
 }
 
 /**
- * Display selector: the "Display" eyebrow + the picker over the `SonataPlayer.Display`
- * contributions. Collection-consumer clean — enumerates the dispatch slot's
- * metadata, never naming a contributor.
+ * Display switcher: a segmented icon switcher over the `SonataPlayer.Display`
+ * contributions — each display's icon, its label as tooltip and accessible
+ * name, the active one also labelled. Collection-consumer clean — enumerates
+ * the dispatch slot's metadata, never naming a contributor.
  */
 export function DisplayPicker() {
   const { displayId, setDisplay } = usePlayerView();
@@ -40,21 +39,19 @@ export function DisplayPicker() {
   // A plain row, with no bar of its own: this component IS one occupant of the
   // pane header's `AdaptiveBar` (`PaneChrome` wraps every header contribution in
   // an `AdaptiveBar.Item`), and one adaptive bar per row is the primitive's own
-  // contract. The `⋯` that collapses these options when the header runs out of
-  // room is the header's, so the eyebrow and its options travel together.
+  // contract. The `⋯` that collapses the switcher when the header runs out of
+  // room is the header's.
   return (
-    <Stack direction="row" align="center" gap="sm">
-      <SectionLabel>Display</SectionLabel>
-      <Picker
-        items={displays.map((d) => ({
-          id: d.id,
-          label: d.label,
-          icon: d.icon,
-        }))}
-        activeId={displayId}
-        onSelect={setDisplay}
-        empty="No displays"
-      />
-    </Stack>
+    <Picker
+      label="Display"
+      items={displays.map((d) => ({
+        id: d.id,
+        label: d.label,
+        icon: d.icon,
+      }))}
+      activeId={displayId}
+      onSelect={setDisplay}
+      empty="No displays"
+    />
   );
 }

@@ -233,13 +233,14 @@ function placementKey(songId: string, bar: number | undefined): string {
 }
 
 /**
- * The player surface. The pane's OWN header carries the whole player bar: the
+ * The player surface. The pane's OWN header carries identity and tools: the
  * song title is the pane title (an inline-editable node, since it needs the
- * loaded row), and ← Library, the display picker, transport, volume and the jog
- * wheel are contributions to `sonataPlayerPane.Actions` — which side of the row
- * each lands on is the slot's reorder config. The surface body is the
- * player's transport strip (`PlayerTransport`, body top), its active display
- * (`PlayerDisplay`), and the collapsible `SectionPane`.
+ * loaded row), and ← Library, the speed wheel, metronome, transpose, volume,
+ * the spread wheel and the display switcher are contributions to
+ * `sonataPlayerPane.Actions` — where each lands in the row is the slot's
+ * reorder config. The surface body is the player's transport strip
+ * (`PlayerTransport`, body top: play / pause, the scrubber, loop), its active
+ * display (`PlayerDisplay`), and the collapsible `SectionPane`.
  */
 function SonataPlayerSurface(): ReactElement {
   return (
@@ -253,8 +254,9 @@ function SonataPlayerSurface(): ReactElement {
         scrollBody={false}
         className="h-full bg-background text-foreground"
         header={
-          /* Transport strip: full-width progression bar (and future transport
-             widgets). Renders nothing when no contributor is present. */
+          /* Transport strip: play / pause, the progression bar, loop (the
+             SonataPlayer.Transport contributions, in its reorder order).
+             Renders nothing when no contributor is present. */
           <PlayerTransport />
         }
         body={

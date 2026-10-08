@@ -1,7 +1,8 @@
 # loop
 
 Sonata A–B practice loop: a draggable loop region on the progression bar, a
-toolbar Loop toggle, and `L`/`[`/`]` shortcuts that cycle playback within `[A, B]`.
+Loop toggle closing the player's transport strip (`SonataPlayer.Transport`,
+after the scrubber), and `L`/`[`/`]` shortcuts that cycle playback within `[A, B]`.
 
 The loop is also surfaced on the piano roll's falling-note timeline — a
 scroll-synced `[A, B]` band with `A`/`B` boundary lines, contributed through the
@@ -43,23 +44,22 @@ plain wrap; tempo changes follow the existing loop-aware `retime` path.
 
 ## Plugin reference
 
-- Description: Sonata A–B practice loop: a draggable loop region on the progression bar, a toolbar Loop toggle, and L/[/] shortcuts that cycle playback within [A, B].
+- Description: Sonata A–B practice loop: a draggable loop region on the progression bar, a Loop toggle at the end of the player's transport strip, and L/[/] shortcuts that cycle playback within [A, B].
 - Web:
   - Contributes:
     - `SonataProgress.Marker` "loop" → `LoopRegion`
     - `Sonata.TransportOverlay` "loop" → `LoopRollRegion`
     - `Sonata.TransportEdge` "loop" → `LoopRollEdge`
-    - `sonataPlayerPane.Actions` "loop-toggle" → `LoopToggle`
+    - `SonataPlayer.Transport` "loop-toggle" → `LoopToggle`
     - `Sonata.Effect` "loop-shortcuts" → `LoopShortcuts`
   - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/session` ×3
+    - `apps/sonata/player` ×2
     - `apps/sonata/progress/scrubber` ×2
     - `apps/sonata/shell` ×2
     - `primitives/css/coords` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/hover-reveal` ×2
-    - `apps/sonata/library.sonataPlayerPane`
-    - `apps/sonata/player.usePlayerView`
     - `primitives/css/inline.Inline`
     - `primitives/css/layer.Layer`
     - `primitives/css/pin.Pin`

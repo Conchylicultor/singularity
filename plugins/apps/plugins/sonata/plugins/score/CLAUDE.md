@@ -55,6 +55,7 @@
     - `barStartBeat`
     - `beatGrid`
     - `beatToSeconds`
+    - `bpmAtBeat`
     - `buildActiveNoteIndex`
     - `buildTempoIndex`
     - `chordBars`

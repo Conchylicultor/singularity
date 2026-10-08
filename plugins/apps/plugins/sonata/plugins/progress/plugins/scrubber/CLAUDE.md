@@ -19,6 +19,7 @@
     - `apps/sonata/session.useSession`
     - `primitives/css/clip.Clip`
     - `primitives/css/coords.Placed`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/layer.Layer`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

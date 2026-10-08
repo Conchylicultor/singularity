@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-apps-sonata-pedal",
-  "description": "Sustain-pedal UI umbrella for Sonata: piano-roll pedal lane + cross-lens toolbar indicator.",
+  "description": "Sustain-pedal UI umbrella for Sonata: the piano-roll pedal lane.",
   "private": true,
   "version": "0.0.1",
   "singularity": { "collapsed": true }

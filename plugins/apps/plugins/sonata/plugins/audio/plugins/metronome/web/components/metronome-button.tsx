@@ -9,6 +9,7 @@ import {
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
 import { metronomeConfig } from "../../shared/config";
+import { TempoBand } from "./tempo-band";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const avTimerIcon = symbol("av-timer");
@@ -33,9 +34,10 @@ const SUBDIVISION_OPTIONS = [
 /**
  * The metronome header control (`sonataPlayerPane.Actions`): a single button that opens
  * the metronome control panel. The button itself reflects the click-track state
- * (filled = on, like the Loop toggle) at a glance; opening it reveals a master
- * on/off switch at the top plus the count-in length, click volume, and downbeat-
- * accent settings. All values are the `sonata.metronome` config (read via
+ * (filled = on, like the Loop toggle) at a glance; opening it reveals the live
+ * tempo the click follows (`TempoBand` — the player bar carries no BPM label of
+ * its own), a master on/off switch, plus the count-in length, click volume, and
+ * downbeat-accent settings. All values are the `sonata.metronome` config (read via
  * `useConfig`, written via `useSetConfig`), so they persist and stay in sync with
  * the Settings pane.
  *
@@ -68,6 +70,8 @@ export function MetronomeButton() {
         />
       }
     >
+      <TempoBand />
+
       <ControlPanel.Section>
         <ControlPanel.Row
           select="switch"

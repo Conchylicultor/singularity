@@ -110,8 +110,6 @@ export const ICON_MANIFEST: {
     "exit-to-app",
     "extension",
     "face",
-    "fast-forward",
-    "fast-rewind",
     "feedback",
     "filter-list",
     "filter-none",

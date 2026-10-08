@@ -10,7 +10,8 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const repeatIcon = symbol("repeat");
 
 /**
- * The player header's Loop toggle (`sonataPlayerPane.Actions`). One click toggles the A–B practice
+ * The Loop toggle at the end of the player's transport strip
+ * (`SonataPlayer.Transport`, after the scrubber). One click toggles the A–B practice
  * loop: with a region set it flips `enabled` (active = filled `default` variant);
  * with none it creates the default region at the playhead and seeks to its start
  * (see `toggleLoop`). Disabled until a song is loaded.

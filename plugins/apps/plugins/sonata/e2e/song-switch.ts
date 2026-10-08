@@ -30,7 +30,7 @@
 // track-view rows exactly as they were) in a finally; B is only read.
 //
 // Width-independent: the player header is an adaptive bar, which relocates
-// what does not fit (the transpose stepper at the harness's default 1400 px,
+// what does not fit (a header control at the harness's default 1400 px,
 // the transport or ← Library on a narrower one) into its `⋯` panel. A header
 // control is clicked through `reachInBar` — in the row, or by opening the `⋯`
 // holding it, as a person would — and read through CSS locators, which still
@@ -62,7 +62,7 @@ const OUT = "/tmp/sonata-song-switch";
 /** One animation frame's view of the per-song settings (null ⇒ not rendered). */
 interface Sample {
   path: string;
-  /** The transpose readout's text, e.g. "+2st" — absent while pending. */
+  /** The transpose trigger's `data-transpose-offset`, e.g. "2" — absent while pending. */
   transpose: string | null;
   /** The Chords card's chip — absent while pending or when the card is not offered. */
   chord: "on" | "off" | null;
@@ -80,22 +80,24 @@ interface SongView {
 }
 
 /**
- * The transpose readout (the stepper's centre button), whichever of its two
- * names it has. A CSS selector on purpose: the stepper may sit in the header's
- * closed overflow panel, where it is still rendered but a role locator does
- * not see it.
+ * The transpose trigger's offset (`data-transpose-offset`, the number its
+ * badge shows) — present only once the offset is settled, so it reads the
+ * offset without opening the popover. A CSS selector on purpose: the trigger
+ * may sit in the header's closed overflow panel, where it is still rendered
+ * but a role locator does not see it.
  */
-const READOUT =
-  'button[aria-label="Reset transpose"], button[aria-label="Transpose (no shift)"]';
+const READOUT = "[data-transpose-offset]";
+const READOUT_ATTR = "data-transpose-offset";
 const CHORD_ON_TITLE = "Playing the detected chords";
 const CHORD_OFF_TITLE = "Play the detected chords";
 
-/** Parse the transpose readout ("0st", "+2st", "−3st") into semitones. */
+/** Parse the transpose trigger's offset attribute ("0", "2", "-3") into semitones. */
 function parseTranspose(text: string): number {
-  const m = /^([+−]?)(\d+)st$/.exec(text.trim());
-  if (!m) throw new Error(`unreadable transpose readout: "${text}"`);
-  const n = Number(m[2]);
-  return m[1] === "−" ? -n : n;
+  const n = Number(text);
+  if (text.trim() === "" || !Number.isInteger(n)) {
+    throw new Error(`unreadable transpose offset: "${text}"`);
+  }
+  return n;
 }
 
 const songPath = (songId: string) => `/sonata/song/${songId}`;
@@ -141,7 +143,7 @@ await withBrowser(async (h) => {
   // ── Page helpers ────────────────────────────────────────────────────────
   /**
    * Wait until the open song's settings have all settled: the transpose
-   * readout (a placeholder while pending) and the Tracks card (offered only
+   * trigger's offset (absent while pending) and the Tracks card (offered only
    * once the score is shown) are both there, and the card is expanded so the
    * mute buttons are mounted. Its open state lives in this throwaway browser's
    * localStorage.
@@ -158,8 +160,8 @@ await withBrowser(async (h) => {
   };
 
   const readView = async (): Promise<SongView> => {
-    const text = await readout.textContent();
-    if (text === null) throw new Error("transpose readout has no text");
+    const text = await readout.getAttribute(READOUT_ATTR);
+    if (text === null) throw new Error("transpose trigger has no offset");
     const on = await page.locator(`[title^="${CHORD_ON_TITLE}"]`).count();
     return {
       transpose: parseTranspose(text),
@@ -223,8 +225,8 @@ await withBrowser(async (h) => {
 
   /**
    * The player's transport is stopped: its toggle reads Play, and no Pause is
-   * rendered. By label, not role: the transport is a header occupant too, and
-   * may sit in the closed `⋯` panel.
+   * rendered. By label, not role: the toggle sits in the transport strip
+   * below the header.
    */
   const transportStopped = async () =>
     (await page.locator('button[aria-label="Play"]').count()) > 0 &&
@@ -244,7 +246,7 @@ await withBrowser(async (h) => {
   /** Start recording one sample per animation frame, in the page. */
   const startSampling = () =>
     page.evaluate(
-      ({ readoutSel, onTitle, offTitle }) => {
+      ({ readoutSel, readoutAttr, onTitle, offTitle }) => {
         const w = window as unknown as {
           __songSamples: unknown[];
           __songSampling: boolean;
@@ -264,7 +266,7 @@ await withBrowser(async (h) => {
               : null;
           w.__songSamples.push({
             path: location.pathname,
-            transpose: readoutEl?.textContent ?? null,
+            transpose: readoutEl?.getAttribute(readoutAttr) ?? null,
             chord,
             muted: speakerEl?.getAttribute("aria-pressed") ?? null,
             noNotes:
@@ -277,6 +279,7 @@ await withBrowser(async (h) => {
       },
       {
         readoutSel: READOUT,
+        readoutAttr: READOUT_ATTR,
         onTitle: CHORD_ON_TITLE,
         offTitle: CHORD_OFF_TITLE,
       },
@@ -386,16 +389,20 @@ await withBrowser(async (h) => {
 
   try {
     // ── Set on A ──────────────────────────────────────────────────────────
+    // Open the transpose popover from its header trigger, step in it, close.
+    const trigger = page.getByRole("button", { name: /^Transpose\b/ });
     const step = page.getByRole("button", {
       name:
         target > baseA.transpose
           ? "Transpose up a semitone"
           : "Transpose down a semitone",
     });
-    await reachInBar(page, step, async (button) => {
+    await reachInBar(page, trigger, async (button) => {
+      await button.first().click();
       for (let i = 0; i < Math.abs(target - baseA.transpose); i++) {
-        await button.click();
+        await step.click();
       }
+      await page.keyboard.press("Escape");
     });
     await api("POST", `/api/sonata/songs/${songA}/chord-mode`, {
       enabled: wantA.chord === "on",

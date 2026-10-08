@@ -4478,6 +4478,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/audio/instruments.InstrumentVoices`
                   - `apps/sonata/audio/instruments.SonataAudio`
                   - `apps/sonata/library.sonataPlayerPane`
+                  - `apps/sonata/primitives/toolbar-control.hoverExpandHost`
+                  - `apps/sonata/primitives/toolbar-control.HoverExpandPanel`
                   - `apps/sonata/session.DriverReading`
                   - `apps/sonata/session.SonataSession`
                   - `apps/sonata/session.useCursorApi`
@@ -4486,6 +4488,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/track-mixer.useTrackInstrumentMap`
                   - `apps/sonata/track-mixer.useTrackVolumeMap`
                   - `primitives/css/slider.Slider`
+                  - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/icon-button.IconButton`
                   - `primitives/latest-ref.useLatestRef`
@@ -4550,15 +4553,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `sonataPlayerPane.Actions` "metronome" → `MetronomeButton`
                   - `Sonata.Hud` "count-in" → `CountInOverlay`
                   - `ConfigV2.WebRegister` "sonata.metronome"
-                - Uses: 22 symbols — full list in [`plugins/apps/plugins/sonata/plugins/audio/plugins/metronome/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/audio/plugins/metronome/REFERENCE.md)
+                - Uses: 25 symbols — full list in [`plugins/apps/plugins/sonata/plugins/audio/plugins/metronome/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/audio/plugins/metronome/REFERENCE.md)
                   - `apps/sonata/audio/engine` ×6
-                  - `apps/sonata/session` ×3
+                  - `apps/sonata/session` ×4
                   - `config_v2` ×3
                   - `primitives/css/control-panel` ×2
                   - `apps/sonata/library.sonataPlayerPane`
                   - `apps/sonata/shell.Sonata`
                   - `primitives/css/center.Center`
                   - `primitives/css/slider.Slider`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.SegmentedControl`
                   - `primitives/css/viewport-overlay.ViewportOverlay`
                   - `primitives/icon-button.IconButton`
@@ -4702,9 +4707,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sonataPlayerPane.Actions` ← `apps.sonata.audio.engine`
               - `sonataPlayerPane.Actions` ← `apps.sonata.audio.metronome`
               - `sonataPlayerPane.Actions` ← `apps.sonata.library`
-              - `sonataPlayerPane.Actions` ← `apps.sonata.pedal.indicator`
               - `sonataPlayerPane.Actions` ← `apps.sonata.piano-roll`
-              - `sonataPlayerPane.Actions` ← `apps.sonata.progress.loop`
               - `sonataPlayerPane.Actions` ← `apps.sonata.transport-bar`
               - `sonataPlayerPane.Actions` ← `apps.sonata.transpose`
               - `sonataPlayerPane.Actions` ← `primitives.pane`
@@ -4716,16 +4719,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
-            - Uses: 62 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses: 61 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `primitives/pane` ×10
               - `primitives/css/ui-kit` ×6
               - `primitives/data-view` ×6
-              - `apps/sonata/player` ×5
               - `apps/sonata/document` ×4
+              - `apps/sonata/player` ×4
               - `network/live` ×4
               - `apps/sonata/shell` ×3
               - `primitives/css/spacing` ×2
-              - `primitives/css/text` ×2
               - `primitives/latest-ref` ×2
               - `primitives/live-state` ×2
               - `apps/sonata/session.useSession`
@@ -4737,6 +4739,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/grid.Grid`
               - `primitives/css/line.Line`
               - `primitives/css/scroll.Scroll`
+              - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.linkProps`
@@ -4807,10 +4811,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/sonata/audio/engine`
               - `apps/sonata/audio/metronome`
-              - `apps/sonata/pedal/indicator`
               - `apps/sonata/piano-roll`
               - `apps/sonata/playback-history`
-              - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/key-mode`
               - `apps/sonata/rich/rhythm-controls`
@@ -4887,16 +4889,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
-        - **`pedal`** — Sustain-pedal UI umbrella for Sonata: piano-roll pedal lane + cross-lens toolbar indicator.
+        - **`pedal`** — Sustain-pedal UI umbrella for Sonata: the piano-roll pedal lane.
           - Plugins:
-            - **`indicator`** — Sonata toolbar sustain-pedal indicator: a cross-lens 'Ped.' chip that glows while the pedal is engaged during playback.
-              - Web:
-                - Contributes: `sonataPlayerPane.Actions` "pedal-indicator" → `PedalIndicator`
-                - Uses:
-                  - `apps/sonata/library.sonataPlayerPane`
-                  - `apps/sonata/session.useCursorSelector`
-                  - `apps/sonata/session.useSession`
-                  - `primitives/css/toggle-chip.ToggleChip`
             - **`lane`** — Sonata piano-roll sustain-pedal lane: a scroll-synced strip marking pedal-down spans along the falling-note timeline.
               - Web:
                 - Contributes: `Sonata.TransportOverlay` "pedal" → `PedalLane`
@@ -5115,7 +5109,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `playbackColumns`
           - Exemptions:
             - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/record-play-observer.tsx` (sanctioned)
-        - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport, PlayToggle, PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown).
+        - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown).
           - Web:
             - Slots:
               - `SonataPlayer.Display`
@@ -5126,7 +5120,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataPlayer.Display` ← `apps.sonata.notation`
               - `SonataPlayer.Display` ← `apps.sonata.piano-roll`
               - `SonataPlayer.Display` ← `apps.sonata.songsheet`
+              - `SonataPlayer.Transport` ← `apps.sonata.progress.loop`
               - `SonataPlayer.Transport` ← `apps.sonata.progress.scrubber`
+              - `SonataPlayer.Transport` ← `apps.sonata.transport-bar`
               - `SonataPlayer.Effect` ← `apps.sonata.controls`
             - Uses:
               - `apps/sonata/document.SongDocumentProvider`
@@ -5140,8 +5136,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/session.useSession`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
+              - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/relative-time.formatElapsed`
               - `primitives/slot-render.defineDispatchSlot`
@@ -5152,7 +5148,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlayerDisplay`
               - `PlayerTime`
               - `PlayerTransport`
-              - `PlayToggle`
               - `SonataPlayer`
               - `SonataPlayerScope`
               - `usePlayerView`
@@ -5168,6 +5163,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/shell`
               - `apps/sonata/songsheet`
               - `apps/sonata/sources/midi/file-preview`
+              - `apps/sonata/transport-bar`
               - `apps/sonata/view-options`
         - **`primitives`** — Umbrella for Sonata-local client primitives.
           - Plugins:
@@ -5192,6 +5188,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`jog-wheel`** — Horizontal jog-wheel chrome: a bordered pill with a leading icon, a draggable ribbed 'physical wheel' face, and a right-hand readout. Consumers supply the value model + the inertial-drag handle.
               - Web:
                 - Uses:
+                  - `apps/sonata/primitives/toolbar-control.HoverExpandPanel`
                   - `apps/sonata/primitives/toolbar-control.ToolbarControl`
                   - `primitives/css/clip.Clip`
                   - `primitives/css/text.Text`
@@ -5240,19 +5237,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `RhythmCircleProps`
                   - `RhythmCircleTrack`
                 - Exports (values): `RhythmCircle`
-            - **`toolbar-control`** — Shared chrome for Sonata's toolbar dial controls: a bordered pill with a leading muted category icon (with corner clearance), tooltip, and disabled dimming, wrapping caller-supplied segments. Composed by the jog wheels and the transpose stepper.
+            - **`toolbar-control`** — Shared chrome for Sonata's toolbar dial controls: a bordered pill with a leading muted category icon (with corner clearance), tooltip, and disabled dimming, wrapping caller-supplied segments; and the one hover-expand rule (hoverExpandHost + HoverExpandPanel) by which a collapsible toolbar control folds a part away at rest and opens it on hover, focus, press or hold. The jog wheels compose the pill; the volume control reuses the hover-expand rule.
               - Web:
                 - Uses:
+                  - `primitives/css/clip.Clip`
                   - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/css/yield.yieldClass`
                   - `primitives/overlay/tooltip.WithTooltip`
                 - Exports (types): `ToolbarControlProps`
-                - Exports (values): `ToolbarControl`
+                - Exports (values):
+                  - `hoverExpandHost`
+                  - `HoverExpandPanel`
+                  - `ToolbarControl`
               - Cross-plugin:
                 - Imported by:
+                  - `apps/sonata/audio/engine`
                   - `apps/sonata/primitives/jog-wheel`
-                  - `apps/sonata/transpose`
         - **`progress`** — Song-navigation progress bar for Sonata: scrubber + contributed timeline markers.
           - Plugins:
             - **`bars`** — Sonata progress marker: bar/measure tick marks along the progression bar, derived from the score's time signatures via bars().
@@ -5273,23 +5275,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/coords.pct`
                   - `primitives/css/coords.Placed`
                   - `primitives/css/layer.Layer`
-            - **`loop`** — Sonata A–B practice loop: a draggable loop region on the progression bar, a toolbar Loop toggle, and L/[/] shortcuts that cycle playback within [A, B].
+            - **`loop`** — Sonata A–B practice loop: a draggable loop region on the progression bar, a Loop toggle at the end of the player's transport strip, and L/[/] shortcuts that cycle playback within [A, B].
               - Web:
                 - Contributes:
                   - `SonataProgress.Marker` "loop" → `LoopRegion`
                   - `Sonata.TransportOverlay` "loop" → `LoopRollRegion`
                   - `Sonata.TransportEdge` "loop" → `LoopRollEdge`
-                  - `sonataPlayerPane.Actions` "loop-toggle" → `LoopToggle`
+                  - `SonataPlayer.Transport` "loop-toggle" → `LoopToggle`
                   - `Sonata.Effect` "loop-shortcuts" → `LoopShortcuts`
                 - Uses: 24 symbols — full list in [`plugins/apps/plugins/sonata/plugins/progress/plugins/loop/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/progress/plugins/loop/REFERENCE.md)
                   - `apps/sonata/session` ×3
+                  - `apps/sonata/player` ×2
                   - `apps/sonata/progress/scrubber` ×2
                   - `apps/sonata/shell` ×2
                   - `primitives/css/coords` ×2
                   - `primitives/css/ui-kit` ×2
                   - `primitives/hover-reveal` ×2
-                  - `apps/sonata/library.sonataPlayerPane`
-                  - `apps/sonata/player.usePlayerView`
                   - `primitives/css/inline.Inline`
                   - `primitives/css/layer.Layer`
                   - `primitives/css/pin.Pin`
@@ -5314,6 +5315,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/session.useSession`
                   - `primitives/css/clip.Clip`
                   - `primitives/css/coords.Placed`
+                  - `primitives/css/fill.fillClasses`
                   - `primitives/css/layer.Layer`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
@@ -5684,6 +5686,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `barStartBeat`
               - `beatGrid`
               - `beatToSeconds`
+              - `bpmAtBeat`
               - `buildActiveNoteIndex`
               - `buildTempoIndex`
               - `chordBars`
@@ -5748,8 +5751,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useCursorSelector`
               - `useSession`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
-              - `apps` ×31
+            - Imported by: 30 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
+              - `apps` ×30
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
           - Web:
             - Slots:
@@ -5923,10 +5926,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`file-preview`** — Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi host files) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
                   - Web:
                     - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
-                    - Uses: 34 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md)
-                      - `apps/sonata/player` ×4
+                    - Uses: 33 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md)
                       - `apps/sonata/sources/midi` ×4
                       - `primitives/file-viewer` ×4
+                      - `apps/sonata/player` ×3
                       - `apps/sonata/document` ×2
                       - `apps/sonata/session` ×2
                       - `primitives/css/spacing` ×2
@@ -6287,43 +6290,38 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/piano-keyboard`
               - `apps/sonata/piano-roll`
               - `apps/sonata/rich/chord-mode`
-        - **`transport-bar`** — Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to the Sonata player pane's header.
+        - **`transport-bar`** — Sonata transport controls: the play/pause button at the head of the player's transport strip (togglePlay, count-in aware) and the playback-speed jog wheel in the player header, folded to its readout at rest.
           - Web:
-            - Contributes: `sonataPlayerPane.Actions` "playback" → `PlaybackControls`
+            - Contributes:
+              - `SonataPlayer.Transport` "play" → `PlayButton`
+              - `sonataPlayerPane.Actions` "speed" → `TempoWheel`
             - Uses:
               - `apps/sonata/library.sonataPlayerPane`
+              - `apps/sonata/player.SonataPlayer`
               - `apps/sonata/primitives/inertial-drag.useInertialDrag`
               - `apps/sonata/primitives/jog-wheel.JogWheel`
-              - `apps/sonata/session.useCursorSelector`
               - `apps/sonata/session.useSession`
-              - `primitives/css/center.Center`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
               - `ui/icons.Icon`
-        - **`transpose`** — Per-song global transpose offset: persists a semitone shift, registers it with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer, and exposes a toolbar stepper control. Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
+        - **`transpose`** — Per-song global transpose offset: persists a semitone shift, registers it with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer, and exposes a toolbar transpose popover (stepper, key line, Play-in grid). Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
           - Web:
             - Contributes:
               - `SonataDocument.SongSetting` "transpose-sync" → `TransposeObserver`
               - `sonataPlayerPane.Actions` "transpose" → `TransposeControl`
-            - Uses:
-              - `apps/sonata/document.SonataDocument`
-              - `apps/sonata/document.transposeSetting`
-              - `apps/sonata/document.useFailSongSetting`
-              - `apps/sonata/document.useLibrarySong`
-              - `apps/sonata/document.useMountedSongId`
-              - `apps/sonata/document.useSongSetting`
-              - `apps/sonata/document.useWriteSongSetting`
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/sonata/plugins/transpose/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/transpose/REFERENCE.md)
+              - `apps/sonata/document` ×7
+              - `primitives/css/control-panel` ×2
+              - `primitives/css/ui-kit` ×2
               - `apps/sonata/library.sonataPlayerPane`
-              - `apps/sonata/primitives/toolbar-control.ToolbarControl`
               - `apps/sonata/session.useSession`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLiveRow`
-              - `primitives/css/inline.Inline`
-              - `primitives/css/spacing.Inset`
+              - `primitives/css/center.Center`
+              - `primitives/css/grid.Grid`
+              - `primitives/css/pin.Pin`
+              - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.cn`
+              - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/icon-button.IconButton`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
@@ -26927,8 +26925,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
-              - `apps` ×15
+            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+              - `apps` ×16
               - `conversations` ×7
               - `debug` ×7
               - `primitives` ×7
@@ -27087,8 +27085,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useControlPanelHost`
               - `usePanelStack`
           - Cross-plugin:
-            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
-              - `apps` ×9
+            - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+              - `apps` ×10
               - `page` ×4
               - `primitives` ×4
               - `config_v2` ×2
@@ -27141,8 +27139,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 143 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
-              - `apps` ×36
+            - Imported by: 144 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+              - `apps` ×37
               - `primitives` ×28
               - `conversations` ×23
               - `debug` ×16
@@ -27164,8 +27162,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `GridProps`
             - Exports (values): `Grid`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
-              - `apps` ×10
+            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
+              - `apps` ×11
               - `primitives` ×8
               - `ui` ×4
               - `conversations` ×2
@@ -27211,9 +27209,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
-              - `apps` ×16
+            - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `debug` ×16
+              - `apps` ×15
               - `reports` ×11
               - `conversations` ×9
               - `primitives` ×9
@@ -27375,9 +27373,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×17
-              - `apps` ×12
+              - `apps` ×13
               - `page` ×9
               - `conversations` ×7
               - `apps-core` ×2
@@ -27599,8 +27597,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 374 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×91
+            - Imported by: 375 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×92
               - `conversations` ×59
               - `primitives` ×50
               - `debug` ×34
@@ -27875,8 +27873,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SegmentedControl`
               - `ToggleChip`
           - Cross-plugin:
-            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
-              - `apps` ×21
+            - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+              - `apps` ×22
               - `primitives` ×8
               - `stats` ×5
               - `apps-core` ×3
@@ -28027,9 +28025,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 378 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 377 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×100
-              - `apps` ×67
+              - `apps` ×66
               - `conversations` ×50
               - `debug` ×23
               - `page` ×23
@@ -28103,9 +28101,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempted by: `primitives/css/ui-kit` (0 debt)
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `primitives` ×7
-              - `apps` ×4
+              - `apps` ×5
               - `conversations` ×3
               - `debug` ×3
               - `ui` ×3
@@ -29523,8 +29521,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
-        - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×43
+        - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×42
           - `primitives` ×19
           - `conversations` ×14
           - `tasks` ×7
