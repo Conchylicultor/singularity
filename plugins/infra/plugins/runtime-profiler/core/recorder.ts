@@ -64,15 +64,17 @@
 // graphile-worker `job.run()`, analogous to `http` but triggered by the queue
 // rather than an incoming request; its label is the job name.
 // `cascade` is an origin entry (sibling to `sub`/`push`) recorded around a
-// dependsOn edge's `signature`/`affectedMap` DB reads — the ids-translation work
-// a scoped cascade runs to compute which downstream rows a change touched. It
-// exists so those reads (a) route through the loader DB gate like a loader and
-// (b) are attributed as their own kind in the profiler, instead of running
-// unmeasured and ungated under the enclosing `flush` entry. Its label is the
-// downstream resource key the edge feeds. Deliberately NOT a `loader` kind: edge
-// reads are a cascade mechanism, not the downstream's value dependencies, so they
-// must NOT enter the loader read-set index (that would create false silent-FULL
-// flags). See research/2026-07-07-global-read-set-notifications-attribution-noise.md.
+// routed resource's reverse-route resolve (`resolveReverseRoutes`): the
+// id-translation read that maps a changed lookup row to the host ids that
+// reference it, run in the drain before the refill. It exists so those reads
+// (a) route through the loader DB gate like a loader and (b) are attributed as
+// their own kind in the profiler, instead of running unmeasured and ungated
+// under the enclosing `flush` entry. Its label is the routed resource's key.
+// Deliberately NOT a `loader` kind: a resolve is routing work, not the
+// resource's value dependencies, so it must NOT enter the loader read-set index.
+// (A `dependsOn` / `recomputeOn` cascade opens no `cascade` entry: it only
+// schedules the downstream, whose recompute is a `push` load.) See
+// research/2026-07-07-global-read-set-notifications-attribution-noise.md.
 // `route` is the change-feed's routing of one Postgres change notification into
 // the resource runtime (label = the changed table): a leaf span recorded with no
 // parent (the listener runs outside any entry). `membership` is a window resource's ids-only membership query

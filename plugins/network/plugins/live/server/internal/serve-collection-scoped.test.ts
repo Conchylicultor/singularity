@@ -20,7 +20,7 @@ import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
 import { integer, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
-import { familyMemberAlias } from "@plugins/infra/plugins/query-resource/core";
+import { familyMemberAlias } from "@plugins/infra/plugins/query-resource/core/testing";
 import {
   compileWindowQuery,
   recordingQueryDb,

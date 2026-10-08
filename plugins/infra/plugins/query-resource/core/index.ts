@@ -1,15 +1,9 @@
-export { queryResourceDescriptor } from "./internal/descriptor";
 export type {
   AllQueryResourceContract,
   PointQueryResourceContract,
-  QueryResourceContract,
   WindowQueryResourceContract,
-} from "./internal/descriptor";
-export {
-  BASE_RELATION,
-  familyMember,
-  familyMemberAlias,
-} from "./internal/joins";
+} from "./internal/contracts";
+export { BASE_RELATION, familyMember } from "./internal/joins";
 export type {
   ColumnRef,
   ColumnRefsOf,

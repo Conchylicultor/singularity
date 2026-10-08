@@ -32,6 +32,7 @@ import {
   tick,
   makeClientView,
 } from "./test-support";
+import { defineRoutedTable } from "./testing/routed-fixture";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
@@ -236,42 +237,31 @@ describe("version short-circuit — same-boot epoch + matching version", () => {
 
 describe("keyed: an evicted snapshot is never left behind a short-circuit", () => {
   function keyedRows(failFull: () => boolean = () => false) {
-    const h = createHarness({ readSet: () => ["row_table"] });
+    const h = createHarness();
     const ctl = controllable<{ id: string; n: number }[]>([
       { id: "a", n: 1 },
       { id: "b", n: 1 },
     ]);
-    h.runtime.defineResource(
-      {
-        key: "rows",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
+    // A routed alias over the identity table (the shared fixture).
+    const rows = defineRoutedTable(h, {
+      key: "rows",
+      table: "row_table",
+      membership: "alias",
+      schema: rowsSchema,
+      orderOf: async () => ctl.value.map((row) => row.id),
+      loader: (_p, c) => {
+        if (c) return ctl.value.filter((row) => c.affectedIds.includes(row.id));
+        if (failFull()) throw new Error("rows read failed");
+        return ctl.loader();
       },
-      {
-        identityTable: "row_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        loader: (_p, c) => {
-          if (c)
-            return ctl.value.filter((row) => c.affectedIds.includes(row.id));
-          if (failFull()) throw new Error("rows read failed");
-          return ctl.loader();
-        },
-      },
-    );
+    });
+    // A scoped UPDATE of row "a".
     const changeA = (n: number) => {
       ctl.setValue([
         { id: "a", n },
         { id: "b", n: 1 },
       ]);
-      h.runtime.applyDbChange({
-        source: "feed",
-        table: "row_table",
-        op: "U",
-        ids: ["a"],
-        origin: "row_table",
-        identityBase: "row_table",
-      });
+      rows.feed("U", ["a"]);
     };
     return { h, changeA };
   }

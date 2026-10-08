@@ -7,8 +7,6 @@ import type {
   JoinSpec,
 } from "@plugins/infra/plugins/query-resource/core";
 import type {
-  DependsOnEntry,
-  Resource,
   ResourceParams,
   RoutedRecomputeOn,
 } from "@plugins/framework/plugins/resource-runtime/core";
@@ -26,11 +24,8 @@ export interface EntitySource {
   readonly schema: ZodParser<unknown>;
 }
 
-/** The three relation kinds a query-resource can read from. */
-export type QuerySource = PgTable | PgView | EntitySource;
-
 /**
- * What a ROUTED compile reads: a base table, or an entity (read through its
+ * What a compile reads: a base table, or an entity (read through its
  * table) — never a view, whose changes arrive under its base tables' names
  * that no route of the view could state (A1 of
  * research/2026-09-29-global-scoped-change-routing.md).
@@ -47,7 +42,7 @@ export type SelectMap = Record<string, PgColumn | SQL | SQL.Aliased>;
 // The minimal chainable query surface the compiler drives: `select → from →
 // optional where/orderBy/limit → await rows`. Kept deliberately small so
 // neither the production default (the real drizzle `db`, cast once at the
-// default-db boundary in `compile.ts`) nor the unit-test fake needs drizzle's
+// default-db boundary in `compile-window.ts`) nor the unit-test fake needs drizzle's
 // full generics.
 //
 // The row shape is the CALLER's declaration, stated ONCE at the call that opens
@@ -55,9 +50,10 @@ export type SelectMap = Record<string, PgColumn | SQL | SQL.Aliased>;
 // `limit` to the `await`. A compiler therefore never re-states it, and no query
 // result needs an assertion to reach its declared type.
 //
-// Nothing about `Row` is guessed. The public entry points are
-// `queryResource(descriptor, spec)` and `windowQueryResource(contract, spec)`,
-// so a compiled resource's `Row` is pinned to the contract's `ZodParser<Row>` —
+// Nothing about `Row` is guessed. Every public entry point
+// (`windowQueryResource(contract, spec)`, `compileAllCollection`,
+// `compileUnionCollection`) takes a contract, so a compiled resource's `Row` is
+// pinned to the contract's `ZodParser<Row>` —
 // and the runtime parses EVERY loader output against that same schema before
 // the value is broadcast or cached
 // (`plugins/framework/plugins/resource-runtime/core/runtime.ts`:
@@ -92,106 +88,6 @@ export interface QueryDb extends SqlExecutable<SQL> {
 }
 
 /**
- * One join step of a cascade edge: read `to` (distinct) from `via` for every row
- * whose `from` column is in the incoming id set. The distinct `to` values become
- * the next hop's incoming set (or, for the final hop, this resource's changed
- * ids). A single-table FK translation (the old `upstreamTable`/`fk`/`upstreamPk`
- * shape) is just a one-element `hops` chain; a multi-table mapping (e.g.
- * conversation → task → launch) chains one hop per join.
- */
-export interface Hop {
-  via: PgTable | PgView;
-  from: PgColumn; // matched against the incoming id set (upstream side)
-  to: PgColumn; // its distinct values become the next hop's id set / the result
-}
-
-/**
- * A compiled cross-resource cascade edge (produced by `rel()`). It is folded
- * into a `dependsOn` entry (its `affectedMap` chains `hops` — one
- * `selectDistinct` per hop — to translate changed upstream ids → this resource's
- * changed ids). Load-bearing: the tasks/attempts/agents cascade rides these
- * derived edges (via `queryResource`'s `edges` or the public `compileEdges`).
- */
-export interface Edge {
-  upstream: Resource<unknown, ResourceParams>;
-  hops: Hop[];
-  signature?: DependsOnEntry["signature"];
-}
-
-/**
- * The declarative input to `compileQuery` / `queryResource`. One constrained
- * drizzle declaration from which the compiler derives the full loader, the
- * scoped loader, the `identityTable`, and the client keyField.
- */
-export interface QueryResourceSpec<P extends ResourceParams = ResourceParams> {
-  /** The relation to read: a base table, a 1:1 identity view, or an entity. */
-  from: QuerySource;
-  /**
-   * Required in full for a `PgView` (a view carries no primary-key metadata,
-   * and its identity base cannot be derived at module eval — the
-   * `View({ view, identityTable })` contribution is only collected at boot,
-   * after `queryResource(...)` has already resolved); usable as an override
-   * elsewhere. `pk` is the identity column; `table` names the base table the
-   * identity scopes to (defaults to the entity/table name for non-views).
-   */
-  identity?: { table?: string; pk: PgColumn };
-  /** Projection. Default: an entity's `wireColumns`, or all columns (table/view). */
-  select?: SelectMap;
-  /**
-   * Static predicate or a per-params one (`(params) => SQL | undefined`).
-   *
-   * RULE: under the plain `identityTable` scoping, every column the `where`
-   * reads must be IMMUTABLE post-insert. An UPDATE that flips a `where` column
-   * removes the row from the result set, but the scoped refill can only upsert
-   * rows it gets back — `diffKeyedScoped` never emits deletes — so the excluded
-   * row would sit stale in every client snapshot until the next FULL. A `where`
-   * on a mutable column (a `dismissed` flag, a status) must therefore pair with
-   * EITHER `recompute: { kind: "full", … }` OR `scopedMembership: true`. The
-   * latter is now the preferred choice for a non-windowed scan: a where-flip is
-   * detected as a membership EXIT (the refill fails to return a requested id) and
-   * shipped as a real delete + order, so the row leaves every client snapshot
-   * without a whole-list FULL. See the plugin CLAUDE.md.
-   */
-  where?: SQL | ((params: P) => SQL | undefined);
-  /** Static ORDER BY — applied to the FULL query only (never the scoped refill). */
-  orderBy?: SQL | SQL[];
-  /** Static LIMIT — applied to the FULL query only. Pairs with `recompute`. */
-  limit?: number;
-  /**
-   * Explicit FULL opt-out for reads whose per-id scoped refill would corrupt or
-   * stale the snapshot: windowed/LIMIT reads (a row entering/leaving the window
-   * is a membership change) and mutable-column `where` filters (see `where`).
-   * Selects the `{ recompute }` scope policy; the loader then always runs the
-   * FULL query and ignores `ctx.affectedIds`.
-   */
-  recompute?: { kind: "full"; reason: string };
-  /**
-   * Opt into row-level membership scoping (M5). Emits a `scopedMembership` server
-   * option so an INSERT/DELETE/where-flip on the identity table no longer forces a
-   * FULL recompute: the compiler derives the `orderOf` ids-only ordered-membership
-   * query the runtime runs ONLY when a row ENTERS membership, and the runtime
-   * reconciles exits/entries against the per-pk snapshot, shipping an incremental
-   * delta that asserts `order`.
-   *
-   * Incompatible with `limit` and `recompute` — a windowed/LIMIT read cannot
-   * membership-scope (a row entering/leaving the window is a membership change a
-   * per-id refill can't place), and `recompute: { full }` is the opposite policy
-   * (no identityTable to scope against). `compileQuery` throws (module eval) on
-   * either combination. It also RELAXES the mutable-`where` rule above — a
-   * where-flip becomes a detected exit/entry — so it is the preferred choice for a
-   * non-windowed mutable-`where` scan. See
-   * research/2026-07-03-global-scoped-membership-m5.md.
-   */
-  scopedMembership?: true;
-  /** `rel()` cascade edges — compiled into `dependsOn` (see `Edge`). */
-  edges?: Edge[];
-  /** Fixed-window trailing debounce (ms) for this resource's flushes. */
-  debounceMs?: number;
-  /** Test seam. Defaults to the real per-worktree drizzle `db`. */
-  db?: QueryDb;
-}
-
-/**
  * One key of a bounded window's total order.
  *
  * RULE: the column MUST be UPDATE-STABLE (immutable post-insert — `createdAt`,
@@ -218,8 +114,8 @@ export interface WindowOrderKey {
 }
 
 /**
- * The declarative input to `compileWindowQuery` / `windowQueryResource` — the
- * bounded-membership (window / point) sibling of `QueryResourceSpec`. Exactly
+ * The declarative input to `compileWindowQuery` / `windowQueryResource` — a bounded-membership
+ * (window / point) read. Exactly
  * ONE of `window` / `point` must be declared, and it must match the descriptor
  * kind — a `liveCollection`'s window (`c.window`) or its `:rows` point sibling
  * (`c.rows`), which `serveCollection` (network/live) compiles through here.
@@ -269,15 +165,15 @@ export interface WindowQueryResourceSpec<
    */
   identity?: { pk: PgColumn };
   /**
-   * Projection. Default: an entity's `wireColumns`, or all columns (table/view).
+   * Projection. Default: an entity's `wireColumns`, or all of the table's columns.
    * Required with `joins`: a joined column is projected rendered against its
    * alias (`JoinPlan.render`).
    */
   select?: SelectMap;
   /**
-   * Server-fixed scope predicate (e.g. `dismissed = false`). Unlike the plain
-   * `QueryResourceSpec`, a mutable-column `where` is FINE here: a where-flip is
-   * detected as a membership exit/entry by the runtime's window path.
+   * Server-fixed scope predicate (e.g. `dismissed = false`). A mutable-column
+   * `where` is FINE: a where-flip is detected as a membership exit/entry by the
+   * runtime's window path.
    */
   where?: SQL | ((params: P) => SQL | undefined);
   /**

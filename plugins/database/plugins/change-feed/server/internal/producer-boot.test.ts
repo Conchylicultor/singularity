@@ -54,6 +54,7 @@ function inputs(
     },
     layouts: [identityLayout],
     scoped: [{ key: "items.list", table: "pb_items", via: 'route "items"' }],
+    relations: { views: new Map(), rollups: new Map() },
     ...rest,
   };
 }
@@ -116,6 +117,45 @@ describe("installFeed with a produced table", () => {
         installFeed(t.db, inputs({ feedExempt: new Set(["pb_items"]) })),
       ),
     ).toContain("AND is a derived-table rollup");
+  });
+
+  test("D35: a view's bases must each have a change source or be opted out", async () => {
+    // A view over a produced and a triggered table, and one over an opted-out
+    // table: every base is sourced.
+    await installFeed(
+      t.db,
+      inputs(
+        { optedOut: new Set(["pb_quiet"]) },
+        {
+          relations: {
+            views: new Map([
+              ["pb_v", ["pb_items", "pb_other"]],
+              ["pb_quiet_v", ["pb_quiet"]],
+            ]),
+            rollups: new Map(),
+          },
+        },
+      ),
+    );
+    // A view reaching, through a rollup, a source no trigger feeds.
+    const err = await rejection(
+      installFeed(
+        t.db,
+        inputs(
+          {},
+          {
+            relations: {
+              views: new Map([["pb_v", ["pb_other", "pb_roll"]]]),
+              rollups: new Map([["pb_roll", ["pb_ghost"]]]),
+            },
+          },
+        ),
+      ),
+    );
+    expect(err).toContain("D35");
+    expect(err).toContain('view "pb_v" → "pb_ghost"');
+    expect(err).toContain('rollup "pb_roll" → "pb_ghost"');
+    expect(err).not.toContain('"pb_other"');
   });
 
   test("A3p: a route on a produced table that needs a carried column blocks boot", async () => {

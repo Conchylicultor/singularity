@@ -482,6 +482,30 @@ describe("reverse routes", () => {
     expect(f.clientValue(W3)).toEqual(f.full(W3));
   });
 
+  // The resolve self-queries the DB to translate changed lookup values into
+  // host ids: an ids-translation read, not part of the value (nor its
+  // read-set), so it runs under the `cascade` origin — the loader DB gate and
+  // the profiler's `cascade:<key>` — while the refill it feeds is the `push`.
+  test("the resolve runs under the `cascade` origin; the refill under `push`", async () => {
+    const origins: Array<[string, string]> = [];
+    const f = await seeded({
+      runtime: {
+        wrapOrigin: (kind, key, fn) => {
+          origins.push([kind, key]);
+          return fn();
+        },
+      },
+    });
+    origins.length = 0;
+    f.change("sources", "U", { ids: ["s1"], keys: { id: ["s1"] } });
+    await settle();
+    expect(f.resolveLog).toHaveLength(1);
+    expect(origins).toEqual([
+      ["cascade", "win"],
+      ["push", "win"],
+    ]);
+  });
+
   test("membership role: resolved unbounded (within null)", async () => {
     const E = { limit: "3", enabled: "1" };
     const f = await seeded({}, E);
@@ -548,20 +572,80 @@ describe("reverse routes", () => {
         src: "s9",
       });
     }
-    await f.h.subscribe("win", W3);
+    await f.h.subscribe("win", W3, { acks: true });
     await f.h.subscribe("win", E);
+    const base = f.framesOf(W3).find((x) => x.kind === "sub-ack")!.version!;
     const at = f.loads.length;
     f.w.sources.get("s9")!.enabled = true;
-    f.change("sources", "U", { ids: ["s9"], keys: { id: ["s9"] } });
+    f.change("sources", "U", {
+      ids: ["s9"],
+      keys: { id: ["s9"] },
+      xid: "800",
+    });
     await settle();
     expect(f.resolveLog).toEqual([
       { changed: ["s9"], within: null },
       { changed: ["s9"], within: ["h1", "h2", "h3"] },
     ]);
-    // W3 holds none of s9's hosts: nothing to load for it.
+    // W3 holds none of s9's hosts: its resolve names no row, so its pending is
+    // an empty scoped one — the drain's skip: nothing loaded, no value frame,
+    // no version bump, only the ack it asked for.
     expect(f.loadsSince(at)).toEqual([{ params: E, ids: "FULL" }]);
+    expect(f.pushesOf(W3).map((x) => [x.kind, x.ackTx])).toEqual([
+      ["ack", ["800"]],
+    ]);
     expect(f.clientValue(W3)).toEqual(f.full(W3));
     expect(f.clientValue(E)).toEqual(f.full(E));
+    // The next real change ships at the sub-ack's version + 1.
+    f.w.hosts.get("h1")!.n = 1.5;
+    f.change("hosts", "U", { ids: ["h1"] });
+    await settle();
+    expect(deltas(f.pushesOf(W3)).at(-1)!.version).toBe(base + 1);
+  });
+
+  // The same skip on a PERSISTED alias: it runs before the persisted branch,
+  // which would otherwise force a FULL reload (and a replace persist) for a
+  // change that touched none of the tuple's rows.
+  test("a persisted alias whose reverse resolves to no host neither loads nor persists — only its ack", async () => {
+    let persists = 0;
+    const f = routed({
+      kind: "alias",
+      runtime: {
+        shouldPersist: () => true,
+        captureWatermark: async () => "1",
+        persistSnapshot: async () => {
+          persists++;
+        },
+      },
+    });
+    seed(f);
+    f.w.sources.set("s9", { label: "S9", enabled: true }); // no host references it
+    await f.h.subscribe("win", {}, { acks: true });
+    await settle();
+    const at = f.loads.length;
+    const persisted = persists;
+    f.w.sources.get("s9")!.label = "S9'";
+    f.change("sources", "U", {
+      ids: ["s9"],
+      keys: { id: ["s9"] },
+      xid: "801",
+    });
+    await settle();
+    expect(f.resolveLog.at(-1)).toEqual({
+      changed: ["s9"],
+      within: ["h1", "h2", "h3", "h4"],
+    });
+    expect(f.loadsSince(at)).toEqual([]);
+    expect(persists).toBe(persisted);
+    expect(f.pushesOf({}).map((x) => [x.kind, x.ackTx])).toEqual([
+      ["ack", ["801"]],
+    ]);
+    // Positive control: a source a member references does reach the tuple.
+    f.w.sources.get("s1")!.label = "S1'";
+    f.change("sources", "U", { ids: ["s1"], keys: { id: ["s1"] } });
+    await settle();
+    expect(f.loadsSince(at).length).toBeGreaterThan(0);
+    expect(f.clientValue({})).toEqual(f.full({}));
   });
 
   // The compiler omits `column` on a lookup by the changed table's own PK:
@@ -1014,31 +1098,6 @@ describe("acks", () => {
       ["ack", ["903"]],
     ]);
   });
-
-  test("a persisted skip NEVER loads on the legacy path either: an empty cascade into a persisted entry is a skip, not a FULL reload", async () => {
-    let downLoads = 0;
-    const h = createHarness({
-      shouldPersist: (key) => key === "down",
-      captureWatermark: async () => "1",
-      persistSnapshot: async () => {},
-    });
-    const up = h.runtime.defineExternalResource({
-      key: "up",
-      mode: "push",
-      schema: z.number(),
-      loader: () => 1,
-    });
-    h.runtime.defineResource({
-      key: "down",
-      mode: "push",
-      schema: z.number(),
-      dependsOn: [{ resource: up, affectedMap: () => [] }],
-      loader: () => ++downLoads,
-    });
-    up.notify(undefined, { affectedIds: ["u1"] });
-    await settle();
-    expect(downLoads).toBe(0);
-  });
 });
 
 // --- Fail open ------------------------------------------------------------------
@@ -1421,7 +1480,7 @@ describe("registration and the legacy path", () => {
     ).toThrow(/"downstream" dependsOn the routed resource "win"/);
   });
 
-  test("routes need a membership, exclude identityTable, and have unique ids", () => {
+  test("routes need a membership, refuse a legacy scope key, and have unique ids", () => {
     const h = createHarness();
     const contract = (key: string) => ({
       key,
@@ -1432,10 +1491,10 @@ describe("registration and the legacy path", () => {
     expect(() =>
       h.runtime.defineResource(contract("a"), {
         routes: plan,
-        fanOut: { reason: "x" },
         loader: () => [],
       } as never),
     ).toThrow(/"routes" requires a membership/);
+    // The deleted legacy arm, cast through (D37): refused by name.
     expect(() =>
       h.runtime.defineResource(contract("b"), {
         routes: plan,
@@ -1443,7 +1502,7 @@ describe("registration and the legacy path", () => {
         membership: { kind: "point", idsOf: () => [] },
         loader: () => [],
       } as never),
-    ).toThrow(/"routes" and "identityTable" are exclusive/);
+    ).toThrow(/"identityTable" on key "b" — the legacy scope policy is gone/);
     const dup: Route = {
       id: "r",
       table: "t",
@@ -1459,6 +1518,7 @@ describe("registration and the legacy path", () => {
     ).toThrow(/duplicate route id "r"/);
     // An external resource's truth is outside Postgres: no table routes into it.
     expect(() =>
+      // @ts-expect-error — an external resource is never keyed (D31)
       h.runtime.defineExternalResource(contract("d"), {
         routes: plan,
         membership: { kind: "point", idsOf: () => [] },
@@ -1513,7 +1573,8 @@ describe("registration and the legacy path", () => {
 
   test("a routed entry takes no cascade: routes or reach beside dependsOn throws", () => {
     const h = createHarness();
-    const upstream = h.runtime.defineResource({
+    // External, so the only thing refused is the cascade into a routed entry.
+    const upstream = h.runtime.defineExternalResource({
       key: "up",
       mode: "push",
       schema: z.number(),
@@ -1551,13 +1612,9 @@ describe("registration and the legacy path", () => {
   test("a routed entry is served by routeTableChange only — the legacy read-set path never reaches it", async () => {
     const f = await seeded({ runtime: { readSet: () => ["hosts"] } });
     const at = f.loads.length;
-    f.h.runtime.applyDbChange({
+    f.h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "hosts",
-      op: "U",
-      ids: ["h1"],
-      origin: "hosts",
-      identityBase: "hosts",
     });
     await settle();
     expect(f.loadsSince(at)).toEqual([]);
@@ -1582,13 +1639,9 @@ describe("registration and the legacy path", () => {
     });
     await h.subscribe("legacy");
     const feed = (table: string) =>
-      h.runtime.applyDbChange({
+      h.runtime.applyLegacyFullChange({
         source: "feed",
         table,
-        op: "U",
-        ids: null,
-        origin: table,
-        identityBase: table,
       });
     const at = loads;
     feed("t1");
@@ -1689,13 +1742,9 @@ describe("reach — a non-keyed entry routed by full routes", () => {
     const g = grouping({ readSet: () => ["hosts", "other"] });
     await g.h.subscribe("groups", PLAIN);
     g.loads.length = 0;
-    g.h.runtime.applyDbChange({
+    g.h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "other",
-      op: "U",
-      ids: null,
-      origin: "other",
-      identityBase: "other",
     });
     await settle();
     expect(g.loads).toEqual([]);
@@ -1757,7 +1806,7 @@ describe("reach — a non-keyed entry routed by full routes", () => {
           loader: () => 1,
         } as never,
       ),
-    ).toThrow(/"reach" and "identityTable" are exclusive/);
+    ).toThrow(/"identityTable" on key "k3" — the legacy scope policy is gone/);
     expect(() =>
       h.runtime.defineExternalResource(
         { key: "k4", schema: z.number(), validateParams: () => {} },

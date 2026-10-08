@@ -11,10 +11,15 @@
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
 import { createHarness, tick } from "./test-support";
+import { feedChange, identityPlan } from "./testing/routed-fixture";
 import type { LoadInfo } from "./runtime";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
+
+// Keyed entries are routed over their identity table (the shared fixture's
+// plan and change-feed delivery): scoped changes reach an entry only through
+// its routes since P8 step 23a.
 
 describe("wrapLoad info", () => {
   test("a param-less load carries no variant; a parameterized one carries its canonical params", async () => {
@@ -48,7 +53,6 @@ describe("window membership", () => {
     const loads: LoadInfo[] = [];
     const membershipKeys: string[] = [];
     const h = createHarness({
-      readSet: () => ["row_table"],
       wrapLoad: (_key, info, fn) => {
         loads.push(info);
         return fn();
@@ -70,7 +74,7 @@ describe("window membership", () => {
         validateParams: () => {},
       },
       {
-        identityTable: "row_table",
+        routes: identityPlan("row_table"),
         membership: {
           kind: "window",
           windowIdsOf: async () =>
@@ -86,13 +90,10 @@ describe("window membership", () => {
     );
     const insert = (id: string, n: number) => {
       table.set(id, n);
-      h.runtime.applyDbChange({
-        source: "feed",
+      feedChange(h, {
         table: "row_table",
         op: "I",
         ids: [id],
-        origin: "row_table",
-        identityBase: "row_table",
       });
     };
     return { h, table, loads, membershipKeys, insert };

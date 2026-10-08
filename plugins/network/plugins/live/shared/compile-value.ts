@@ -24,7 +24,10 @@ import type {
 //
 // - `throttleMs`        → the runtime's `debounceMs` (a fixed trailing window,
 //                         not re-armed — a throttle, whatever the old name said).
-// - `recomputeOn`       → `dependsOn` edges. A bare served value recomputes
+// - `recomputeOn`       → `dependsOn` edges, from EXTERNAL upstreams only (T15:
+//                         a db upstream's writes reach this value's read-set
+//                         through the change feed already, so a cascade would
+//                         serve it twice). A bare served value recomputes
 //                         every currently-subscribed tuple of THIS value (the
 //                         runtime's `toSubscribed` edge; a param-less value
 //                         always recomputes its one `{}` tuple). The mapped form
@@ -55,9 +58,18 @@ export type ServedValueBase<T, P extends Record<string, string>> = Resource<
   keys: string[];
 };
 
-// `any`: an upstream of any payload/params — `Resource` is invariant in both.
+/**
+ * A served value that can be a `recomputeOn` upstream: an EXTERNAL one — told
+ * apart by its `notify`, which only the external arm has (T15). A db value
+ * has none, so naming one in `recomputeOn` is a tsc error. `any`: an upstream
+ * of any payload/params — `Resource` is invariant in both. One definition, for
+ * the worktree and the central `serveValue` alike.
+ */
 // biome-ignore lint/suspicious/noExplicitAny: see above.
-type AnyServed = ServedValueBase<any, any>;
+export type ExternalServed = ServedValueBase<any, any> & {
+  // biome-ignore lint/suspicious/noExplicitAny: see above.
+  notify(params?: any): void;
+};
 
 /** The params type an upstream served value is subscribed with. */
 type UpstreamParams<S> = S extends { load(params: infer UP): unknown }
@@ -77,7 +89,7 @@ export type RecomputeEntry<S, P> =
  * mapped entry's `params` sees ITS upstream's params and must return this
  * value's.
  */
-export type RecomputeOn<R extends readonly AnyServed[], P> = {
+export type RecomputeOn<R extends readonly ExternalServed[], P> = {
   [I in keyof R]: RecomputeEntry<R[I], P>;
 };
 
@@ -135,7 +147,7 @@ export type ServeValueOptions<
   T,
   P extends Record<string, string>,
   Src extends LiveValueSource,
-  R extends readonly AnyServed[] = [],
+  R extends readonly ExternalServed[] = [],
 > = {
   /** Where the value's truth lives (see the header). Required. */
   source: Src;
@@ -192,7 +204,7 @@ export interface ValueRuntime {
     opts: ValueOptions<T, P>,
   ): Resource<T, P>;
   defineExternalResource<T, P extends Record<string, string>>(
-    contract: ResourceContract<T, P>,
+    contract: ResourceContract<T, P> & { keyed?: never },
     opts: ValueOptions<T, P>,
   ): ExternalResource<T, P>;
 }
@@ -274,7 +286,7 @@ export function compileValue<
   P extends Record<string, string>,
   Src extends LiveValueSource,
   O extends LiveValueOrigin,
-  const R extends readonly AnyServed[] = [],
+  const R extends readonly ExternalServed[] = [],
 >(
   value: LiveValue<T, P, O>,
   // `NoInfer`: `T` / `P` come from the declaration alone — a loader returning
@@ -316,7 +328,7 @@ export function compileValue<
 
   const dependsOn = compileRecomputeOn<P>(
     value,
-    (opts.recomputeOn ?? []) as readonly RecomputeEntry<AnyServed, P>[],
+    (opts.recomputeOn ?? []) as readonly RecomputeEntry<ExternalServed, P>[],
   );
 
   const loader = opts.loader;
@@ -351,7 +363,7 @@ export function compileValue<
  */
 function compileRecomputeOn<P extends Record<string, string>>(
   value: { key: string; params: readonly string[] },
-  entries: readonly RecomputeEntry<AnyServed, P>[],
+  entries: readonly RecomputeEntry<ExternalServed, P>[],
 ): DependsOnEntry<P>[] {
   return entries.map((entry): DependsOnEntry<P> => {
     if ("value" in entry) {
@@ -359,11 +371,11 @@ function compileRecomputeOn<P extends Record<string, string>>(
       return {
         resource: entry.value,
         map: (upstreamParams: unknown) => [
-          toParams(upstreamParams as UpstreamParams<AnyServed>),
+          toParams(upstreamParams as UpstreamParams<ExternalServed>),
         ],
       };
     }
-    const upstream = entry as AnyServed;
+    const upstream = entry as ExternalServed;
     if (value.params.length === 0) {
       return { resource: upstream, map: () => [{} as P] };
     }
@@ -380,7 +392,7 @@ export function registerValue<
   P extends Record<string, string>,
   O extends LiveValueOrigin,
   Src extends LiveValueSource,
-  const R extends readonly AnyServed[] = [],
+  const R extends readonly ExternalServed[] = [],
 >(
   runtime: ValueRuntime,
   value: LiveValue<T, P, O>,

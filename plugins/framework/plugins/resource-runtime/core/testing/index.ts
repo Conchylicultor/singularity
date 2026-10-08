@@ -13,3 +13,15 @@ export type { KeyedSnapshot } from "../keyed-diff";
 // fresh FULL load.
 export { makeClientView } from "../test-support";
 export type { ClientView, RecordedFrame } from "../test-support";
+// The shared routed fixture (P8 step 23b): a keyed resource declared the way a
+// compiled collection is — a minted identity route and a membership — plus the
+// change feed's delivery to both routers, and the runtime harness itself.
+export {
+  defineRoutedTable,
+  feedChange,
+  identityPlan,
+  legacyFull,
+} from "./routed-fixture";
+export type { FedChange, RoutedTable, RoutedTableSpec } from "./routed-fixture";
+export { createHarness } from "../test-support";
+export type { Harness } from "../test-support";

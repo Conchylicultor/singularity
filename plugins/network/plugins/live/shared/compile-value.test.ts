@@ -212,6 +212,71 @@ describe("recomputeOn", () => {
   });
 });
 
+// T15: a `recomputeOn` upstream is EXTERNAL. A db value's writes reach every
+// reader of its tables through the change feed already, so a cascade out of
+// one would serve its downstream twice. Rung 2: `ExternalServed` is told apart
+// by `notify`, which a db value has none of; the runtime still refuses one an
+// erased cast let through.
+describe("recomputeOn — only an external upstream (T15)", () => {
+  function dbUpstream(runtime: ReturnType<typeof createResourceRuntime>) {
+    const v = liveValue(key("db-up"), { schema: Count });
+    const { resource } = registerValue(runtime, v, {
+      source: "db",
+      loader: () => ({ n: 0 }),
+    });
+    const served: ServedValueBase<{ n: number }, Record<string, string>> = {
+      ...resource,
+      source: "db",
+      keys: [v.key],
+    };
+    return served;
+  }
+
+  test("types: a db upstream is refused, bare and mapped", () => {
+    const runtime = createResourceRuntime();
+    const db = dbUpstream(runtime);
+    const v = liveValue(key("t-db"), { schema: Count });
+    // Never called — the assertions are the `@ts-expect-error`s.
+    const typeOnly = () => {
+      compileValue(v, {
+        source: "external",
+        loader: () => ({ n: 0 }),
+        // @ts-expect-error — a db value has no `notify`: not an upstream
+        recomputeOn: [db],
+      });
+      compileValue(v, {
+        source: "db",
+        loader: () => ({ n: 0 }),
+        recomputeOn: [
+          // @ts-expect-error — mapped, the same: only an external upstream
+          { value: db, params: () => ({}) },
+        ],
+      });
+    };
+    expect(typeof typeOnly).toBe("function");
+  });
+
+  test("a db upstream an erased cast let through is refused at registration; an external one registers", () => {
+    const runtime = createResourceRuntime();
+    const db = dbUpstream(runtime);
+    expect(() =>
+      registerValue(runtime, liveValue(key("down-db"), { schema: Count }), {
+        source: "db",
+        loader: () => ({ n: 0 }),
+        recomputeOn: [db as never],
+      }),
+    ).toThrow(/which is DB-backed/);
+    const ref = upstream(runtime);
+    expect(() =>
+      registerValue(runtime, liveValue(key("down-ext"), { schema: Count }), {
+        source: "db",
+        loader: () => ({ n: 0 }),
+        recomputeOn: [ref],
+      }),
+    ).not.toThrow();
+  });
+});
+
 describe("whileSubscribed", () => {
   test("starts once per first subscriber, stops once per last unsubscribe", async () => {
     const h = harness();

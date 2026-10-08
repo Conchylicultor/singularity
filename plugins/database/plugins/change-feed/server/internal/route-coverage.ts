@@ -1,13 +1,10 @@
-// Boot-time invariant (A1′): every table a live-state resource's scoped delivery
-// depends on has a change source — a table the change-feed ACTUALLY installs a
+// Boot-time invariant (A1′): every table a routed live-state resource's routes
+// name has a change source — a table the change-feed ACTUALLY installs a
 // trigger on, or one a mounted in-process change producer feeds (./producer).
 //
-// Two kinds of declaration depend on a table:
-// - a ROUTED resource (`routes` / `reach`, compiler-emitted) is reached ONLY
-//   through its routes, so every route's table must fire, whatever its map;
-// - a legacy scoped resource (`identityTable`) gets a scoped update only when a
-//   feed change arrives with `origin === identityTable`.
-// Either way the change can only come from a table the change-feed put a trigger
+// A ROUTED resource (`routes` / `reach`, compiler-emitted) is reached ONLY
+// through its routes, so every route's table must fire, whatever its map. The
+// change can only come from a table the change-feed put a trigger
 // on (see ./triggers `coveredTables`) or whose producer emits it — the caller
 // passes the union as `coveredTables`.
 //
@@ -33,20 +30,20 @@
 // This is the sibling of `warnOnCoverageGaps` (triggers.ts): both reconcile the
 // change-feed against its consumers at boot because a static `./singularity check`
 // can reach neither a live DB nor the server-only contribution/registry sets. This
-// one THROWS (blocks boot) rather than warning, because a scoped resource on an
+// one THROWS (blocks boot) rather than warning, because a routed resource on an
 // untriggered table is always a definite bug with a clear fix, never transient
 // drift — the covered-tables set is exactly what `rebuildTriggers` just installed,
 // so any real base table a resource legitimately reads is present by
 // construction, and a miss is never a false positive.
 
-/** One table a resource's scoped delivery depends on (server-core's `scopedResourceTables`). */
+/** One table a routed resource's routes name (server-core's `scopedResourceTables`). */
 export interface ScopedResourceTable {
   /** The resource key (for the diagnostic). */
   key: string;
   /** The base table the resource depends on. */
   table: string;
-  /** What names it: `identityTable`, or `route "<id>"` for a routed resource. */
-  via: string;
+  /** The route that names it: `route "<id>"`. */
+  via: `route "${string}"`;
 }
 
 // Why a table is not in the triggered set — drives the per-violation
@@ -133,7 +130,7 @@ const REASON_ORDER: readonly RouteCoverageReason[] = [
   "uncovered",
 ];
 
-/** Loud, actionable message grouping every dead scope declaration by its reason. */
+/** Loud, actionable message grouping every dead route by its reason. */
 export function formatUncoveredRouteError(
   violations: readonly RouteCoverageViolation[],
 ): string {
@@ -149,7 +146,7 @@ export function formatUncoveredRouteError(
       "",
       heading,
       ...group,
-      `  Fix: ${fix}, or make the resource a plain push resource (no identityTable / routes, hydrate-on-mount — like slow_ops).`,
+      `  Fix: ${fix}, or make the resource a plain push resource (no routes, hydrate-on-mount — like slow_ops).`,
     );
   }
   return [

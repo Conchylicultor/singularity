@@ -88,8 +88,8 @@ const [L1, L2, L3, L4, L5, L6] = [
 const A4 = "launch-a4";
 const C4 = "launch-c4";
 
-// What the legacy `agent-launches` descriptor parsed its payload with
-// (`keyedResourceDescriptor` → `z.array(AgentLaunchWithStatusSchema)`),
+// What the legacy `agent-launches` descriptor (param-less, keyed) parsed its
+// payload with (`z.array(AgentLaunchWithStatusSchema)`),
 // restated as a literal frozen at step 21 — `strict` at the row and the
 // nested ref, so a field added, removed or renamed fails the parse rather
 // than passing it, and the key must then be renamed.

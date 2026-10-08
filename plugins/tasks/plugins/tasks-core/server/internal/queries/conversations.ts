@@ -162,8 +162,9 @@ export function listConversationsForDisplay(
 
 // User-visible + active=true. Server-side batch callers (backup, transcript
 // retention, cross-table mutations). The conversations-active/-system live-state
-// resources no longer route through here — they are declarative `queryResource`s
-// (see ../resources.ts), so this needs no scoped-recompute id parameter.
+// resources no longer route through here — they are `liveCollection`s declared
+// `all` (see ../conversation-rows.ts), so this needs no scoped-recompute id
+// parameter.
 export function listActiveConversations(): Promise<Conversation[]> {
   return queryConversations(
     { active: true },

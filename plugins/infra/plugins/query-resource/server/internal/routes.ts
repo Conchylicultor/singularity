@@ -22,7 +22,7 @@ import {
   BASE_RELATION,
   type ArmKeyCodec,
 } from "@plugins/infra/plugins/query-resource/core";
-import type { EntitySource, QuerySource } from "./spec";
+import type { EntitySource, RoutedSource } from "./spec";
 
 // The routed half of a compiled read: the `RoutePlan` (or, for a non-keyed
 // aggregate, the `ReachPlan`) the runtime's `routeTableChange` serves the
@@ -52,11 +52,12 @@ export interface RoutedBase {
 }
 
 /**
- * The base table of a routed compile, or a loud throw for a view. A view has no
- * trigger — a change arrives under its base tables' names, which a view
- * declaration cannot state as routes — so a routed resource reads tables (A1).
+ * The base table of a routed compile. A view has no trigger — a change arrives
+ * under its base tables' names, which a view declaration cannot state as
+ * routes — so a routed resource reads tables (A1): `RoutedSource` has no
+ * spelling for a view, and one cast through throws here.
  */
-export function routedBase(from: QuerySource, label: string): RoutedBase {
+export function routedBase(from: RoutedSource, label: string): RoutedBase {
   if (is(from, PgView)) {
     throw new Error(
       `${label}: a routed compile reads a base table, never a view — a change ` +

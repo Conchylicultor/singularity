@@ -5,6 +5,7 @@ import {
 import type { LiveValue } from "@plugins/network/plugins/live/core";
 import {
   registerValue,
+  type ExternalServed,
   type ServedValueBase,
   type ServeValueOptions,
 } from "../../shared/compile-value";
@@ -30,9 +31,6 @@ export type CentralServedValue<
   notify(params?: P): void;
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: an upstream of any payload/params.
-type AnyServed = ServedValueBase<any, any>;
-
 /**
  * Serve a central `liveValue`.
  *
@@ -48,7 +46,7 @@ type AnyServed = ServedValueBase<any, any>;
 export function serveValue<
   T,
   P extends Record<string, string>,
-  const R extends readonly AnyServed[] = [],
+  const R extends readonly ExternalServed[] = [],
 >(
   value: LiveValue<T, P, "central">,
   opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R>,
@@ -62,7 +60,7 @@ export function serveValue<
   const { resource } = registerValue(
     { defineResource, defineExternalResource },
     value,
-    opts as ServeValueOptions<T, P, "external", readonly AnyServed[]>,
+    opts as ServeValueOptions<T, P, "external", readonly ExternalServed[]>,
   );
   if (!("notify" in resource)) {
     throw new Error(

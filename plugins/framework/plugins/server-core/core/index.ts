@@ -43,7 +43,7 @@ export { getBootMode, registeringPlugin } from "./boot-mode";
 export type { BootMode } from "./boot-mode";
 export {
   Resource,
-  applyDbChange,
+  applyLegacyFullChange,
   assertPreloadedResourcesDeclared,
   bindDeferredResources,
   defineDeferredResource,
@@ -69,8 +69,7 @@ export {
   persistedDefinitions,
   keptSnapshotValue,
   dropPendingPersists,
-  setRelationResolver,
-  setFeedExemptTables,
+  setRelationBases,
   setLiveStateSnapshotHooks,
   setClientBuildIdentity,
   triggerResourcePush,

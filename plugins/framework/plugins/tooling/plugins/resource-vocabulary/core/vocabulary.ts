@@ -4,7 +4,6 @@ import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/
 // system (it is not an import statement the checker can see). `import type * as`
 // is a real, checkable edge that still erases completely.
 import type * as LiveStateBarrel from "@plugins/primitives/plugins/live-state/core";
-import type * as QueryResourceBarrel from "@plugins/infra/plugins/query-resource/core";
 import type * as LiveBarrel from "@plugins/network/plugins/live/core";
 
 // The closed set of ways a plugin declares a live-state resource, as DATA, so
@@ -50,7 +49,6 @@ import type * as LiveBarrel from "@plugins/network/plugins/live/core";
  * string and the two are the same runtime object behind two facades.
  */
 export const LIVE_STATE_CORE = "@plugins/primitives/plugins/live-state/core";
-export const QUERY_RESOURCE_CORE = "@plugins/infra/plugins/query-resource/core";
 export const SERVER_CORE = "@plugins/framework/plugins/server-core/core";
 export const QUERY_RESOURCE_SERVER =
   "@plugins/infra/plugins/query-resource/server";
@@ -136,8 +134,7 @@ export interface RegisterMarker {
 /**
  * The minimal structural shape EVERY resource descriptor has, whatever factory
  * minted it — `ResourceDescriptor<T, P>` and each of its extensions
- * (`QueryResourceContract`, and a collection's window and `:rows` descriptors)
- * satisfy it.
+ * (a collection's window, `:rows` and `all` descriptors) satisfy it.
  *
  * Deliberately NOT `ResourceDescriptor<unknown, …>`: `schema` is a
  * `ZodParser<T>`, which is invariant in `T` (zod surfaces `T` in both parameter
@@ -192,7 +189,6 @@ type CollectionFactoryNames<M> = {
 
 type MintingFactoryName =
   | DescriptorFactoryNames<typeof LiveStateBarrel>
-  | DescriptorFactoryNames<typeof QueryResourceBarrel>
   | DescriptorFactoryNames<typeof LiveBarrel>
   | CollectionFactoryNames<typeof LiveBarrel>;
 
@@ -217,16 +213,6 @@ export const resourceDescriptorFactories = {
     barrel: LIVE_STATE_CORE,
     preload: PRELOAD,
     mints: [{ suffix: "", keyed: false, membership: null, preloadable: true }],
-  },
-  keyedResourceDescriptor: {
-    barrel: LIVE_STATE_CORE,
-    preload: PRELOAD,
-    mints: [{ suffix: "", keyed: true, membership: null, preloadable: true }],
-  },
-  queryResourceDescriptor: {
-    barrel: QUERY_RESOURCE_CORE,
-    preload: PRELOAD,
-    mints: [{ suffix: "", keyed: true, membership: null, preloadable: true }],
   },
   liveValue: {
     barrel: LIVE_CORE,
@@ -270,8 +256,8 @@ export type DescriptorFactoryName = keyof typeof resourceDescriptorFactories;
  * Every call that SERVES a descriptor on a runtime. `defineResource` /
  * `defineExternalResource` are the resource runtime's own two primitives,
  * re-presented identically by `server-core/core` and `central-core/core`;
- * `queryResource` / `windowQueryResource` are the query compiler's wrappers
- * around the first, `serveCollection` serves every resource a
+ * `windowQueryResource` / `deferredWindowQueryResource` are the query
+ * compiler's wrappers around the first, `serveCollection` serves every resource a
  * `liveCollection` mints (its first argument resolves to every minted key),
  * and `serveValue` serves a `liveValue`.
  *
@@ -291,7 +277,6 @@ export const resourceRegisterMarkers = {
   // The same registration, its server half compiled at boot once
   // contributions are collected (a contributed collection's resources).
   defineDeferredResource: { barrel: SERVER_CORE },
-  queryResource: { barrel: QUERY_RESOURCE_SERVER },
   windowQueryResource: { barrel: QUERY_RESOURCE_SERVER },
   deferredWindowQueryResource: { barrel: QUERY_RESOURCE_SERVER },
   serveCollection: { barrel: LIVE_SERVER },
@@ -308,10 +293,9 @@ export type RegisterMarkerName = keyof typeof resourceRegisterMarkers;
  *
  * A scanner needs this to tell a DECLARATION from an IMPLEMENTATION. Inside
  * `live-state`, `query-resource` and `network/live`, a factory is called with a
- * computed key (`keyedResourceDescriptor(key, …)` inside
- * `queryResourceDescriptor`, or inside the window / point factories
- * `liveCollection` mints with) — that is the wrapper implementing the factory,
- * not a plugin declaring a resource. Everywhere else the key must be a literal
+ * computed key (inside the window / point factories `liveCollection` mints
+ * with, or a register marker's wrapper) — that is the wrapper implementing the
+ * factory, not a plugin declaring a resource. Everywhere else the key must be a literal
  * at the call site, because a scanner reading source text has no other way to
  * see it.
  */

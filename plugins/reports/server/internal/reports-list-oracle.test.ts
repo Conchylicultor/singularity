@@ -48,7 +48,9 @@ import {
   routedTableRequirements,
   scopedResourceTables,
   type ResourceParams,
+  setRelationBases,
 } from "@plugins/framework/plugins/server-core/core";
+import { clearRelationBases } from "@plugins/framework/plugins/server-core/core/testing";
 import { sweepExpired } from "@plugins/infra/plugins/retention/server/testing";
 import {
   makeClientView,
@@ -120,6 +122,12 @@ const tupleKey = (key: string, params: ResourceParams) =>
   `${key} ${JSON.stringify(params)}`;
 
 beforeAll(async () => {
+  // What change-feed's boot installs before its listener starts (D34). This
+  // suite reaches only routed entries, but the legacy router runs on every
+  // change too, over whatever legacy read-sets other suites in this bun
+  // process left: with no bases set it would report on each one. No views
+  // matter here, so every relation is its own base.
+  setRelationBases((r) => [r]);
   testDb = await createTestDb({ prefix: "reports_oracle" });
   await runMigrations(testDb.db);
   // The collection's three resources, compiled from the REAL declaration with
@@ -175,6 +183,7 @@ beforeAll(async () => {
 }, 30_000);
 
 afterAll(async () => {
+  clearRelationBases();
   handler.close(ws, 1000, "test");
   unmount?.();
   await testDb?.drop();

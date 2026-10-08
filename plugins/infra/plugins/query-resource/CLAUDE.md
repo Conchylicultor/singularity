@@ -4,7 +4,7 @@ The SQL compiler under `network/live`'s live-resource API. **It is not a way to
 declare a resource.** A new collection is a `liveCollection` served by
 `serveCollection`, and a new value is a `liveValue` served by `serveValue` —
 see `plugins/network/plugins/live/CLAUDE.md`. What lives here is what those
-compile to, plus the last resources that have not moved:
+compile to:
 
 - **`windowQueryResource`** — the bounded (window / point) compiler.
   `serveCollection` runs every collection's window and `:rows` sibling through
@@ -14,32 +14,26 @@ compile to, plus the last resources that have not moved:
 - **`compileAllCollection`** — the whole-ordered-set compiler: a collection
   declared `all` and its `:rows` sibling, set-at-a-time with grouped CTEs (see
   *The `all` compiler* below).
-- **`queryResource`** + **`queryResourceDescriptor`** — the legacy unbounded
-  keyed form. No resource uses it any more: the task tree's keys moved to
-  collections declared `all` (`compileAllCollection`) in P8 v3 steps 18–22
-  (`research/2026-10-06-global-scoped-change-routing-p8-v3.md`; the last,
-  `conversations-active` / `-system`, at step 22), and step 23 deletes the
-  form with `rel()` / `compileEdges`, which no resource uses either. Never use
-  it for a new resource.
 
 `query-resource` never imports `network/live` — the dependency runs the other
 way, test files included.
 
-Every compiler takes ONE constrained drizzle declaration and derives the FULL
-loader, the Layer-2 scoped loader, the scope policy (legacy `queryResource`: the
-`identityTable`, hand-authored elsewhere and free to drift from what the loader
-actually reads; `windowQueryResource`, `compileAllCollection` and the union: the
-ROUTES — see *Routes*), and the client keyField — producing exactly the object the two-arg keyed
-`defineResource(descriptor, KeyedServerResourceOptions & ScopePolicy)` already
-accepts (a keyed contract takes no `mode`).
+Every keyed compiler takes ONE constrained drizzle declaration and derives the
+FULL loader, the Layer-2 scoped loader, the scope policy (the ROUTES its SQL
+reads plus a membership — see *Routes*; never hand-authored, so it cannot drift
+from what the loader reads), and the client keyField — producing exactly the
+object the two-arg keyed `defineResource(descriptor, KeyedServerResourceOptions
+& ScopePolicy)` already accepts (a keyed contract takes no `mode`). The grouping
+compiler's `:groups` value is the one non-keyed output (a push value with a
+`reach` plan).
 
 ## Routes: the bounded and grouping compilers emit what their SQL reads
 
 `windowQueryResource`, `compileGroupsQuery`, `compileAllCollection` and the
 union compiler are **routed**
-(`research/2026-09-29-global-scoped-change-routing.md`, P1): instead of an
-`identityTable`, each emits, from the same declaration it renders the SQL from,
-the `RoutePlan` the runtime's `routeTableChange` serves it by (`internal/routes.ts`):
+(`research/2026-09-29-global-scoped-change-routing.md`, P1): each emits, from
+the same declaration it renders the SQL from, the `RoutePlan` the runtime's
+`routeTableChange` serves it by (`internal/routes.ts`):
 
 - **window / point** — `routes`: an `identity` route (`base`) on the base table,
   read by every tuple in the `membership` role, plus one route per declared join
@@ -67,9 +61,9 @@ the `RoutePlan` the runtime's `routeTableChange` serves it by (`internal/routes.
   `from` is typed `RoutedSource` (`PgTable | EntitySource`), and an untyped view
   throws at module eval. The change-feed's boot assertion checks every route table
   is triggered (`change-feed/server/internal/route-coverage.ts`).
-- **No `rel()` edges** on a bounded spec: a routed entry is never a cascade
-  upstream, and routes the tables it reads itself (the runtime refuses `dependsOn`
-  beside `routes` / `reach`).
+- **No cascade edges**: a routed entry is never a cascade upstream (A5), and
+  routes the tables it reads itself (the runtime refuses `dependsOn` beside
+  `routes` / `reach`).
 - **`internal/routes.ts` is the one production minter.** A plan is made by
   `mintRoutePlan` / `mintReachPlan` (resource-runtime), never written as a literal
   (a type brand), and the `resource-runtime:compiled-routes` check allows the
@@ -610,108 +604,39 @@ each member reads. A window spec takes them as `families: { joins, valuesKey }`
   (a column added, dropped, retyped) FULLs every subscribed tuple and drops its
   read-set memo.
 
-The tree resources used to be declared like this, until each converted to a
-`liveCollection(…, { all })` (P8 v3 steps 18–22; the last, the conversation
-lists, at step 22). Nothing is declared this way any more and step 23 deletes
-the form — kept here only to read the sections below, **not** a precedent:
-
-```ts
-// core/ (web-safe descriptor — NO drizzle):
-export const conversationsActiveResource = queryResourceDescriptor<Conversation>(
-  "conversations-active", ConversationSchema, "id", { preload: "boot" });
-
-// server:
-export const conversationsActiveResource = queryResource(descriptor, {
-  from: conversations,                       // PgTable | PgView | Entity (here the conversations_v view)
-  identity: { table: "conversations", pk: conversations.id }, // a view states its identity (§ What it derives)
-  scopedMembership: true,                    // INSERT/DELETE ship incremental deltas (§ scopedMembership)
-});
-```
-
-> `where` (and mutable-column filtering) is covered in the RULE section below.
-
 ## What it derives
 
-1. **Identity.** `Entity` → base = `entity.name`, pk = its table's single primary,
-   projection = `wireColumns`; `PgTable` → base = its table name, pk = its single
-   primary, select-all; `PgView` → **requires** `identity.pk` + `identity.table`
-   (matching the view's `View({ view, identityTable })` declaration), because a
-   view has no PK metadata and its identity base cannot be derived at module eval
-   — before the boot-time contribution collection that populates
-   `relationIdentityBase`. A composite / missing PK with no `identity.pk` override
-   throws; such a payload is a pushed `liveValue` (`network/live`) instead.
+1. **Identity** (`resolveIdentity`, `internal/identity.ts`). The source is a
+   `RoutedSource` — a `PgTable` or an `Entity`, never a view (A1, above):
+   `Entity` → pk = its table's single primary, projection = `wireColumns`;
+   `PgTable` → pk = its single primary, select-all. A composite / missing PK
+   with no `identity.pk` override throws; such a payload is a pushed
+   `liveValue` (`network/live`) instead.
 2. **keyField.** The wire field the client `keyOf` reads: the projection key whose
    column matches the pk (matched by DB column *name*, so an aliased projection
    `{ conversationId: table.parentId }` keys on the alias), else the pk's JS
    property name. Throws if the pk is not projected, or if the descriptor's
    `queryPk` disagrees with it.
-3. **FULL loader.** `select(map).from(rel)[.where][.orderBy][.limit]`.
-4. **Scoped loader.** The same select/where composed with
-   `and(where, pk IN (affectedIds))` and **no orderBy/limit** — a partial refill
-   of only the changed rows. Fires only under the `identityTable` policy.
-5. **ScopePolicy.** `{ identityTable }` by default; `{ recompute: {kind:"full"} }`
-   when `spec.recompute` is set. Never both, never neither.
+3. **FULL loader** — the tuple's whole window / point set / ordered set.
+4. **Scoped loader** — the same read composed with `pk IN (affectedIds)` and no
+   order or limit: the partial refill a membership drain runs for the rows a
+   routed change named.
+5. **ScopePolicy** — the routes plus a membership (a window / point
+   `membership`, or the `all` set's `scopedMembership` alias with its
+   `orderOf` and `orderSignatureOf`). Every compiled order declares its order
+   signature, so a refilled row whose sort position moved re-derives `order`
+   instead of staying in place.
 
-## Keyed-only, and why push is excluded
+## Keyed, except the grouping
 
-The compiler emits **keyed resources only**: a push loader that ignored
-`ctx.affectedIds` would broadcast a partial (scoped) array as the whole value,
-corrupting every subscriber's snapshot. Keyed-ness comes solely from the client
-descriptor (`queryResourceDescriptor` → `keyedResourceDescriptor`), so the scope
-policy is mandatory by construction. A pushed or on-demand payload is a
-`liveValue` served by `serveValue` (`network/live`).
-
-## The `recompute: {full}` escape hatch (K/full)
-
-Windowed reads (`orderBy … LIMIT N`) can't be scoped: a row entering or leaving the
-window is a *membership* change a per-id refill can't express, and a scoped refill
-of an out-of-window row would corrupt the snapshot. Declare
-`recompute: { kind: "full", reason }` — the loader always runs the FULL query and
-ignores `ctx.affectedIds`, while still gaining Layer-1 keyed row diffing.
-
-## RULE: a mutable-column `where` requires `scopedMembership` or `recompute:{full}`
-
-**`where` + the plain `identityTable` scoping is sound only when every column the
-`where` reads is immutable post-insert.** The scoped refill runs
-`and(where, pk IN affectedIds)`, but `diffKeyedScoped` **never emits deletes** (a
-scoped notify never asserts membership) — so an UPDATE that flips a row out of the
-`where` merges nothing, and the excluded row sits **stale in every client
-snapshot** until the next FULL recompute. A correctness bug, not a staleness nit;
-column mutability is not statically detectable, so this rule is checked at review
-time:
-
-- `where` on **immutable** columns (a parent FK like `threadId`, a fixed `type`
-  discriminator, anything never UPDATEd) → plain K/scoped is fine.
-- `where` on a **mutable** column (`dismissed`, a status, any flag a mutation
-  flips) → declare EITHER **`scopedMembership: true`** (M5, preferred for a
-  non-windowed scan: the flip is detected as a membership **exit** and shipped as
-  a real delete + `order`, so the row leaves incrementally — see the next
-  section) OR **`recompute: { kind: "full", reason: "where-filtered membership:
-  …" }`** (the fallback for windowed reads, which cannot membership-scope; the
-  FULL loader's `diffKeyedFull` ships the disappearance as a per-row delete,
-  while in-place flips still ship as single-row upserts).
-- No `where` at all → membership only changes via INSERT/DELETE. Without
-  `scopedMembership` the feed delivers those as FULL (`op: "I" | "D"`); with it
-  they ship incrementally. Either is correct.
-
-## `scopedMembership: true` — incremental membership (M5)
-
-Opt a **non-windowed** keyed scan into row-level membership scoping so an
-INSERT / DELETE / where-flip no longer forces a FULL recompute. The compiler
-derives, alongside the FULL + scoped loaders, an **`orderOf`** query — the
-ids-only `select(pk).from(rel)[.where][.orderBy]` (**never a limit**) — and emits
-`scopedMembership: { orderOf }` into `serverOpts`. The runtime reconciles each
-flush's changed ids against the per-pk snapshot (delete / where-flip exit → delete
-+ `order` derived from the in-memory snapshot; entry → upsert + `order` with
-`orderOf` run exactly once; in-place flip → one upsert, no `order`): see the
-runtime section in `plugins/framework/plugins/resource-runtime/CLAUDE.md`. Cost
-model: `orderOf` runs **only when a row enters** membership, so the common
-status-flip path issues no extra query.
-
-`scopedMembership` cannot combine with `limit` (a windowed read cannot
-membership-scope) or `recompute` (the opposite policy — no `identityTable`): loud
-throw in `compileQuery`. Absent ⇒ byte-identical to pre-M5. Design:
-`research/2026-07-03-global-scoped-membership-m5.md`.
+A keyed loader may return a partial (scoped) array, which the keyed diff merges
+into the snapshot; a push loader that did the same would broadcast the partial
+array as the whole value, corrupting every subscriber. So every compiler that
+refills by id emits a KEYED resource, keyed-ness coming solely from the client
+descriptor (`liveCollection`'s window / `:rows` / `all` descriptors), and the
+grouping compiler — a push value — has no scoped loader at all: every reach
+route is `full`. A pushed or on-demand payload of your own is a `liveValue`
+served by `serveValue` (`network/live`).
 
 ## Bounded membership: `windowQueryResource` (window / point)
 
@@ -772,8 +697,8 @@ union snapshot has to change, regenerate it with
 Run the generator on the code BEFORE the refactor; output generated afterwards
 reproduces whatever the refactor broke.
 
-The bounded-working-set sibling of `queryResource`: the subscription's params tuple
-names a **bounded selector**, so a change costs O(changed) + O(window), never
+The bounded-working-set compiler: the subscription's params tuple names a
+**bounded selector**, so a change costs O(changed) + O(window), never
 O(collection), and the value is never the whole table. Two kinds, one compiler —
 exactly ONE of `window` / `point` per spec, matching the descriptor kind. What
 `serveCollection` derives for a collection `c` over a table (never written by
@@ -874,9 +799,8 @@ collected): the resource registers now under its descriptor and `specOf()`
 compiles at the bind, through the same checks. For a spec that depends on
 contributions (network/live's `contributed` collections).
 
-Structural differences from `queryResource`: no `limit` / `recompute` /
-`scopedMembership` fields exist on the spec (the bound comes from the params;
-membership is always incremental); bounded resources are never L2-persisted
+The spec has no `limit` / `recompute` / `scopedMembership` fields (the bound
+comes from the params; membership is always incremental); bounded resources are never L2-persisted
 (runtime-enforced), so a preloaded window loads via boot-snapshot's
 fallback loader at the descriptor's `defaultParams` — the identical tuple a
 bare `useLive(c)` subscribes to. `defaultLimit` lives ONLY on the descriptor
@@ -886,50 +810,6 @@ at most `maxLimit`. Every misuse (window+point, missing `orderBy`,
 `orderBy` without `signatureColumns`, an unprojected signature column, kind/descriptor drift, `point.by` ≠ identity pk,
 `queryPk` ≠ derived keyField) throws at module eval — a bad spec is a boot crash,
 never a silent misbehavior.
-
-## Ordering-staleness caveat
-
-A scoped keyed delta omits `order` (in-place row upserts only, never
-membership/order), so a scoped update that moves a row's sort position leaves it
-**in place** until the next FULL recompute reships `order` — an accepted trade-off:
-a status/title flip ships one row, not the whole ordered list.
-
-## `rel()` cascade edges (load-bearing)
-
-`rel(upstream, hops, { signature? })` declares a cross-resource cascade: when
-`upstream` notifies, the compiled edge's `affectedMap` chains `hops` to translate
-changed upstream ids → this resource's changed ids. **Load-bearing:** the
-tasks/attempts/agents cascade (the last hand-written `affectedMap` scoping in the
-codebase) now rides these derived edges.
-
-A **hop** (`{ via, from, to }`) is one join step — read `to` (distinct) from `via`
-for every row whose `from` column is in the incoming id set. A single hop is a
-plain FK translation (`rel(conversationsActive, { via: _conversations, from:
-_conversations.id, to: _conversations.attemptId })` ⇒ `affectedMap = ids =>
-selectDistinct({ v: attemptId }).from(_conversations).where(id IN ids)`); a hop
-array chains one `selectDistinct` per hop, each hop's distinct `to` feeding the
-next hop's `from IN (…)` (the old agent-launches edge was two hops, `conv id →
-task id → launch id`). Ids are `String()`-coerced and **deduped between hops**; an **empty
-hop short-circuits** the whole chain to `[]` with no further query — sound because
-the runtime never calls `affectedMap` with an empty set, so an empty result can
-only mean "no downstream rows".
-
-Two ways to consume edges:
-
-- **`queryResource({ …, edges: [rel(…)] })`** — folded into
-  `serverOpts.dependsOn` for a fully-declarative resource. No resource uses
-  it any more (the last, `tasksResource`, became the `tasks` collection in P8
-  step 19).
-- **`compileEdges([rel(…)], db?)`** — edges for a **hand-written**
-  `defineResource` that keeps a bespoke loader but wants derived scoping. No
-  resource uses it any more: `attemptsResource` became the `attempts`
-  collection in P8 step 20 and `agentLaunchesResource` the `agent-launches`
-  collection in step 21; step 23 deletes it.
-
-`opts.signature` is passed through verbatim to the `DependsOnEntry` — the
-relevance gate that drops a cascade whose downstream-relevant upstream projection
-is unchanged (e.g. a conversation's transient `waitingFor`/`updatedAt`, which the
-tasks/attempts aggregates never read).
 
 ## The `db` seam
 
@@ -942,9 +822,9 @@ importing `db` never touches a worktree — no test env shim needed.
 
 ## Boundaries
 
-- `core/` — `queryResourceDescriptor` + the contract types (`QueryResourceContract`,
-  `WindowQueryResourceContract`, `PointQueryResourceContract`,
-  `AllQueryResourceContract`). Web-safe: **no drizzle** (bundled into the
+- `core/` — the contract types (`WindowQueryResourceContract`,
+  `PointQueryResourceContract`, `AllQueryResourceContract`, in
+  `core/internal/contracts.ts`). Web-safe: **no drizzle** (bundled into the
   browser).
 - `core/` also holds the `all`-only join kinds (`AllJoinSpec`, `childrenJoin`,
   `closureJoin`, `aggregate`, `jsonAgg`, `OuterColumnRef`) — type-only drizzle
@@ -952,18 +832,19 @@ importing `db` never touches a worktree — no test env shim needed.
 - `core/` also holds the join vocabulary's types (`JoinSpec`, `ColumnRef`,
   `JoinRefs`, `JoinRef`, `JoinColumns`) and `BASE_RELATION` — type-only drizzle
   imports.
-- `server/` — `queryResource`, `windowQueryResource`, `compileGroupsQuery`,
-  `compileAllCollection`, `compileJoins` / `joinRefs`, `compileQuery`,
-  `compileEdges`, `rel`, and the spec types. Owns all drizzle usage and the `identityTable` / routes / keyField
-  derivation. `server/testing` publishes `compileWindowQuery` (the bounded
+- `server/` — `windowQueryResource` / `deferredWindowQueryResource`,
+  `compileGroupsQuery`, `compileAllCollection`, `compileUnionCollection`,
+  `compileJoins` / `joinRefs`, and the spec types. Owns
+  all drizzle usage and the routes / keyField derivation. `server/testing` publishes `compileWindowQuery` (the bounded
   compiler without registering), `compileAllCollection` and
-  `recordingQueryDb` for `network/live`'s and tasks-core's tests.
+  `recordingQueryDb` for `network/live`'s and tasks-core's tests; `core/testing`
+  publishes `familyMemberAlias` (shipping code reaches it through `familyMember`).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, scope policy (an identityTable for the legacy unbounded form; the routes the change router serves it by for a bounded window / point set, a whole ordered set declared `all` — compileAllCollection, grouped CTEs over rollup / children / closure joins — and a grouping), and client keyOf for live-state resources.
+- Description: Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, scope policy (the routes the change router serves it by, for a bounded window / point set, a whole ordered set declared `all` — compileAllCollection, grouped CTEs over rollup / children / closure joins — and a grouping), and client keyOf for live-state resources.
 - Server:
   - Uses:
     - `database.db`
@@ -984,14 +865,9 @@ importing `db` never touches a worktree — no test env shim needed.
     - `AllCollectionSpec`
     - `CompiledAllCollection`
     - `CompiledGroups`
-    - `CompiledQuery`
     - `CompiledUnion`
-    - `Edge`
     - `EntitySource`
-    - `Hop`
     - `QueryDb`
-    - `QueryResourceSpec`
-    - `QuerySource`
     - `ReadColumn`
     - `RoutedSource`
     - `SelectMap`
@@ -1005,25 +881,21 @@ importing `db` never touches a worktree — no test env shim needed.
     - `WindowQueryResourceSpec`
   - Exports (values):
     - `compileAllCollection`
-    - `compileEdges`
     - `compileGroupsQuery`
     - `compileJoins`
-    - `compileQuery`
     - `compileUnionCollection`
     - `deferredWindowQueryResource`
     - `joinRefs`
-    - `queryResource`
-    - `rel`
     - `windowQueryResource`
+- Cross-plugin:
+  - Imported by:
+    - `network/live`
+    - `runs`
+- Exemptions:
+  - Exempts itself from:
+    - `resource-runtime:compiled-routes` — `server/internal/routes.ts` (sanctioned)
+    - `live/no-legacy-resource-spelling` — `.` (sanctioned)
 - Core:
-  - Uses:
-    - `primitives/live-state.keyedResourceDescriptor`
-    - `primitives/live-state.PointResourceDescriptor`
-    - `primitives/live-state.ResourceDescriptor`
-    - `primitives/live-state.ResourcePreload`
-    - `primitives/live-state.WindowParams`
-    - `primitives/live-state.WindowResourceDescriptor`
-    - `primitives/live-state.WindowSelector`
   - Exports (types):
     - `Aggregate`
     - `AggregateOrder`
@@ -1060,7 +932,6 @@ importing `db` never touches a worktree — no test env shim needed.
     - `OuterColumnRef`
     - `OuterColumnRefsOf`
     - `PointQueryResourceContract`
-    - `QueryResourceContract`
     - `RollupJoin`
     - `TypedColumnRef`
     - `WindowQueryResourceContract`
@@ -1072,26 +943,18 @@ importing `db` never touches a worktree — no test env shim needed.
     - `closureJoin`
     - `expr`
     - `familyMember`
-    - `familyMemberAlias`
     - `isAggregate`
     - `isExprField`
     - `jsonAgg`
     - `jsonAggValue`
     - `KIND_RE`
-    - `queryResourceDescriptor`
-- Cross-plugin:
-  - Imported by:
-    - `network/live`
-    - `runs`
-- Exemptions:
-  - Exempts itself from:
-    - `resource-runtime:compiled-routes` — `server/internal/routes.ts` (sanctioned)
-    - `live/no-legacy-resource-spelling` — `.` (sanctioned)
 - Test helpers:
   - Server: `@plugins/infra/plugins/query-resource/server/testing`
     - `compileAllCollection` — Compile a collection declared `all` (see the header).
     - `compileWindowQuery` — Turn a bounded spec + its shared contract into the two-arg `defineResource` server half.
     - `recordingQueryDb` — A `QueryDb` that renders every query through drizzle's real `PgDialect` — the SQL a compiler would send — records it, and answers with `script`'s rows instead of running it.
     - Types: `RecordedQuery`
+  - Core: `@plugins/infra/plugins/query-resource/core/testing`
+    - `familyMemberAlias` — A member's join alias: the family id, then the member id with every character outside `[A-Za-z0-9]` spelled `_<hex>_` — injective, so two members can never share an alias (`cc-1` → `custom__cc_2d_1`).
 
 <!-- AUTOGENERATED:END -->

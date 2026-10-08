@@ -32,8 +32,7 @@ import type { QueryDb, WindowOrderKey, WindowQueryResourceSpec } from "./spec";
 // The bounded-membership (window / point) compiler for the bounded working-set
 // contract (research/2026-07-18-global-bounded-working-set-resource-contract.md);
 // its whole-set sibling is the `all` compiler (`./compile-alias`, a collection
-// declared `liveCollection(key, { all })`), which replaces the legacy
-// unbounded `queryResource`. One declaration derives, per kind:
+// declared `liveCollection(key, { all })`). One declaration derives, per kind:
 //
 // - **window**: the windowed FULL loader (`where → ORDER BY (declared keys +
 //   pk tiebreaker, NULLS LAST) → LIMIT`, the limit decoded from the params via
@@ -55,12 +54,12 @@ import type { QueryDb, WindowOrderKey, WindowQueryResourceSpec } from "./spec";
 //
 // Both kinds are ROUTED (research/2026-09-29-global-scoped-change-routing.md):
 // the scope policy is `routes` — an `identity` route on the base table plus one
-// route per declared join (`./joins`) — rather than a declared `identityTable`,
-// so `routeTableChange` serves them and the legacy read-set path never does.
+// route per declared join (`./joins`) — so `routeTableChange` serves them and
+// the legacy read-set path never does.
 // Every shape of one tuple (full, scoped, ids, point) joins exactly the
 // relations its `usesOf` names (`routedReads`), read off the SQL it renders.
 // Hence a base table, never a view (A1: a view has no trigger and no route can
-// name it), and no `rel()` edges: a routed entry routes the tables it reads
+// name it), and no cascade edges: a routed entry routes the tables it reads
 // itself.
 //
 // The compile is two halves: `planArm` (`./arm-plan`) plans one relation set —
@@ -252,7 +251,7 @@ export function assembleWindow<Row, P extends ResourceParams>(
  * `ctx?.affectedIds ?? idsOf(params)` (an empty id set short-circuits to `[]`
  * — a legitimately empty value, no query), and `membership: { kind: "point",
  * idsOf }` — the router intersects the changed identity ids with the point
- * set, so it needs no `fanOut`.
+ * set.
  */
 export function assemblePoint<Row, P extends ResourceParams>(
   arms: readonly [PointArmPlan<Row, P>],
@@ -284,10 +283,10 @@ export function assemblePoint<Row, P extends ResourceParams>(
 /**
  * Turn a bounded spec + its shared contract into the two-arg `defineResource`
  * server half. Exported separately from `windowQueryResource` (which also
- * registers) so unit tests can compile against a fake `db` — mirroring
- * `compileQuery`. All spec-shape misuse throws HERE, at module eval, so a bad
- * declaration is a boot crash, never a silent misbehavior: the spec's own
- * guards first (kind, codec, order, limits), then the arm's (`planArm`).
+ * registers) so unit tests can compile against a fake `db`. All spec-shape
+ * misuse throws HERE, at module eval, so a bad declaration is a boot crash,
+ * never a silent misbehavior: the spec's own guards first (kind, codec, order,
+ * limits), then the arm's (`planArm`).
  */
 export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
   contract: AnyWindowContract<Row, P & WindowParams>,
@@ -305,7 +304,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
     "declare `window: { maxLimit }` or `point: { by }` — for a whole ordered set, declare the collection with `all` (`liveCollection(key, { all })`), which `compileAllCollection` compiles.",
   );
 
-  // One boundary cast — same as `compileQuery` (the entities plugin precedent).
+  // One boundary cast (the entities plugin precedent).
   const db: QueryDb = spec.db ?? (realDb as unknown as QueryDb);
   const label = `windowQueryResource("${key}")`;
   const base = routedBase(spec.from, label);

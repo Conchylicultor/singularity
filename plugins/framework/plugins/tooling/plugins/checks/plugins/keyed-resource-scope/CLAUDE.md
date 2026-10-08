@@ -6,13 +6,18 @@ documentation; this file records only the judgement calls behind it.
 
 Three rules: (1) no `mode: "keyed"` (nor a non-literal `mode:`), (2) no inline
 `keyed:` contract literal — both keep keyed-ness declared once, on the shared
-descriptor. And (3), the addition from
-`research/2026-08-25-global-own-row-resource-scoping.md`: an opts object
-declaring `identityTable` must declare exactly one of `membership` /
-`scopedMembership` / `fanOut: { reason }`. `identityTable` says which RESOURCE a
-change belongs to, never which subscribed TUPLE — so without an
-arm the router wakes every tuple, each of which re-reads its own row and diffs to
-empty. No frame ships, which is why the cost was invisible: the read IS the cost.
+descriptor. And (3): a keyed opts object declaring `routes` must declare
+exactly one of `membership` / `scopedMembership` — the membership is how the
+router finds the subscribed TUPLES that hold a changed row.
+
+There is no rule for the legacy scope keys (`identityTable`, `fanOut`,
+`recompute`, D37 of
+`research/2026-10-08-global-scoped-change-routing-p8-steps-23-24.md`): they
+have no spelling in `ScopePolicy`, and the runtime throws on one cast through
+(`refuseLegacyScopeKeys`). A textual ban on the tokens was rejected: `tsc`
+and that throw already cover every path into the runtime, and the words name
+unrelated things elsewhere (the reports engine's `fanOut` ceiling, the
+transcript watchers' `fanOut`).
 
 Rule 3's judgement calls:
 
@@ -20,13 +25,13 @@ Rule 3's judgement calls:
   `resource-runtime/core/runtime.ts`); this rule only backstops opts objects
   assembled behind an `as … & ScopePolicy` cast or an `as any`.
 - **Runs only when NO `mode:` is present.** A stated literal mode means a
-  `push`/`invalidate` resource, whose `identityTable` routes recompute scoping
-  and has no per-tuple fan-out to answer for. A non-keyed form that omits
-  `mode` is a tsc error (the runtime has no default), so only a keyed resource
-  reaches this rule. Erring toward the false positive is deliberate: a backstop
-  that misses a keyed resource is worthless.
+  `push`/`invalidate` resource, which recomputes FULL and has no per-tuple
+  ownership to answer for. A non-keyed form that omits `mode` is a tsc error
+  (the runtime has no default), so only a keyed resource reaches this rule.
+  Erring toward the false positive is deliberate: a backstop that misses a
+  keyed resource is worthless.
 - **A non-literal second argument is skipped** — `defineResource(descriptor,
-  serverOpts)`, the two `query-resource` compilers. Their policy is checked by
+  serverOpts)`, the `query-resource` compilers. Their policy is checked by
   `tsc` at its own `const scopePolicy: ScopePolicy<P>` annotation, which is the
   stronger rung; the `as` on the merged `serverOpts` sits downstream of it.
 

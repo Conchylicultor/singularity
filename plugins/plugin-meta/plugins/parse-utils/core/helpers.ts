@@ -599,7 +599,7 @@ function isSkippedWalkDir(name: string): boolean {
 // which the convention co-locates next to source rather than under `__tests__`) —
 // the same rationale as the `__tests__` dir skip. Since `walkFiles` is the shared
 // source-file enumerator for every facet + codegen scan, excluding them here keeps
-// a test fixture (e.g. a `queryResourceDescriptor("qr-mismatch-test", …)` in a
+// a test fixture (e.g. a `liveValue("mismatch-test", …)` in a
 // `*.test.ts`) or a test-only import from leaking into a plugin's docs.
 function isSourceFile(name: string): boolean {
   return /\.(ts|tsx)$/.test(name) && !isTestCodePath([name]);

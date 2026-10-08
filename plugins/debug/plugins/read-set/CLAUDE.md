@@ -1,58 +1,67 @@
 # read-set
 
-Web-only Debug pane surfacing the L3 read-set capture: the automatic
-`table → [resource keys]` index the server records (which tables each loader
-actually read since boot), the runtime's authoritative scoped-vs-FULL routing
-set, and a client-side diff against the hand-drawn `dependsOn` cascade graph. It
-declares its own typed contract for the kernel-served `GET /api/resources/_debug`
-route (it does not implement it) and consumes it via `useEndpoint`, polling every
-5s.
+Web-only Debug pane surfacing how a change reaches each live-state resource:
+the L3 read-set capture (the automatic `table → [resource keys]` index the
+server records — which relations each loader actually read since boot) and the
+read-set ceiling (A7) — what a change costs each entry, by the runtime's own
+policy. It declares its own typed contract for the kernel-served
+`GET /api/resources/_debug` route (it does not implement it; the handler is
+`handleResourcesDebug` in `resource-runtime`) and consumes it via
+`useEndpoint`, polling every 5s.
 
-Sections, all derived purely client-side from `resources[].readSet`,
-`resources[].readSetBases`, `resources[].coveredOrigins`,
-`resources[].identityTable`/`recompute`, `resources[].routes`, and
-`resources[].dependsOn`:
+Every entry carries a `policy` from a closed set the runtime decides
+(`debugPolicyOf`, in this order): `unbound` (a deferred placeholder not bound
+yet), `external` (declared outside Postgres — its own `notify()` reaches it),
+`routed` (compiler-emitted routes) or `legacy-full` (the legacy router: a write
+to any relation base of its captured read-set recomputes every tracked tuple
+FULL). The policy is what an entry IS, not the whole of who reaches it: the
+legacy router indexes EVERY non-routed entry, so an external or unbound entry
+whose loader read the DB (`automations.catalog`, `edited-files`) is also
+recomputed FULL by a write to its bases. The runtime emits that delivery truth
+as `legacyReach` — the bases it indexes the entry under, from the same
+predicate `tableToResources` reads (`legacyRouted`). The pane never re-derives
+either from routes or read-sets, so it cannot disagree with the router. The
+schema (`shared/schema.ts`) models only the fields the pane reads, parses
+`policy` against the closed set and requires every field, so a server/pane
+mismatch fails loudly rather than reading as an empty entry.
 
-- **Captured index** — the inverted, searchable `table → readers` list (raw
-  read-set, i.e. the VIEW/table names loaders actually read).
-- **Read-set ceiling — silent FULL recomputes** — the authoritative successor to
-  the old "missing edges" heuristic. For each keyed resource that *declares*
-  `identityTable` (intent to be scoped), any *base-resolved* read-set table
-  OUTSIDE its `coveredOrigins` (the runtime's real scoped-vs-FULL routing set —
-  `coveredOriginsFor` in `resource-runtime`) silently degrades its cascade to a
-  FULL recompute when that table changes. The comparison runs in **base-table
-  space**: the raw read-set records the VIEW a loader read (`conversations_v`),
-  but `coveredOrigins` names the base (`conversations`), so the server emits
-  `readSetBases` — the read-set with each view resolved to its identity base via
-  `derived-views`' `relationIdentityBase` — and the ceiling compares against that
-  (without it, every healthy view-backed resource false-positives). Those
-  uncovered tables are flagged as
-  warning chips, with `coveredOrigins` shown alongside (the resource's own
-  `identityTable` is the "self" covered origin) so the gap reads at a glance.
-  Resources with a declared `recompute: { kind: "full", reason }` opt-out are
-  listed separately as *explicit FULL* — informational, never a warning, because
-  the FULL is deliberate, not a degradation. A **routed** resource
-  (`resources[].routes` non-null — compiler-emitted routes, see
-  `research/2026-09-29-global-scoped-change-routing.md`) is covered by its route
-  tables instead of `coveredOrigins`: a captured table outside them is one whose
-  writes never reach it, flagged the same way. Each of its `full` routes is
-  listed under *explicit FULL* with the route's table and reason (A7), so a
-  routed FULL is never silent. This replaces the old *missing
-  edges* signal, whose latent-stale-UI premise no longer holds under the L4
-  change-feed (an uncovered table is still delivered — it just FULL-recomputes).
-- **Over-broad edges — cascade amplification** — declared `dependsOn` upstreams
-  sharing no read table with the resource (the orthogonal axis `coveredOrigins`
-  does not subsume).
+Sections, in render order:
 
-A prominent caveat notes this is a heuristic: direct `notify()` sites are not
-modeled (L4), over-broad flags ignore `affectedMap` scoping, and only loaders
-that have run since boot appear.
+- **A — Notify provenance** — per-resource hand / feed / producer notify counts,
+  flagging read-set-gap candidates (hand > 0 and no change-source delivery).
+- **B — Captured index** — the inverted, searchable `table → readers` list over
+  the raw read-set (the view / table / rollup names loaders actually read).
+- **C — Read-set ceiling** (`web/internal/ceiling.ts`, `computeCeiling`, pure
+  and bun-tested beside it):
+  - per-policy counts;
+  - **Legacy FULL** — every entry the legacy router reaches: each
+    `legacy-full` entry (listed even before its loader has run, with no bases)
+    and each external / unbound entry with a non-empty `legacyReach` (tagged
+    with its policy). Each shows its bases (the read-set expanded through the
+    relation bases: views transitively, rollups to their sources —
+    `edited-files` shows `attempts, conversations, tasks`, not the
+    `conversations_v` it read), its FULL loads per base write (one per
+    subscribed tuple, or one for a persisted entry nobody subscribes to), its
+    tuples, and whether it is L2-persisted with its row's position age;
+  - **Routed FULL** — every routed `full` route with its table and declared
+    reason, so a routed FULL is never silent;
+  - **Route drift** — a routed entry's `routeDrifted`: the A8 guard's own record
+    of captured tables no route names (raw-table space, as the guard judged
+    them — never recomputed from the bases, which would flag the rollup
+    sources a plan reaches as derived reads);
+  - **Routed** (folded), **External** (only the external entries with no
+    legacy reach — those really are reached only by their own `notify()`) and
+    **Unbound** — listed by key.
+
+A caveat notes that read-sets cover only loaders that have run since boot (or
+were seeded from a persisted row), and that direct `notify()` sites are not
+modeled.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Read-set capture debug pane: the automatic loader→table dependency index plus a diff against the hand-drawn dependsOn graph.
+- Description: Read-set debug pane: the captured loader→table index and the read-set ceiling — every live-state resource under its change policy (routed, legacy-full, external, unbound), with legacy-full relation bases, routed full routes and route drift.
 - Web:
   - Slots: `readSetPane.Actions`
   - Slot contributors: `readSetPane.Actions` ← `primitives.pane`
@@ -62,6 +71,10 @@ that have run since boot appear.
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.useEndpoint`
+    - `primitives/collapsible.Collapsible`
+    - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.CollapsibleContent`
+    - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/placeholder.Placeholder`

@@ -35,6 +35,7 @@ import {
   tick,
   makeClientView,
 } from "./test-support";
+import { defineRoutedTable, legacyFull } from "./testing/routed-fixture";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
@@ -48,7 +49,8 @@ const POST: Rows = [
 ];
 
 /**
- * A keyed resource whose loader is a `snapshotControllable`, plus a recorder for
+ * A keyed resource (a routed alias over `s_table`, the shared fixture) whose
+ * loader is a `snapshotControllable`, plus a recorder for
  * the runtime's stale-flight supersession hook. Socket 0 is the established
  * subscriber (its snapshot is seeded on subscribe); socket 1 is the one that
  * parks a read flight in the middle.
@@ -57,39 +59,23 @@ function staleFlightHarness(extra: Parameters<typeof createHarness>[0] = {}) {
   const ctl = snapshotControllable<Rows>(PRE);
   const supersedes: string[] = [];
   const h = createHarness({
-    readSet: () => ["s_table"],
     sockets: 2,
     onStaleFlightSupersede: (key) => supersedes.push(key),
     ...extra,
   });
-  h.runtime.defineResource(
-    {
-      key: "s",
-      schema: rowsSchema,
-      keyed: { keyOf },
-      validateParams: () => {},
-    },
-    {
-      identityTable: "s_table",
-      fanOut: { reason: "one param-less tuple — nothing to narrow" },
-      loader: (_p, c) =>
-        c
-          ? ctl.value.filter((r) => c.affectedIds.includes(r.id))
-          : ctl.loader(),
-    },
-  );
+  const s = defineRoutedTable(h, {
+    key: "s",
+    table: "s_table",
+    membership: "alias",
+    schema: rowsSchema,
+    orderOf: async () => ctl.value.map((r) => r.id),
+    loader: (_p, c) =>
+      c ? ctl.value.filter((r) => c.affectedIds.includes(r.id)) : ctl.loader(),
+  });
   // The incident's own change shape: `ids: null` — a FULL-absorbing merge, which
   // is why `lastNotifyAt` must be stamped BEFORE `mergePending`'s FULL-absorb
   // early return.
-  const feedFull = () =>
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "s_table",
-      op: "U",
-      ids: null,
-      origin: "s_table",
-      identityBase: "s_table",
-    });
+  const feedFull = () => s.feed("U", null);
   return { h, ctl, supersedes, feedFull };
 }
 
@@ -224,30 +210,24 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
     const ctl = snapshotControllable<Rows>(PRE);
     let live = 0;
     let maxLive = 0;
-    const h = createHarness({ readSet: () => ["s_table"], sockets: 3 });
-    h.runtime.defineResource(
-      {
-        key: "s",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
+    const h = createHarness({ sockets: 3 });
+    const s = defineRoutedTable(h, {
+      key: "s",
+      table: "s_table",
+      membership: "alias",
+      schema: rowsSchema,
+      orderOf: async () => ctl.value.map((row) => row.id),
+      loader: async (_p, c) => {
+        if (c) return ctl.value.filter((row) => c.affectedIds.includes(row.id));
+        live++;
+        maxLive = Math.max(maxLive, live);
+        try {
+          return await ctl.loader();
+        } finally {
+          live--;
+        }
       },
-      {
-        identityTable: "s_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        loader: async (_p, c) => {
-          if (c)
-            return ctl.value.filter((row) => c.affectedIds.includes(row.id));
-          live++;
-          maxLive = Math.max(maxLive, live);
-          try {
-            return await ctl.loader();
-          } finally {
-            live--;
-          }
-        },
-      },
-    );
+    });
     await h.subscribe("s", {}, { socket: 0 });
 
     ctl.block();
@@ -257,14 +237,7 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
     // Three FULL changes back to back: each drain refuses whatever is older than
     // its own notify. They still cannot overlap each other.
     for (let i = 0; i < 3; i++) {
-      h.runtime.applyDbChange({
-        source: "feed",
-        table: "s_table",
-        op: "U",
-        ids: null,
-        origin: "s_table",
-        identityBase: "s_table",
-      });
+      s.feed("U", null);
       await tick();
     }
     ctl.release();
@@ -277,26 +250,21 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
   test("a value-aware cascade `map(params, value)` receives the POST-commit value", async () => {
     // The cascade reads the drained value directly, so a joined pre-commit value
     // would propagate the stale state into every downstream tuple selection —
-    // the same bug one hop further out, and invisible on the wire.
+    // the same bug one hop further out, and invisible on the wire. A cascade
+    // upstream is external (T15) and non-keyed; here one the legacy router
+    // still reaches through its read-set.
     const ctl = snapshotControllable<Rows>(PRE);
     const seen: Rows[] = [];
-    const h = createHarness({ readSet: () => ["s_table"], sockets: 2 });
-    const up = h.runtime.defineResource(
-      {
-        key: "s",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "s_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        loader: (_p, c) =>
-          c
-            ? ctl.value.filter((r) => c.affectedIds.includes(r.id))
-            : ctl.loader(),
-      },
-    );
+    const h = createHarness({
+      readSet: (k) => (k === "s" ? ["s_table"] : []),
+      sockets: 2,
+    });
+    const up = h.runtime.defineExternalResource({
+      key: "s",
+      mode: "push",
+      schema: rowsSchema,
+      loader: () => ctl.loader(),
+    });
     h.runtime.defineResource({
       key: "down",
       mode: "push",
@@ -322,14 +290,7 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
     // against the UNFIXED runtime.
     await tick();
     ctl.setValue(POST);
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "s_table",
-      op: "U",
-      ids: null,
-      origin: "s_table",
-      identityBase: "s_table",
-    });
+    legacyFull(h, "s_table");
     await tick();
     ctl.release();
     await parked;
@@ -396,7 +357,6 @@ describe("stale-flight refusal — the L2 persist floor", () => {
     let truthTag = "pre";
     const persistArgs: Array<{ value: unknown; wm: string }> = [];
     const h = createHarness({
-      readSet: () => ["s_table"],
       sockets: 2,
       shouldPersist: (k) => k === "s",
       captureWatermark: async () => `xmin-${truthTag}`,
@@ -404,19 +364,14 @@ describe("stale-flight refusal — the L2 persist floor", () => {
         persistArgs.push({ value, wm });
       },
     });
-    h.runtime.defineResource(
-      {
-        key: "s",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "s_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        loader: () => ctl.loader(),
-      },
-    );
+    const s = defineRoutedTable(h, {
+      key: "s",
+      table: "s_table",
+      membership: "alias",
+      schema: rowsSchema,
+      orderOf: async () => ctl.value.map((r) => r.id),
+      loader: () => ctl.loader(),
+    });
     await h.subscribe("s", {}, { socket: 0 });
     persistArgs.length = 0; // ignore the subscribe-time recompute, if any
 
@@ -429,14 +384,7 @@ describe("stale-flight refusal — the L2 persist floor", () => {
     await tick();
     ctl.setValue(POST);
     truthTag = "post";
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "s_table",
-      op: "U",
-      ids: null,
-      origin: "s_table",
-      identityBase: "s_table",
-    });
+    s.feed("U", null);
     await tick();
     ctl.release();
     await parked;

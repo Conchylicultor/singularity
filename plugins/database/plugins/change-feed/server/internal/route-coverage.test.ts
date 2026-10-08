@@ -7,12 +7,12 @@ import {
   type RouteCoverageViolation,
 } from "./route-coverage";
 
-// Legacy scoped resources (`identityTable`) — the shape every case below uses
-// unless it names a route.
+// One identity route per resource — the shape every case below uses unless it
+// names its routes.
 const scoped = (
   ...pairs: Array<[key: string, table: string]>
 ): ScopedResourceTable[] =>
-  pairs.map(([key, table]) => ({ key, table, via: "identityTable" }));
+  pairs.map(([key, table]) => ({ key, table, via: 'route "identity"' }));
 
 // Convenience: the four-arg call with empty exclusion/exempt sets (so every
 // violation classifies as "uncovered") unless a test overrides them.
@@ -52,7 +52,7 @@ describe("findUncoveredRouteTables", () => {
       {
         key: "crash-log",
         table: "crash_log",
-        via: "identityTable",
+        via: 'route "identity"',
         reason: "excluded",
       },
     ]);
@@ -71,7 +71,7 @@ describe("findUncoveredRouteTables", () => {
       {
         key: "r",
         table: "task_latest_conversation",
-        via: "identityTable",
+        via: 'route "identity"',
         reason: "rollup",
       },
     ]);
@@ -84,7 +84,7 @@ describe("findUncoveredRouteTables", () => {
       {
         key: "v",
         table: "tasks_view",
-        via: "identityTable",
+        via: 'route "identity"',
         reason: "uncovered",
       },
     ]);
@@ -114,19 +114,19 @@ describe("findUncoveredRouteTables", () => {
       {
         key: "bad-excluded",
         table: "reports",
-        via: "identityTable",
+        via: 'route "identity"',
         reason: "excluded",
       },
       {
         key: "bad-rollup",
         table: "task_latest_conversation",
-        via: "identityTable",
+        via: 'route "identity"',
         reason: "rollup",
       },
       {
         key: "bad-typo",
         table: "taskz",
-        via: "identityTable",
+        via: 'route "identity"',
         reason: "uncovered",
       },
     ]);
@@ -262,19 +262,19 @@ describe("formatUncoveredRouteError", () => {
       {
         key: "exc",
         table: "reports",
-        via: "identityTable",
+        via: 'route "identity"',
         reason: "excluded",
       },
       {
         key: "roll",
         table: "task_latest_conversation",
-        via: "identityTable",
+        via: 'route "identity"',
         reason: "rollup",
       },
       {
         key: "typo",
         table: "taskz",
-        via: "identityTable",
+        via: 'route "identity"',
         reason: "uncovered",
       },
     ]);
@@ -293,13 +293,13 @@ describe("formatUncoveredRouteError", () => {
       {
         key: "zResource",
         table: "slow_ops",
-        via: "identityTable",
+        via: 'route "identity"',
         reason: "excluded",
       },
       {
         key: "aResource",
         table: "reports",
-        via: "identityTable",
+        via: 'route "identity"',
         reason: "excluded",
       },
     ]);
@@ -315,7 +315,7 @@ describe("formatUncoveredRouteError", () => {
       {
         key: "only",
         table: "taskz",
-        via: "identityTable",
+        via: 'route "identity"',
         reason: "uncovered",
       },
     ]);

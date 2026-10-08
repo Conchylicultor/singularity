@@ -2,15 +2,19 @@
 // entry AND hands every loader's captured tables to server-core's runtime-owned
 // read-set — the index the live-state change router inverts. It is routing
 // state, so neither the profiler's kill-switch nor a profile reset may touch it.
-import { expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import { z } from "zod";
 import {
-  applyDbChange,
+  applyLegacyFullChange,
   defineResource,
   loadResourceByKey,
   notifyStatsFor,
+  setRelationBases,
 } from "@plugins/framework/plugins/server-core/core";
-import { getReadSetIndex } from "@plugins/framework/plugins/server-core/core/testing";
+import {
+  clearRelationBases,
+  getReadSetIndex,
+} from "@plugins/framework/plugins/server-core/core/testing";
 import { mintReachPlan } from "@plugins/framework/plugins/resource-runtime/core";
 import "./install";
 import {
@@ -18,6 +22,9 @@ import {
   recordReadTables,
   resetRuntimeProfile,
 } from "../../core";
+
+// The relation bases this file installs are process-global: reset them.
+afterAll(clearRelationBases);
 
 // Run `fn` under the profiler's kill-switch, restoring the prior setting after.
 async function withProfilingOff(fn: () => Promise<void>): Promise<void> {
@@ -63,13 +70,12 @@ test("legacy routing still works under SINGULARITY_PROFILING=0: a change to a ta
       recordReadTables(["install_route_table"]);
     });
     expect(notifyStatsFor(key).feed).toBe(0);
-    applyDbChange({
+    // No views here: every relation is its own base (change-feed sets the
+    // real ones at boot).
+    setRelationBases((r) => [r]);
+    applyLegacyFullChange({
       source: "feed",
       table: "install_route_table",
-      op: "U",
-      ids: null,
-      origin: "install_route_table",
-      identityBase: "install_route_table",
     });
     // The legacy router inverted the read-set and scheduled the resource's
     // recompute from the feed (with no subscriber, its drain has nobody to load for).

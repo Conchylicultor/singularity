@@ -10,6 +10,7 @@ import type {
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import {
   registerValue,
+  type ExternalServed,
   type LiveValueSource,
   type ServedValueBase,
   type ServeValueOptions,
@@ -50,9 +51,6 @@ export type ServedExternalValue<
   notify(params?: P): void;
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: an upstream of any payload/params.
-type AnyServed = ServedValueBase<any, any>;
-
 /** Any other worktree value: its `serveValue` takes no `preloadParams`. */
 type PlainValue<T, P extends Record<string, string>> = LiveValue<T, P> & {
   preloadsParams?: never;
@@ -91,7 +89,7 @@ interface PreloadParamsOption<P> {
 export function serveValue<
   T,
   P extends Record<string, string>,
-  const R extends readonly AnyServed[] = [],
+  const R extends readonly ExternalServed[] = [],
 >(
   value: LivePreloadedParamValue<T, P>,
   opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> &
@@ -100,7 +98,7 @@ export function serveValue<
 export function serveValue<
   T,
   P extends Record<string, string>,
-  const R extends readonly AnyServed[] = [],
+  const R extends readonly ExternalServed[] = [],
 >(
   value: LivePreloadedParamValue<T, P>,
   opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R> &
@@ -109,7 +107,7 @@ export function serveValue<
 export function serveValue<
   T,
   P extends Record<string, string>,
-  const R extends readonly AnyServed[] = [],
+  const R extends readonly ExternalServed[] = [],
 >(
   value: PlainValue<T, P>,
   opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> & {
@@ -119,7 +117,7 @@ export function serveValue<
 export function serveValue<
   T,
   P extends Record<string, string>,
-  const R extends readonly AnyServed[] = [],
+  const R extends readonly ExternalServed[] = [],
 >(
   value: PlainValue<T, P>,
   opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R> & {
@@ -128,7 +126,7 @@ export function serveValue<
 ): ServedExternalValue<T, P>;
 export function serveValue<T, P extends Record<string, string>>(
   value: LiveValue<T, P> & { preloadsParams?: true },
-  opts: ServeValueOptions<T, P, LiveValueSource, readonly AnyServed[]> & {
+  opts: ServeValueOptions<T, P, LiveValueSource, readonly ExternalServed[]> & {
     preloadParams?: () => P[] | Promise<P[]>;
   },
 ): ServedValue<T, P> | ServedExternalValue<T, P> {

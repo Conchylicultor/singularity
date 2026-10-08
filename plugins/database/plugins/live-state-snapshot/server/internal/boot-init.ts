@@ -22,6 +22,7 @@ import {
 import {
   createProducedPersistGuard,
   sweepProducedSnapshots,
+  type RelationBases,
 } from "./produced-guard";
 import { snapshotLog as log } from "./log-sink";
 import { producedPersistReports } from "./produced-reports";
@@ -30,7 +31,7 @@ import { producedPersistReports } from "./produced-reports";
 // the snapshot table, inject the persist hooks into the resource runtime, and seed
 // the read-set index from the durable `tables_read` column — all before the
 // readiness flag flips (so a persist can never fire with the hooks unset, and
-// catch-up's first `applyDbChange` sees a non-empty table→resource inversion).
+// catch-up's first `applyLegacyFullChange` sees a non-empty table→resource inversion).
 //
 // This is a GRACEFUL-DEGRADATION hook. The snapshot layer is a cold-boot
 // *accelerator*, not a correctness prerequisite: if it can't initialize, the
@@ -43,7 +44,10 @@ import { producedPersistReports } from "./produced-reports";
 //
 // `produced` is the set of tables fed by an in-process change producer (A6, see
 // ./produced-guard): a persisted row reading one is swept here, and a persist
-// whose read-set names one is refused for the life of the process.
+// whose read-set reaches one is refused for the life of the process. Both judge
+// a read-set through `relationBases` (D28 — change-feed's boot graph, set in its
+// own `onReadyBlocking`, which runs before this plugin's): a view or rollup over
+// a produced table reaches it.
 //
 // `healedRollups` are the rollups this boot's committed reconcile healed (A20):
 // every persisted row is cleared before readiness flips, so boot-snapshot can
@@ -54,6 +58,7 @@ import { producedPersistReports } from "./produced-reports";
 export async function initSnapshotSubsystem(
   db: NodePgDatabase,
   produced: ReadonlySet<string>,
+  relationBases: RelationBases,
   healedRollups: readonly string[],
 ): Promise<void> {
   try {
@@ -67,11 +72,12 @@ export async function initSnapshotSubsystem(
     // never an empty list, so a floor persist's first INSERT is guarded too.
     const guard = createProducedPersistGuard({
       produced,
+      relationBases,
       onRefused: async (key, tables) => {
         // Never served again: drop the row a previous persist left.
         await clearPersistedSnapshots(db, [key]);
         reportProducedPersist(
-          `refused to persist "${key}": its read-set names produced table(s) ${tables.join(", ")} — the key writes no row again in this process`,
+          `refused to persist "${key}": its read-set reaches produced table(s) ${tables.join(", ")} — the key writes no row again in this process`,
         );
       },
     });
@@ -105,14 +111,15 @@ export async function initSnapshotSubsystem(
     // A6 (stale rows): a persisted value over a produced table may predate the
     // code that stopped persisting it — delete it (before the read-set seed
     // below can index it), and say so once.
-    const sweptProduced = await sweepProducedSnapshots(db, produced);
+    const sweptProduced = await sweepProducedSnapshots(
+      db,
+      produced,
+      relationBases,
+    );
     if (sweptProduced.length > 0) {
       reportProducedPersist(
-        `deleted ${sweptProduced.length} stale L2 snapshot row(s) that read a produced table: ${sweptProduced
-          .map(
-            (r) =>
-              `${r.resource_key} (${r.tables_read.filter((t) => produced.has(t)).join(", ")})`,
-          )
+        `deleted ${sweptProduced.length} stale L2 snapshot row(s) whose read-set reaches a produced table: ${sweptProduced
+          .map((r) => `${r.resource_key} (${r.produced.join(", ")})`)
           .join("; ")}`,
       );
     }

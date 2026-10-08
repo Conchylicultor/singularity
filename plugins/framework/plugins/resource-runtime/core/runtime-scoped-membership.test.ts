@@ -4,7 +4,7 @@
  *
  * `scopedMembership` lets a keyed own-identity resource absorb row-level
  * INSERT/DELETE/where-flip changes INCREMENTALLY instead of FULL-recomputing:
- * `applyDbChange` scopes I/D (not just U) to the resource's own keys, and
+ * its identity route scopes I/D (not just U) to the resource's own keys, and
  * `drainEntry` runs the membership path (`diffKeyedScopedMembership`) — refilling
  * only the changed rows, running the ids-only `orderOf` query ONLY on an entry, and
  * shipping a delta that asserts the new `order`. This file pins the runtime
@@ -18,9 +18,11 @@
  *   - a PERSISTED entry floor-persists a FULL-equal value, once per trailing
  *     window, floored by the snapshot's base (never a drain-time capture);
  *   - a scoped change with no snapshot degrades to FULL, then resumes incremental;
- *   - a persisted sm snapshot survives the N→0 sub transition;
- *   - a DELETE cascades FULL downstream while an INSERT cascades scoped;
- *   - default-off (no `scopedMembership`) is frame-for-frame the pre-M5 behavior.
+ *   - a persisted sm snapshot survives the N→0 sub transition.
+ *
+ * The alias is routed (its identity route, `routeTableChange`): since P8 steps
+ * 23–24 (23a) the legacy router recomputes FULL only, so the downstream-cascade
+ * and default-off cases it served went with it.
  *
  * The pure membership DIFF (all the id-set edge cases + the property fuzz vs the
  * FULL oracle) lives in `keyed-diff.test.ts`; this file is the runtime wiring.
@@ -34,9 +36,13 @@ import {
   makeClientView,
   type RecordedFrame,
 } from "./test-support";
+import { defineRoutedTable } from "./testing/routed-fixture";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
+
+// Every alias here is routed (its identity route, the shared fixture): scoped
+// changes reach an entry only through its routes since P8 step 23a.
 
 // A simulated identity table: id → { n (content), where (membership flag) }.
 function makeTable() {
@@ -61,45 +67,32 @@ function membershipHarness(
   const { table, members, orderIds } = makeTable();
   const loaderCalls: string[] = [];
   let orderOfCalls = 0;
-  const h = createHarness({ readSet: () => ["row_table"], ...runtimeOpts });
-  h.runtime.defineResource(
-    {
-      key: "rows",
-      schema: rowsSchema,
-      keyed: { keyOf },
-      validateParams: () => {},
+  const h = createHarness(runtimeOpts);
+  const rows = defineRoutedTable(h, {
+    key: "rows",
+    table: "row_table",
+    membership: "alias",
+    schema: rowsSchema,
+    orderOf: async () => {
+      orderOfCalls++;
+      return orderIds();
     },
-    {
-      identityTable: "row_table",
-      scopedMembership: {
-        orderOf: async () => {
-          orderOfCalls++;
-          return orderIds();
-        },
-      },
-      loader: (_p, c) => {
-        if (c === undefined) {
-          loaderCalls.push("FULL");
-          log?.push("load:FULL");
-          return members();
-        }
-        loaderCalls.push([...c.affectedIds].sort().join(","));
-        log?.push("load:scoped");
-        return c.affectedIds
-          .filter((id) => table.get(id)?.where)
-          .map((id) => ({ id, n: table.get(id)!.n }));
-      },
+    // Ordered by id, which no change moves (the fixture's default signature).
+    loader: (_p, c) => {
+      if (c === undefined) {
+        loaderCalls.push("FULL");
+        log?.push("load:FULL");
+        return members();
+      }
+      loaderCalls.push([...c.affectedIds].sort().join(","));
+      log?.push("load:scoped");
+      return c.affectedIds
+        .filter((id) => table.get(id)?.where)
+        .map((id) => ({ id, n: table.get(id)!.n }));
     },
-  );
+  });
   const feed = (op: "I" | "U" | "D", ids: string[] | null) =>
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "row_table",
-      op,
-      ids,
-      origin: "row_table",
-      identityBase: "row_table",
-    });
+    rows.feed(op, ids);
   const insert = (id: string, n: number, where = true) => {
     table.set(id, { n, where });
     feed("I", [id]);
@@ -454,7 +447,6 @@ describe("scopedMembership — L2 persisted floor persist", () => {
     let gate: (() => void) | undefined;
     const h = createHarness({
       sockets: 2,
-      readSet: () => ["row_table"],
       shouldPersist: (k) => k === "rows",
       persistWindowMs: 0,
       captureWatermark: async () => wm,
@@ -462,40 +454,28 @@ describe("scopedMembership — L2 persisted floor persist", () => {
         persisted.push({ value, wm: w, mode: meta.mode });
       },
     });
-    h.runtime.defineResource(
-      {
-        key: "rows",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
+    const rows = defineRoutedTable(h, {
+      key: "rows",
+      table: "row_table",
+      membership: "alias",
+      schema: rowsSchema,
+      orderOf: async () => full().map((r) => r.id),
+      loader: async (_p, c) => {
+        if (!c) return full();
+        await new Promise<void>((r) => {
+          gate = r;
+        });
+        return c.affectedIds
+          .filter((id) => table.has(id))
+          .map((id) => ({ id, n: table.get(id)! }));
       },
-      {
-        identityTable: "row_table",
-        scopedMembership: { orderOf: async () => full().map((r) => r.id) },
-        loader: async (_p, c) => {
-          if (!c) return full();
-          await new Promise<void>((r) => {
-            gate = r;
-          });
-          return c.affectedIds
-            .filter((id) => table.has(id))
-            .map((id) => ({ id, n: table.get(id)! }));
-        },
-      },
-    );
+    });
     await h.subscribe("rows"); // base floor xmin-1
     await tick();
     persisted.length = 0;
     wm = "xmin-5";
     table.set("a", 2);
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "row_table",
-      op: "U",
-      ids: ["a"],
-      origin: "row_table",
-      identityBase: "row_table",
-    });
+    rows.feed("U", ["a"]);
     await tick(); // the drain is parked in its scoped refill
     expect(gate).toBeDefined();
     // A second subscriber's sub-ack re-seeds the snapshot at xmin-5 meanwhile.
@@ -526,7 +506,6 @@ describe("scopedMembership — L2 persisted floor persist", () => {
         .sort((x, y) => x.n - y.n || (x.id < y.id ? -1 : 1));
     let orderOfCalls = 0;
     const h = createHarness({
-      readSet: () => ["row_table"],
       shouldPersist: (k) => k === "rows",
       persistWindowMs: 0,
       captureWatermark: async () => "xmin-1",
@@ -534,44 +513,30 @@ describe("scopedMembership — L2 persisted floor persist", () => {
         persisted.push({ value, mode: meta.mode });
       },
     });
-    h.runtime.defineResource(
-      {
-        key: "rows",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
+    const rows = defineRoutedTable(h, {
+      key: "rows",
+      table: "row_table",
+      membership: "alias",
+      schema: rowsSchema,
+      orderOf: async () => {
+        orderOfCalls++;
+        return full().map((r) => r.id);
       },
-      {
-        identityTable: "row_table",
-        scopedMembership: {
-          orderOf: async () => {
-            orderOfCalls++;
-            return full().map((r) => r.id);
-          },
-          orderSignatureOf: (row) => String((row as { n: number }).n),
-        },
-        loader: (_p, c) => {
-          log.push(c ? "scoped" : "FULL");
-          if (!c) return full();
-          return c.affectedIds
-            .filter((id) => table.has(id))
-            .map((id) => ({ id, n: table.get(id)! }));
-        },
+      orderSignatureOf: (row) => String((row as { n: number }).n),
+      loader: (_p, c) => {
+        log.push(c ? "scoped" : "FULL");
+        if (!c) return full();
+        return c.affectedIds
+          .filter((id) => table.has(id))
+          .map((id) => ({ id, n: table.get(id)! }));
       },
-    );
+    });
     await h.subscribe("rows");
     await tick();
     persisted.length = 0;
     // Move "a" to the end: an in-place UPDATE of the order column.
     table.set("a", 9);
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "row_table",
-      op: "U",
-      ids: ["a"],
-      origin: "row_table",
-      identityBase: "row_table",
-    });
+    rows.feed("U", ["a"]);
     await tick();
     await tick();
     expect(orderOfCalls).toBe(1); // the moved signature re-derived the order
@@ -794,21 +759,16 @@ describe("scopedMembership — A30: an L2 value that does not parse seeds nothin
 
   test("an unknown key, or a key that is no unbounded-window alias, is `skipped`", () => {
     const m = membershipHarness({}, []);
-    // A registered keyed entry WITHOUT scopedMembership: no alias, never
-    // seeded — and never parsed, so even a value its schema rejects skips.
-    m.h.runtime.defineResource(
-      {
-        key: "plain",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "row_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        loader: () => [],
-      },
-    );
+    // A registered keyed entry WITHOUT scopedMembership (a bounded window): no
+    // alias, never seeded — and never parsed, so even a value its schema
+    // rejects skips.
+    defineRoutedTable(m.h, {
+      key: "plain",
+      table: "row_table",
+      membership: "window",
+      schema: rowsSchema,
+      loader: () => [],
+    });
     const base = { position: "1", positionAt: null };
     for (const key of ["nope", "plain"]) {
       expect(m.h.runtime.seedPersistedSnapshot(key, "{}", [], base)).toEqual({
@@ -901,143 +861,15 @@ describe("scopedMembership — snapshot survives N→0 for a persisted entry", (
     });
     await tick();
     expect(m.loaderCalls).toEqual([]); // no scoped refill against a live snapshot
-  });
-});
 
-describe("scopedMembership — downstream cascade", () => {
-  // `up` is a scopedMembership resource; `down` is a plain keyed resource that
-  // cascades off it via an identity `affectedMap`, recording how each cascaded
-  // load was scoped. A DELETE from `up` forces `down` FULL (a vanished row has no
-  // value to translate); an INSERT cascades scoped.
-  function cascadeHarness() {
-    const up = makeTable();
-    const h = createHarness({
-      readSet: (k) => (k === "up" ? ["up_t"] : ["down_t"]),
+    // Positive control: subscribed again, the same change refills scoped.
+    await m.h.subscribe("rows");
+    m.loaderCalls.length = 0;
+    m.update("a", (cell) => {
+      cell.n = 10;
     });
-    const upResource = h.runtime.defineResource(
-      {
-        key: "up",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "up_t",
-        scopedMembership: { orderOf: async () => up.orderIds() },
-        loader: (_p, c) =>
-          c === undefined
-            ? up.members()
-            : c.affectedIds
-                .filter((id) => up.table.get(id)?.where)
-                .map((id) => ({ id, n: up.table.get(id)!.n })),
-      },
-    );
-    const downLoads: string[] = [];
-    h.runtime.defineResource(
-      {
-        key: "down",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "down_t",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        dependsOn: [{ resource: upResource, affectedMap: (ids) => [...ids] }],
-        loader: (_p, c) => {
-          downLoads.push(c === undefined ? "FULL" : "scoped");
-          return [{ id: "d", n: 1 }];
-        },
-      },
-    );
-    const feedUp = (op: "I" | "U" | "D", ids: string[] | null) =>
-      h.runtime.applyDbChange({
-        source: "feed",
-        table: "up_t",
-        op,
-        ids,
-        origin: "up_t",
-        identityBase: "up_t",
-      });
-    return { h, up, downLoads, feedUp };
-  }
-
-  test("INSERT into up cascades scoped; DELETE from up cascades FULL", async () => {
-    const c = cascadeHarness();
-    c.up.table.set("a", { n: 1, where: true });
-    await c.h.subscribe("up");
-    await c.h.subscribe("down");
-    c.downLoads.length = 0;
-
-    // INSERT a new member → up scopes to {x} → down cascades scoped.
-    c.up.table.set("x", { n: 1, where: true });
-    c.feedUp("I", ["x"]);
     await tick();
-    expect(c.downLoads).toEqual(["scoped"]);
-
-    // DELETE it → up's deleted set forces a FULL downstream cascade.
-    c.downLoads.length = 0;
-    c.up.table.delete("x");
-    c.feedUp("D", ["x"]);
-    await tick();
-    expect(c.downLoads).toEqual(["FULL"]);
-  });
-});
-
-describe("default-off — a keyed resource without scopedMembership is byte-identical to pre-M5", () => {
-  test("INSERT → FULL, UPDATE → scoped, DELETE → FULL (unchanged legacy routing)", async () => {
-    const { table, members } = makeTable();
-    const loaderCalls: string[] = [];
-    const h = createHarness({ readSet: () => ["row_table"] });
-    h.runtime.defineResource(
-      {
-        key: "rows",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "row_table", // scoped, but NOT scopedMembership
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        loader: (_p, c) => {
-          if (c === undefined) {
-            loaderCalls.push("FULL");
-            return members();
-          }
-          loaderCalls.push([...c.affectedIds].sort().join(","));
-          return c.affectedIds
-            .filter((id) => table.get(id)?.where)
-            .map((id) => ({ id, n: table.get(id)!.n }));
-        },
-      },
-    );
-    table.set("a", { n: 1, where: true });
-    table.set("b", { n: 1, where: true });
-    await h.subscribe("rows");
-    loaderCalls.length = 0;
-
-    const feed = (op: "I" | "U" | "D", ids: string[]) =>
-      h.runtime.applyDbChange({
-        source: "feed",
-        table: "row_table",
-        op,
-        ids,
-        origin: "row_table",
-        identityBase: "row_table",
-      });
-
-    table.set("x", { n: 1, where: true });
-    feed("I", ["x"]);
-    await tick();
-    table.get("a")!.n = 9;
-    feed("U", ["a"]);
-    await tick();
-    table.delete("x");
-    feed("D", ["x"]);
-    await tick();
-
-    // Pre-M5 behavior: INSERT and DELETE degrade to FULL; only UPDATE scopes.
-    expect(loaderCalls).toEqual(["FULL", "a", "FULL"]);
+    expect(m.loaderCalls).toEqual(["a"]);
   });
 });
 
@@ -1049,7 +881,6 @@ describe("scopedMembership — registration guards", () => {
         key: "bad",
         mode: "push",
         schema: z.number(),
-        identityTable: "t",
         // @ts-expect-error — scopedMembership is not on the non-keyed input form
         scopedMembership: { orderOf: async () => [] },
         loader: async () => 1,
@@ -1057,14 +888,14 @@ describe("scopedMembership — registration guards", () => {
     ).toThrow(/scopedMembership requires mode "keyed"/);
   });
 
-  test("throws when scopedMembership is set without an identityTable", () => {
+  test("throws when scopedMembership is set without routes", () => {
     const h = createHarness();
     expect(() =>
-      // The four-arm `ScopePolicy` rejects this combination at compile time, which
-      // is the point: `@ts-expect-error` FAILS if it ever stops being rejected, so
-      // the directive pins the type's behaviour as a test. The runtime guard below
+      // The routed `ScopePolicy` rejects this at compile time, which is the
+      // point: `@ts-expect-error` FAILS if it ever stops being rejected, so the
+      // directive pins the type's behaviour as a test. The runtime guard below
       // is the backstop for a caller who casts past the type.
-      // @ts-expect-error — `recompute` and `scopedMembership` are different arms
+      // @ts-expect-error — every ScopePolicy arm requires `routes`
       h.runtime.defineResource(
         {
           key: "bad2",
@@ -1073,14 +904,58 @@ describe("scopedMembership — registration guards", () => {
           validateParams: () => {},
         },
         {
-          // no identityTable → the ScopePolicy would be violated anyway; the runtime
-          // fails loudly rather than silently disabling membership scoping.
-          recompute: { kind: "full", reason: "test" },
-          scopedMembership: { orderOf: async () => [] },
+          scopedMembership: {
+            orderOf: async () => [],
+            orderSignatureOf: () => "",
+          },
           loader: async () => [],
         },
       ),
-    ).toThrow(/scopedMembership requires an identityTable/);
+    ).toThrow(/scopedMembership requires routes/);
+  });
+});
+
+// W5 / D32: a membership entry never cascades. A5 refuses a dependsOn onto the
+// routed alias in both registration orders, so its drains have no downstream to
+// reach — the runtime asserts that over the whole graph at every DAG rebuild.
+// The D32 assert itself is unreachable through the API (A5 is the only way in),
+// so this pins the refusal, the empty `downstream`, and that a flush running
+// that assert passes over a membership entry without misfiring.
+describe("scopedMembership — no cascade out of a membership entry (A5 / D32)", () => {
+  test("a dependsOn onto the alias throws; the alias has no downstream and its I / U / D drains flush cleanly", async () => {
+    const m = membershipHarness();
+    expect(() =>
+      m.h.runtime.defineResource({
+        key: "downstream",
+        mode: "push",
+        schema: z.number(),
+        loader: () => 1,
+        dependsOn: [{ resource: { key: "rows" } as never }],
+      }),
+    ).toThrow(/dependsOn the routed resource "rows"/);
+    m.table.set("a", { n: 1, where: true });
+    await m.h.subscribe("rows");
+    const debug = async () =>
+      (await (
+        await m.h.runtime.handleResourceHttp(
+          new Request("http://localhost/api/resources/_debug"),
+          { key: "_debug" },
+        )
+      ).json()) as { resources: Array<{ key: string; downstream: string[] }> };
+    expect(
+      (await debug()).resources.find((r) => r.key === "rows")!.downstream,
+    ).toEqual([]);
+
+    m.insert("b", 2);
+    await tick();
+    m.update("a", (c) => {
+      c.n = 3;
+    });
+    await tick();
+    m.del("b");
+    await tick();
+    // The first flush rebuilt the DAG (asserting D32); each drained its delta.
+    expect(deltas(m.h)).toHaveLength(3);
   });
 });
 

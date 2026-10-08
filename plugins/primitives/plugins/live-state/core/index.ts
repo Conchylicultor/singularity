@@ -1,6 +1,5 @@
 export {
   resourceDescriptor,
-  keyedResourceDescriptor,
   resourceDescriptorByKey,
   registerResourceDescriptor,
 } from "./resource";

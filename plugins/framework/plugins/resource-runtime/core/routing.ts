@@ -6,8 +6,9 @@
 // per-tuple decision, so it names no contributor and touches no registry.
 //
 // See research/2026-09-29-global-scoped-change-routing.md (§Runtime contract,
-// §Algorithm). The legacy read-set path (`applyDbChange`) keeps serving every
-// entry that declares no routes, so a resource moves over one at a time.
+// §Algorithm). The legacy read-set path (`applyLegacyFullChange`) serves every
+// entry that declares no routes or reach (a non-keyed DB-backed entry), FULL,
+// through its read-set expanded to relation bases.
 
 /**
  * Where a change came from. `feed` — the Postgres change feed (a trigger's

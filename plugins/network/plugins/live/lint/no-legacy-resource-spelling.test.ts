@@ -47,7 +47,7 @@ ruleTester.run(
         `,
       },
       // An old name from a barrel that does not export it as the old spelling
-      // (query-resource/core exports the descriptors, not `queryResource`).
+      // (`queryResource` was only ever query-resource/server's).
       { code: `import { queryResource } from "${QUERY_RESOURCE_CORE}";` },
       // A relative import — the defining plugins' own, exempt by `ignores`.
       { code: `import { useResource } from "./use-resource";` },

@@ -872,9 +872,8 @@ describe("tree oracle — the scripted workload over the real feed", () => {
   });
 });
 
-// What the legacy `tasks` descriptor parsed its payload with
-// (`queryResourceDescriptor("tasks", TaskListItemSchema, "id")` →
-// `z.array(TaskListItemSchema)`), restated as a LITERAL frozen at step 19 —
+// What the legacy `tasks` descriptor (param-less, keyed on `id`) parsed its
+// payload with (`z.array(TaskListItemSchema)`), restated as a LITERAL frozen at step 19 —
 // never derived from the live `TaskListItemSchema`, which would change with
 // the row and so pass whatever the row becomes. `strict`, so a field added to
 // the row fails the parse; a field removed or renamed fails it as a missing
@@ -929,9 +928,8 @@ describe("C39 — a tab on the legacy `tasks` descriptor", () => {
   });
 });
 
-// What the legacy `attempts` descriptor parsed its payload with
-// (`keyedResourceDescriptor("attempts", z.array(AttemptWithConversationsSchema))`),
-// restated as a LITERAL frozen at step 20 — never derived from the live
+// What the legacy `attempts` descriptor (param-less, keyed) parsed its payload
+// with (`z.array(AttemptWithConversationsSchema)`), restated as a LITERAL frozen at step 20 — never derived from the live
 // schema (see `LegacyRowsSchema` above). `strict` at both levels, so a field
 // added to the row or to a listed conversation fails the parse.
 const LegacyAttemptsSchema = z.array(
@@ -995,8 +993,8 @@ describe("C39 — a tab on the legacy `attempts` descriptor", () => {
 });
 
 // What the legacy `conversations-active` / `-system` descriptors parsed their
-// payload with (`queryResourceDescriptor(key, ConversationSchema, "id")` →
-// `z.array(ConversationSchema)`, the `conversations_v` row), restated as a
+// payload with (param-less, keyed on `id`: `z.array(ConversationSchema)`, the
+// `conversations_v` row), restated as a
 // LITERAL frozen at step 22 — never derived from the live schema (see
 // `LegacyRowsSchema` above). `strict`, so a field added to the row fails the
 // parse. `model` is the stored version as text.

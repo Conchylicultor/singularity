@@ -664,10 +664,12 @@ export function feedExemptTables(): Set<string> {
  * reader of the rollup must be routed by.
  */
 export function rollupSources(): Map<string, string[]> {
-  return new Map(
-    DerivedTable.getContributions().map((r) => [
-      r.table,
-      r.sources.map((s) => s.table),
-    ]),
-  );
+  return rollupSourcesOf(DerivedTable.getContributions());
+}
+
+/** `rollupSources` over an explicit rollup list (a headless suite has no contributions). Pure. */
+export function rollupSourcesOf(
+  rollups: readonly Rollup[],
+): Map<string, string[]> {
+  return new Map(rollups.map((r) => [r.table, r.sources.map((s) => s.table)]));
 }

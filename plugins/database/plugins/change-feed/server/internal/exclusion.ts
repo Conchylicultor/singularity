@@ -31,9 +31,9 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 // writes it routes each write itself, coalesced at the source, with no trigger,
 // changelog row or NOTIFY. An exclusion is for a table read on mount only.
 //
-// INVARIANT (enforced at boot by ./route-coverage): no live-state resource
-// may depend on an excluded table (an `identityTable`, or a route). Its delivery
-// fires only on a change to that table, which an excluded (trigger-less) table
+// INVARIANT (enforced at boot by ./route-coverage): no routed live-state
+// resource may name an excluded table in a route. Its delivery fires only on a
+// change to that table, which an excluded (trigger-less) table
 // can never produce — so the policy would be dead config that silently degrades
 // the resource to hydrate-on-mount. A surface that reads an excluded table should
 // be an endpoint read on open, like the Slow Ops pane's `listSlowOps` (a live

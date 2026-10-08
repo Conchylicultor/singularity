@@ -13524,7 +13524,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/connection.DbClient`
           - `database/connection.withQueryDeadline`
           - `database/derived-tables.feedExemptTables`
-          - `database/derived-views.relationIdentityBase`
+          - `database/derived-tables.rollupSources`
           - `primitives/log-channels.defineLogSink`
         - DB schema: `plugins/database/plugins/change-feed/server/internal/produced-tables.ts`
         - Exports (types):
@@ -13549,6 +13549,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PRODUCER_IDS_CAP`
           - `readLayout`
           - `rebuildTriggers`
+          - `relationBases`
           - `routeChange`
       - Cross-plugin:
         - Imported by:
@@ -13565,12 +13566,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Server: `@plugins/database/plugins/change-feed/server/testing`
           - `assertRouteLayoutsInstalled` — A3: throw (block boot) unless every routed table's installed triggers emit what its routes read.
           - `assertRouteTablesCovered` — Throw loudly (blocking boot) if any resource depends on a table with no change source: no trigger the change-feed installed, and no change producer.
+          - `buildViewDeps` — Each public view → the relations it directly reads (sorted).
           - `createChangeFeedListener`
           - `createChangeRouter` — The routing above, into ANY runtime's two routers — `routeChange` is it bound to server-core's process-global runtime.
+          - `createRelationBases` — The memoized relation → bases function over `graph`.
           - `ensureChangelogTable`
           - `findCarriedProducedRoutes` — A3p: the produced tables whose routes need a carried column.
           - `flushNow` — Flush `producer`'s coalescing buffer now (a test drives the window by hand).
           - `installedLayouts` — What each table's installed triggers emit.
+          - `installRelationGraph` — Install the boot graph (change-feed's `onReadyBlocking`, D34): here, and in server-core's runtime (`setRelationBases`, which bumps the read-set version so the legacy router's memoized inversion is rebuilt through it).
           - `mountProducersForTest` — Mount `producers` without a booted plugin graph: each is live (A12 passes), runs as boot mode `mode` (default `"serve"`; pass `"exec"` to see A13), and routes through `route` (default the real `routeChange`).
           - `readInstalledTriggers` — Every installed `live_state_*` trigger on the given tables.
           - `rebuildTriggers`
@@ -13696,6 +13700,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Test helpers:
         - Server: `@plugins/database/plugins/derived-tables/server/testing`
           - `installRollups` — Install `rollups` onto a throwaway test database (`createTestDb`) whose source tables exist, and reconcile them — the SAME code path the boot schema layer runs (`rebuildDerivedTables`), so the DDL and the reconcile under test are byte-identical to what a backend installs.
+          - `rollupSourcesOf` — `rollupSources` over an explicit rollup list (a headless suite has no contributions).
     - **`derived-updated-at`** — Derived updatedAt: compiles a table's per-column touchedBy rules (declared in defineEntity's meta.updatedAt, or deriveUpdatedAt on a raw pgTable) into a BEFORE UPDATE trigger that sets updated_at = now() only when a counted column really changed and RAISEs on any app write to it; a registry filled at module eval, the boot installer (signature-in-COMMENT, advisory-locked, asserted) the database plugin runs right after migrations, and a check that every schema table with an updated_at column declares one.
       - Cross-plugin:
         - Imported by:
@@ -13737,14 +13742,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `dropDerivedViews`
           - `rebuildDerivedViews`
-          - `relationIdentityBase`
           - `View`
       - Cross-plugin:
         - Imported by:
           - `apps/chord/video-availability`
           - `conversations/agents`
           - `database`
-          - `database/change-feed`
           - `database/derived-tables`
           - `database/migrations`
           - `tasks/tasks-core`
@@ -13837,6 +13840,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/admin.ExcludeFromFork`
           - `database/change-feed.producedTableNames`
           - `database/change-feed.readLayout`
+          - `database/change-feed.relationBases`
           - `database/change-feed.routeChange`
           - `database/derived-tables.reconciledRollups`
           - `infra/jobs.defineJob`
@@ -15382,7 +15386,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `waitTone`
       - Exemptions:
         - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/watchdog.ts` (sanctioned)
-    - **`read-set`** — Read-set capture debug pane: the automatic loader→table dependency index plus a diff against the hand-drawn dependsOn graph.
+    - **`read-set`** — Read-set debug pane: the captured loader→table index and the read-set ceiling — every live-state resource under its change policy (routed, legacy-full, external, unbound), with legacy-full relation bases, routed full routes and route drift.
       - Web:
         - Slots: `readSetPane.Actions`
         - Slot contributors: `readSetPane.Actions` ← `primitives.pane`
@@ -15392,6 +15396,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.useEndpoint`
+          - `primitives/collapsible.Collapsible`
+          - `primitives/collapsible.CollapsibleChevron`
+          - `primitives/collapsible.CollapsibleContent`
+          - `primitives/collapsible.CollapsibleTrigger`
           - `primitives/css/badge.Badge`
           - `primitives/css/cluster.Cluster`
           - `primitives/css/placeholder.Placeholder`
@@ -18120,11 +18128,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Test helpers:
         - Core: `@plugins/framework/plugins/resource-runtime/core/testing`
           - `buildSnapshot` — Build the id→entry map for a keyed resource's array `value`, in array order.
+          - `createHarness` — A runtime under test plus `sockets` (default 1) fake `ServerWebSocket`s opened via `notificationsWsHandler.open`.
+          - `defineRoutedTable` — Register a keyed resource over `spec.table` the way a compiled collection is.
           - `diffKeyedFull` — Full diff: compare the new array `value` against `prev` (the prior snapshot, or `undefined` on first notify).
           - `diffKeyedScoped` — Scoped diff (Layer 2): `scopedRows` is a PARTIAL array — only the recomputed affected rows.
+          - `feedChange` — One base-table change as the change feed delivers it (`routeChange`): to the routed router, then the legacy one.
           - `hashSnapEncoder`
+          - `identityPlan` — The plan `compileWindowQuery` emits for a single-table window / point set / alias: one identity route `base` on `table`, gating on `cols`, read by every tuple in the membership role.
+          - `legacyFull` — The legacy router alone: every non-routed reader of `table` recomputes FULL.
           - `makeClientView`
-          - Types: `ClientView`, `KeyedSnapshot`, `RecordedFrame`
+          - Types: `ClientView`, `FedChange`, `Harness`, `KeyedSnapshot`, `RecordedFrame`, `RoutedTable`, `RoutedTableSpec`
     - **`server-core`**
       - Core:
         - Uses:
@@ -18170,7 +18183,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WsData`
           - `WsHandler`
         - Exports (values):
-          - `applyDbChange`
+          - `applyLegacyFullChange`
           - `assertPreloadedResourcesDeclared`
           - `bindDeferredResources`
           - `boundedMembershipKeys`
@@ -18215,10 +18228,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `setClientBuildIdentity`
           - `setErrorReporter`
           - `setFatalReporter`
-          - `setFeedExemptTables`
           - `setLiveStateSnapshotHooks`
           - `setProfilerHooks`
-          - `setRelationResolver`
+          - `setRelationBases`
           - `triggerResourcePush`
           - `unboundedWindowKeys`
           - `validatePersistedValue`
@@ -18236,6 +18248,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `runExec`
       - Test helpers:
         - Core: `@plugins/framework/plugins/server-core/core/testing`
+          - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
           - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
     - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
       - Cross-plugin:
@@ -18955,7 +18968,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LIVE_SERVER`
               - `LIVE_STATE_CORE`
               - `mintsOf`
-              - `QUERY_RESOURCE_CORE`
               - `QUERY_RESOURCE_SERVER`
               - `resourceDescriptorFactories`
               - `resourceRegisterMarkers`
@@ -21462,7 +21474,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SECRETS_DIR_DISPLAY`
               - `USER_CONFIG_DIR_DISPLAY`
               - `WORKTREES_DIR_DISPLAY`
-    - **`query-resource`** — Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, scope policy (an identityTable for the legacy unbounded form; the routes the change router serves it by for a bounded window / point set, a whole ordered set declared `all` — compileAllCollection, grouped CTEs over rollup / children / closure joins — and a grouping), and client keyOf for live-state resources.
+    - **`query-resource`** — Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, scope policy (the routes the change router serves it by, for a bounded window / point set, a whole ordered set declared `all` — compileAllCollection, grouped CTEs over rollup / children / closure joins — and a grouping), and client keyOf for live-state resources.
       - Server:
         - Uses:
           - `database.db`
@@ -21483,14 +21495,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AllCollectionSpec`
           - `CompiledAllCollection`
           - `CompiledGroups`
-          - `CompiledQuery`
           - `CompiledUnion`
-          - `Edge`
           - `EntitySource`
-          - `Hop`
           - `QueryDb`
-          - `QueryResourceSpec`
-          - `QuerySource`
           - `ReadColumn`
           - `RoutedSource`
           - `SelectMap`
@@ -21504,25 +21511,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WindowQueryResourceSpec`
         - Exports (values):
           - `compileAllCollection`
-          - `compileEdges`
           - `compileGroupsQuery`
           - `compileJoins`
-          - `compileQuery`
           - `compileUnionCollection`
           - `deferredWindowQueryResource`
           - `joinRefs`
-          - `queryResource`
-          - `rel`
           - `windowQueryResource`
+      - Cross-plugin:
+        - Imported by:
+          - `network/live`
+          - `runs`
+      - Exemptions:
+        - Exempts itself from:
+          - `resource-runtime:compiled-routes` — `server/internal/routes.ts` (sanctioned)
+          - `live/no-legacy-resource-spelling` — `.` (sanctioned)
       - Core:
-        - Uses:
-          - `primitives/live-state.keyedResourceDescriptor`
-          - `primitives/live-state.PointResourceDescriptor`
-          - `primitives/live-state.ResourceDescriptor`
-          - `primitives/live-state.ResourcePreload`
-          - `primitives/live-state.WindowParams`
-          - `primitives/live-state.WindowResourceDescriptor`
-          - `primitives/live-state.WindowSelector`
         - Exports (types):
           - `Aggregate`
           - `AggregateOrder`
@@ -21559,7 +21562,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OuterColumnRef`
           - `OuterColumnRefsOf`
           - `PointQueryResourceContract`
-          - `QueryResourceContract`
           - `RollupJoin`
           - `TypedColumnRef`
           - `WindowQueryResourceContract`
@@ -21571,27 +21573,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `closureJoin`
           - `expr`
           - `familyMember`
-          - `familyMemberAlias`
           - `isAggregate`
           - `isExprField`
           - `jsonAgg`
           - `jsonAggValue`
           - `KIND_RE`
-          - `queryResourceDescriptor`
-      - Cross-plugin:
-        - Imported by:
-          - `network/live`
-          - `runs`
-      - Exemptions:
-        - Exempts itself from:
-          - `resource-runtime:compiled-routes` — `server/internal/routes.ts` (sanctioned)
-          - `live/no-legacy-resource-spelling` — `.` (sanctioned)
       - Test helpers:
         - Server: `@plugins/infra/plugins/query-resource/server/testing`
           - `compileAllCollection` — Compile a collection declared `all` (see the header).
           - `compileWindowQuery` — Turn a bounded spec + its shared contract into the two-arg `defineResource` server half.
           - `recordingQueryDb` — A `QueryDb` that renders every query through drizzle's real `PgDialect` — the SQL a compiler would send — records it, and answers with `script`'s rows instead of running it.
           - Types: `RecordedQuery`
+        - Core: `@plugins/infra/plugins/query-resource/core/testing`
+          - `familyMemberAlias` — A member's join alias: the family id, then the member id with every character outside `[A-Za-z0-9]` spelled `_<hex>_` — injective, so two members can never share an alias (`cc-1` → `custom__cc_2d_1`).
     - **`request-origin`** — Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
       - Core:
         - Exports (types): `WriteOrigin`
@@ -26806,16 +26800,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useCollapsibleContext`
           - `useExpandAll`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `ui` ×9
           - `primitives` ×7
           - `apps` ×6
           - `conversations` ×5
           - `plugin-meta` ×4
           - `review` ×3
+          - `debug` ×2
           - `build/build-logs`
           - `code-explorer/commit-detail`
-          - `debug/claude-cli-calls`
           - `reorder/node-types/header`
           - `shell/health-report`
     - **`collapsible-wrap`** — Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
@@ -29969,7 +29963,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 196 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 195 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×50
           - `conversations` ×38
           - `ui` ×22
@@ -29978,7 +29972,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×11
           - `primitives` ×9
           - `active-data` ×6
-          - `infra` ×6
+          - `infra` ×5
           - `auth` ×4
           - `build` ×4
           - `plugin-meta` ×3
@@ -30013,7 +30007,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WindowSelector`
         - Exports (values):
           - `compareTxWatermark`
-          - `keyedResourceDescriptor`
           - `registerResourceDescriptor`
           - `resolvableSchema`
           - `resolved`

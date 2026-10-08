@@ -12,6 +12,7 @@
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.producedTableNames`
     - `database/change-feed.readLayout`
+    - `database/change-feed.relationBases`
     - `database/change-feed.routeChange`
     - `database/derived-tables.reconciledRollups`
     - `infra/jobs.defineJob`

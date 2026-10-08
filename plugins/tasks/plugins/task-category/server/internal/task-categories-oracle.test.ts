@@ -27,8 +27,8 @@
  * - nothing is ever loaded FULL after the subscribe (W1/W2 for this key).
  *
  * Then the C39 old-bundle check against the real key: a tab still running a
- * bundle that declared `task-categories` with the legacy param-less
- * `queryResourceDescriptor` subscribes `{}`, passes the `all` gate, and
+ * bundle that declared `task-categories` with a legacy param-less keyed
+ * descriptor subscribes `{}`, passes the `all` gate, and
  * parses the compiled rows with its OLD row schema to the same values — the
  * wire row is byte-compatible, so the key keeps its name.
  *
@@ -70,9 +70,9 @@ const KEY = taskCategories.key;
 const ROWS_KEY = taskCategories.rows.key;
 const [T1, T2, T3, , , T6] = TREE_IDS.tasks;
 
-// What the legacy `task-categories` descriptor parsed its payload with
-// (`queryResourceDescriptor` → `z.array(TaskCategoryRowSchema)` over the
-// extension's `{ taskId, category }`), restated as a literal — `strict`, so a
+// What the legacy `task-categories` descriptor (param-less, keyed) parsed its
+// payload with (`z.array(TaskCategoryRowSchema)` over the extension's
+// `{ taskId, category }`), restated as a literal — `strict`, so a
 // field added to the row would fail the parse, not pass it.
 const LegacyRowsSchema = z.array(
   z.object({ taskId: z.string(), category: z.string() }).strict(),

@@ -116,7 +116,6 @@ it, so both scanners throw rather than guess.
     - `LIVE_SERVER`
     - `LIVE_STATE_CORE`
     - `mintsOf`
-    - `QUERY_RESOURCE_CORE`
     - `QUERY_RESOURCE_SERVER`
     - `resourceDescriptorFactories`
     - `resourceRegisterMarkers`

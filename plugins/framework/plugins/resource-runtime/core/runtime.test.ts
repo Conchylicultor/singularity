@@ -19,13 +19,14 @@
 
 import { test, expect, describe, mock, spyOn } from "bun:test";
 import { z } from "zod";
-import { type ResourceParams } from "./runtime";
+import { type ExternalResource, type ResourceParams } from "./runtime";
 // The harness / controllable-loader / tick helpers live in the shared
 // test-support module (extracted so the invariant suites reuse the exact same
 // fakes). `createHarness()` subsumes the old bespoke `harness()` (default 1
 // socket), `feedHarness()` (a `readSet` option), and `revalHarness()` (subscribe
 // takes an `etag`) with byte-identical behavior.
 import { createHarness, controllable, tick } from "./test-support";
+import { feedChange, identityPlan } from "./testing/routed-fixture";
 
 describe("flushNotifies — level-parallel", () => {
   test("a slow loader does not head-of-line-block an unrelated fast node", async () => {
@@ -97,6 +98,50 @@ describe("flushNotifies — level-parallel", () => {
     expect(up[0]!.seq).toBeLessThan(down[0]!.seq);
   });
 
+  // A cascade is FULL (its downstream is a legacy entry): it translates no row
+  // ids, so it runs no edge query and opens no `cascade` origin — only a
+  // routed entry's reverse resolve does (`runtime-table-routing.test.ts`).
+  test("a cascade opens no `cascade` origin; the downstream reloads FULL under `push`", async () => {
+    const origins: Array<[string, string]> = [];
+    const h = createHarness({
+      wrapOrigin: (kind, key, fn) => {
+        origins.push([kind, key]);
+        return fn();
+      },
+    });
+    const up = h.runtime.defineExternalResource({
+      key: "up",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => 1,
+    });
+    const downCtx: unknown[] = [];
+    h.runtime.defineResource({
+      key: "down",
+      mode: "push",
+      schema: z.number(),
+      loader: async (_p, ctx) => {
+        downCtx.push(ctx);
+        return 2;
+      },
+      dependsOn: [{ resource: up }],
+    });
+    await h.subscribe("up");
+    await h.subscribe("down");
+    origins.length = 0;
+    downCtx.length = 0;
+
+    up.notify();
+    await tick();
+
+    expect(origins).toEqual([
+      ["push", "up"],
+      ["push", "down"],
+    ]);
+    expect(downCtx).toEqual([undefined]); // FULL
+    expect(h.pushesFor("down")).toHaveLength(1);
+  });
+
   test("version advances monotonically per (key,pk), one per notify", async () => {
     const h = createHarness();
     const r = h.runtime.defineExternalResource({
@@ -161,14 +206,14 @@ describe("flushNotifies — level-parallel", () => {
 
 /**
  * A harness whose runtime is built with an injected L3 read-set hook so
- * `applyDbChange` can invert table→resource. `readSet` is a static map for the
+ * `applyLegacyFullChange` can invert table→resource. `readSet` is a static map for the
  * test; in production it is `getReadSetIndex()[key]`. `createHarness` folds this
  * into its `ResourceRuntimeOptions` — no bespoke harness needed.
  */
 const feedHarness = (readSetMap: Record<string, string[]>) =>
   createHarness({ readSet: (key) => readSetMap[key] ?? [] });
 
-describe("applyDbChange — L4 DB change-feed routing", () => {
+describe("applyLegacyFullChange — L4 DB change-feed routing", () => {
   test("routes a table change to a subscribed param-less resource (full recompute on INSERT)", async () => {
     const h = feedHarness({ tasks: ["tasks"] });
     h.runtime.defineResource({
@@ -179,13 +224,9 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     });
     await h.subscribe("tasks");
 
-    h.runtime.applyDbChange({
+    h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "tasks",
-      op: "I",
-      ids: ["a"],
-      origin: "tasks",
-      identityBase: "tasks",
     });
     await tick();
 
@@ -203,405 +244,13 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     });
     await h.subscribe("tasks");
 
-    h.runtime.applyDbChange({
+    h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "unrelated_table",
-      op: "U",
-      ids: ["x"],
-      origin: "unrelated_table",
-      identityBase: "unrelated_table",
     });
     await tick();
 
     expect(h.pushesFor("tasks")).toHaveLength(0);
-  });
-
-  test("a single-row UPDATE scopes to a keyed resource (Layer-2 delta, not full)", async () => {
-    const h = feedHarness({ rows: ["row_table"] });
-    h.runtime.defineResource(
-      {
-        key: "rows",
-        schema: z.array(z.object({ id: z.string(), n: z.number() })),
-        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
-        validateParams: () => {},
-      },
-      {
-        // Identity table = the resource's own table, so a row UPDATE scopes.
-        identityTable: "row_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        loader: (_p, ctx) => {
-          // Full load returns two rows; a scoped load returns only the affected row.
-          if (ctx) return [{ id: "a", n: 2 }];
-          return [
-            { id: "a", n: 1 },
-            { id: "b", n: 1 },
-          ];
-        },
-      },
-    );
-    await h.subscribe("rows");
-
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "row_table",
-      op: "U",
-      ids: ["a"],
-      origin: "row_table",
-      identityBase: "row_table",
-    });
-    await tick();
-
-    const pushes = h.pushesFor("rows");
-    expect(pushes).toHaveLength(1);
-    // Scoped → a "delta" frame (FULL would be "update" because membership is asserted).
-    expect(pushes[0]!.kind).toBe("delta");
-  });
-
-  test("without identityTable, a row UPDATE degrades to FULL (no key-space corruption)", async () => {
-    const h = feedHarness({ rows: ["row_table"] });
-    // Record whether each post-subscribe load was scoped (`ctx` present) or FULL.
-    // The sub-ack also loads (full) to seed the snapshot, so we only inspect
-    // loads the change provoked.
-    const postSubLoads: boolean[] = [];
-    let subscribed = false;
-    h.runtime.defineResource(
-      {
-        key: "rows",
-        schema: z.array(z.object({ id: z.string(), n: z.number() })),
-        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
-        validateParams: () => {},
-      },
-      {
-        // Intentionally unscoped: no `identityTable`, so a change's row-ids are not
-        // provably this resource's keys — the runtime must FULL-recompute, never
-        // scope. `recompute` is the sanctioned explicit FULL opt-out; it is
-        // declaration-only (the runtime branches on identityTable absence, not on
-        // this field) and only makes the keyed resource type-legal without scope.
-        recompute: {
-          kind: "full",
-          reason: "test: FULL fallback when identityTable is absent",
-        },
-        loader: (_p, ctx) => {
-          if (subscribed) postSubLoads.push(ctx !== undefined);
-          return ctx
-            ? [{ id: "a", n: 2 }]
-            : [
-                { id: "a", n: 1 },
-                { id: "b", n: 1 },
-              ];
-        },
-      },
-    );
-    await h.subscribe("rows");
-    subscribed = true;
-
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "row_table",
-      op: "U",
-      ids: ["a"],
-      origin: "row_table",
-      identityBase: "row_table",
-    });
-    await tick();
-
-    // The change provoked a single FULL recompute (no scoped ctx) — the ids are
-    // not provably this resource's keys without a declared identity.
-    expect(postSubLoads).toEqual([false]);
-  });
-
-  test("an edge-covered origin is suppressed on a direct read-set match (the edge delivers it scoped)", async () => {
-    // down reads BOTH its own table and the upstream's table, but depends on up
-    // via an affectedMap edge. A change to up_t must reach down ONCE, scoped via
-    // the edge — the direct read-set match on up_t is suppressed so it can't
-    // FULL-absorb the scoped delivery.
-    const h = feedHarness({ up: ["up_t"], down: ["down_t", "up_t"] });
-    const postSubLoads: boolean[] = [];
-    let subscribed = false;
-    const up = h.runtime.defineResource({
-      key: "up",
-      mode: "push",
-      identityTable: "up_t",
-      schema: z.number(),
-      loader: async () => 1,
-    });
-    h.runtime.defineResource(
-      {
-        key: "down",
-        schema: z.array(z.object({ id: z.string(), n: z.number() })),
-        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "down_t",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        dependsOn: [{ resource: up, affectedMap: () => ["d1"] }],
-        loader: (_p, ctx) => {
-          if (subscribed) postSubLoads.push(ctx !== undefined);
-          return ctx
-            ? [{ id: "d1", n: 2 }]
-            : [
-                { id: "d1", n: 1 },
-                { id: "d2", n: 1 },
-              ];
-        },
-      },
-    );
-    await h.subscribe("down");
-    subscribed = true;
-
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "up_t",
-      op: "U",
-      ids: ["u1"],
-      origin: "up_t",
-      identityBase: "up_t",
-    });
-    await tick();
-
-    const pushes = h.pushesFor("down");
-    // Exactly one frame (the direct read-set match on up_t was suppressed), and it
-    // was a single SCOPED recompute delivered via the edge (loader saw ctx).
-    expect(pushes).toHaveLength(1);
-    expect(pushes[0]!.kind).toBe("delta");
-    expect(postSubLoads).toEqual([true]);
-  });
-
-  test("a secondary-view FULL for a covered origin does not absorb the scoped edge delivery", async () => {
-    // Mirrors conversations→attempts: a base change fans out onto the downstream's
-    // identity view as FULL (origin = the upstream's identity, identityBase =
-    // downstream identity). Because the origin is edge-covered, that FULL is
-    // dropped, leaving the scoped edge delivery intact.
-    const h = feedHarness({ up: ["up_t"], down: ["down_v", "up_t"] });
-    const postSubLoads: boolean[] = [];
-    let subscribed = false;
-    const up = h.runtime.defineResource({
-      key: "up",
-      mode: "push",
-      identityTable: "up_t",
-      schema: z.number(),
-      loader: async () => 1,
-    });
-    h.runtime.defineResource(
-      {
-        key: "down",
-        schema: z.array(z.object({ id: z.string(), n: z.number() })),
-        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "down_t",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        dependsOn: [{ resource: up, affectedMap: () => ["d1"] }],
-        loader: (_p, ctx) => {
-          if (subscribed) postSubLoads.push(ctx !== undefined);
-          return ctx
-            ? [{ id: "d1", n: 2 }]
-            : [
-                { id: "d1", n: 1 },
-                { id: "d2", n: 1 },
-              ];
-        },
-      },
-    );
-    await h.subscribe("down");
-    subscribed = true;
-
-    // The identity-forwarded scoped change to up_t…
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "up_t",
-      op: "U",
-      ids: ["u1"],
-      origin: "up_t",
-      identityBase: "up_t",
-    });
-    // …and the secondary-view FULL fanout of the same base change onto down_v
-    // (down's identity view), tagged with the originating base up_t.
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "down_v",
-      op: "U",
-      ids: null,
-      origin: "up_t",
-      identityBase: "down_t",
-    });
-    await tick();
-
-    const pushes = h.pushesFor("down");
-    expect(pushes).toHaveLength(1);
-    // The scoped edge delivery survived (a single load, with ctx); the
-    // secondary-view FULL for the same covered origin was dropped, so it could
-    // not absorb it.
-    expect(postSubLoads).toEqual([true]);
-  });
-
-  test("a scoped cascade whose upstream signature is unchanged does not recompute the downstream", async () => {
-    // Relevance gate: down derives only a COARSE projection of up's rows. When up
-    // changes but that projection is unchanged (signature equal), the cascade is
-    // skipped — no downstream recompute, no empty delta. A later change that DOES
-    // move the signature propagates again. Mirrors a conversation
-    // waitingFor/updatedAt write vs the attempts / agent-launches aggregates.
-    const h = feedHarness({ up: ["up_t"], down: ["down_t", "up_t"] });
-    const postSubLoads: boolean[] = [];
-    let subscribed = false;
-    let sig = "v1";
-    const up = h.runtime.defineResource({
-      key: "up",
-      mode: "push",
-      identityTable: "up_t",
-      schema: z.number(),
-      loader: async () => 1,
-    });
-    h.runtime.defineResource(
-      {
-        key: "down",
-        schema: z.array(z.object({ id: z.string(), n: z.number() })),
-        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "down_t",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        dependsOn: [
-          {
-            resource: up,
-            signature: () => new Map([["u1", sig]]),
-            affectedMap: () => ["d1"],
-          },
-        ],
-        loader: (_p, ctx) => {
-          if (subscribed) postSubLoads.push(ctx !== undefined);
-          return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }];
-        },
-      },
-    );
-    await h.subscribe("down");
-    subscribed = true;
-
-    const change = (): void =>
-      h.runtime.applyDbChange({
-        source: "feed",
-        table: "up_t",
-        op: "U",
-        ids: ["u1"],
-        origin: "up_t",
-        identityBase: "up_t",
-      });
-
-    // 1st change: signature "v1" is new → propagates → down recomputes (scoped).
-    change();
-    await tick();
-    expect(postSubLoads).toEqual([true]);
-
-    // 2nd change: signature still "v1" → unchanged → cascade skipped, no recompute.
-    change();
-    await tick();
-    expect(postSubLoads).toEqual([true]);
-    expect(h.pushesFor("down")).toHaveLength(1);
-
-    // 3rd change: signature moves to "v2" → propagates again.
-    sig = "v2";
-    change();
-    await tick();
-    expect(postSubLoads).toEqual([true, true]);
-  });
-
-  test("a FULL upstream cascade clears remembered signatures so the next scoped change re-propagates", async () => {
-    const h = feedHarness({ up: ["up_t"], down: ["down_t", "up_t"] });
-    const postSubLoads: boolean[] = [];
-    let subscribed = false;
-    const up = h.runtime.defineResource({
-      key: "up",
-      mode: "push",
-      identityTable: "up_t",
-      schema: z.number(),
-      loader: async () => 1,
-    });
-    h.runtime.defineResource(
-      {
-        key: "down",
-        schema: z.array(z.object({ id: z.string(), n: z.number() })),
-        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "down_t",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        dependsOn: [
-          {
-            resource: up,
-            signature: () => new Map([["u1", "stable"]]),
-            affectedMap: () => ["d1"],
-          },
-        ],
-        loader: (_p, ctx) => {
-          if (subscribed) postSubLoads.push(ctx !== undefined);
-          return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }];
-        },
-      },
-    );
-    await h.subscribe("down");
-    subscribed = true;
-
-    const scoped = (): void =>
-      h.runtime.applyDbChange({
-        source: "feed",
-        table: "up_t",
-        op: "U",
-        ids: ["u1"],
-        origin: "up_t",
-        identityBase: "up_t",
-      });
-
-    scoped();
-    await tick();
-    expect(postSubLoads).toHaveLength(1); // first scoped change propagates (new sig)
-
-    scoped();
-    await tick();
-    expect(postSubLoads).toHaveLength(1); // unchanged sig → skipped
-
-    // A FULL upstream change (INSERT → ids null) clears the edge's signature memo.
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "up_t",
-      op: "I",
-      ids: null,
-      origin: "up_t",
-      identityBase: "up_t",
-    });
-    await tick();
-    const afterFull = postSubLoads.length;
-
-    // The next scoped change must re-propagate even though the signature string is
-    // unchanged — the memo was cleared by the FULL, so it can't wrongly skip.
-    scoped();
-    await tick();
-    expect(postSubLoads.length).toBe(afterFull + 1);
-  });
-
-  test("DELETE degrades to FULL (a vanished row can't scope)", async () => {
-    const h = feedHarness({ rows: ["row_table"] });
-    h.runtime.defineResource({
-      key: "rows",
-      mode: "invalidate",
-      schema: z.number(),
-      loader: async () => 1,
-    });
-    await h.subscribe("rows");
-
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "row_table",
-      op: "D",
-      ids: ["a"],
-      origin: "row_table",
-      identityBase: "row_table",
-    });
-    await tick();
-    expect(h.pushesFor("rows")).toHaveLength(1);
   });
 
   test("fans out to every subscribed params tuple", async () => {
@@ -615,13 +264,9 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     await h.subscribe("doc", { id: "1" });
     await h.subscribe("doc", { id: "2" });
 
-    h.runtime.applyDbChange({
+    h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "docs",
-      op: "I",
-      ids: null,
-      origin: "docs",
-      identityBase: "docs",
     });
     await tick();
 
@@ -629,17 +274,30 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     expect(h.pushesFor("doc")).toHaveLength(2);
   });
 
-  test("never throws on a malformed change (defensive no-op)", () => {
-    const h = feedHarness({});
-    expect(() =>
-      h.runtime.applyDbChange({
-        source: "feed",
-        table: "x",
-        op: "U",
-        // @ts-expect-error — exercising the defensive path with a bad shape.
-        ids: undefined,
-      }),
-    ).not.toThrow();
+  test("never throws: a failing lookup is reported, not thrown at the feed", () => {
+    const reported: string[] = [];
+    const h = createHarness({
+      readSet: () => ["x_v"],
+      relationBases: () => {
+        throw new Error("bases not set");
+      },
+      reportError: (context) => reported.push(context),
+    });
+    h.runtime.defineResource({
+      key: "x",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => 1,
+    });
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(() =>
+        h.runtime.applyLegacyFullChange({ source: "feed", table: "x" }),
+      ).not.toThrow();
+    } finally {
+      error.mockRestore();
+    }
+    expect(reported).toEqual(['applyLegacyFullChange failed for table "x"']);
   });
 
   test("notifyStatsFor counts hand vs feed sources", async () => {
@@ -653,13 +311,9 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     await h.subscribe("tasks");
 
     r.notify(); // hand
-    h.runtime.applyDbChange({
+    h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "tasks",
-      op: "I",
-      ids: ["a"],
-      origin: "tasks",
-      identityBase: "tasks",
     }); // feed
     await tick();
 
@@ -680,29 +334,31 @@ describe("defineResource(contract, serverOpts) — keyed-ness derived from the d
     validateParams: () => {},
   };
 
-  test("a keyed contract drives a scoped row delta without restating mode/keyOf", async () => {
-    const h = feedHarness({ rows: ["row_table"] });
+  // A keyed contract pairs with a routed scope policy (the only keyed one).
+  const routedAlias = {
+    routes: identityPlan("row_table"),
+    scopedMembership: {
+      orderOf: async () => ["a", "b"],
+      orderSignatureOf: () => "",
+    },
+  };
+
+  test("a keyed contract drives a keyed delta without restating mode/keyOf", async () => {
+    const h = createHarness();
+    let n = 1;
+    const rows = () => [
+      { id: "a", n },
+      { id: "b", n: 1 },
+    ];
     h.runtime.defineResource(rowsContract, {
-      identityTable: "row_table",
-      fanOut: { reason: "one param-less tuple — nothing to narrow" },
-      loader: (_p, ctx) =>
-        ctx
-          ? [{ id: "a", n: 2 }]
-          : [
-              { id: "a", n: 1 },
-              { id: "b", n: 1 },
-            ],
+      ...routedAlias,
+      loader: (_p, c) =>
+        c ? rows().filter((r) => c.affectedIds.includes(r.id)) : rows(),
     });
     await h.subscribe("rows");
 
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "row_table",
-      op: "U",
-      ids: ["a"],
-      origin: "row_table",
-      identityBase: "row_table",
-    });
+    n = 2;
+    feedChange(h, { table: "row_table", op: "U", ids: ["a"] });
     await tick();
 
     const pushes = h.pushesFor("rows");
@@ -745,8 +401,7 @@ describe("defineResource(contract, serverOpts) — keyed-ness derived from the d
     ).toThrow(/is required for key "no-mode-external"/);
     const keyedWithMode = {
       mode: "push" as const,
-      identityTable: "row_table",
-      fanOut: { reason: "one param-less tuple — nothing to narrow" },
+      ...routedAlias,
       loader: () => [],
     };
     expect(() =>
@@ -1076,8 +731,11 @@ describe("preloadedKeys — the registry's half of the preload-declare boot asse
         preload: "boot-and-keep",
       },
       {
-        identityTable: "keyed_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
+        routes: identityPlan("keyed_table"),
+        scopedMembership: {
+          orderOf: async () => [],
+          orderSignatureOf: () => "",
+        },
         loader: () => [],
       },
     );
@@ -1116,5 +774,285 @@ describe("preloadedKeys — the registry's half of the preload-declare boot asse
       "keyed",
       "value",
     ]);
+  });
+});
+
+describe("applyLegacyFullChange — relation bases (C30) and the inversion memo (C38)", () => {
+  // A legacy entry reading a VIEW is indexed under the view's bases, so a
+  // write to a table feeding the view reaches it — once, however many of its
+  // relations share that base.
+  test("a reader of a view is reached by a write to each of its bases, once", async () => {
+    const h = createHarness({
+      readSet: (key) => (key === "v" ? ["tasks_v", "attempts_v"] : []),
+      relationBases: (r) =>
+        r === "tasks_v"
+          ? ["attempts", "conversations", "tasks"]
+          : r === "attempts_v"
+            ? ["attempts", "conversations"]
+            : [r],
+    });
+    let loads = 0;
+    h.runtime.defineResource({
+      key: "v",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => ++loads,
+    });
+    await h.subscribe("v");
+    const at = loads;
+
+    h.runtime.applyLegacyFullChange({ source: "feed", table: "conversations" });
+    await tick();
+    expect(loads - at).toBe(1);
+
+    h.runtime.applyLegacyFullChange({ source: "feed", table: "tasks" });
+    await tick();
+    expect(loads - at).toBe(2);
+
+    // The view's own name and an unrelated table reach nothing.
+    h.runtime.applyLegacyFullChange({ source: "feed", table: "tasks_v" });
+    h.runtime.applyLegacyFullChange({ source: "feed", table: "pushes" });
+    await tick();
+    expect(loads - at).toBe(2);
+  });
+
+  // The inversion is memoized on the read-set version: an unchanged version
+  // reuses it (no relation is re-expanded), and installing new bases — which
+  // moves the version (server-core's `setRelationBases`, D33) — rebuilds it
+  // through them.
+  test("the memo hits on an unchanged version and misses after the bases change", async () => {
+    let version = 0;
+    let expansions = 0;
+    let bases: (r: string) => readonly string[] = (r) => [r];
+    const h = createHarness({
+      readSet: (key) => (key === "v" ? ["tasks_v"] : []),
+      readSetVersion: () => version,
+      relationBases: (r) => {
+        expansions++;
+        return bases(r);
+      },
+    });
+    let loads = 0;
+    h.runtime.defineResource({
+      key: "v",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => ++loads,
+    });
+    await h.subscribe("v");
+    const at = loads;
+
+    // Identity bases: a `tasks` write does not reach the reader of `tasks_v`.
+    h.runtime.applyLegacyFullChange({ source: "feed", table: "tasks" });
+    await tick();
+    expect(loads - at).toBe(0);
+    const built = expansions;
+    expect(built).toBe(1);
+
+    // Unchanged version: the memo serves, nothing is re-expanded.
+    h.runtime.applyLegacyFullChange({ source: "feed", table: "tasks" });
+    h.runtime.applyLegacyFullChange({ source: "feed", table: "attempts" });
+    await tick();
+    expect(expansions).toBe(built);
+
+    // `setRelationBases`: new bases AND a moved version.
+    bases = (r) => (r === "tasks_v" ? ["attempts", "tasks"] : [r]);
+    version++;
+    h.runtime.applyLegacyFullChange({ source: "feed", table: "tasks" });
+    await tick();
+    expect(expansions).toBe(built + 1);
+    expect(loads - at).toBe(1);
+  });
+});
+
+// P8 step 23b: the legacy scope policy, the keyed external resource and the
+// DB-backed cascade upstream have no spelling any more (tsc); each is still
+// refused at registration for a caller a cast let through, so a dead option is
+// loud instead of silently doing nothing.
+describe("P8 23b — the deleted spellings are refused at registration", () => {
+  const rowsContract = {
+    key: "rows",
+    schema: z.array(z.object({ id: z.string() })),
+    keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+    validateParams: () => {},
+  };
+  const routedAlias = {
+    routes: identityPlan("row_table"),
+    scopedMembership: { orderOf: async () => [], orderSignatureOf: () => "" },
+    loader: () => [],
+  };
+
+  test("D37: a legacy scope key cast through either form throws, naming it", () => {
+    const { runtime } = createHarness();
+    expect(() =>
+      runtime.defineResource(rowsContract, {
+        ...routedAlias,
+        ...({ identityTable: "row_table" } as object),
+      }),
+    ).toThrow(
+      /"identityTable" on key "rows" — the legacy scope policy is gone/,
+    );
+    expect(() =>
+      runtime.defineResource({
+        key: "flat",
+        mode: "push",
+        schema: z.number(),
+        loader: () => 1,
+        ...({ recompute: { kind: "full", reason: "x" } } as object),
+      }),
+    ).toThrow(/"recompute" on key "flat"/);
+    expect(() =>
+      runtime.defineExternalResource(
+        { key: "ext", schema: z.number(), validateParams: () => {} },
+        {
+          mode: "push",
+          loader: () => 1,
+          ...({ fanOut: { reason: "x" } } as object),
+        },
+      ),
+    ).toThrow(/defineExternalResource: "fanOut" on key "ext"/);
+    // Positive control: the same routed alias without the cast registers.
+    expect(() =>
+      runtime.defineResource(rowsContract, routedAlias),
+    ).not.toThrow();
+  });
+
+  test("D31: a keyed entry is a routed membership entry — keyed external and keyed-without-membership throw", () => {
+    const { runtime } = createHarness();
+    const noScope = { loader: () => [] };
+    expect(() =>
+      // @ts-expect-error — defineExternalResource takes no keyed contract (D31)
+      runtime.defineExternalResource(rowsContract, noScope),
+    ).toThrow(/a keyed entry is a routed membership entry — key "rows"/);
+    const flatKeyed = {
+      key: "flat-keyed",
+      mode: "keyed" as const,
+      schema: z.array(z.object({ id: z.string() })),
+      keyOf: (r: { id: string }) => r.id,
+      loader: () => [],
+    };
+    expect(() =>
+      // @ts-expect-error — the flat external form is push / invalidate only
+      runtime.defineExternalResource(flatKeyed),
+    ).toThrow(/key "flat-keyed" declares no membership/);
+    expect(() =>
+      // @ts-expect-error — a keyed contract requires the routed ScopePolicy
+      runtime.defineResource(rowsContract, noScope),
+    ).toThrow(/key "rows" declares no membership/);
+  });
+
+  test("T15: a dependsOn onto a DB-backed upstream throws in both registration orders; an external one registers", () => {
+    const { runtime } = createHarness();
+    const db = runtime.defineResource({
+      key: "db",
+      mode: "push",
+      schema: z.number(),
+      loader: () => 1,
+    });
+    expect(() =>
+      runtime.defineResource({
+        key: "down",
+        mode: "push",
+        schema: z.number(),
+        loader: () => 2,
+        // @ts-expect-error — a DB-backed `Resource` has no notify: not an upstream
+        dependsOn: [{ resource: db }],
+      }),
+    ).toThrow(/"down" dependsOn "db", which is DB-backed/);
+
+    // The other order: the downstream names an upstream registered after it.
+    runtime.defineResource({
+      key: "early",
+      mode: "push",
+      schema: z.number(),
+      loader: () => 2,
+      dependsOn: [
+        {
+          resource: { key: "late" } as unknown as ExternalResource<
+            unknown,
+            ResourceParams
+          >,
+        },
+      ],
+    });
+    expect(() =>
+      runtime.defineResource({
+        key: "late",
+        mode: "push",
+        schema: z.number(),
+        loader: () => 1,
+      }),
+    ).toThrow(/"early" dependsOn "late", which is DB-backed/);
+
+    // Positive control: an external upstream cascades.
+    const ext = runtime.defineExternalResource({
+      key: "ext",
+      mode: "push",
+      schema: z.number(),
+      loader: () => 1,
+    });
+    expect(() =>
+      runtime.defineResource({
+        key: "down-ok",
+        mode: "push",
+        schema: z.number(),
+        loader: () => 2,
+        dependsOn: [{ resource: ext }],
+      }),
+    ).not.toThrow();
+  });
+
+  test("T15: a deferred placeholder upstream is left to its bind, which refuses it", () => {
+    const { runtime } = createHarness();
+    const deferredValue = runtime.defineDeferredResource(
+      { key: "deferred", schema: z.number(), validateParams: () => {} },
+      () => ({ mode: "push" as const, loader: () => 1 }),
+    );
+    // Before the bind the placeholder reports `externalSource: false` like any
+    // DB-backed entry, so registration does not judge it…
+    expect(() =>
+      runtime.defineResource({
+        key: "down",
+        mode: "push",
+        schema: z.number(),
+        loader: () => 2,
+        dependsOn: [
+          {
+            resource: deferredValue as unknown as ExternalResource<
+              unknown,
+              ResourceParams
+            >,
+          },
+        ],
+      }),
+    ).not.toThrow();
+    // …and the bind, which makes it a DB-backed value, refuses the cascade.
+    expect(() => runtime.bindDeferredResources()).toThrow(
+      /"down" dependsOn "deferred", which is DB-backed/,
+    );
+  });
+
+  // `notify` has no row-id spelling (tsc); a hand notify is always a FULL
+  // recompute. A25 (`scheduleNotify` refusing row ids for a non-membership
+  // entry) has no public path left to reach it, so it is not exercised here.
+  test("Resource.notify takes no row ids (type); an external notify recomputes FULL", async () => {
+    const h = createHarness();
+    const ctxs: unknown[] = [];
+    const r = h.runtime.defineExternalResource({
+      key: "ext",
+      mode: "push",
+      schema: z.number(),
+      loader: (_p, ctx) => {
+        ctxs.push(ctx);
+        return 1;
+      },
+    });
+    await h.subscribe("ext");
+    ctxs.length = 0;
+    // @ts-expect-error — the deleted `{ affectedIds }` option has no spelling.
+    r.notify({}, { affectedIds: ["a"] });
+    await tick();
+    expect(ctxs).toEqual([undefined]);
+    expect(h.pushesFor("ext")).toHaveLength(1);
   });
 });

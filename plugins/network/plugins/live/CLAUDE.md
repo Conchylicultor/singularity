@@ -716,7 +716,8 @@ useLive(pluginChanges, id === null ? null : { conversationId: id });  // no subj
   - **`revalidate`** (both arms): the ETag signature, passed through
     (read path only; co-produce it with the loader, e.g. `createSignedMemo`).
   - Not spelled: `ackChannel` (an optimistic reader asks for acks on its own
-    subscription), a read-side `select`, scoped `rel()` edges — see
+    subscription), a read-side `select`, row-scoped `recomputeOn` edges (an
+    upstream's change recomputes whole tuples) — see
     `research/2026-09-26-global-live-values-migration-contract.md`.
 - **Central.** `liveValue(key, { …, origin: "central" })` declares a value the
   machine-wide central runtime serves (`LiveValue<T, P, "central">`; the browser
@@ -754,11 +755,12 @@ read off the barrel's module object (a namespace import or an awaited
 `windowQueryResourceDescriptor`, `pointQueryResourceDescriptor`,
 `defineResource`, `defineExternalResource`, `queryResource`,
 `windowQueryResource`, `useResource` — and `usePointResource(s)` and
-`useWindowResource`, deleted (at the phase-3 Wave 3 and Wave 4 barriers), and
-`windowQueryResourceDescriptor` / `pointQueryResourceDescriptor`, now internal
-to `network/live` (`core/internal/window-descriptor.ts`, Wave 7) — still
-listed so a stale import is told its replacement, not only tsc's "no exported
-member". Its exemptions (`exempt/index.ts` of the plugins that hold them: the substrate, plus
+`useWindowResource`. Several no longer exist: `usePointResource(s)`,
+`useWindowResource`, `keyedResourceDescriptor`, `queryResourceDescriptor` and
+`queryResource` are deleted, and `windowQueryResourceDescriptor` /
+`pointQueryResourceDescriptor` are internal to `network/live`
+(`core/internal/window-descriptor.ts`) — all still listed so a stale import is
+told its replacement, not only tsc's "no exported member". Its exemptions (`exempt/index.ts` of the plugins that hold them: the substrate, plus
 debt entries for every file not migrated yet) are the burndown inventory (`./singularity exempt list --rule live/no-legacy-resource-spelling --debt`)
 (`research/2026-09-27-global-live-resources-phase3-bulk-migration.md`).
 **Never add an entry for new code** — declare it with `liveValue` /
@@ -771,8 +773,8 @@ which stay on `resourceDescriptor` — and reload in full — until item 9. The
 `live:legacy-descriptors-pinned` check (`check/legacy-descriptors.ts`) pins
 the resources: it reads every non-test file's AST for a `resourceDescriptor(`
 call (by name, under any import alias, or as a namespace import's member —
-`keyedResourceDescriptor` / `queryResourceDescriptor` are other names, the
-tree's, Item 3) and fails unless each initializes one of the two pinned
+the deleted `keyedResourceDescriptor` / `queryResourceDescriptor` are other
+names, and its test pins that the scan does not confuse them with it) and fails unless each initializes one of the two pinned
 bindings and each pinned binding is still declared; a reference to it that is
 not a call (`const rd = resourceDescriptor`) fails too, since it would hide a
 call from the scan. A new legacy resource is a check failure, not a lint-list

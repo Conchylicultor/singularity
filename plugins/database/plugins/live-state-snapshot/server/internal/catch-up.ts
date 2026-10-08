@@ -51,10 +51,9 @@ const MinPositionRowSchema = z.object({ min_position: z.string().nullable() });
 // rows as if they had just arrived over NOTIFY" — reusing `routeChange` makes that
 // true by construction and prevents drift, and THAT INVARIANT requires preserving
 // `row.ids` for every op (the live listener never strips them). A genuinely id-less
-// bulk statement still arrives with `row.ids === null` → FULL; a non-membership
-// keyed entry routes `I`/`D` to FULL regardless of ids (`applyDbChange`); only a
-// membership entry gains the cheap scoped exit it already gets on the live path (a
-// `D`-with-ids removes the deleted set from the snapshot with ZERO loader queries).
+// bulk statement still arrives with `row.ids === null` → FULL; a legacy entry
+// recomputes in FULL regardless of ids (`applyLegacyFullChange`); a routed entry
+// gains the same scoped delivery it gets on the live path.
 // See research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.5.
 function replayChange(
   row: ChangelogRow,
@@ -147,7 +146,7 @@ export async function probeCatchUp(
 // advancing the floor.
 //
 // It routes every replayed row through `routeChange` (routed entries through
-// their routes, legacy ones through `applyDbChange`, which inverts the IN-MEMORY
+// their routes, legacy ones through `applyLegacyFullChange`, which inverts the IN-MEMORY
 // read-set index seeded at boot from the persisted `tables_read` column — so
 // catch-up works at a cold boot with NO loader having run). It also relies on
 // the post-LISTEN ordering documented at the call site in `server/index.ts`:

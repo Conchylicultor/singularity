@@ -17,9 +17,14 @@
 import { test, expect, describe, mock } from "bun:test";
 import { z } from "zod";
 import { createHarness, controllable, tick } from "./test-support";
+import { feedChange, identityPlan } from "./testing/routed-fixture";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
+
+// Keyed entries are routed over their identity table (the shared fixture's
+// plan and change-feed delivery): scoped changes reach an entry only through
+// its routes since P8 step 23a.
 
 // A capture hook handing out strictly-increasing xid8-style decimal tokens, so
 // each flight's watermark is distinguishable in the frame log.
@@ -79,7 +84,6 @@ describe("watermark — full frames carry it", () => {
   test("keyed: the FULL-recompute delta carries it; a SCOPED delta never does", async () => {
     const cap = makeCapture();
     const h = createHarness({
-      readSet: () => ["row_table"],
       captureWatermark: cap.fn,
     });
     let truth = [
@@ -94,8 +98,11 @@ describe("watermark — full frames carry it", () => {
         validateParams: () => {},
       },
       {
-        identityTable: "row_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
+        routes: identityPlan("row_table"),
+        scopedMembership: {
+          orderOf: async () => truth.map((r) => r.id),
+          orderSignatureOf: () => "",
+        },
         loader: (_p, c) =>
           c ? truth.filter((r) => c.affectedIds.includes(r.id)) : truth,
       },
@@ -108,13 +115,10 @@ describe("watermark — full frames carry it", () => {
       { id: "a", n: 2 },
       { id: "b", n: 1 },
     ];
-    h.runtime.applyDbChange({
-      source: "feed",
+    feedChange(h, {
       table: "row_table",
       op: "U",
       ids: ["a"],
-      origin: "row_table",
-      identityBase: "row_table",
     });
     await tick();
     const scoped = h.frames.filter((f) => f.kind === "delta").at(-1)!;
@@ -126,13 +130,10 @@ describe("watermark — full frames carry it", () => {
       { id: "a", n: 3 },
       { id: "b", n: 1 },
     ];
-    h.runtime.applyDbChange({
-      source: "feed",
+    feedChange(h, {
       table: "row_table",
       op: "U",
       ids: null,
-      origin: "row_table",
-      identityBase: "row_table",
     });
     await tick();
     const full = h.frames.filter((f) => f.kind === "delta").at(-1)!;
@@ -142,7 +143,6 @@ describe("watermark — full frames carry it", () => {
   test("M5 membership-scoped deltas (in-place flip AND entry-with-order) never carry one", async () => {
     const cap = makeCapture();
     const h = createHarness({
-      readSet: () => ["m_table"],
       captureWatermark: cap.fn,
     });
     const table = new Map<string, number>();
@@ -155,8 +155,11 @@ describe("watermark — full frames carry it", () => {
         validateParams: () => {},
       },
       {
-        identityTable: "m_table",
-        scopedMembership: { orderOf: async () => [...table.keys()] },
+        routes: identityPlan("m_table"),
+        scopedMembership: {
+          orderOf: async () => [...table.keys()],
+          orderSignatureOf: () => "",
+        },
         loader: (_p, c) =>
           c ? rows().filter((r) => c.affectedIds.includes(r.id)) : rows(),
       },
@@ -166,13 +169,10 @@ describe("watermark — full frames carry it", () => {
 
     // In-place flip (op U, no order asserted).
     table.set("a", 2);
-    h.runtime.applyDbChange({
-      source: "feed",
+    feedChange(h, {
       table: "m_table",
       op: "U",
       ids: ["a"],
-      origin: "m_table",
-      identityBase: "m_table",
     });
     await tick();
     const flip = h.frames.filter((f) => f.kind === "delta").at(-1)!;
@@ -182,13 +182,10 @@ describe("watermark — full frames carry it", () => {
     // Membership entry (op I): the delta asserts the full `order` but is still
     // a partial re-read — it must stay tokenless.
     table.set("b", 1);
-    h.runtime.applyDbChange({
-      source: "feed",
+    feedChange(h, {
       table: "m_table",
       op: "I",
       ids: ["b"],
-      origin: "m_table",
-      identityBase: "m_table",
     });
     await tick();
     const entry = h.frames.filter((f) => f.kind === "delta").at(-1)!;
@@ -203,7 +200,6 @@ describe("watermark — full frames carry it", () => {
     // rides it fine.
     const cap = makeCapture();
     const h = createHarness({
-      readSet: () => ["row_table"],
       captureWatermark: cap.fn,
     });
     let truth = [{ id: "a", n: 1 }];
@@ -215,8 +211,11 @@ describe("watermark — full frames carry it", () => {
         validateParams: () => {},
       },
       {
-        identityTable: "row_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
+        routes: identityPlan("row_table"),
+        scopedMembership: {
+          orderOf: async () => truth.map((r) => r.id),
+          orderSignatureOf: () => "",
+        },
         loader: (_p, c) =>
           c ? truth.filter((r) => c.affectedIds.includes(r.id)) : truth,
       },
@@ -224,13 +223,10 @@ describe("watermark — full frames carry it", () => {
     await h.subscribe("rows");
 
     truth = [{ id: "a", n: 2 }];
-    h.runtime.applyDbChange({
-      source: "feed",
+    feedChange(h, {
       table: "row_table",
       op: "U",
       ids: ["a"],
-      origin: "row_table",
-      identityBase: "row_table",
       xid: "77",
     });
     await tick();

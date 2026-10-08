@@ -15,7 +15,6 @@ import {
 import {
   buildSnapshot,
   diffKeyedFull,
-  diffKeyedScoped as diffKeyedScopedPure,
   diffKeyedScopedMembership,
   hashSnapEncoder,
   retainSnapEncoder,
@@ -84,9 +83,15 @@ export type ResourceParams = Record<string, string>;
 // `map` translates upstream params (and optionally value) into the list of
 // downstream params tuples to schedule. Default: identity (`[upstreamParams]`).
 // See `research/2026-04-16-global-derived-state-primitive-v2.md`.
+//
+// The upstream is always EXTERNAL (T15): a DB-backed resource's writes reach
+// every reader of its tables through the change feed already, so a cascade out
+// of one would serve its downstream a second time. A DB-backed `Resource` has
+// no `notify`, so it is not an `ExternalResource` (type); `createResource`
+// still refuses one an erased cast let through.
 export interface DependsOnEntry<P extends ResourceParams = ResourceParams> {
   // biome-ignore lint/suspicious/noExplicitAny: upstream type is erased — the map callback owns the shape.
-  resource: Resource<any, any>;
+  resource: ExternalResource<any, any>;
   map?: (
     // biome-ignore lint/suspicious/noExplicitAny: see above.
     upstreamParams: any,
@@ -102,44 +107,6 @@ export interface DependsOnEntry<P extends ResourceParams = ResourceParams> {
    * Spelled `recomputeOn: [served]` by `network/live`'s `serveValue`.
    */
   toSubscribed?: true;
-  /**
-   * Scoped-recompute (Layer 2): translate the set of changed upstream row ids
-   * into the set of changed downstream row ids, so the downstream loader can
-   * recompute only the affected rows (`WHERE id IN (…)`) instead of the whole
-   * view. Only consulted when the upstream notify carried `affectedIds`. If
-   * absent (or it throws), the cascade degrades the downstream to a FULL
-   * recompute — never silently drops a change. Must self-query the DB rather
-   * than read the upstream value, so it does NOT force the upstream loader to
-   * run. See research/2026-06-06-global-live-state-layer2-scoped-recompute-impl.md.
-   */
-  affectedMap?: (
-    upstreamAffected: ReadonlySet<string>,
-    // biome-ignore lint/suspicious/noExplicitAny: upstream params type is erased — see above.
-    upstreamParams: any,
-  ) => Promise<string[]> | string[];
-  /**
-   * Relevance gate for a SCOPED cascade (Layer 2). Given the changed upstream
-   * row ids, return id→signature capturing ONLY the upstream fields THIS
-   * downstream actually derives from. The runtime remembers the last signature
-   * per id and forwards an id to `affectedMap` only when its signature changed
-   * (or it is new / unknown). Transient upstream fields the downstream ignores —
-   * e.g. a conversation's `waitingFor`/`updatedAt`, which the tasks/attempts
-   * aggregates never read — thus stop triggering downstream no-op recomputes at
-   * the source, instead of recomputing-then-diffing-to-empty on every write.
-   *
-   * Like `affectedMap`, it MUST self-query the DB (never read the upstream
-   * value, so it does not force the upstream loader). Consulted ONLY on scoped
-   * cascades; a FULL cascade (insert/delete/bulk/reconnect) bypasses it AND
-   * clears the remembered signatures, so the next scoped change always
-   * re-propagates rather than comparing against a pre-FULL signature. An id
-   * absent from the returned map is treated as changed (fail-safe). Omit for the
-   * default: cascade on every delivered id.
-   */
-  signature?: (
-    upstreamAffected: ReadonlySet<string>,
-    // biome-ignore lint/suspicious/noExplicitAny: upstream params type is erased — see above.
-    upstreamParams: any,
-  ) => Promise<Map<string, string>> | Map<string, string>;
 }
 
 /**
@@ -177,7 +144,7 @@ export interface RoutedRecomputeOn<P extends ResourceParams = ResourceParams> {
  *   feed change routes to a tuple iff the changed ids intersect its set. No ids
  *   query ever runs; point sets are unordered (entrants append).
  *
- * Declaring `membership` requires `mode: "keyed"` + `identityTable` (enforced
+ * Declaring `membership` requires `mode: "keyed"` + `routes` (enforced
  * with a loud throw, exactly like `scopedMembership`) and marks the entry as
  * BOUNDED: it is excluded from L2 persistence (`live_state_snapshot`) and its
  * keyed snapshot uses the compact hash encoder. The legacy
@@ -216,9 +183,9 @@ export type KeyedMembership<P extends ResourceParams = ResourceParams> =
  * same seam as `KeyedMembership`'s window arm: when present, a refilled member
  * whose ORDER BY projection moved re-derives the order (`orderOf`) instead of
  * keeping its stale position — so an alias over a mutable sort column (a rank, a
- * createdAt resurface) stays ordered. Optional on the legacy `identityTable`
- * arm; REQUIRED on the routed arm (`ScopePolicy`), where the compiler always
- * knows its ORDER BY and so an in-place reorder can never go stale.
+ * createdAt resurface) stays ordered. REQUIRED on the routed arm
+ * (`ScopePolicy`), where the compiler always knows its ORDER BY and so an
+ * in-place reorder can never go stale.
  */
 export interface AliasMembership<P extends ResourceParams = ResourceParams> {
   orderOf: (params: P) => Promise<string[]>;
@@ -259,11 +226,11 @@ export interface ResourceDefinition<
    */
   mode: ResourceMode;
   /**
-   * Compute the resource value for `params`. When the notify that triggered
-   * this load carried scoped `affectedIds` (Layer 2), `ctx.affectedIds` lists
-   * the changed row ids and the loader MAY recompute only those rows (returning
-   * a partial array for `keyed` mode — the diff merges it into the snapshot).
-   * Full loads (sub-ack, HTTP fallback, plain `notify()`) pass `ctx === undefined`.
+   * Compute the resource value for `params`. When a membership drain refills
+   * only the rows a routed change named, `ctx.affectedIds` lists those row ids
+   * and the loader returns only those rows (a partial array — the membership
+   * diff merges it into the snapshot). Full loads (sub-ack, HTTP fallback,
+   * `notify()`, every non-membership drain) pass `ctx === undefined`.
    */
   loader: (
     params: P,
@@ -295,49 +262,17 @@ export interface ResourceDefinition<
    */
   dependsOn?: ReadonlyArray<DependsOnEntry<P>>;
   /**
-   * The base table whose primary key equals this resource's `keyOf` id (i.e. the
-   * loader reads its own identity view / table). Declaring it lets the L4
-   * change-feed deliver a scoped row change to this resource in its OWN key space
-   * (`ctx.affectedIds` are this resource's keys → `WHERE id IN (…)`), rather than
-   * degrading to a FULL recompute. It is also the unit of cross-resource
-   * coverage: a downstream `affectedMap` edge translates THIS table's changed ids
-   * into the downstream's keys, so the runtime routes a covered change through the
-   * single authoritative path (this identity view OR an edge) and never lets a
-   * secondary view-fanout FULL absorb the scoped delivery. Omit it to keep the
-   * resource on FULL-recompute (the safe default). See
-   * research/2026-06-20-global-scoped-recompute-default.md.
-   *
-   * MUST be a BASE TABLE name, never a view name — `applyDbChange`'s `origin` is
-   * always the base table that changed, so a view name here silently never matches
-   * and the resource quietly stays on FULL recompute. This is enforced at boot:
-   * the change-feed's `assertRouteTablesCovered` throws if this table is not one
-   * it installed a trigger on (a view / rollup / excluded / typo'd name), so the
-   * silent degrade is now a loud boot failure rather than a latent footgun.
-   */
-  identityTable?: string;
-  /**
-   * Explicit opt-out: this keyed resource intentionally FULL-recomputes (its key
-   * is not a single base-table PK, or its read is irreducibly whole-set). Required
-   * ON A KEYED RESOURCE when `identityTable` is omitted, so a FULL fallback is
-   * always a declared, documented choice — never a silent default. `reason` is
-   * surfaced in the read-set debug pane and read by the future work-admission
-   * scheduler when it decides whether to admit a FULL recompute intent.
-   */
-  recompute?: { kind: "full"; reason: string };
-  /**
    * Opt-in row-level membership scoping (M5) for a keyed resource. When present,
-   * an INSERT/DELETE/where-flip on the resource's identity table no longer forces
-   * a FULL recompute: the runtime refills only the changed rows and reconciles
+   * an INSERT/DELETE/where-flip routed to the resource no longer forces a FULL
+   * recompute: the runtime refills only the changed rows and reconciles
    * membership against the per-pk snapshot, shipping an incremental delta that
    * asserts the new `order`. `orderOf` is the ids-only "full ORDER BY'd id list
    * for these params" query the runtime runs ONLY when a row ENTERS membership
    * (an exit or in-place change derives its order from the prior snapshot, so no
    * query runs). It is an injected closure so `resource-runtime` stays DB-free.
    *
-   * Requires `mode: "keyed"` + `identityTable` (an own-identity scoped resource) —
-   * enforced with a loud throw in `createResource`, so it is incompatible with the
-   * `recompute: { full }` opt-out (which has no identityTable). Absent ⇒
-   * byte-identical to the pre-M5 FULL-on-membership-change behavior. Also relaxes
+   * Requires `mode: "keyed"` + `routes` (an own-identity routed resource) —
+   * enforced with a loud throw in `createResource`. Also relaxes
    * the mutable-`where` rule (a where-flip is detected as an exit/entry). See
    * research/2026-07-03-global-scoped-membership-m5.md.
    */
@@ -346,7 +281,7 @@ export interface ResourceDefinition<
    * Bounded-membership selector (window / point) — see `KeyedMembership`. The
    * generalization of `scopedMembership` (which remains as the unbounded-window
    * alias); the two are mutually exclusive. Requires `mode: "keyed"` +
-   * `identityTable`, enforced with a loud throw in `createResource`. A
+   * `routes`, enforced with a loud throw in `createResource`. A
    * membership-bounded entry is never L2-persisted and its snapshot uses the
    * hash encoder.
    */
@@ -355,11 +290,10 @@ export interface ResourceDefinition<
    * Scoped change routing (see `RoutePlan` in `./routing`): every table
    * occurrence this resource's compiled query may read, and how each tuple reads
    * them. Present ⇒ the entry is ROUTED: `routeTableChange` serves it and the
-   * legacy read-set path (`applyDbChange`) never does, so each change reaches it
-   * exactly once. Only on a membership entry (`membership` / `scopedMembership`),
-   * and its `identityTable` is DERIVED from its identity route rather than
-   * declared — both enforced by `ScopePolicy` and, for an untyped caller, by a
-   * loud throw in `createResource`. Exclusive with `dependsOn`: a routed entry
+   * legacy read-set path (`applyLegacyFullChange`) never does, so each change reaches it
+   * exactly once. Only on a membership entry (`membership` / `scopedMembership`)
+   * — enforced by `ScopePolicy` and, for an untyped caller, by a loud throw in
+   * `createResource`. Exclusive with `dependsOn`: a routed entry
    * takes no cascade (it routes the tables it reads). Written by a compiler,
    * never by hand: a route's `columns` gate what the SQL references, so a
    * hand-kept list could silently drop an update — a `RoutePlan` is minted by
@@ -374,7 +308,7 @@ export interface ResourceDefinition<
    * one declaring `routes` (served by `routeTableChange`, never by the legacy
    * read-set path): a change to a table a tuple reads recomputes that tuple,
    * and a change to any other table reaches nothing. Exclusive with
-   * `identityTable`, `routes` and `dependsOn`; refused on a keyed or external
+   * `routes` and `dependsOn`; refused on a keyed or external
    * entry (a throw in `createResource`). Compiler-minted (`mintReachPlan`),
    * like `routes`.
    */
@@ -491,78 +425,31 @@ export interface ResourceDefinition<
  * A keyed resource's scope policy — the two questions the feed router asks,
  * both answered at the declaration site or the resource does not compile.
  *
- * **Which RESOURCE does a change belong to?** Either `identityTable` (the change
- * scopes to this resource's own keys) or `recompute: { kind: "full", reason }`
- * (an explicit, documented FULL opt-out) — never both, never neither. See
- * research/2026-06-20-global-enforce-keyed-resource-scope-coverage.md.
+ * **Which RESOURCE does a change belong to?** `routes`: a compiler-minted
+ * `RoutePlan` naming every table occurrence the query may read (see
+ * research/2026-09-29-global-scoped-change-routing.md).
  *
- * **And which subscribed TUPLE of it owns the changed row?** `identityTable`
- * alone never answered that, so the router woke EVERY subscribed tuple, each of
- * which re-ran its own read, found the row was not its own, and diffed to empty.
- * No frame shipped from those tuples — which is exactly what hid the cost; the
- * read IS the cost. So an `identityTable` arm must also carry exactly one of:
+ * **And which subscribed TUPLE of it owns the changed row?** Exactly one of:
  *
  * - `membership` — the tuple names a bounded window / point set, maintained
- *   incrementally (`KeyedMembership`). Also reroutes the drain and INSERT/DELETE.
- * - `scopedMembership` — the legacy unbounded-window alias of `membership`.
- * - `fanOut: { reason }` — every subscribed tuple genuinely must be woken, and
- *   here is why. Normalizes to NOTHING at runtime: it is a declaration
- *   requirement only, byte-identical to omitting it, exactly as the
- *   `recompute: { kind: "full", reason }` arm is. `reason` must be a real
- *   sentence about THIS resource (a composite pk the change feed cannot emit ids
- *   for; params that key a foreign column; a param-less single tuple) — a wrong
- *   reason is worse than none, because the next reader will believe it.
+ *   incrementally (`KeyedMembership`).
+ * - `scopedMembership` — the unbounded-window alias of `membership`, its
+ *   `orderSignatureOf` required: a compiler always knows its ORDER BY.
  *
- * `fanOut` is deliberately a SIBLING of `membership`, never a `kind` inside
- * `KeyedMembership`: a membership record is truthy at `drainEntry`'s membership
- * branch and at `applyDbChange`'s INSERT/DELETE scoping decision, so a
- * `kind: "fan-out"` member would reroute the drain — the exact behaviour change
- * this arm exists to avoid. See
- * research/2026-08-25-global-own-row-resource-scoping.md §3.
- *
- * A compiler that emits a `RoutePlan` declares `routes` INSTEAD of
- * `identityTable`, on a membership arm only: the identity table is derived from
- * the routes (so the two cannot disagree), and `fanOut` / `recompute` have no
- * routed spelling — a scoped refill never deletes, so routing a change into a
- * non-membership drain could not express an exit. A routed arm takes no
- * `dependsOn` either: it routes the tables it reads itself, and a cascade would
- * serve it a second time. See
- * research/2026-09-29-global-scoped-change-routing.md.
- *
- * `tsc` enforces this at every hand-written call site. The compilers in
- * `@plugins/infra/plugins/query-resource/server` merge their opts behind an
- * `as … & ScopePolicy` cast that `tsc` cannot see through, so each states its
- * policy as an annotated `const scopePolicy: ScopePolicy<P>` FIRST — that
- * annotation is the enforcement there. The `keyed-resource-scope` check is the
- * text-level backstop for whatever still gets past both.
+ * A keyed entry is therefore always a routed membership entry: a scoped refill
+ * never deletes, so only a membership drain turns a routed change into an exit.
+ * A routed arm takes no `dependsOn` either: it routes the tables it reads
+ * itself, and a cascade would serve it a second time. There is no
+ * `identityTable` / `fanOut` / `recompute` spelling: a cast that smuggles one
+ * through throws where the definition enters the runtime
+ * (`refuseLegacyScopeKeys`, D37).
  */
 export type ScopePolicy<P extends ResourceParams = ResourceParams> =
-  | {
-      identityTable: string;
-      membership: KeyedMembership<P>;
-      scopedMembership?: never;
-      fanOut?: never;
-      recompute?: never;
-      routes?: never;
-      recomputeOn?: never;
-    }
-  | {
-      identityTable: string;
-      scopedMembership: AliasMembership<P>;
-      membership?: never;
-      fanOut?: never;
-      recompute?: never;
-      routes?: never;
-      recomputeOn?: never;
-    }
   | {
       routes: RoutePlan<P>;
       membership: KeyedMembership<P>;
       recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
-      identityTable?: never;
       scopedMembership?: never;
-      fanOut?: never;
-      recompute?: never;
       dependsOn?: never;
     }
   | {
@@ -571,29 +458,8 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
         orderSignatureOf: (row: unknown, params: P) => string;
       };
       recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
-      identityTable?: never;
       membership?: never;
-      fanOut?: never;
-      recompute?: never;
       dependsOn?: never;
-    }
-  | {
-      identityTable: string;
-      fanOut: { reason: string };
-      membership?: never;
-      scopedMembership?: never;
-      recompute?: never;
-      routes?: never;
-      recomputeOn?: never;
-    }
-  | {
-      recompute: { kind: "full"; reason: string };
-      identityTable?: never;
-      membership?: never;
-      scopedMembership?: never;
-      fanOut?: never;
-      routes?: never;
-      recomputeOn?: never;
     };
 
 /**
@@ -604,11 +470,7 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
  * derives it from the shared client `KeyedResourceContract` descriptor — so the
  * client always carries the matching `keyOf`. This structurally removes the
  * "server says keyed, client forgot its keyOf → browser crash" class. `mode` is
- * required: the runtime has no default delivery. `push`/`invalidate` resources
- * may still optionally set `identityTable` (e.g. a push aggregate that
- * propagates scoped ids downstream). `defineExternalResource` is
- * deliberately NOT constrained — keyed external resources have no DB feed to scope
- * against. See
+ * required: the runtime has no default delivery. See
  * research/2026-06-20-global-enforce-keyed-resource-scope-coverage.md.
  */
 export type DefineResourceInput<
@@ -618,8 +480,6 @@ export type DefineResourceInput<
   ResourceDefinition<T, P>,
   | "mode"
   | "keyOf"
-  | "identityTable"
-  | "recompute"
   | "scopedMembership"
   | "membership"
   | "routes"
@@ -628,7 +488,25 @@ export type DefineResourceInput<
   | "optionalParams"
 > & {
   mode: "push" | "invalidate";
-  identityTable?: string;
+};
+
+/**
+ * The flat `defineExternalResource` input: the loose `ResourceDefinition`,
+ * push / invalidate only (D31 — a keyed entry is a routed membership entry,
+ * and nothing routes into an external one), with nothing that routes.
+ */
+type ExternalDefinition<T, P extends ResourceParams> = ResourceDefinition<
+  T,
+  P
+> & {
+  mode: "push" | "invalidate";
+  keyOf?: never;
+  membership?: never;
+  scopedMembership?: never;
+  optionalParams?: never;
+  routes?: never;
+  reach?: never;
+  recomputeOn?: never;
 };
 
 /**
@@ -679,8 +557,9 @@ export interface ResourceContract<
 }
 
 /**
- * A keyed contract — the client descriptor carries a `keyOf` (produced by
- * `keyedResourceDescriptor`, whose return type makes `keyed` REQUIRED). The
+ * A keyed contract — the client descriptor carries a `keyOf` (a
+ * `liveCollection`'s window / `:rows` descriptor, whose type makes `keyed`
+ * REQUIRED). The
  * server's two-arg `defineResource` matches this overload and pairs it with a
  * mandatory `ScopePolicy`. It is the only keyed `defineResource` form (the flat
  * `DefineResourceInput` is push/invalidate-only), so no keyed resource escapes
@@ -725,32 +604,26 @@ interface ServerResourceOptionsBase<
  * Server-only half of a NON-keyed resource declaration, paired with a
  * `ResourceContract` that has no `keyed` in the two-arg `defineResource` /
  * `defineExternalResource` form. `mode` is required — `push` or `invalidate`,
- * stated where the resource is declared; the runtime has no default. It may set
- * `identityTable` (e.g. a push aggregate that propagates scoped ids
- * downstream), but never a membership: that is keyed-only. A compiler may
- * instead declare `reach` (`ReachPlan`), which routes the entry by the tables
- * each tuple reads — exclusive with `identityTable`, which names the one
- * identity a routed entry derives from its routes.
+ * stated where the resource is declared; the runtime has no default. Never a
+ * membership: that is keyed-only. A compiler may declare `reach` (`ReachPlan`),
+ * which routes the entry by the tables each tuple reads — exclusive with
+ * `dependsOn`, since a routed entry takes no cascade.
  */
 export type ServerResourceOptions<
   T,
   P extends ResourceParams = ResourceParams,
 > = ServerResourceOptionsBase<T, P> & {
   mode: "push" | "invalidate";
-} & (
-    | { identityTable?: string; reach?: never }
-    | { reach: ReachPlan<P>; identityTable?: never; dependsOn?: never }
-  );
+} & ({ reach?: never } | { reach: ReachPlan<P>; dependsOn?: never });
 
 /**
  * Server-only half of a KEYED resource declaration, paired with a
  * `KeyedResourceContract`. There is no `mode`: keyed-ness comes solely from the
  * contract's `keyOf`, so the server cannot state a delivery the client does not
  * share. `defineResource`'s keyed overload intersects `ScopePolicy`, which makes
- * `identityTable` (or the explicit `recompute:` FULL opt-out) mandatory — and,
- * under `identityTable`, one of `membership` / `scopedMembership` /
- * `fanOut: { reason }`, so which subscribed tuple owns a changed row is answered
- * too rather than defaulting to waking all of them.
+ * `routes` mandatory and one of `membership` / `scopedMembership`, so which
+ * subscribed tuple owns a changed row is answered too rather than defaulting to
+ * waking all of them.
  */
 export interface KeyedServerResourceOptions<
   T,
@@ -759,18 +632,32 @@ export interface KeyedServerResourceOptions<
   mode?: never;
 }
 
+// The legacy scope-policy keys (D37). The types do not spell them, so only a cast can carry one in — and it would silently do
+// nothing, since no router reads it. Refused by name instead, wherever a
+// definition enters the runtime (`contractToDefinition`, `buildEntry`).
+const LEGACY_SCOPE_KEYS = ["identityTable", "recompute", "fanOut"] as const;
+
+function refuseLegacyScopeKeys(where: string, key: string, obj: object): void {
+  const found = LEGACY_SCOPE_KEYS.filter((k) => k in obj);
+  if (found.length > 0) {
+    throw new Error(
+      `${where}: "${found.join('", "')}" on key "${key}" — the legacy scope policy is gone: a keyed entry routes through a compiler-minted "routes" plan and a membership, and a non-keyed one is reached through its read-set (or "reach")`,
+    );
+  }
+}
+
 // Fold a (contract, server-opts) pair into the flat `ResourceDefinition` the
 // runtime registers. Pure — keyed-ness comes solely from the contract, so the
 // server cannot disagree with the client about it. The scope policy (the keyed
-// overload's `ScopePolicy`: `identityTable`, `recompute`, a membership) is
-// threaded through. `opts` is the union the overloads narrow; an untyped caller
-// that breaks the pairing throws here rather than registering a guessed mode.
+// overload's `ScopePolicy`: `routes` and a membership) is threaded through.
+// `opts` is the union the overloads narrow; an untyped caller that breaks the
+// pairing — or casts a legacy scope key through — throws here rather than
+// registering a guessed mode or a dead option.
 function contractToDefinition<T, P extends ResourceParams>(
+  form: "defineResource" | "defineExternalResource",
   contract: ResourceContract<T, P>,
   opts: ServerResourceOptionsBase<T, P> & {
     mode?: "push" | "invalidate";
-    identityTable?: string;
-    recompute?: { kind: "full"; reason: string };
     scopedMembership?: ResourceDefinition<T, P>["scopedMembership"];
     membership?: ResourceDefinition<T, P>["membership"];
     routes?: ResourceDefinition<T, P>["routes"];
@@ -778,6 +665,7 @@ function contractToDefinition<T, P extends ResourceParams>(
     recomputeOn?: ResourceDefinition<T, P>["recomputeOn"];
   },
 ): ResourceDefinition<T, P> {
+  refuseLegacyScopeKeys(form, contract.key, opts);
   let mode: ResourceMode;
   if (contract.keyed) {
     if (opts.mode !== undefined) {
@@ -805,8 +693,6 @@ function contractToDefinition<T, P extends ResourceParams>(
       : {}),
     loader: opts.loader,
     dependsOn: opts.dependsOn,
-    identityTable: opts.identityTable,
-    recompute: opts.recompute,
     scopedMembership: opts.scopedMembership,
     membership: opts.membership,
     routes: opts.routes,
@@ -850,14 +736,11 @@ export interface ExternalResource<
   P extends ResourceParams = ResourceParams,
 > extends Resource<T, P> {
   /**
-   * Signal that state has changed. No-arg = parameterless resource.
-   * `opts.affectedIds` (Layer 2) scopes the recompute to those row ids — the
-   * loader receives them via `ctx.affectedIds` and may return only the changed
-   * rows. Omit it for full-recompute semantics (the correct default for any
-   * membership change: create/delete/reorder). Sticky FULL: any id-less
-   * contributor to the same flush degrades the whole pk back to FULL.
+   * Signal that state has changed: a FULL recompute of the tuple. No-arg =
+   * parameterless resource. (An external resource is never keyed, so there are
+   * no row ids to scope a recompute to.)
    */
-  notify(params?: P, opts?: { affectedIds?: string[] }): void;
+  notify(params?: P): void;
 }
 
 interface DownstreamEdge {
@@ -874,28 +757,12 @@ interface DownstreamEdge {
    * memoized read-sets first — its compiled vocabulary moved.
    */
   routedRecompute?: { upstreamPk: string };
-  affectedMap?: (
-    upstreamAffected: ReadonlySet<string>,
-    upstreamParams: ResourceParams,
-  ) => Promise<string[]> | string[];
-  /** Relevance gate (see DependsOnEntry.signature). Undefined = cascade every id. */
-  signature?: (
-    upstreamAffected: ReadonlySet<string>,
-    upstreamParams: ResourceParams,
-  ) => Promise<Map<string, string>> | Map<string, string>;
-  /**
-   * Per-upstream-id memory of the last signature forwarded through this edge,
-   * owned by the runtime. Compared against `signature()` to drop scoped cascades
-   * whose downstream-relevant projection is unchanged. Cleared on a FULL cascade
-   * (the new values weren't observed, so a stale entry could wrongly skip the
-   * next scoped change back to a pre-FULL signature).
-   */
-  lastSignatures: Map<string, string>;
 }
 
 // A coalesced pending notify for one params-tuple. `affected === null` means
 // FULL recompute (sticky/absorbing): once a flush has any id-less contributor
-// the pk stays FULL. A non-null Set scopes the recompute to those row ids.
+// the pk stays FULL. A non-null Set scopes the recompute to those row ids —
+// a routed membership entry's only (A25: every other entry recomputes FULL).
 interface PendingNotify {
   params: ResourceParams;
   affected: Set<string> | null;
@@ -904,8 +771,8 @@ interface PendingNotify {
    * entry's DELETE — `affected` then carries no id for them (a deleted row cannot
    * be refilled), so `deleted` is the separate channel that drives the membership
    * diff's exit path. Absorbed/dropped by a FULL contributor exactly like
-   * `affected` (see `mergePending`). Undefined for every non-membership pending, so
-   * the legacy scoped/FULL paths are byte-identical.
+   * `affected` (see `mergePending`). Undefined for every non-membership pending
+   * (the legacy drain is FULL-only).
    */
   deleted?: Set<string>;
   /**
@@ -1081,29 +948,13 @@ interface RegistryEntry {
   /** Row identity for keyed mode. Undefined for push/invalidate entries. */
   keyOf?: (row: unknown) => string;
   /**
-   * The base table whose PK == this resource's keyOf id (declared via
-   * `identityTable`). Drives scoped-vs-FULL routing in `applyDbChange`: a change
-   * whose `origin` equals this is delivered scoped via the identity view; covered
-   * origins from `affectedMap` edges are routed through those edges instead.
-   * Undefined → the resource stays on FULL recompute (safe default).
-   */
-  identityTable?: string;
-  /**
-   * Explicit FULL opt-out (declared via `recompute`). Declaration-only today —
-   * the runtime still treats "no `identityTable`" as FULL behaviourally — but
-   * surfaced here so the read-set debug pane and the future work-admission
-   * scheduler can read whether a keyed resource's FULL recompute is a deliberate,
-   * documented choice rather than a silent default.
-   */
-  recompute?: { kind: "full"; reason: string };
-  /**
    * Normalized membership record (see `MembershipRecord`): the public
-   * `membership` selector or the legacy `scopedMembership` alias (an unbounded
-   * window, `bounded: false`). Present ⇒ `applyDbChange` scopes INSERT/DELETE
-   * (not just UPDATE) to this resource's own keys and `drainEntry` runs the
+   * `membership` selector or the `scopedMembership` alias (an unbounded
+   * window, `bounded: false`). Present ⇒ `drainEntry` runs the
    * incremental membership path (`diffKeyedScopedMembership`) instead of a FULL
-   * recompute. Undefined ⇒ the pre-M5 FULL-on-membership-change behavior
-   * (byte-identical). See research/2026-07-03-global-scoped-membership-m5.md
+   * recompute. Present exactly on keyed entries (keyed ⇒ membership ⇒ routed);
+   * undefined ⇒ a non-keyed entry, which always recomputes FULL. See
+   * research/2026-07-03-global-scoped-membership-m5.md
    * and research/2026-07-18-global-bounded-working-set-resource-contract.md.
    */
   membership?: MembershipRecord;
@@ -1342,8 +1193,9 @@ export interface ResourceRuntimeOptions {
   ) => Promise<string[]>;
   /**
    * Wrap an origin-triggered load so child loader spans (and the gate waits they
-   * charge) attribute to the originating request class — `sub` (a tab subscribed)
-   * or `push` (a notify cascade). Without it the loader runs with no entry
+   * charge) attribute to the originating request class — `sub` (a tab subscribed),
+   * `push` (a drain's load) or `cascade` (a routed entry's reverse-route resolve,
+   * `resolveReverseRoutes`). Without it the loader runs with no entry
    * context and gets `parent: null`. server: recordEntrySpan(kind, key, fn);
    * central: omit (identity). See
    * research/2026-06-19-global-wait-attribution-instrumentation.md.
@@ -1443,9 +1295,9 @@ export interface ResourceRuntimeOptions {
   /**
    * Per-key automatic table read-set: the tables this resource's loader actually
    * read (captured at the DB pool chokepoint), unioned over every run. It is the
-   * legacy router's table → resource inversion (`applyDbChange`, for every entry
-   * that declares no `routes`), and the `_debug` endpoint shows it so gaps and
-   * over-broad edges versus the hand-drawn `dependsOn` graph become visible.
+   * legacy router's table → resource inversion (`applyLegacyFullChange`, for every entry
+   * that declares no `routes`), and the `_debug` endpoint shows it with its
+   * relation bases — the read-set ceiling of every `legacy-full` entry.
    * server: server-core's runtime-owned read-set sink (captured whatever the
    * profiler's kill-switch says); central: omit (field absent, nothing routes).
    */
@@ -1470,7 +1322,7 @@ export interface ResourceRuntimeOptions {
    * conditional queries among persisted resources — the safety basis; see
    * research/2026-07-07-global-read-set-self-heal-on-full-recompute.md).
    *
-   * Deliberately does NOT feed `applyDbChange`'s live routing — that keeps using
+   * Deliberately does NOT feed `applyLegacyFullChange`'s live routing — that keeps using
    * the union `readSet`, an over-approximation, so a stale extra edge only causes a
    * wasteful recompute, never a missed live delivery. server: the read-set sink's
    * per-run capture;
@@ -1485,26 +1337,16 @@ export interface ResourceRuntimeOptions {
    */
   strictRoutes?: boolean;
   /**
-   * Map a captured read-set relation to its identity base table, so the debug
-   * ceiling compares like-for-like with `coveredOrigins` (stated in base-table
-   * space): a view-backed loader records the VIEW (`conversations_v`), but
-   * coveredOrigins names the base (`conversations`). server: relationIdentityBase
-   * (resolves declared identity views, else identity); central: omitted (identity).
+   * The base tables a read of `relation` depends on (C30): a base table is its
+   * own base, a view expands to the tables it reads (transitively), and a
+   * trigger-maintained rollup to its sources. The legacy router indexes each
+   * read-set relation under its bases (`applyLegacyFullChange`), so a reader of
+   * a view is reached by a write to any table feeding it; `_debug` shows the
+   * expansion as `readSetBases`. server: injected at boot by change-feed (the
+   * server-core holder throws if read before); central / DB-free harness:
+   * omitted (identity).
    */
-  resolveRelation?: (relation: string) => string;
-  /**
-   * Feed-exempt base tables: trigger-maintained materialized rollups
-   * (derived-tables) that a loader reads but the change-feed deliberately does
-   * NOT install NOTIFY triggers on (a rollup is a pure read-cache fed by its
-   * source's change). The `_debug` builder subtracts these from the emitted
-   * read-set so a rollup never shows as a false "silent FULL recompute" (a
-   * read-set base outside `coveredOrigins`) in the Debug → Read-set pane — the
-   * source-driven scoped path already covers the change. server: injected at
-   * boot by change-feed (reads the current holder at call time); central /
-   * before-injection: omitted (empty set, no filtering). See
-   * research/2026-06-23-global-agent-launches-incremental-materialization.md §8.
-   */
-  feedExemptTables?: () => Set<string>;
+  relationBases?: (relation: string) => readonly string[];
   /**
    * L2 persisted materialization — true when this resource key should be
    * persisted to `live_state_snapshot` for instant cold boot. Backed by
@@ -1593,12 +1435,12 @@ export interface PersistMeta {
   guardTables: readonly string[];
 }
 
-/** One table a resource's scoped delivery depends on (see `scopedResourceTables`). */
+/** One table a routed resource's delivery depends on (see `scopedResourceTables`). */
 export interface ScopedResourceTable {
   key: string;
   table: string;
-  /** What names it: `identityTable`, or `route "<id>"` for a routed entry. */
-  via: string;
+  /** The route that names it: `route "<id>"`. */
+  via: `route "${string}"`;
 }
 
 /**
@@ -1611,6 +1453,13 @@ export interface NotifyCounts {
   feed: number;
   producer: number;
 }
+
+/**
+ * How a change reaches one entry (the `_debug` payload's `policy`; A7, D40) —
+ * a closed set: a deferred placeholder not bound yet, truth outside Postgres,
+ * compiler-emitted routes, or the legacy router's FULL recompute.
+ */
+type DebugPolicy = "unbound" | "external" | "routed" | "legacy-full";
 
 export interface ResourceRuntime {
   /**
@@ -1675,29 +1524,22 @@ export interface ResourceRuntime {
    *
    * Two shapes, mirroring `defineResource`:
    *
-   * - Flat `(def)` — the loose `ResourceDefinition` (external resources are not
-   *   held to the `ScopePolicy` invariant — they have no DB feed to scope against).
-   * - Two-arg `(contract, serverOpts)` — derives `key`/`schema`/keyed-ness AND
-   *   `preload` from the shared client descriptor so server and client can't
-   *   drift, exactly like `defineResource`'s two-arg form (a keyed contract
-   *   takes `KeyedServerResourceOptions`, any other `ServerResourceOptions`).
+   * - Flat `(def)` — the loose `ResourceDefinition`, push / invalidate only.
+   * - Two-arg `(contract, serverOpts)` — derives `key`/`schema` AND `preload`
+   *   from the shared client descriptor so server and client can't drift,
+   *   exactly like `defineResource`'s non-keyed two-arg form.
+   *
+   * Never keyed (D31): a keyed entry is a routed membership entry, and an
+   * external resource's truth is outside Postgres, so nothing could route it.
    */
   defineExternalResource: {
     // No `optionalParams` on the flat form: the spelling rule must come from the
     // shared client descriptor (the two-arg form), or the client would key
-    // tuples the server's echoes never match. No `routes` / `reach` either: an
-    // external resource's truth is outside Postgres, so no table change may
-    // route into it.
+    // tuples the server's echoes never match. No `routes` / `reach` / membership
+    // either: an external resource's truth is outside Postgres, so no table
+    // change may route into it.
     <T, P extends ResourceParams = ResourceParams>(
-      def: ResourceDefinition<T, P> & {
-        optionalParams?: never;
-        routes?: never;
-        reach?: never;
-      },
-    ): ExternalResource<T, P>;
-    <T, P extends ResourceParams = ResourceParams>(
-      contract: KeyedResourceContract<T, P>,
-      opts: KeyedServerResourceOptions<T, P>,
+      def: ExternalDefinition<T, P>,
     ): ExternalResource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
       contract: ResourceContract<T, P> & { keyed?: never },
@@ -1746,25 +1588,19 @@ export interface ResourceRuntime {
    */
   triggerResourcePush: (key: string, params?: ResourceParams) => number;
   /**
-   * Route one DB change (from the L4 change-feed) into the recompute cascade.
-   * Inverts the L3 read-set (`table → resourceKey[]`), decides each resource's
-   * scope from `origin` (the base table that changed) and `identityBase` (the
-   * identity of the matched relation) against the resource's `identityTable` +
-   * `affectedMap` coverage, fans out to every currently-subscribed params tuple
-   * (param-less → `{}`), and routes through `scheduleNotify` tagged with the
-   * change's `source`. DB-agnostic and defensive: an unknown table is a no-op,
-   * and it never throws. See
-   * research/2026-06-19-global-live-state-l4-db-change-feed.md §6 and
-   * research/2026-06-20-global-scoped-recompute-default.md.
+   * Route one DB change (from the L4 change-feed) to every LEGACY (non-routed)
+   * entry whose read-set reaches `table` through its relation bases: a FULL
+   * recompute of each of its tracked tuples (param-less → `{}`), through
+   * `scheduleNotify` tagged with the change's `source`. It carries no ids, op or
+   * origin: a legacy entry has no scope to apply them to. DB-agnostic and
+   * defensive: an unread table is a no-op, and it never throws. See
+   * research/2026-10-08-global-scoped-change-routing-p8-steps-23-24.md (D36).
    */
-  applyDbChange: (change: {
+  applyLegacyFullChange: (change: {
+    /** The base table that changed. */
+    table: string;
     /** Which producer made the change (see `TableChange.source`). */
     source: ChangeSource;
-    table: string;
-    op: "I" | "U" | "D";
-    ids: readonly string[] | null;
-    origin: string;
-    identityBase: string;
     /** Source transaction id (xid8 text) — mutation-ack attribution (`ackTx`). */
     xid?: string;
     /** Wall-clock epoch ms of the change (live NOTIFY only; see `PendingNotify.changedAt`). */
@@ -1778,7 +1614,7 @@ export interface ResourceRuntime {
    * reads that table. A tuple the change skips owes at most an ack. Synchronous,
    * SQL-free and producer-agnostic (every producer calls it; reverse routes
    * resolve later, in the drain). Never throws. Entries without routes are served
-   * by `applyDbChange` instead — each entry is reached by exactly one of the two.
+   * by `applyLegacyFullChange` instead — each entry is reached by exactly one of the two.
    * See research/2026-09-29-global-scoped-change-routing.md.
    */
   routeTableChange: (change: TableChange) => void;
@@ -1806,11 +1642,10 @@ export interface ResourceRuntime {
    */
   readGateStats: () => { active: number; queued: number; max: number };
   /**
-   * Every table a registered resource's scoped delivery depends on: one row per
+   * Every table a registered resource's routed delivery depends on: one row per
    * route of a ROUTED entry (`routes` / `reach` — every table it may read, since
-   * only a change to one of them can reach it), and one per legacy scoped
-   * `identityTable` (entries on `recompute:{full}` or with no scope policy are
-   * omitted). The change-feed cross-checks these against the tables it installed
+   * only a change to one of them can reach it); a legacy entry, reached through
+   * its read-set, has none. The change-feed cross-checks these against the tables it installed
    * triggers on at boot (A1): a table with no trigger can NEVER produce the
    * change the resource waits for, so the declaration is dead config that
    * silently degrades the resource to hydrate-on-mount with zero signal. The
@@ -1971,11 +1806,6 @@ function normalizeEtag(raw: string): string {
   return createHash("sha1").update(raw).digest("hex");
 }
 
-// Sentinel returned by a cascade edge's ids-translation closure to signal "this
-// edge is irrelevant this flush, skip it" — the closure can't `continue` the
-// caller's loop across the wrapOrigin boundary, so it returns this instead.
-const SKIP_EDGE = Symbol("skip-edge");
-
 // The most host ids one reverse route may resolve to in one flush before its
 // reading tuples recompute FULL instead (a bounded window load, for a window).
 // Handed to the route's own `resolve`, which answers "over-cap" past it.
@@ -2118,8 +1948,35 @@ export function createResourceRuntime(
   // inversion, and a hit costs nothing per change. With no counter injected the
   // inversion is rebuilt on every change. ROUTED entries are skipped: they are
   // served by `routeTableChange`, so each change reaches each entry exactly once.
+  //
+  // The inversion is in BASE-table space: each read-set relation is indexed
+  // under its relation bases (`opts.relationBases`, identity when absent), and
+  // installing those bases moves the read-set version too (server-core's
+  // `setRelationBases`), so the memo can never serve an inversion built
+  // through older bases.
+  const relationBasesOf =
+    opts.relationBases ?? ((relation: string): readonly string[] => [relation]);
   let tableToResourcesCache: Map<string, string[]> | null = null;
   let tableToResourcesSig: string | null = null;
+  // The relation bases of `key`'s captured read-set, sorted and distinct: each
+  // relation the loader read expanded to its bases (a view or rollup to the
+  // tables that feed it). Identity on central and in the DB-free harness.
+  function readSetBasesOf(key: string): string[] {
+    const bases = new Set<string>();
+    for (const relation of opts.readSet?.(key) ?? []) {
+      for (const base of relationBasesOf(relation)) bases.add(base);
+    }
+    return [...bases].sort();
+  }
+  // Does the legacy router (`applyLegacyFullChange`) index this entry under its
+  // read-set bases? Every entry that is not routed — external entries and
+  // unbound deferred placeholders included: a routed entry is reached only
+  // through `routeTableChange`. The ONE predicate `tableToResources` and
+  // `_debug`'s `legacyReach` both read, so the pane cannot disagree with the
+  // router about who a base write reaches.
+  function legacyRouted(entry: RegistryEntry): boolean {
+    return !entry.routing;
+  }
   function tableToResources(): Map<string, string[]> {
     const version = opts.readSetVersion?.();
     const sig =
@@ -2129,11 +1986,13 @@ export function createResourceRuntime(
     }
     const inverse = new Map<string, string[]>();
     for (const entry of registry.values()) {
-      if (entry.routing) continue;
-      for (const table of opts.readSet?.(entry.key) ?? []) {
-        const list = inverse.get(table);
+      if (!legacyRouted(entry)) continue;
+      // Two relations sharing a base list the entry under it once, so one
+      // change is one notify per tuple.
+      for (const base of readSetBasesOf(entry.key)) {
+        const list = inverse.get(base);
         if (list) list.push(entry.key);
-        else inverse.set(table, [entry.key]);
+        else inverse.set(base, [entry.key]);
       }
     }
     tableToResourcesCache = inverse;
@@ -2144,44 +2003,6 @@ export function createResourceRuntime(
   // The routed entries reading each table — the router's static index, filled at
   // `createResource` (routes are fixed at registration, so it never needs a memo).
   const routedByTable = new Map<string, RegistryEntry[]>();
-
-  // The set of base tables whose change a resource can absorb through a SINGLE
-  // authoritative scoped path — its own `identityTable` plus, transitively, the
-  // identityTables reachable through its `affectedMap`/`dependsOn` edges. Used by
-  // `applyDbChange`: a feed change whose `origin` is in this set is delivered via
-  // exactly one path (the identity view, or the edge that translates it), so a
-  // secondary view-fanout FULL can never absorb the scoped delivery. Memoized on
-  // registry size — identity/edges are fixed at registration, so the closure only
-  // changes when an entry is added.
-  let coveredOriginsCache: Map<string, Set<string>> | null = null;
-  let coveredOriginsSig = -1;
-  function coveredOriginsFor(key: string): Set<string> {
-    if (!coveredOriginsCache || coveredOriginsSig !== registry.size) {
-      const cache = new Map<string, Set<string>>();
-      const visiting = new Set<string>();
-      const compute = (k: string): Set<string> => {
-        const memo = cache.get(k);
-        if (memo) return memo;
-        if (visiting.has(k)) return new Set(); // cycle guard (bug — warned in rebuildDag)
-        visiting.add(k);
-        const entry = registry.get(k);
-        const out = new Set<string>();
-        if (entry) {
-          if (entry.identityTable) out.add(entry.identityTable);
-          for (const up of entry.upstreamKeys) {
-            for (const o of compute(up)) out.add(o);
-          }
-        }
-        visiting.delete(k);
-        cache.set(k, out);
-        return out;
-      };
-      for (const k of registry.keys()) compute(k);
-      coveredOriginsCache = cache;
-      coveredOriginsSig = registry.size;
-    }
-    return coveredOriginsCache.get(key) ?? new Set();
-  }
 
   // console.error ALWAYS fires here; the report hook is additive.
   function reportLoaderError(context: string, err: unknown): void {
@@ -2355,7 +2176,7 @@ export function createResourceRuntime(
   // persist SQL sets `tables_read = EXCLUDED`, so feeding it the per-run set here is
   // what makes the durable seed converge. The in-memory union (`opts.readSet`) is
   // deliberately left untouched — it stays an over-approximation so live
-  // `applyDbChange` routing never under-delivers. Must be read SYNCHRONOUSLY right
+  // `applyLegacyFullChange` routing never under-delivers. Must be read SYNCHRONOUSLY right
   // after awaiting the loader; every persisted resource is param-less (single pk),
   // so no concurrent same-key run can clobber the per-run capture in between.
   function persistReadSet(key: string): string[] {
@@ -2927,14 +2748,14 @@ export function createResourceRuntime(
   // Validate and index a routed entry's plan (see `ResourceDefinition.routes` /
   // `.reach`). The types already refuse routes on an external resource, off a
   // membership arm, a reach on a keyed entry, a non-`full` reach route, either
-  // beside an `identityTable` or a `dependsOn`, and an unminted plan; these
+  // beside a `dependsOn`, and an unminted plan; these
   // throws hold the same line for an untyped caller or an `as` cast.
   // A9: route ids must be unique within the resource — `usesOf` names routes by
   // id, so a duplicate would make a tuple's read-set ambiguous.
   function routingRecordFor(
     def: Pick<
       ResourceDefinition<unknown, ResourceParams>,
-      "key" | "mode" | "identityTable" | "routes" | "reach" | "dependsOn"
+      "key" | "mode" | "routes" | "reach" | "dependsOn"
     >,
     membershipField: "membership" | "scopedMembership" | null,
     externalSource: boolean,
@@ -2950,11 +2771,6 @@ export function createResourceRuntime(
     if (externalSource) {
       throw new Error(
         `defineExternalResource: "${field}" on key "${key}" — an external resource's truth lives outside Postgres, so no table change may route into it`,
-      );
-    }
-    if (def.identityTable !== undefined) {
-      throw new Error(
-        `defineResource: "${field}" and "identityTable" are exclusive for key "${key}" — a routed entry's identity table is derived from its identity route`,
       );
     }
     // A routed entry takes no cascade: it is reached only through the tables
@@ -3019,18 +2835,6 @@ export function createResourceRuntime(
     };
   }
 
-  // A routed entry's identity table: the table of its unencoded identity route
-  // (its rows ARE the host rows, keyed as the host keys them). A union has none —
-  // its arms encode — and stays undefined.
-  function derivedIdentityTable(routing: RoutingRecord): string | undefined {
-    for (const route of routing.plan.routes) {
-      if (route.map.kind === "identity" && route.map.encode === undefined) {
-        return route.table;
-      }
-    }
-    return undefined;
-  }
-
   // Single internal builder. Produces the full runtime object (with a working
   // `notify` either way) and registers the entry. `defineResource` returns it
   // typed as `Resource` (notify present at runtime but hidden by the type, so a
@@ -3093,21 +2897,31 @@ export function createResourceRuntime(
           await entry.loader(canonicalTuple(entry, params)),
         );
       },
-      notify(params?: P, opts?: { affectedIds?: string[] }): void {
-        const affected = opts?.affectedIds ? new Set(opts.affectedIds) : null;
-        scheduleNotify(entry, (params ?? {}) as ResourceParams, affected);
+      notify(params?: P): void {
+        scheduleNotify(entry, (params ?? {}) as ResourceParams, null);
       },
     };
+  }
+
+  /** T15's refusal: `downstream` cascades from `upstream`, which is DB-backed. */
+  function dbBackedUpstreamMessage(
+    downstream: string,
+    upstream: string,
+  ): string {
+    return `defineResource: "${downstream}" dependsOn "${upstream}", which is DB-backed — its writes reach "${downstream}" through the change feed already (its read-set), so a cascade would serve it twice; only an external upstream (truth outside Postgres) cascades`;
   }
 
   /**
    * Validate a definition and build its registry entry — every check and
    * normalization `createResource` applies, without registering anything, so a
-   * deferred entry binds through exactly the same path.
+   * deferred entry binds through exactly the same path. `placeholder` marks a
+   * deferred entry before its bind: the contract's identity only, so a keyed
+   * one has no membership yet (its bind supplies it, and is checked then).
    */
   function buildEntry<T, P extends ResourceParams>(
     def: ResourceDefinition<T, P>,
     externalSource: boolean,
+    placeholder = false,
   ): {
     entry: RegistryEntry;
     ownDownstreamEdges: Array<{ upstreamKey: string; edge: DownstreamEdge }>;
@@ -3130,13 +2944,17 @@ export function createResourceRuntime(
         `defineResource: mode "keyed" requires a keyOf for key "${def.key}"`,
       );
     }
+    // D37: a legacy scope key a cast smuggled through would do nothing at all.
+    refuseLegacyScopeKeys(
+      externalSource ? "defineExternalResource" : "defineResource",
+      def.key,
+      def,
+    );
     // Membership (bounded `membership` or the M5 `scopedMembership` alias) is
     // only sound on a keyed OWN-IDENTITY resource — the membership diff
-    // reconciles the loader's own row ids against the per-pk snapshot, and
-    // INSERT/DELETE scope through the identity view. Requiring `identityTable`
-    // also makes it incompatible with `recompute: { full }` (the ScopePolicy is
-    // identityTable XOR recompute), so a FULL opt-out can never also claim
-    // membership scoping. Fail loudly at registration.
+    // reconciles the loader's own row ids against the per-pk snapshot — and
+    // only a routed one: `routes` is what scopes a change to its rows. Fail
+    // loudly at registration.
     if (def.scopedMembership && def.membership) {
       throw new Error(
         `defineResource: "scopedMembership" and "membership" are mutually exclusive for key "${def.key}" — scopedMembership IS the unbounded-window membership alias`,
@@ -3153,17 +2971,27 @@ export function createResourceRuntime(
           `defineResource: ${membershipField} requires mode "keyed" for key "${def.key}"`,
         );
       }
-      if (!def.identityTable && !def.routes) {
+      if (!def.routes) {
         throw new Error(
-          `defineResource: ${membershipField} requires an identityTable (an own-identity scoped resource) for key "${def.key}"`,
+          `defineResource: ${membershipField} requires routes (a compiler-minted route plan) for key "${def.key}"`,
         );
       }
     }
+
     const routing = routingRecordFor(
       def as ResourceDefinition<unknown, ResourceParams>,
       membershipField,
       externalSource,
     );
+    // D31: keyed ⇒ membership ⇒ routed. The keyed drain is the membership
+    // drain; a keyed entry without one would have no path that reconciles its
+    // rows (the types allow no such declaration — this holds the line for an
+    // untyped caller or a cast).
+    if (mode === "keyed" && !membershipField && !placeholder) {
+      throw new Error(
+        `defineResource: a keyed entry is a routed membership entry — key "${def.key}" declares no membership (membership / scopedMembership) and routes`,
+      );
+    }
     // The routed alias's ORDER BY is the compiler's, so it always states the
     // signature of it (type: required on the routed `ScopePolicy` arm); an
     // untyped caller without one would leave an in-place reorder stale.
@@ -3237,10 +3065,20 @@ export function createResourceRuntime(
       // routed upstream only drains the tuples a change reaches — so a
       // subscriber-less upstream tuple would lose the update for good. The
       // downstream routes the upstream's tables itself instead.
-      if (registry.get(dep.resource.key)?.routing) {
+      const upstream = registry.get(dep.resource.key);
+      if (upstream?.routing) {
         throw new Error(
           `defineResource: "${def.key}" dependsOn the routed resource "${dep.resource.key}" — route the table, not the resource: a routed entry is never a cascade upstream`,
         );
+      }
+      // T15 — only an external upstream cascades (see `DependsOnEntry`). The
+      // type refuses a DB-backed handle; this holds the line for a cast. An
+      // upstream not registered yet is checked when it registers (below, the
+      // other order) and again at the DAG rebuild; a deferred placeholder
+      // reports `externalSource: false` before its bind, so it is left to A5 /
+      // the bind.
+      if (upstream && !upstream.externalSource && !deferred.has(upstream.key)) {
+        throw new Error(dbBackedUpstreamMessage(def.key, upstream.key));
       }
       upstreamKeys.push(dep.resource.key);
       ownDownstreamEdges.push({
@@ -3254,19 +3092,6 @@ export function createResourceRuntime(
                 upstreamValue: unknown,
               ) => ResourceParams[])
             | undefined,
-          affectedMap: dep.affectedMap as
-            | ((
-                upstreamAffected: ReadonlySet<string>,
-                upstreamParams: ResourceParams,
-              ) => Promise<string[]> | string[])
-            | undefined,
-          signature: dep.signature as
-            | ((
-                upstreamAffected: ReadonlySet<string>,
-                upstreamParams: ResourceParams,
-              ) => Promise<Map<string, string>> | Map<string, string>)
-            | undefined,
-          lastSignatures: new Map(),
         },
       });
     }
@@ -3299,19 +3124,20 @@ export function createResourceRuntime(
           routedRecompute: {
             upstreamPk: paramsKey(canonicalTuple(upstream, r.params)),
           },
-          lastSignatures: new Map(),
         },
       });
     }
-    // A5, the other registration order: a downstream registered first already
-    // names this routed entry as its upstream.
-    if (routing) {
+    // A5 and T15, the other registration order: a downstream registered first
+    // already names this entry as its upstream — refused when this entry is
+    // routed, or DB-backed (a deferred placeholder is checked at its bind).
+    if (routing || (!externalSource && !placeholder)) {
       for (const other of registry.values()) {
-        if (other.upstreamKeys.includes(def.key)) {
-          throw new Error(
-            `defineResource: "${other.key}" dependsOn the routed resource "${def.key}" — route the table, not the resource: a routed entry is never a cascade upstream`,
-          );
-        }
+        if (!other.upstreamKeys.includes(def.key)) continue;
+        throw new Error(
+          routing
+            ? `defineResource: "${other.key}" dependsOn the routed resource "${def.key}" — route the table, not the resource: a routed entry is never a cascade upstream`
+            : dbBackedUpstreamMessage(other.key, def.key),
+        );
       }
     }
     const entry: RegistryEntry = {
@@ -3327,10 +3153,6 @@ export function createResourceRuntime(
         ctx?: { affectedIds: readonly string[] },
       ) => Promise<unknown> | unknown,
       keyOf: def.keyOf as ((row: unknown) => string) | undefined,
-      identityTable: routing
-        ? derivedIdentityTable(routing)
-        : def.identityTable,
-      recompute: def.recompute,
       membership,
       preload: def.preload,
       snapshots: mode === "keyed" ? new Map() : undefined,
@@ -3416,12 +3238,14 @@ export function createResourceRuntime(
         loader: unbound,
       } as ResourceDefinition<unknown, ResourceParams>,
       false,
+      true,
     );
     registerEntry(entry, []);
     deferred.set(key, {
       entry,
       bind: () =>
         contractToDefinition(
+          "defineResource",
           contract,
           bind() as ServerResourceOptions<T, P>,
         ) as unknown as ResourceDefinition<unknown, ResourceParams>,
@@ -3449,8 +3273,6 @@ export function createResourceRuntime(
       const built = buildEntry(def, false);
       Object.assign(entry, {
         loader: built.entry.loader,
-        identityTable: built.entry.identityTable,
-        recompute: built.entry.recompute,
         membership: built.entry.membership,
         debounceMs: built.entry.debounceMs,
         routing: built.entry.routing,
@@ -3497,27 +3319,23 @@ export function createResourceRuntime(
       | (KeyedServerResourceOptions<T, P> & ScopePolicy<P>),
   ): Resource<T, P> {
     const def = opts
-      ? contractToDefinition(a as ResourceContract<T, P>, opts)
+      ? contractToDefinition(
+          "defineResource",
+          a as ResourceContract<T, P>,
+          opts,
+        )
       : (a as ResourceDefinition<T, P>);
     return createResource(def, false);
   }
 
   // Escape-hatch resource (truth outside Postgres): exposes a callable `notify`.
-  // Two shapes mirroring `defineResource`: the flat loose `ResourceDefinition`,
-  // and the `(contract, serverOpts)` form that reads key/schema/keyed-ness AND
-  // `preload` off a shared client descriptor. External resources are NOT
-  // held to the keyed `ScopePolicy` invariant (no DB feed to scope against), so
-  // a keyed contract takes plain `KeyedServerResourceOptions`.
+  // Two shapes mirroring `defineResource`'s non-keyed ones: the flat loose
+  // `ResourceDefinition` (push / invalidate), and the `(contract, serverOpts)`
+  // form that reads key/schema AND `preload` off a shared client descriptor.
+  // Never keyed (D31): a keyed entry is a routed membership entry, and nothing
+  // routes into an external one — `buildEntry` refuses one a cast let through.
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
-    def: ResourceDefinition<T, P> & {
-      optionalParams?: never;
-      routes?: never;
-      reach?: never;
-    },
-  ): ExternalResource<T, P>;
-  function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
-    contract: KeyedResourceContract<T, P>,
-    opts: KeyedServerResourceOptions<T, P>,
+    def: ExternalDefinition<T, P>,
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     contract: ResourceContract<T, P> & { keyed?: never },
@@ -3525,18 +3343,45 @@ export function createResourceRuntime(
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     a: ResourceDefinition<T, P> | ResourceContract<T, P>,
-    opts?: ServerResourceOptions<T, P> | KeyedServerResourceOptions<T, P>,
+    opts?: ServerResourceOptions<T, P>,
   ): ExternalResource<T, P> {
     const def = opts
-      ? contractToDefinition(a as ResourceContract<T, P>, opts)
+      ? contractToDefinition(
+          "defineExternalResource",
+          a as ResourceContract<T, P>,
+          opts,
+        )
       : (a as ResourceDefinition<T, P>);
     return createResource(def, true);
   }
 
   // Rebuild the topological order and warn on cycles or dangling upstream refs.
-  // Called lazily — amortised to flushNotifies and the debug endpoint.
+  // Called lazily — amortised to flushNotifies and the debug endpoint. Two
+  // invariants registration already holds are asserted here too, over the
+  // whole graph, so a regression of either check is loud (rung 4):
+  //  - D32: a membership entry has no downstream. Membership ⇒ routed, and A5
+  //    refuses a cascade out of a routed entry in both registration orders, so
+  //    the membership drains cascade nothing.
+  //  - T15: every upstream is external — a deferred placeholder excepted, which
+  //    reports `externalSource: false` until its bind (checked then).
   function rebuildDag(): void {
     if (!dagDirty) return;
+
+    // Asserted before the DAG counts as rebuilt, so a violation stays loud on
+    // every flush rather than once.
+    for (const entry of registry.values()) {
+      if (entry.membership && entry.downstream.length > 0) {
+        throw new Error(
+          `[resources] membership entry "${entry.key}" has downstream edges (${entry.downstream.map((d) => d.downstreamKey).join(", ")}) — A5 must refuse a cascade out of a routed entry`,
+        );
+      }
+      for (const upKey of entry.upstreamKeys) {
+        const up = registry.get(upKey);
+        if (up && !up.externalSource && !deferred.has(upKey)) {
+          throw new Error(dbBackedUpstreamMessage(entry.key, upKey));
+        }
+      }
+    }
     dagDirty = false;
 
     const order: RegistryEntry[] = [];
@@ -3705,6 +3550,14 @@ export function createResourceRuntime(
       unresolved?: readonly UnresolvedReverse[];
     },
   ): void {
+    // A25: a scoped recompute (row ids) exists only for a membership entry —
+    // the only drain that refills rows. Every other entry recomputes FULL; a
+    // non-null set reaching one would be a router bug, not a narrower load.
+    if (affected !== null && !entry.membership) {
+      throw new Error(
+        `[resources] scoped notify (${affected.size} id(s)) for "${entry.key}", which has no membership — only a routed membership entry recomputes by row id`,
+      );
+    }
     // The funnel for `notify`, the change feed, `triggerResourcePush` and the
     // L2 recompute: one canonical tuple, however the caller spelled it.
     const params = canonicalTuple(entry, rawParams);
@@ -4169,42 +4022,6 @@ export function createResourceRuntime(
     return diff;
   }
 
-  // Scoped diff (Layer 2): `scopedRows` is a PARTIAL array — only the recomputed
-  // affected rows. We MERGE them into the existing snapshot (never replace it):
-  // each changed row becomes an upsert and its hash is written back; rows not in
-  // `scopedRows` are left intact (no upsert). `deletes` is necessarily empty and
-  // `order` is unchanged — a scoped notify never asserts membership/order, so a
-  // concurrently-deleted row is corrected by the delete site's own FULL notify.
-  // Precondition: a snapshot for `pk` already exists (caller only enters the
-  // scoped path when `hadSnapshot`).
-  function diffKeyedScoped(
-    entry: RegistryEntry,
-    pk: string,
-    scopedRows: unknown[],
-  ): { upserts: [string, unknown][] } {
-    const keyOf = entry.keyOf;
-    if (!keyOf) {
-      throw new Error(
-        `[resources] keyed resource "${entry.key}" missing keyOf`,
-      );
-    }
-    const snapshots = (entry.snapshots ??= new Map());
-    const snap = snapshots.get(pk);
-    if (!snap) {
-      throw new Error(
-        `[resources] diffKeyedScoped called for "${entry.key}" pk "${pk}" with no snapshot`,
-      );
-    }
-    const { upserts, nextSnapshot } = diffKeyedScopedPure(
-      snap,
-      scopedRows,
-      keyOf,
-      snapEncoderFor(entry),
-    );
-    snapshots.set(pk, nextSnapshot);
-    return { upserts };
-  }
-
   async function flushNotifies(): Promise<void> {
     // Single-active-flush mutex: never overlap two flushes. A notify that lands
     // while a flush is mid-await sets `flushAgain`; the live flush re-drains so
@@ -4248,22 +4065,16 @@ export function createResourceRuntime(
     } while (flushAgain);
   }
 
-  // Cascade this entry's change into its downstream edges. Shared by the legacy
-  // per-pk path AND the M5 membership path (`drainMembershipScoped`) — both supply
-  // an EFFECTIVE affected set: `null` forces a FULL downstream cascade (and clears
-  // remembered edge signatures), a non-null Set flows through the per-edge
-  // relevance-signature gate + `affectedMap`. `value`/`valueComputed` feed a
-  // value-aware downstream `map`. Extracted verbatim from `drainEntry`'s original
-  // inline loop so both callers route through one implementation.
-  // `sourceTx` (the upstream pending's mutation-ack attribution, minus overflow)
-  // threads into every downstream `mergePending`, because a downstream recompute
-  // triggered by this cascade also reads post-commit — the ackTx claim holds
-  // transitively. A `SKIP_EDGE` relevance skip drops it (vacuously irrelevant
-  // downstream; a missing ack is safe).
+  // Cascade this entry's change into its downstream edges — always FULL: only
+  // a legacy (non-membership) entry has downstream (D32), and it recomputes
+  // FULL, so there are no row ids to translate. `value`/`valueComputed` feed a
+  // value-aware downstream `map`. `sourceTx` (the upstream pending's
+  // mutation-ack attribution, minus overflow) threads into every downstream
+  // `mergePending`, because a downstream recompute triggered by this cascade
+  // also reads post-commit — the ackTx claim holds transitively.
   async function cascadeDownstream(
     entry: RegistryEntry,
     params: ResourceParams,
-    affected: Set<string> | null,
     value: unknown,
     valueComputed: boolean,
     sourceTx?: ReadonlySet<string>,
@@ -4296,84 +4107,6 @@ export function createResourceRuntime(
       } else {
         derived = [params];
       }
-      // Compute the downstream affected set. Upstream FULL ⇒ FULL; no
-      // affectedMap ⇒ FULL; a throwing affectedMap fails safe to FULL. Never
-      // silently narrows a membership change.
-      let downAffected: Set<string> | null;
-      if (affected === null) {
-        // FULL cascade: propagate everything. Drop remembered signatures — the
-        // new upstream values weren't observed here, so a stale entry could
-        // wrongly skip the next scoped change back to a pre-FULL signature.
-        edge.lastSignatures.clear();
-        downAffected = null;
-      } else if (!edge.affectedMap) {
-        downAffected = null;
-      } else {
-        // The relevance gate (`signature`) and `affectedMap` both self-query the
-        // DB to translate the changed upstream ids into downstream ids. Run that
-        // translation under a `cascade` origin entry (server: recordEntrySpan;
-        // central: identity) so those reads (a) route through the loader DB gate —
-        // otherwise a large scoped fan-out issues ungated queries that contend
-        // with interactive work past the reserved-interactive floor — and (b) are
-        // attributed in the profiler as `cascade:<downstreamKey>` instead of
-        // running unmeasured under the enclosing `flush`. These are edge
-        // (ids-translation) reads, NOT the downstream's value dependencies, so
-        // they are deliberately NOT captured into the loader read-set index: a
-        // standalone change to a table only `affectedMap` reads never requires the
-        // downstream to recompute (only the upstream cascade does, already
-        // scoped), so indexing them would raise a false silent-FULL flag.
-        const affectedMap = edge.affectedMap;
-        const signature = edge.signature;
-        // Relevance gate (Layer 2): keep only the upstream ids whose
-        // downstream-relevant signature changed, so a scoped change that touched
-        // only fields this downstream ignores (e.g. a conversation's
-        // waitingFor/updatedAt vs the tasks/attempts aggregates) stops here
-        // instead of forcing a recompute that diffs to empty. No signature on the
-        // edge ⇒ every delivered id passes (prior behavior). Returns SKIP_EDGE
-        // when nothing relevant changed (the closure cannot `continue` across the
-        // wrapOrigin boundary).
-        const translate = async (): Promise<
-          Set<string> | null | typeof SKIP_EDGE
-        > => {
-          let relevant: ReadonlySet<string> = affected;
-          if (signature) {
-            try {
-              const sigs = await signature(affected, params);
-              const kept = new Set<string>();
-              for (const id of affected) {
-                const sig = sigs.get(id);
-                if (sig === undefined || sig !== edge.lastSignatures.get(id)) {
-                  kept.add(id);
-                  if (sig !== undefined) edge.lastSignatures.set(id, sig);
-                }
-              }
-              relevant = kept;
-            } catch (err) {
-              reportLoaderError(
-                `signature failed (${entry.key} → ${edge.downstreamKey})`,
-                err,
-              );
-              relevant = affected; // fail-safe: cascade everything
-            }
-          }
-          if (relevant.size === 0) return SKIP_EDGE; // nothing relevant changed
-          try {
-            return new Set(await affectedMap(relevant, params));
-            // eslint-disable-next-line promise-safety/no-absorbed-failure -- the error IS reported (reportLoaderError), and null is not an absorbable empty here: it is the documented "unscoped" sentinel that forces the downstream entry into a FULL recompute from source — the fail-safe direction (recompute everything), never a false "nothing changed"
-          } catch (err) {
-            reportLoaderError(
-              `affectedMap failed (${entry.key} → ${edge.downstreamKey})`,
-              err,
-            );
-            return null;
-          }
-        };
-        const result = await (opts.wrapOrigin
-          ? opts.wrapOrigin("cascade", edge.downstreamKey, translate)
-          : translate());
-        if (result === SKIP_EDGE) continue; // nothing relevant changed → skip edge
-        downAffected = result;
-      }
       for (const raw of derived) {
         // A mapped tuple is canonical too, however the map spelled it.
         const dp = canonicalTuple(down, raw);
@@ -4381,7 +4114,7 @@ export function createResourceRuntime(
           down.pendingNotifies,
           paramsKey(dp),
           dp,
-          downAffected,
+          null,
           undefined,
           sourceTx,
           changedAt,
@@ -4396,10 +4129,10 @@ export function createResourceRuntime(
   // eviction, a race). For a bounded window/point entry this "FULL" is bounded
   // by construction — the entry loader at these params IS the windowed/point
   // read, never an unbounded collection sweep. It FULL-recomputes
-  // and — unlike the legacy keyed FULL path, which only touches the snapshot when
-  // a subscriber is present — SEEDS/REPLACES the per-pk snapshot whenever the value
-  // is computed (persisted or subscribed), so the next incremental membership diff
-  // has a base. Cascades FULL. See research/2026-07-03-global-scoped-membership-m5.md.
+  // and SEEDS/REPLACES the per-pk snapshot whenever the value is computed
+  // (persisted or subscribed), so the next incremental membership diff
+  // has a base. Cascades nothing: a membership entry has no downstream (D32).
+  // See research/2026-07-03-global-scoped-membership-m5.md.
   async function drainMembershipFull(
     entry: RegistryEntry,
     pendingEntry: PendingNotify,
@@ -4411,14 +4144,10 @@ export function createResourceRuntime(
     entry.versions.set(pk, version);
     const subs = subscribersFor(entry.key, pk);
     const owner = snapshotOwner(entry, pk);
-    const hasValueAwareDownstream = entry.downstream.some(
-      (d) => d.map !== undefined,
-    );
     // The snapshot must be maintained whenever it could be needed later: a
     // persisted entry recomputes every change (and survives N→0), and a subscribed
-    // entry needs a diff base. With neither (nor a value-aware downstream) there is
-    // nothing to seed — matching the legacy `needValue` gate.
-    const needValue = persisted || subs.length > 0 || hasValueAwareDownstream;
+    // entry needs a diff base. With neither there is nothing to seed.
+    const needValue = persisted || subs.length > 0;
 
     let value: unknown;
     // The flight-co-produced commit watermark for the FULL value below (Rule B′
@@ -4549,9 +4278,8 @@ export function createResourceRuntime(
     } else if (owns && valueComputed) {
       // Zero subscribers but a value was computed for a snapshot that outlives
       // them (a persisted alias): still seed/replace the snapshot so the next
-      // membership diff has a base. This is the M5 difference from the legacy
-      // keyed FULL path. An untracked tuple (a value-aware downstream alone)
-      // seeds nothing — no drain would keep that snapshot current.
+      // membership diff has a base. An untracked tuple seeds nothing — no
+      // drain would keep that snapshot current.
       diffKeyed(entry, pk, value);
     }
     // The order-signature map's lifecycle mirrors the snapshot's: whenever the
@@ -4561,17 +4289,6 @@ export function createResourceRuntime(
       reseedOrderSigs(entry, params, value);
       setBaseFloor(entry, pk, flightWatermark);
     }
-
-    // A FULL recompute cascades FULL (clears edge signatures inside the helper).
-    await cascadeDownstream(
-      entry,
-      params,
-      null,
-      value,
-      valueComputed,
-      cascadeSourceTx(pendingEntry),
-      pendingEntry.changedAt,
-    );
   }
 
   // Membership incremental path (drainEntry branch 4): a membership entry
@@ -4609,7 +4326,6 @@ export function createResourceRuntime(
 
     // Refill only the requested (op-I ∪ op-U) ids — a pure DELETE runs NO loader.
     let refillRows: unknown[] = [];
-    let loaderRan = false;
     if (requestedIds.size > 0) {
       try {
         const ctx = { affectedIds: [...requestedIds] };
@@ -4624,7 +4340,6 @@ export function createResourceRuntime(
           );
         }
         refillRows = v as unknown[];
-        loaderRan = true;
       } catch (err) {
         if (evictOnContractError(entry, params, err)) return;
         reportLoaderError(`loader failed for ${entry.key}`, err);
@@ -4763,7 +4478,6 @@ export function createResourceRuntime(
                   safeOrderSig(entry, sigFn, row, params),
                 );
             }
-            loaderRan = true;
           } catch (err) {
             if (evictOnContractError(entry, params, err)) return;
             reportLoaderError(`loader failed for ${entry.key}`, err);
@@ -4805,28 +4519,12 @@ export function createResourceRuntime(
       keyOf,
       snapEncoderFor(entry),
     );
-    // Downstream cascade: a DELETE forces FULL (a vanished row has no value for an
-    // affectedMap to translate) and clears edge signatures; otherwise the requested
-    // ids (incl. where-flip exits, whose rows still exist) flow through the gate.
-    const cascade = () =>
-      cascadeDownstream(
-        entry,
-        params,
-        deletedIds.size > 0 ? null : requestedIds,
-        refillRows,
-        loaderRan,
-        cascadeSourceTx(pendingEntry),
-        pendingEntry.changedAt,
-      );
     // The tracking span this drain started in ended while it read: its snapshot
     // was evicted and its subscribers left (`snapshotOwner`). Writing
     // `nextSnapshot` back would resurrect a base nothing routes to, so the diff
     // is dropped whole — no snapshot, no frame, no ack (whoever asked for one is
-    // gone); only the cascade, which reads no snapshot of this tuple, runs.
-    if (snapshotOwner(entry, pk) !== owner) {
-      await cascade();
-      return;
-    }
+    // gone). Nothing cascades from a membership entry (D32).
+    if (snapshotOwner(entry, pk) !== owner) return;
     // A sub-ack may have re-seeded the snapshot (and raised its base floor to
     // its own read's watermark) while this drain read: its `versions ===
     // baseVersion` test holds until this drain bumps the version below. The
@@ -4904,13 +4602,10 @@ export function createResourceRuntime(
       // on it. Subscribers that asked for acks get the standalone ack frame.
       broadcastAckOnly(entry, pendingEntry);
     }
-    // Mirror the legacy scoped path's accounting: an empty diff is a recorded
-    // no-op push (changed:false) to any subscriber.
+    // An empty diff is still a recorded no-op push (changed:false) to any subscriber.
     if (subs.length > 0) {
       opts.onPush?.(entry.key, { subscribers: subs.length, changed });
     }
-
-    await cascade();
   }
 
   // Drain one entry's pending notifies: load (await), send frames, cascade.
@@ -4978,8 +4673,7 @@ export function createResourceRuntime(
   // most two queries — see below). The answer lands in the SAME pending as
   // the change's other routes, so its ack leaves only after all of them.
   // `"over-cap"` or a throw recomputes the readers FULL (a throw is reported).
-  // Runs under the `cascade` origin: like an `affectedMap`, it is an
-  // ids-translation read, not part of the value (and not in its read-set).
+  // Runs under the `cascade` origin: it is an ids-translation read, not part of the value (and not in its read-set).
   async function resolveReverseRoutes(
     entry: RegistryEntry,
     pending: readonly PendingNotify[],
@@ -5123,8 +4817,8 @@ export function createResourceRuntime(
     // L2: persisted entries (boot-critical, DB-backed) always recompute FULL and
     // persist their value to `live_state_snapshot` — even with zero subscribers —
     // so cold boot reads a fresh snapshot instead of a from-scratch rebuild. A
-    // scoped partial is never persisted (§3.6/§6.7), and the value is never
-    // persisted as a stale partial: the FULL recompute below ignores `affected`.
+    // scoped partial is never persisted (§3.6/§6.7): the legacy path below is
+    // FULL-only, and a persisted alias's scoped drains write a floor persist.
     // Gated on `!entry.externalSource` defensively (the injected `shouldPersist`
     // already excludes external sources, but a runtime check makes the invariant
     // hold regardless of how the hook is backed), and on `!membershipBounded` —
@@ -5139,13 +4833,12 @@ export function createResourceRuntime(
     for (const pendingEntry of pending) {
       const { params, affected } = pendingEntry;
       const pk = paramsKey(params);
-      // A SCOPED pending that names nothing — no row to refill, none deleted —
-      // changed nothing for this tuple: an empty `notify({ affectedIds: [] })`,
-      // an `affectedMap` that mapped to no downstream row, a reverse route that
-      // resolved to no host. Skip it on EVERY entry kind, before the membership
-      // and persisted branches (a persisted entry forces FULL, so a skip left to
-      // it would reload the whole value): no version bump, no frame, no cascade —
-      // only the standalone ack to the subscribers that asked for one.
+      // A SCOPED pending (membership entries only — A25) that names nothing —
+      // no row to refill, none deleted — changed nothing for this tuple: a
+      // reverse route that resolved to no host. Skip it before the membership
+      // branches (a FULL drain would reload the whole value): no version bump,
+      // no frame — only the standalone ack to the subscribers that asked for
+      // one.
       if (
         affected !== null &&
         affected.size === 0 &&
@@ -5155,13 +4848,11 @@ export function createResourceRuntime(
         continue;
       }
       // A membership entry (bounded window / point / the M5 alias) runs the
-      // incremental membership path instead of the legacy scoped/FULL branches.
+      // incremental membership path instead of the legacy FULL branch.
       // Branch 2/3 (FULL: sticky-FULL `affected === null`, or no snapshot yet)
       // vs branch 4 (incremental, snapshot present). For a window/point entry
       // the FULL branch is bounded by construction — its loader IS the
-      // windowed/point read at these params. The legacy body below is
-      // byte-identical for every non-membership entry — early-branch out so it
-      // is never touched. See the M5 plan doc.
+      // windowed/point read at these params. See the M5 plan doc.
       if (entry.membership) {
         const hasSnapshot = entry.snapshots?.get(pk) !== undefined;
         if (affected === null || !hasSnapshot) {
@@ -5171,56 +4862,53 @@ export function createResourceRuntime(
         }
         continue;
       }
-      // Scoped notify (Layer 2): `affected !== null` means recompute only those
-      // row ids (an empty set was skipped above). A persisted entry is forced to
-      // FULL (it cannot persist a scoped partial), so the scoped bookkeeping
-      // below only applies to the non-persisted path.
-      const scoped = affected !== null && !persisted;
+      // The legacy path: a push / invalidate entry, recomputed FULL (`affected`
+      // is always null here — A25). A keyed entry is always a membership entry
+      // (D31); the one exception is a deferred keyed placeholder before its
+      // bind, which has no loader to run either — reported, never guessed at.
+      if (entry.mode === "keyed") {
+        reportLoaderError(
+          `drain of keyed resource ${entry.key} without a membership`,
+          new Error(
+            `"${entry.key}" is keyed but has no membership — a deferred resource drained before bindDeferredResources()?`,
+          ),
+        );
+        continue;
+      }
       const version = (entry.versions.get(pk) ?? 0) + 1;
       entry.versions.set(pk, version);
       const subs = subscribersFor(entry.key, pk);
-      const owner = snapshotOwner(entry, pk);
 
       // Compute value once if either a subscriber (push mode) or any
       // value-aware downstream `map` needs it. For invalidate-mode upstreams
       // we still compute when a map wants it — rare today, acceptable cost.
-      // `affectedMap` self-queries the DB and must NOT force the value, else we
-      // reintroduce the full upstream load Layer 2 is removing.
-      // L2: a persisted entry ALWAYS needs the (FULL) value so it can be written
-      // to the snapshot, even when no tab is subscribed.
+      // L2: a persisted entry ALWAYS needs the value so it can be written to
+      // the snapshot, even when no tab is subscribed.
       const hasValueAwareDownstream = entry.downstream.some(
         (d) => d.map !== undefined,
       );
       const needValue =
         persisted ||
-        ((entry.mode === "push" || entry.mode === "keyed") &&
-          subs.length > 0) ||
+        (entry.mode === "push" && subs.length > 0) ||
         hasValueAwareDownstream;
-      // L2: a persisted entry never passes a scoped ctx — it recomputes FULL.
-      const ctx = scoped ? { affectedIds: [...affected!] } : undefined;
       let value: unknown;
-      // Flight-co-produced commit watermark for a FULL value (Rule B′), and the
-      // L2 persist floor below — one capture, because both stamps describe the
-      // same value. A scoped flight (ctx) always resolves it undefined, so the
-      // scoped delta below is structurally tokenless; a persisted entry is never
-      // scoped (`scoped` is false when `persisted`), so the persist always has one.
+      // Flight-co-produced commit watermark (Rule B′), and the L2 persist floor
+      // below — one capture, because both stamps describe the same value.
       let flightWatermark: string | undefined;
       // Flight-resolved mutation-ack attribution: the pending's sourceTx seeds
       // the flight; a joined stale (pre-commit) flight resolves the STARTER's
-      // seed instead — missed ack safe, false ack impossible. A ctx (scoped)
-      // load returns the seed directly (ctx loads never coalesce).
+      // seed instead — missed ack safe, false ack impossible.
       let flightAckTx: readonly string[] | undefined;
-      const seedAckTx = pendingAckTx(pendingEntry);
       let valueComputed = false;
       if (needValue) {
+        const seedAckTx = pendingAckTx(pendingEntry);
         try {
           // Origin = the push/cascade flush: re-establishes an entry context
           // (this runs in a bare microtask with no ambient context) so the
           // loader span attributes to this `push` instead of `parent: null`.
           // `notBefore: lastNotifyAt` — this drain minted `version` above, so a
           // flight that started before the change it is announcing must be
-          // superseded rather than joined (a scoped `ctx` load never coalesces,
-          // so the floor is inert on that branch).
+          // superseded rather than joined.
           ({
             value,
             watermark: flightWatermark,
@@ -5230,7 +4918,7 @@ export function createResourceRuntime(
                 getResourceValue(
                   entry,
                   params,
-                  ctx,
+                  undefined,
                   undefined,
                   false,
                   seedAckTx,
@@ -5240,7 +4928,7 @@ export function createResourceRuntime(
             : getResourceValue(
                 entry,
                 params,
-                ctx,
+                undefined,
                 undefined,
                 false,
                 seedAckTx,
@@ -5252,22 +4940,21 @@ export function createResourceRuntime(
           reportLoaderError(`loader failed for ${entry.key}`, err);
           // Skip sending and cascading on loader failure — otherwise we'd
           // invalidate downstream state based on a torn read. Never persist on
-          // the failure path (the snapshot stays untouched). No ack either — a
-          // failed recompute never proved anything was re-read.
+          // the failure path. No ack either — a failed recompute never proved
+          // anything was re-read.
           continue;
         }
 
-        // L2: persist the FULL value on loader SUCCESS only, floored by the
+        // L2: persist the value on loader SUCCESS only, floored by the
         // FLIGHT's own watermark — captured by that flight's starter before its
         // first read, so it describes exactly the value being persisted. A
         // separately captured floor could be NEWER than a joined flight's value,
         // and catch-up (which replays only `xid >= watermark`) would then skip
         // the very commit the value is missing — a stale cold boot that survives
         // restarts. The flight's floor is at worst older, which only over-replays
-        // (harmless per `captureWatermark`'s contract). Persisted entries are
-        // forced FULL so it is present whenever the hook is bound; a throwing
-        // capture leaves it undefined and the persist is skipped this cycle (the
-        // row keeps its prior, older floor) while subscribers are still served.
+        // (harmless per `captureWatermark`'s contract). A throwing capture
+        // leaves it undefined and the persist is skipped this cycle (the row
+        // keeps its prior, older floor) while subscribers are still served.
         // Persist failure is reported but does not block the send/cascade.
         if (persisted && flightWatermark !== undefined) {
           // The loader has already run (via `getResourceValue` above), so its
@@ -5296,162 +4983,6 @@ export function createResourceRuntime(
             version,
           };
           frameChars = broadcastJson(subs, msg);
-        } else if (
-          entry.mode === "keyed" &&
-          snapshotOwner(entry, pk) !== owner
-        ) {
-          // The tracking span ended while the load ran: its subscribers left
-          // and its snapshot was evicted. Nothing to ship, and no snapshot to
-          // write back — it would go stale unseen (`snapshotOwner`).
-        } else if (entry.mode === "keyed") {
-          // `value` is guaranteed computed (needValue is true for keyed + subs).
-          const hadSnapshot = entry.snapshots?.has(pk) ?? false;
-          if (scoped && !hadSnapshot) {
-            // Near-unreachable: a subscribed pk always seeded a snapshot at
-            // sub-ack. If we somehow get here, the scoped `value` is partial and
-            // unsafe for diffKeyed — reload the FULL value and diff that.
-            let full: unknown;
-            try {
-              // Same floor as the load above: this reload feeds the `update`
-              // frame carrying the version this drain already minted.
-              ({
-                value: full,
-                watermark: flightWatermark,
-                ackTx: flightAckTx,
-              } = await (opts.wrapOrigin
-                ? opts.wrapOrigin("push", entry.key, () =>
-                    getResourceValue(
-                      entry,
-                      params,
-                      undefined,
-                      undefined,
-                      false,
-                      seedAckTx,
-                      pendingEntry.lastNotifyAt,
-                    ),
-                  )
-                : getResourceValue(
-                    entry,
-                    params,
-                    undefined,
-                    undefined,
-                    false,
-                    seedAckTx,
-                    pendingEntry.lastNotifyAt,
-                  )));
-            } catch (err) {
-              if (evictOnContractError(entry, params, err)) continue;
-              reportLoaderError(`loader failed for ${entry.key}`, err);
-              continue;
-            }
-            // hadSnapshot was false ⇒ ship a full update base. diffKeyed here
-            // serves only to (re)seed the snapshot from the full value.
-            diffKeyed(entry, pk, full);
-            frameChars = await sendUpdate(
-              entry,
-              params,
-              full,
-              version,
-              subs,
-              flightWatermark,
-              flightAckTx,
-              pendingEntry.changedAt,
-            );
-            opts.onPush?.(entry.key, {
-              subscribers: subs.length,
-              changed: true,
-            });
-          } else if (scoped) {
-            // Scoped path: merge the partial recompute into the snapshot and
-            // ship only the changed rows. `deletes:[]`, `order:undefined` —
-            // a scoped notify never asserts membership/order (those stay FULL).
-            // The delta stamps the PENDING's sourceTx directly: a ctx load
-            // never coalesces, so no stale-flight adoption is needed — and Rule
-            // B′ is untouched (still watermark-less; ackTx claims only that the
-            // listed transactions' rows were re-read, nothing about membership
-            // or snapshot completeness).
-            const { upserts } = diffKeyedScoped(entry, pk, value as unknown[]);
-            if (upserts.length) {
-              const msg = {
-                kind: "delta" as const,
-                key: entry.key,
-                params,
-                upserts,
-                deletes: [] as string[],
-                order: undefined,
-                version,
-                ...(seedAckTx !== undefined ? { ackTx: seedAckTx } : {}),
-                ...(pendingEntry.changedAt !== undefined
-                  ? { changedAt: pendingEntry.changedAt }
-                  : {}),
-              };
-              frameChars = broadcastJson(subs, msg);
-            } else {
-              // Empty scoped diff: the recompute proved the bytes unchanged —
-              // no value frame, but an ack-requesting subscriber still gets the
-              // writer's ack (a no-byte-change write must not hang it).
-              frameChars = broadcastAckOnly(entry, pendingEntry);
-            }
-            // Emit regardless of whether a frame was sent: the recompute happened,
-            // so an empty scoped diff (upserts.length === 0) is a recorded no-op push.
-            opts.onPush?.(entry.key, {
-              subscribers: subs.length,
-              changed: upserts.length > 0,
-            });
-          } else {
-            // FULL path (unchanged from Layer 1). diffKeyed replaces the stored
-            // snapshot only here, after the loader succeeded — the loader-failure
-            // `continue` above leaves it untouched.
-            const { upserts, deletes, order } = diffKeyed(entry, pk, value);
-            if (!hadSnapshot) {
-              // First notify for this pk: ship a full update so brand-new
-              // subscribers get a complete base to merge subsequent deltas onto.
-              frameChars = await sendUpdate(
-                entry,
-                params,
-                value,
-                version,
-                subs,
-                flightWatermark,
-                flightAckTx,
-                pendingEntry.changedAt,
-              );
-              opts.onPush?.(entry.key, {
-                subscribers: subs.length,
-                changed: true,
-              });
-            } else {
-              // A FULL-recompute keyed delta fully reconciles the client, so it
-              // may carry the flight watermark (Rule B′) and the flight-resolved
-              // ackTx. The scoped delta branch above stamps the pending's set.
-              const msg = {
-                kind: "delta" as const,
-                key: entry.key,
-                params,
-                upserts,
-                deletes,
-                order,
-                version,
-                ...(flightWatermark !== undefined
-                  ? { watermark: flightWatermark }
-                  : {}),
-                ...(flightAckTx !== undefined && flightAckTx.length > 0
-                  ? { ackTx: flightAckTx }
-                  : {}),
-                ...(pendingEntry.changedAt !== undefined
-                  ? { changedAt: pendingEntry.changedAt }
-                  : {}),
-              };
-              frameChars = broadcastJson(subs, msg);
-              opts.onPush?.(entry.key, {
-                subscribers: subs.length,
-                changed:
-                  upserts.length > 0 ||
-                  deletes.length > 0 ||
-                  order !== undefined,
-              });
-            }
-          }
         } else {
           frameChars = await sendUpdate(
             entry,
@@ -5481,7 +5012,6 @@ export function createResourceRuntime(
       await cascadeDownstream(
         entry,
         params,
-        affected,
         value,
         valueComputed,
         cascadeSourceTx(pendingEntry),
@@ -6422,8 +5952,25 @@ export function createResourceRuntime(
     );
   }
 
+  // A7 / D40: what an entry IS, as one closed set, checked in this order — a
+  // deferred placeholder not bound yet (`unbound`: no loader, no routes), truth
+  // outside Postgres (`external`: declared via `defineExternalResource`, so its
+  // own `notify` reaches it), compiler-emitted routes (`routed`:
+  // `routeTableChange`), and otherwise the legacy router (`legacy-full`: every
+  // change to a relation base of its captured read-set recomputes each tracked
+  // tuple FULL). The policy is not the whole delivery story: the legacy router
+  // indexes every non-routed entry, so an external or unbound entry with a
+  // captured read-set is ALSO reached FULL by its bases — `legacyReach` says so.
+  function debugPolicyOf(entry: RegistryEntry): DebugPolicy {
+    if (deferred.has(entry.key)) return "unbound";
+    if (entry.externalSource) return "external";
+    if (entry.routing) return "routed";
+    return "legacy-full";
+  }
+
   function handleResourcesDebug(): Response {
     rebuildDag();
+    const now = Date.now();
     const ownerByKey = new Map<string, { pluginId?: string }>();
     for (const c of opts.debugOwners?.() ?? []) {
       ownerByKey.set(c.key, { pluginId: c.pluginId });
@@ -6437,17 +5984,21 @@ export function createResourceRuntime(
       versions: Record<string, number>;
       dependsOn: string[];
       downstream: string[];
+      policy: DebugPolicy;
       readSet: string[];
       readSetBases: string[];
-      identityTable?: string;
-      recompute?: { kind: "full"; reason: string };
-      coveredOrigins: string[];
+      legacyReach: string[];
       routes: Array<{
         id: string;
         table: string;
         map: HostMap["kind"];
         reason?: string;
       }> | null;
+      derivedReads: string[];
+      routeDrifted: string[];
+      tuples: number;
+      persisted: boolean;
+      positionAgeMs: number | null;
       loaderStats?: { count: number; ratePerMin: number; maxMs: number };
       notifyStats: NotifyCounts;
       subShortCircuits: number;
@@ -6473,22 +6024,15 @@ export function createResourceRuntime(
         }
       }
       const owner = ownerByKey.get(entry.key);
-      // The raw captured read-set (the VIEW/table names loaders actually read)
-      // AND its base-resolved projection (views → their identity base), so the
-      // ceiling can compare like-for-like with `coveredOrigins` (base-table
-      // space) while the captured index keeps the raw names. `resolveRelation` is
-      // identity on central (no derived views there).
-      const resolve = opts.resolveRelation ?? ((r) => r);
-      // Drop feed-exempt rollup tables (derived-tables) from the emitted
-      // read-set: the change-feed installs no trigger on them, so they are not
-      // in `coveredOrigins` and would otherwise read as a false "silent FULL
-      // recompute" — but the source-driven scoped path already covers the
-      // change. Filter on the base-resolved name (a rollup is itself a base).
-      const feedExempt = opts.feedExemptTables?.() ?? new Set<string>();
-      const rawReadSet = (opts.readSet?.(entry.key) ?? []).filter(
-        (r) => !feedExempt.has(resolve(r)),
-      );
-      const readSetBases = [...new Set(rawReadSet.map(resolve))].sort();
+      const persisted = isPersisted(entry);
+      const l2PositionAt = persistStats.get(entry.key)?.l2PositionAt;
+      // The raw captured read-set (the view/table names the loader actually
+      // read) and its relation bases — the base tables a change to which
+      // reaches this entry through the legacy router (views and rollups
+      // expanded). Unfiltered: a rollup shows in the raw set, its sources in
+      // the bases. Identity on central (no views there).
+      const rawReadSet = opts.readSet?.(entry.key) ?? [];
+      const readSetBases = readSetBasesOf(entry.key);
       out.push({
         key: entry.key,
         mode: entry.mode,
@@ -6500,25 +6044,20 @@ export function createResourceRuntime(
         versions: Object.fromEntries(entry.versions),
         dependsOn: entry.upstreamKeys,
         downstream: entry.downstream.map((d) => d.downstreamKey),
+        // How a change reaches this entry (A7, D40) — see `debugPolicyOf`.
+        policy: debugPolicyOf(entry),
         // Automatic table read-set captured at the DB chokepoint (server-only
-        // hook; absent on central). Diffed against dependsOn in the debug pane to
-        // surface latent stale-UI gaps and over-broad cascade edges.
+        // hook; `[]` on central): the view / table / rollup names the loader
+        // read, inverted into the read-set pane's captured index.
         readSet: rawReadSet,
-        // The read-set resolved into base-table space (views → identity base) for
-        // the ceiling's like-for-like comparison against `coveredOrigins`.
+        // The read-set expanded through the relation bases (base-table space).
         readSetBases,
-        // Declared scope policy: the resource's own `identityTable` (intent to be
-        // scoped) and its explicit `recompute: full` opt-out (a deliberate FULL,
-        // not a degradation). The read-set debug pane uses both to tell a silent
-        // FULL apart from a declared one.
-        identityTable: entry.identityTable,
-        recompute: entry.recompute,
-        // The authoritative scoped-vs-FULL routing set: the base tables whose
-        // change this resource can absorb through a single scoped path — its own
-        // `identityTable` ∪ the transitive identityTables reachable via its
-        // `affectedMap`/`dependsOn` edges. A read-set table OUTSIDE this set
-        // silently FULL-recomputes the resource (`coveredOriginsFor`, ~564).
-        coveredOrigins: [...coveredOriginsFor(entry.key)].sort(),
+        // The bases under which the legacy router indexes this entry — a write
+        // to any of them recomputes it FULL (`applyLegacyFullChange`). Read off
+        // the router's own predicate (`legacyRouted`), not off `policy`: an
+        // EXTERNAL entry whose loader read the DB is reached here too, beside
+        // its own `notify()`. `[]` for a routed entry (and on central).
+        legacyReach: legacyRouted(entry) ? readSetBases : [],
         // A routed entry's routes (null = the legacy read-set path serves it):
         // every table it can be reached through, how its rows map, and — for a
         // `full` route — the declared reason, so a routed FULL is never silent.
@@ -6530,6 +6069,21 @@ export function createResourceRuntime(
               ...(r.map.kind === "full" ? { reason: r.map.reason } : {}),
             }))
           : null,
+        // A routed entry's derived reads (the rollups its plan reads beside its
+        // route tables, reached through their sources' routes) and the A8 drift
+        // guard's own record: the captured tables no route names, each one a
+        // table whose writes never reach the entry. Raw-table space, as the
+        // guard judged them. `[]` for a legacy entry (and on central).
+        derivedReads: entry.routing ? [...entry.routing.derived].sort() : [],
+        routeDrifted: entry.routing ? [...entry.routing.drifted].sort() : [],
+        // Tracked params-tuples (`entry.tracked`): the subscribed tuples a
+        // change recomputes — a legacy-full entry's fan-out per change.
+        tuples: entry.tracked.size,
+        // L2-persisted, and how old its row's `position_at` is as last known
+        // (null = not persisted, or no position known in this process).
+        persisted,
+        positionAgeMs:
+          persisted && l2PositionAt !== undefined ? now - l2PositionAt : null,
         // Loader frequency over the profiling window (server-only hook; absent on
         // central). Surfaces a cheap-but-hot loader the slow-single-call view misses.
         loaderStats: opts.loaderStats?.(entry.key),
@@ -6558,12 +6112,12 @@ export function createResourceRuntime(
         // L2 bookkeeping, for a persisted key only: its definition (A18), when
         // this process last replaced / floor-wrote its row, and the row's
         // `position_at` as last known (epoch ms; null = never in this process).
-        ...(isPersisted(entry)
+        ...(persisted
           ? {
               definition: definitionOf(entry),
               lastReplaceAt: persistStats.get(entry.key)?.lastReplaceAt ?? null,
               lastFloorAt: persistStats.get(entry.key)?.lastFloorAt ?? null,
-              l2PositionAt: persistStats.get(entry.key)?.l2PositionAt ?? null,
+              l2PositionAt: l2PositionAt ?? null,
             }
           : {}),
       });
@@ -6665,7 +6219,7 @@ export function createResourceRuntime(
   // Route one base-table change to every ROUTED entry reading the table (see
   // `ResourceRuntime.routeTableChange` and `./routing`). Synchronous: each tuple's
   // pending is merged in this call, so the whole change rides one flush.
-  // Defensive like `applyDbChange`: a failure is reported, never thrown at the
+  // Defensive like `applyLegacyFullChange`: a failure is reported, never thrown at the
   // producer — and isolated per entry (per tuple inside `routeEntryChange`), so
   // one failing entry cannot take the change from the others.
   function routeTableChange(change: TableChange): void {
@@ -6881,152 +6435,42 @@ export function createResourceRuntime(
 
   // --- L4 DB change-feed routing ---
 
-  // Route one DB change into the recompute cascade. Pure mapping: invert the L3
-  // read-set, decide each resource's scope, fan out to subscribed params
-  // (param-less → {}), and route through the existing `scheduleNotify` tagged
-  // "feed". Defensive: an unknown table (no resource reads it yet) is a silent
-  // no-op; never throws.
-  //
-  // `table` is the relation the read-set matched (a base table OR a view the
-  // change-feed forwarded onto). `origin` is the BASE table that actually
-  // changed; `identityBase` is the identity base of `table` (a 1:1 PK-preserving
-  // view maps to its base; any other relation is its own identity). These let the
-  // runtime route a covered change through ONE authoritative path so a secondary
-  // view-fanout FULL can't absorb a scoped delivery. See
-  // research/2026-06-20-global-scoped-recompute-default.md.
-  function applyDbChange(change: {
-    source: ChangeSource;
+  // Route one DB change to the LEGACY (non-routed) readers of its table: invert
+  // the L3 read-set through the relation bases, and FULL-recompute every
+  // tracked tuple of each reader through the existing `scheduleNotify`, tagged
+  // with the change's source. Defensive: an unread table is a silent no-op, and
+  // it never throws (a lookup bug must not take down the LISTEN consumer).
+  function applyLegacyFullChange(change: {
     table: string;
-    op: "I" | "U" | "D";
-    ids: readonly string[] | null;
-    origin: string;
-    identityBase: string;
+    source: ChangeSource;
     xid?: string;
     changedAt?: number;
   }): void {
     try {
       const affectedKeys = tableToResources().get(change.table);
-      if (!affectedKeys || affectedKeys.length === 0) {
-        // Unknown/unread table — no resource depends on it (yet). Debug-level,
-        // not warn: this is expected for tables no loader has read.
-        return;
-      }
-      // A single-row UPDATE with ids scopes to those rows (Layer-2 `WHERE id IN
-      // (…)`) for ANY scoped keyed resource. INSERT/DELETE additionally scope for
-      // an M5 `scopedMembership` entry (decided per-entry below, since the field is
-      // per-resource); otherwise they remain a membership/order change → FULL. A
-      // null/empty id list, or an over-cap statement, is always FULL.
-      const hasIds = change.ids != null && change.ids.length > 0;
-      const scopedUpdate: Set<string> | null =
-        change.op === "U" && hasIds ? new Set(change.ids!) : null;
-
+      if (!affectedKeys || affectedKeys.length === 0) return;
       for (const key of affectedKeys) {
         const entry = registry.get(key);
         if (!entry) continue;
-
-        // Per-resource scope decision (the unifying rule: an affectedMap edge /
-        // the resource's own identity view takes precedence over any other
-        // read-set match for the same origin). `deleted` (M5) rides alongside a
-        // scoped `affected` for a scopedMembership DELETE (see below).
-        let affected: Set<string> | null;
-        let deleted: Set<string> | undefined;
-        if (coveredOriginsFor(key).has(change.origin)) {
-          if (change.origin === entry.identityTable) {
-            // Identity-origin change: the identity view is the authoritative path.
-            // Drop a duplicate arriving via a SECONDARY view so it can't FULL the
-            // scoped identity delivery.
-            if (change.identityBase !== entry.identityTable) continue;
-            // UPDATE always scopes (today). For a membership entry (window /
-            // point / the M5 alias) an INSERT scopes to the new ids and a
-            // DELETE scopes to an EMPTY affected set carrying the op-D ids in
-            // `deleted` — a deleted row can't be refilled, so the membership
-            // diff resolves the exit from `deleted` with ZERO loader runs. A
-            // non-membership entry keeps the pre-M5 FULL.
-            if (change.op === "U") {
-              affected = scopedUpdate;
-            } else if (entry.membership && hasIds) {
-              if (change.op === "I") {
-                affected = new Set(change.ids!);
-              } else {
-                affected = new Set<string>();
-                deleted = new Set(change.ids!);
-              }
-            } else {
-              affected = null;
-            }
-          } else {
-            // Edge-covered origin: an affectedMap edge delivers it (scoped) via
-            // the DAG cascade. Drop EVERY feed delivery for this origin so it
-            // can't absorb that scoped path.
-            continue;
-          }
-        } else {
-          // Uncovered dependency (no identity/edge for this origin): coarse but
-          // correct — recompute the whole resource.
-          affected = null;
-        }
-
         const subscribed = subscribedParamsFor(key);
-        const pointMembership =
-          entry.membership?.kind === "point" ? entry.membership : undefined;
-        // Fan out to every subscribed params tuple. A param-less resource is
-        // always covered (key = {}); a parametrized resource with no current
-        // subscribers admits nothing (a fresh subscribe loads from scratch).
-        // A POINT entry never fans out to the `{}` fallback tuple — its params
-        // ARE the id set, so with no subscribers there is nothing to maintain.
-        const targets: ResourceParams[] = pointMembership
-          ? subscribed
-          : subscribed.length > 0
-            ? subscribed
-            : [{}];
+        // Fan out to every subscribed params tuple; with none, the `{}` tuple
+        // (a param-less resource's only one — a persisted entry recomputes it
+        // with no subscriber). (No membership entry is legacy — membership ⇒
+        // routed.)
+        const targets: ResourceParams[] =
+          subscribed.length > 0 ? subscribed : [{}];
         for (const params of targets) {
-          let tupleAffected = affected;
-          let tupleDeleted = deleted;
-          // Point routing: a scoped change reaches a subscribed tuple iff the
-          // changed ids intersect that tuple's explicit id set (upsert), or a
-          // D op hits one of its ids (delete). Empty intersection → the tuple
-          // is untouched: no notify, no version bump, no frame. A FULL change
-          // (`affected === null`, e.g. an id-less bulk statement) still reaches
-          // every tuple — its FULL recompute is the point loader over the
-          // tuple's own ids, bounded by construction.
-          if (pointMembership && affected !== null) {
-            const idSet = new Set(pointMembership.idsOf(params));
-            tupleAffected = new Set(
-              [...affected].filter((id) => idSet.has(id)),
-            );
-            tupleDeleted = deleted
-              ? new Set([...deleted].filter((id) => idSet.has(id)))
-              : undefined;
-            if (
-              tupleAffected.size === 0 &&
-              (tupleDeleted === undefined || tupleDeleted.size === 0)
-            ) {
-              // Empty intersection: the tuple's value is untouched — but a
-              // subscriber that asked for acks is still owed the writer's ack (an
-              // optimistic client subscribed to THIS tuple may hold a pending
-              // op whose write landed outside the tuple's id set — e.g. a
-              // reorder that only moved OTHER rows' ranks). Owe it an ack
-              // (`scheduleAck`): the drain sends it standalone — no version
-              // bump, no frame otherwise, no cascade.
-              if (change.xid !== undefined && tupleWantsAcks(key, params)) {
-                scheduleAck(entry, paramsKey(params), params, change.xid);
-              }
-              continue;
-            }
-          }
-          scheduleNotify(entry, params, tupleAffected, {
+          scheduleNotify(entry, params, null, {
             source: change.source,
-            deleted: tupleDeleted,
             sourceTx: change.xid,
             changedAt: change.changedAt,
           });
         }
       }
     } catch (err) {
-      // Never throw out of the feed router — a parse/lookup bug must not take down
-      // the LISTEN consumer. console.error fires (loud), plus the report hook.
+      // console.error fires (loud), plus the report hook.
       reportLoaderError(
-        `applyDbChange failed for table "${change.table}"`,
+        `applyLegacyFullChange failed for table "${change.table}"`,
         err,
       );
     }
@@ -7050,27 +6494,18 @@ export function createResourceRuntime(
     };
   }
 
-  // Enumerate every registered resource that declared a scoped `identityTable`
-  // policy. Read straight off the registry (populated at module-import, so this is
-  // authoritative by the time any boot hook runs) — covers hand-written AND
-  // query-resource-compiled resources identically, because the compiler lowers the
-  // drizzle table down to the same `identityTable` string the runtime stores here.
+  // Enumerate every table a routed entry's routes name. Read straight off the
+  // registry — call it after `bindDeferredResources()`, so a deferred entry's
+  // routes are in. A legacy entry is reached through its read-set and names none.
   function scopedResourceTables(): ScopedResourceTable[] {
     const out: ScopedResourceTable[] = [];
     for (const entry of registry.values()) {
-      if (entry.routing) {
-        for (const route of entry.routing.plan.routes) {
-          out.push({
-            key: entry.key,
-            table: route.table,
-            via: `route "${route.id}"`,
-          });
-        }
-      } else if (entry.identityTable) {
+      if (!entry.routing) continue;
+      for (const route of entry.routing.plan.routes) {
         out.push({
           key: entry.key,
-          table: entry.identityTable,
-          via: "identityTable",
+          table: route.table,
+          via: `route "${route.id}"`,
         });
       }
     }
@@ -7222,7 +6657,7 @@ export function createResourceRuntime(
     loadResourceByKey,
     measureSubscribeCycle,
     triggerResourcePush,
-    applyDbChange,
+    applyLegacyFullChange,
     routeTableChange,
     recomputeResource,
     notifyStatsFor,

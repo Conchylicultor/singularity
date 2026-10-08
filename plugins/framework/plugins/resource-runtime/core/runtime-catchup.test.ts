@@ -3,7 +3,7 @@
  * `bun test plugins/framework/plugins/resource-runtime/core/runtime-catchup.test.ts`.
  *
  * The L2 cold-boot catch-up (`live-state-snapshot/catch-up.ts`) replays changelog
- * rows through the SAME `applyDbChange` the live LISTEN consumer uses. Its safety
+ * rows through the SAME `routeChange` the live LISTEN consumer uses. Its safety
  * rests on "over-replay is harmless / under-replay is impossible"
  * (`research/2026-06-22-global-live-state-l2-persisted-materialization.md` §2/§6):
  * replaying an already-reflected change recomputes an identical value, the keyed
@@ -20,16 +20,20 @@
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
 import { createHarness, tick, makeClientView } from "./test-support";
+import { defineRoutedTable } from "./testing/routed-fixture";
 import type { PersistMeta } from "./runtime";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
 
+// Keyed entries are routed aliases over their identity table (the shared
+// fixture); scoped changes reach an entry only through its routes since P8
+// step 23a.
+
 describe("over-replay idempotence", () => {
   test("replaying the same keyed UPDATE twice: first ships a delta, the second is an empty-diff no-op (no frame)", async () => {
     const pushLog: Array<{ changed: boolean }> = [];
     const h = createHarness({
-      readSet: () => ["row_table"],
       onPush: (_key, info) => pushLog.push({ changed: info.changed }),
     });
     // The DB truth the loader reflects. sub-ack seeds the snapshot from [a:1,b:1];
@@ -38,35 +42,21 @@ describe("over-replay idempotence", () => {
       { id: "a", n: 1 },
       { id: "b", n: 1 },
     ];
-    h.runtime.defineResource(
-      {
-        key: "rows",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "row_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        loader: (_p, c) =>
-          c ? truth.filter((r) => c.affectedIds.includes(r.id)) : truth,
-      },
-    );
+    const rows = defineRoutedTable(h, {
+      key: "rows",
+      table: "row_table",
+      membership: "alias",
+      schema: rowsSchema,
+      loader: (_p, c) =>
+        c ? truth.filter((r) => c.affectedIds.includes(r.id)) : truth,
+    });
     await h.subscribe("rows"); // snapshot seeded: a:1, b:1
     truth = [
       { id: "a", n: 2 },
       { id: "b", n: 1 },
     ];
 
-    const replay = () =>
-      h.runtime.applyDbChange({
-        source: "feed",
-        table: "row_table",
-        op: "U",
-        ids: ["a"],
-        origin: "row_table",
-        identityBase: "row_table",
-      });
+    const replay = () => rows.feed("U", ["a"]);
 
     // First replay: a:1 → a:2 is a real change → one delta, changed:true.
     replay();
@@ -117,7 +107,6 @@ describe("over-replay idempotence — a seeded scopedMembership entry", () => {
     const log: string[] = [];
     const persisted: Array<{ value: unknown; wm: string; mode: string }> = [];
     const h = createHarness({
-      readSet: () => ["row_table"],
       shouldPersist: (k) => k === "rows",
       captureWatermark: async () => "xmin",
       persistWindowMs: 0,
@@ -125,37 +114,24 @@ describe("over-replay idempotence — a seeded scopedMembership entry", () => {
         persisted.push({ value, wm, mode: meta.mode });
       },
     });
-    h.runtime.defineResource(
-      {
-        key: "rows",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
+    const rows = defineRoutedTable(h, {
+      key: "rows",
+      table: "row_table",
+      membership: "alias",
+      schema: rowsSchema,
+      orderOf: async () => order(),
+      loader: (_p, c) => {
+        if (c === undefined) {
+          log.push("FULL");
+          return members();
+        }
+        log.push("scoped");
+        return c.affectedIds
+          .filter((id) => truth.has(id))
+          .map((id) => ({ id, n: truth.get(id)! }));
       },
-      {
-        identityTable: "row_table",
-        scopedMembership: { orderOf: async () => order() },
-        loader: (_p, c) => {
-          if (c === undefined) {
-            log.push("FULL");
-            return members();
-          }
-          log.push("scoped");
-          return c.affectedIds
-            .filter((id) => truth.has(id))
-            .map((id) => ({ id, n: truth.get(id)! }));
-        },
-      },
-    );
-    const feed = (op: "I" | "U" | "D", ids: string[]) =>
-      h.runtime.applyDbChange({
-        source: "feed",
-        table: "row_table",
-        op,
-        ids,
-        origin: "row_table",
-        identityBase: "row_table",
-      });
+    });
+    const feed = (op: "I" | "U" | "D", ids: string[]) => rows.feed(op, ids);
 
     // Cold-boot seed: restore the diff base from the durable L2 value, exactly as
     // live-state-snapshot's onReady does BEFORE catch-up. No subscriber — catch-up
@@ -238,8 +214,10 @@ describe("recomputeResource", () => {
 });
 
 describe("L2 persist-hook calling contract", () => {
-  // A persisted keyed resource + injected fakes recording into a shared ordered
-  // call-log. `shouldPersist` selects the key; `lastReadSet` (the per-run capture)
+  // A persisted legacy (non-routed) push value + injected fakes recording into a
+  // shared ordered call-log — the legacy FULL drain's persist contract (a routed
+  // alias's is pinned in runtime-scoped-membership / -table-routing).
+  // `shouldPersist` selects the key; `lastReadSet` (the per-run capture)
   // supplies `tablesRead`, falling back to the `readSet` union when absent.
   function persistHarness(overrides: {
     captureWatermark?: () => Promise<string>;
@@ -250,9 +228,7 @@ describe("L2 persist-hook calling contract", () => {
       wm: string,
       meta: PersistMeta,
     ) => Promise<void>;
-    loader?: (ctx?: {
-      affectedIds: readonly string[];
-    }) => { id: string; n: number }[];
+    loader?: () => { id: string; n: number }[];
     lastReadSet?: (key: string) => string[] | undefined;
   }) {
     const log: string[] = [];
@@ -289,18 +265,12 @@ describe("L2 persist-hook calling contract", () => {
         }),
     });
     h.runtime.defineResource(
+      { key: "p", schema: rowsSchema, validateParams: () => {} },
       {
-        key: "p",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "p_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        loader: (_p, c) => {
-          log.push(c === undefined ? "load:FULL" : "load:scoped");
-          return overrides.loader ? overrides.loader(c) : [{ id: "a", n: 1 }];
+        mode: "push",
+        loader: (_p) => {
+          log.push("load:FULL");
+          return overrides.loader ? overrides.loader() : [{ id: "a", n: 1 }];
         },
       },
     );
@@ -357,40 +327,13 @@ describe("L2 persist-hook calling contract", () => {
       },
     });
     h.runtime.defineResource(
-      {
-        key: "p",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "p_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        loader: () => [{ id: "a", n: 1 }],
-      },
+      { key: "p", schema: rowsSchema, validateParams: () => {} },
+      { mode: "push", loader: () => [{ id: "a", n: 1 }] },
     );
     h.runtime.recomputeResource("p");
     await tick();
     expect(persistArgs).toHaveLength(1);
     expect(persistArgs[0]!.tables).toEqual(["p_table"]); // per-run wins, `notifications` shed
-  });
-
-  test("a persisted entry is forced to FULL even on a scoped change (loader gets ctx === undefined)", async () => {
-    const { h, log } = persistHarness({});
-    // A scoped feed change would normally hand the loader `ctx.affectedIds`; a
-    // persisted entry ignores it and recomputes FULL (never persists a partial).
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "p_table",
-      op: "U",
-      ids: ["a"],
-      origin: "p_table",
-      identityBase: "p_table",
-    });
-    await tick();
-    // One flight watermark (it floors the persist AND rides the wire — see the
-    // zero-subscriber case above), then the forced FULL load.
-    expect(log).toEqual(["wm", "load:FULL", "persist"]); // load:scoped never appears
   });
 
   test("persistSnapshot is NEVER called on loader failure (but captureWatermark was)", async () => {
@@ -414,13 +357,9 @@ describe("L2 persist-hook calling contract", () => {
       },
     });
     await h.subscribe("p");
-    h.runtime.applyDbChange({
+    h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "p_table",
-      op: "U",
-      ids: ["a"],
-      origin: "p_table",
-      identityBase: "p_table",
     });
     await tick();
     // The persist rejected, but the subscriber still received its push.
@@ -438,13 +377,9 @@ describe("L2 persist-hook calling contract", () => {
       },
     });
     await h.subscribe("p");
-    h.runtime.applyDbChange({
+    h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "p_table",
-      op: "U",
-      ids: ["a"],
-      origin: "p_table",
-      identityBase: "p_table",
     });
     await tick();
     // Frame delivered; persist skipped (no watermark to stamp).

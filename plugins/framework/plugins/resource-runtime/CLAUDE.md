@@ -15,8 +15,8 @@ never see this plugin directly.
 Plugins do not call it to add live state: they declare with `network/live`'s
 `liveValue` / `liveCollection` and serve with `serveValue` / `serveCollection`,
 which compile to `defineResource` (`plugins/network/plugins/live/CLAUDE.md`). The
-only direct callers left are that substrate and the tree / revision-tick
-resources (Resources page items 3 / 7). `mode` has no default: a non-keyed
+only direct callers left are that substrate and the two page resources
+(`pages`, `page-links`; Resources page item 9). `mode` has no default: a non-keyed
 definition states `push` or `invalidate` (the flat `DefineResourceInput` and the
 two-arg `ServerResourceOptions` require it; the keyed `KeyedServerResourceOptions`
 has none), because the old implicit `invalidate` was a delivery choice nobody
@@ -98,49 +98,47 @@ at the declaration site or the resource does not compile.
 
 1. **Which RESOURCE does a change belong to?** A compiler-minted route plan
    (`routes` — see *Scoped change routing*; every compiled collection, `all`
-   included), the legacy `identityTable`, or the explicit
-   `recompute: { kind: "full", reason }` opt-out.
-2. **And which subscribed TUPLE of it owns the changed row?** Under `routes`,
-   exactly one of `membership` (a bounded window or point set) /
-   `scopedMembership` (the unbounded alias — its `orderSignatureOf` required).
-   Under `identityTable`, exactly one of `membership` / `scopedMembership` /
-   `fanOut: { reason }` (every tuple genuinely must be woken). A routed plan
-   names its tuples, so it has no `fanOut`.
+   included).
+2. **And which subscribed TUPLE of it owns the changed row?** Exactly one of
+   `membership` (a bounded window or point set) / `scopedMembership` (the
+   unbounded alias — its `orderSignatureOf` required). A routed plan names its
+   tuples, so there is no "wake every tuple" spelling.
+
+So a keyed entry is always a routed membership entry: `buildEntry` refuses a
+keyed entry with no membership, and `routes` with no membership (a registration
+throw beside the type). There is no `identityTable`, `fanOut` or `recompute`
+spelling; a cast that carries one in is refused by name
+(`refuseLegacyScopeKeys`, called from `contractToDefinition` and `buildEntry`),
+since no router would read it.
 
 Question 2 used to have no spelling, so its answer was always "wake all of them":
 every subscribed tuple re-ran its own read, found the changed row was not its
 own, and diffed to empty. No frame shipped, which is what hid the cost — the read
 IS the cost. A tuple that names ONE row is a lookup-only `liveCollection` read by
 id (its `:rows` point membership routes a change only to the tuples holding that
-id); the own-row `rowIdentity` arm that once answered it went with its last
-caller.
-
-`fanOut` normalizes to NOTHING in `createResource`: a declaration requirement
-only, byte-identical at runtime, exactly as the `recompute` arm is. It is deliberately a SIBLING of
-`membership` and never a `kind` inside `KeyedMembership` — a membership record is
-truthy at `drainEntry`'s membership branch and at `applyDbChange`'s INSERT/DELETE
-scoping decision, so a `kind: "fan-out"` member would reroute the drain, which is
-the behaviour change the arm exists to avoid.
-
-A `fanOut` `reason` must be a real sentence about that resource (a composite pk
-the change feed emits no ids for; params keying a foreign column; a param-less
-single tuple). A wrong reason is worse than none — the next reader believes it.
+id).
 
 The `query-resource` compilers build their opts behind an `as … & ScopePolicy`
 cast that `tsc` cannot see through, so each states its policy as an annotated
 `const scopePolicy: ScopePolicy<P>` first; the `keyed-resource-scope` check is
 the backstop for anything that still slips past.
 
+A non-keyed entry has no scope policy. A DB-backed one is reached through its
+captured read-set (the legacy router, `applyLegacyFullChange`, FULL — see
+*Scoped change routing*) or a compiler's `reach` plan; an external one through
+its `notify()`. Either may take `dependsOn` edges, whose upstream must be
+EXTERNAL (T15 — a throw in both registration orders and again at the DAG
+rebuild, deferred placeholders judged at their bind): a DB-backed upstream's
+writes are tables the downstream's own read-set or routes reach.
+
 ## Bounded membership (`membership`) and the `scopedMembership` alias
 
-A keyed own-identity resource may declare a **membership selector** (only on the
-two-arg keyed form, whose scope policy names the identity — routed `routes` or
-the legacy `identityTable`; `createResource` throws otherwise). It makes an INSERT / DELETE / where-flip on the identity table
-ship an incremental delta instead of a FULL recompute — the runtime refills only
-the changed rows and reconciles membership against the per-pk snapshot via
-`diffKeyedScopedMembership`. Absent ⇒ byte-identical to the pre-M5
-FULL-on-membership-change behavior. Three shapes, folded into one internal
-record (see `research/2026-07-03-global-scoped-membership-m5.md` and
+Every keyed resource declares a **membership selector** (the two-arg keyed
+form's `ScopePolicy`, beside its `routes`; `createResource` throws otherwise). It
+makes an INSERT / DELETE / where-flip routed to the resource ship an incremental
+delta instead of a FULL recompute — the runtime refills only the changed rows
+and reconciles membership against the per-pk snapshot via
+`diffKeyedScopedMembership`. Three shapes, folded into one internal record (see `research/2026-07-03-global-scoped-membership-m5.md` and
 `research/2026-07-18-global-bounded-working-set-resource-contract.md`):
 
 - **`membership: { kind: "window", windowIdsOf }`** — the params tuple names a
@@ -155,17 +153,16 @@ record (see `research/2026-07-03-global-scoped-membership-m5.md` and
   whose sub-ack load failed is healed by its client's `sub-error` HTTP fallback.
 - **`membership: { kind: "point", idsOf }`** — the params tuple names an
   **explicit id set** (`idsOf(params)` decodes it; pure, sync, cheap — it runs
-  per subscribed tuple on the feed-routing path). `applyDbChange` routes a change
-  to a tuple **iff the changed ids intersect its set** (empty intersection = no
+  per subscribed tuple on the feed-routing path). `routeTableChange` routes a
+  change to a tuple **iff the changed ids intersect its set** (empty intersection = no
   notify, no version bump); no ids query ever runs; entrants append (point sets
   are unordered); never fans out to the `{}` fallback tuple.
 - **`scopedMembership: { orderOf, orderSignatureOf? }`** (`AliasMembership`) — the
   M5 alias ≡ an **unbounded window** (`windowIdsOf = orderOf`, no LIMIT), the
   only membership shape L2 persists. `orderSignatureOf` is the window's seam (see
-  *Order signature* below), optional on the `identityTable` arm and REQUIRED on
-  the routed arm (type, plus a throw for an untyped caller): a compiler always
-  knows its ORDER BY, so an in-place reorder of a routed alias can never go
-  stale. Mutually exclusive with `membership`.
+  *Order signature* below), REQUIRED by the `ScopePolicy` arm (type, plus a
+  throw for an untyped caller): a compiler always knows its ORDER BY, so an
+  in-place reorder of an alias can never go stale. Mutually exclusive with `membership`.
 
 The window path (`drainMembershipScoped`, `drainEntry` branch 4) classifies each
 flush against the prior snapshot — *entered* (a refilled id not already a member)
@@ -218,11 +215,10 @@ across N→0 (it recomputes on every change regardless of subscribers and needs
 the diff base), and a scoped drain that changed it arms a **floor persist** (see
 *L2 persists* below) rather than writing the row itself; branch 2/3
 (`drainMembershipFull`) seeds/replaces the snapshot even with zero subs so the
-next incremental diff has a base, and REPLACES the row. A DELETE
-cascades downstream FULL (a vanished row has no value for an `affectedMap` to
-translate); inserts/updates cascade scoped (backfilled tail ids do NOT join the
-cascade set — they did not change in the DB, they only entered this window's
-view).
+next incremental diff has a base, and REPLACES the row. A membership drain
+cascades nothing: a membership entry has no downstream, since A5 refuses a
+`dependsOn` onto a routed entry in either registration order, and the DAG
+rebuild asserts it (D32).
 
 At **boot**, the L2 layer restores each persisted alias's in-memory diff base from
 its durable value BEFORE catch-up: `live-state-snapshot`'s `onReady` reads the L2
@@ -294,16 +290,23 @@ carries none (`definition?: never`).
 from its kept snapshot (fresher than the trailing row); `dropPendingPersists()`
 drops the armed windows at shutdown (catch-up replays what they held). `_debug`
 shows a persisted key's `definition`, `lastReplaceAt`, `lastFloorAt` and
-`l2PositionAt`. Pinned by `runtime-scoped-membership.test.ts` §"L2 persisted floor
+`l2PositionAt`, and every key's `persisted` / `positionAgeMs`. Pinned by `runtime-scoped-membership.test.ts` §"L2 persisted floor
 persist", `runtime-catchup.test.ts` and `runtime-table-routing.test.ts` §"the
 plan's definition".
 
 ## Scoped change routing (`routes` + `routeTableChange`)
 
-The legacy router (`applyDbChange`) knows one thing per resource: its
-`identityTable`. A write to any OTHER table its loader reads is FULL for every
-subscribed tuple of that key — even tuples whose SQL never reads that table, since
-the read-set is one union per key. A **routed** resource instead declares, as data
+The legacy router (`applyLegacyFullChange`) knows one thing per resource: the
+union of the tables its loader runs read (the L3 read-set), each relation
+expanded to its **relation bases** — a view to the tables it reads,
+transitively, and a trigger-maintained rollup to its sources
+(`opts.relationBases`, injected by change-feed through server-core's
+`setRelationBases`; identity on central and in the DB-free harness). A write to
+any base is FULL for every subscribed tuple of every reader (or its `{}` tuple when
+none is subscribed) — even tuples whose SQL never reads that table, since the
+read-set is one union per key. The inversion (`tableToResources`) is memoized on
+the read-set sink's version counter, which `setRelationBases` also moves. A
+**routed** resource instead declares, as data
 its compiler emits, a `RoutePlan` (`core/routing.ts`, SQL-free, names no
 contributor): every table occurrence the query may read (`Route` — its `HostMap`
 from changed rows to host ids: `identity`, `alias`, `reverse`, `full`, where an
@@ -316,10 +319,8 @@ serves everything else (`tableToResources` skips routed keys), so each change
 reaches each entry exactly once and resources move over one at a time. Design:
 `research/2026-09-29-global-scoped-change-routing.md`.
 
-- **Declared on a membership arm only** (`ScopePolicy`): `routes` replaces
-  `identityTable` (derived from the unencoded identity route) and has no `fanOut` /
-  `recompute` spelling — a scoped refill never deletes, so only a membership drain
-  turns a routed change into an exit. Route ids are unique (A9: an unknown id from
+- **Declared on a membership arm only** (`ScopePolicy`): a scoped refill never
+  deletes, so only a membership drain turns a routed change into an exit. Route ids are unique (A9: an unknown id from
   `usesOf` is reported and FULLs that tuple). A `dependsOn` edge whose upstream is a
   routed entry throws (A5, "route the table, not the resource") in either
   registration order, and so do routes on an external resource (its truth is not
@@ -353,20 +354,35 @@ reaches each entry exactly once and resources move over one at a time. Design:
   cast let through, and the `resource-runtime:compiled-routes` check (`check/`)
   allows the minters only in `infra/query-resource`'s `routes.ts` and test code.
 - **A non-keyed entry routes through `reach`** (`ReachPlan`, on
-  `ServerResourceOptions`, exclusive with `identityTable`): the same per-tuple
+  `ServerResourceOptions`, exclusive with `dependsOn`): the same per-tuple
   `usesOf`, but every route is `full` — a push value has no host ids to refill, so
   a change to a table the tuple reads recomputes it and a change to any other
   reaches nothing (at most an ack). A collection's `:groups` is the caller. A keyed
-  entry, a non-`full` route, an `identityTable` beside it or an external resource
-  throws in `createResource`.
+  entry, a non-`full` route, `routes` beside it or an external resource throws in
+  `createResource`.
 - **Every `serveCollection` resource is routed** (window, `:rows` and `:groups`,
   compiled by `infra/query-resource`), so none of them depends on the loader
   read-set to be reached.
-- **The read-set debug pane** (`/api/resources/_debug`) carries each routed
-  entry's routes (`routes`: id, table, map kind, a `full` route's reason; `null`
-  for a legacy entry). `debug/read-set` lists every `full` route beside the
-  `recompute: full` opt-outs, and checks a routed entry's captured read-set
-  against its route tables (A7).
+- **The read-set debug pane** (`/api/resources/_debug`, A7) gives every entry a
+  `policy` from a closed set, decided in this order (`debugPolicyOf`):
+  `unbound` (a deferred placeholder not bound yet), `external`, `routed`, else
+  `legacy-full`. The policy is what an entry is, not all that reaches it:
+  `tableToResources` indexes every non-routed entry, so an external or unbound
+  entry with a captured DB read-set is also recomputed FULL by its bases.
+  `legacyReach` is that delivery truth — the bases the legacy router indexes
+  the entry under, from the router's own predicate (`legacyRouted`); `[]` for a
+  routed entry. Beside it: `routes` (id, table, map kind, a `full` route's
+  reason; `null` when not routed), `derivedReads` and `routeDrifted` (the A8
+  guard's own record, raw-table space; `[]` when not routed), `readSetBases`
+  (the raw read-set expanded through the relation bases, unfiltered), `tuples`
+  (`tracked.size`), `persisted` and `positionAgeMs` (now − the row's last known
+  `position_at`; `null` if unknown or not persisted). On central (no read-set
+  capture, no L2) `readSet` / `readSetBases` / `legacyReach` / `routeDrifted` are `[]`,
+  `persisted` is false and `positionAgeMs` null. `debug/read-set` renders the ceiling from
+  these alone — every entry the legacy router reaches with its bases, every
+  routed `full` route, routed drift, and the routed, pure-external and unbound
+  keys. Pinned by `runtime-debug-policy.test.ts` (A26, including that
+  `legacyReach` names exactly who a base write loads).
 - **The drift guard (A8).** A routed entry is reached ONLY through its routes, so
   after each loader run the key's per-run capture (`lastReadSet`) must be a subset
   of its route tables — a table outside them is one whose writes it never sees —
@@ -417,9 +433,9 @@ reaches each entry exactly once and resources move over one at a time. Design:
 - **A skip is never a pending.** A tuple a change skips owes at most an ack
   (`entry.pendingAcks`): the drain folds it into that tuple's real pending, or
   broadcasts it standalone before any persisted or membership branch — so a skip
-  can no longer be spelled as a reload (a persisted entry forces FULL). The legacy
-  point empty-intersection uses the same channel, and an empty scoped pending (an
-  empty `notify`, an `affectedMap` mapping to nothing) is a skip on every entry kind.
+  can no longer be spelled as a reload (a persisted entry forces FULL). A point
+  tuple's empty intersection uses the same channel, and an empty scoped pending
+  (a reverse route that resolves to no host) is a skip on every entry kind.
   An owed ack counts as a feed delivery (hand-vs-feed counters, read-set-gap
   match); a skip that owes none records nothing — the change never reached the
   tuple.
@@ -545,8 +561,9 @@ NOTIFY carries its source transaction id (`x`, `pg_current_xact_id()::text`);
 the pending coalesces those into `sourceTx` (unioned on every merge branch,
 INCLUDING the FULL absorb/degrade — a FULL recompute reads post-commit, so the
 claim survives; contrast `deleted`, which FULL drops; capped at 64 with
-overflow suppressing the whole cycle), threads them through the cascade
-(`SKIP_EDGE` drops them), and the drain stamps `ackTx` on the `update`/`delta`
+overflow suppressing the whole cycle), threads them through the FULL
+`dependsOn` cascade into every downstream pending (a downstream recompute also
+reads post-commit), and the drain stamps `ackTx` on the `update`/`delta`
 frames the recompute produces. The claim is
 deliberately NARROW: *"for each W ∈ ackTx, every row of this tuple's view that W
 wrote has been re-read post-commit and is reflected in this frame's base"* —
@@ -611,12 +628,12 @@ I am draining". No adoption rule makes an older SELECT satisfy it, so the defenc
   observe it **before** the load; then a joined older value can only report an older
   version, which the client drops. This is why the read path passes NO floor and its
   coalescing (and the gate-after-dedup replay-storm fix) is untouched.
-- A **push** frame *mints* one, so the three FULL drain sites
-  (`drainMembershipFull`, the legacy `drainEntry` branch, the keyed FULL reload)
+- A **push** frame *mints* one, so the two FULL drain sites
+  (`drainMembershipFull` and the legacy non-keyed FULL drain in `drainPendings`)
   pass `notBefore: pendingEntry.lastNotifyAt`. A flight that started earlier is
   superseded, not joined, and the drain runs its own.
 
-**The floor is passed explicitly by those three sites and must NEVER be derived
+**The floor is passed explicitly by those two sites and must NEVER be derived
 from `gated`.** That flag looks like a proxy for "this is a push" and is not one —
 the boot-snapshot fan-out and the multi-tab sub herd are *gated read* callers, the
 exact traffic single-flighting exists to collapse. Keying the floor off it would
@@ -755,8 +772,13 @@ The server binds each of these to a profiler span in `server-core/core/resources
 - `wrapLoad(key, info, fn)` wraps every loader run (`timedLoad`). `info.variant` is
   the canonical params (`paramsKey`), absent for `{}`. `info.scopedIds` is the id count
   of a scoped refill, absent on a FULL load.
-- `wrapOrigin(kind, key, fn)` wraps the `sub` / `push` / `cascade` origins.
-  `wrapFlush(fn)` wraps the flush cycle.
+- `wrapOrigin(kind, key, fn)` wraps the `sub` / `push` / `cascade` origins:
+  `sub` a gated read (sub-ack, HTTP) and its revalidate signature, `push` a
+  drain's load, `cascade` a routed
+  entry's reverse-route resolve (`resolveReverseRoutes`, the id-translation read
+  from changed lookup rows to host ids; label = that entry's key). A `dependsOn`
+  or `recomputeOn` cascade opens no `cascade` origin — the downstream's
+  recompute is a `push` load. `wrapFlush(fn)` wraps the flush cycle.
 - `wrapHttp(key, fn)` wraps one `GET /api/resources/:key` request, starting right after
   the key resolves. The revalidate signature and the 304 are included, so a conditional
   GET is measured even when no loader runs.
@@ -779,12 +801,12 @@ Each suite's `describe`/`test` names state what it pins; read them there.
   `makeClientView()` (a client simulator applying frames through the REAL WS
   version guard + a mirror of `mergeKeyedDelta`, so tests assert "converges to
   server truth"), and the `rng` mulberry32 PRNG.
-- `runtime.test.ts` (level-parallel flush, `applyDbChange` routing, revalidate,
-  `authorize`), `keyed-diff.test.ts` (all three diffs, scenario + property, under
+- `runtime.test.ts` (level-parallel flush, `applyLegacyFullChange` routing,
+  revalidate, `authorize`, the D37 / D31 / T15 refusals), `keyed-diff.test.ts` (all three diffs, scenario + property, under
   BOTH encoders), `runtime-h5.test.ts` (notify-vs-fresh-sub race),
   `runtime-scoped-routing.test.ts`, `runtime-scoped-membership.test.ts` (M5 alias),
   `runtime-window-membership.test.ts` (bounded window / point / order signature),
-  `runtime-cascade-attribution.test.ts`, `runtime-catchup.test.ts` (over-replay
+  `runtime-catchup.test.ts` (over-replay
   idempotence + the L2 persist-hook calling contract),
   `runtime-version-shortcircuit.test.ts`, `runtime-gate-dedup.test.ts`,
   `runtime-sub-batch.test.ts`, `runtime-watermark.test.ts`,
@@ -796,9 +818,17 @@ Each suite's `describe`/`test` names state what it pins; read them there.
   a joined sub-ack nor a drain outliving its span sets an older snapshot), `runtime-optional-params.test.ts` (one
   tuple per spelling of an absent optional param), `runtime-table-routing.test.ts`
   (the routed-entry matrix, the named routing scenarios, the `reach` arm and the
-  A5 / A8 / A22 guards). `runtime-window-membership.test.ts` runs every window / point
-  case under both routers — declared `identityTable` and the identity route
-  `compileWindowQuery` emits.
+  A5 / A8 / A22 guards, and the reverse resolve's `cascade` origin),
+  `runtime-debug-policy.test.ts` (A26: every key in `_debug` under one policy,
+  before and after a deferred bind, and the central-shaped degradation).
+- `testing/routed-fixture.ts` (re-exported from `core/testing`) — the shared
+  routed fixture: `identityPlan(table, cols)` (the identity route
+  `compileWindowQuery` emits), `defineRoutedTable(h, { key, table, membership,
+  loader, … })` (a keyed entry on it, `alias` / `window` / `point`; refuses a
+  key the harness answers a read-set for, so a migrated suite cannot carry a
+  dead `readSet`), `feedChange(h, change)` (both routers, as change-feed's
+  `routeChange` calls them) and `legacyFull(h, table, o)` (the legacy router
+  alone). `createHarness` / `Harness` are re-exported for cross-plugin suites.
   Note `controllable()` resolves at RELEASE time, so it structurally cannot model
   a SELECT that already ran; any test about stale-flight joins must use
   `snapshotControllable()`, which captures at INVOCATION time.
@@ -907,10 +937,15 @@ and those plugins' `CLAUDE.md`.
 - Test helpers:
   - Core: `@plugins/framework/plugins/resource-runtime/core/testing`
     - `buildSnapshot` — Build the id→entry map for a keyed resource's array `value`, in array order.
+    - `createHarness` — A runtime under test plus `sockets` (default 1) fake `ServerWebSocket`s opened via `notificationsWsHandler.open`.
+    - `defineRoutedTable` — Register a keyed resource over `spec.table` the way a compiled collection is.
     - `diffKeyedFull` — Full diff: compare the new array `value` against `prev` (the prior snapshot, or `undefined` on first notify).
     - `diffKeyedScoped` — Scoped diff (Layer 2): `scopedRows` is a PARTIAL array — only the recomputed affected rows.
+    - `feedChange` — One base-table change as the change feed delivers it (`routeChange`): to the routed router, then the legacy one.
     - `hashSnapEncoder`
+    - `identityPlan` — The plan `compileWindowQuery` emits for a single-table window / point set / alias: one identity route `base` on `table`, gating on `cols`, read by every tuple in the membership role.
+    - `legacyFull` — The legacy router alone: every non-routed reader of `table` recomputes FULL.
     - `makeClientView`
-    - Types: `ClientView`, `KeyedSnapshot`, `RecordedFrame`
+    - Types: `ClientView`, `FedChange`, `Harness`, `KeyedSnapshot`, `RecordedFrame`, `RoutedTable`, `RoutedTableSpec`
 
 <!-- AUTOGENERATED:END -->

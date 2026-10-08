@@ -38,6 +38,7 @@ import { recordTrashEntry } from "@plugins/infra/plugins/trash/server";
 import {
   collectContributions,
   recordLoaderReadSet,
+  removeReadSetTable,
 } from "@plugins/framework/plugins/server-core/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { defineBlock } from "../../core";
@@ -316,7 +317,7 @@ describe("cycle guard", () => {
  * (`\b(from|join)\s+"([^"]+)"`, `plugins/database/server/internal/client.ts`).
  * Raw SQL writing `FROM page_blocks` unquoted captures NOTHING — the
  * `page_blocks → pages` edge never registers in `tableToResources()`,
- * `applyDbChange` early-outs, and the sidebar just stops updating. No error, no
+ * `applyLegacyFullChange` early-outs, and the sidebar just stops updating. No error, no
  * log, every other test still green.
  *
  * Capture happens in the instrumented `pool.query` wrapper keyed on the ambient
@@ -335,6 +336,19 @@ describe("read-set (Hole A)", () => {
     });
     installLoaderReadSetSink(recordLoaderReadSet);
     resetRuntimeProfile();
+  });
+
+  // The read-set index is process-global ROUTING state: a later suite in the
+  // same bun process that routes a change through server-core's legacy router
+  // would otherwise invert these keys' tables (and, with no relation bases set,
+  // report on every change). Remove what this describe recorded.
+  afterAll(() => {
+    const index = getReadSetIndex();
+    const mine = [pagesResource.key, "doc-order-paths-probe"];
+    const others = Object.keys(index).filter((k) => !mine.includes(k));
+    for (const table of new Set(mine.flatMap((k) => index[k] ?? []))) {
+      removeReadSetTable(table, others);
+    }
   });
 
   test("the pages loader's read-set contains page_blocks", async () => {

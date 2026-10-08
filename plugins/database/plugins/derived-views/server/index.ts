@@ -3,7 +3,6 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 export { dropDerivedViews, rebuildDerivedViews } from "./internal/rebuild";
 export type { DeclaredView } from "./internal/rebuild";
 export { View } from "./internal/contribution";
-export { relationIdentityBase } from "./internal/relation-identity";
 
 export default {
   description:

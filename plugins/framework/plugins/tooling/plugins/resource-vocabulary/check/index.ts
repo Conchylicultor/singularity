@@ -21,7 +21,7 @@ import type * as LiveServerBarrel from "@plugins/network/plugins/live/server";
 //
 // The descriptor-factory half lives in `../core`, where `satisfies
 // Record<MintingFactoryName, …>` derives its key set from the `core` barrels'
-// module types (`live-state`, `query-resource`, `network/live`). The register
+// module types (`live-state`, `network/live`). The register
 // markers cannot be derived there: they come from `query-resource/server` and
 // `network/live/server`, and runtime isolation grants `core -> core` only. A
 // `check/` file has no runtime restriction (it already imports server barrels

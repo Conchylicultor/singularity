@@ -11,6 +11,10 @@ import {
 } from "./route-coverage";
 import { assertRouteLayoutsInstalled } from "./route-layout";
 import {
+  assertRelationBasesSourced,
+  type RelationGraph,
+} from "./relation-bases";
+import {
   assertNoTriggerOnProduced,
   assertProducedTablesDeclared,
 } from "./produced-tables";
@@ -21,8 +25,10 @@ export interface FeedInstallInputs {
   exclusions: TriggerExclusions;
   /** The routed tables' trigger layouts (`routedTableRequirements()`). */
   layouts: readonly TableLayoutRequirement[];
-  /** Every table a resource's scoped delivery depends on (`scopedResourceTables()`). */
+  /** Every table a routed resource's routes name (`scopedResourceTables()`). */
   scoped: readonly ScopedResourceTable[];
+  /** The views' and rollups' read graph, which relation bases expand through. */
+  relations: RelationGraph;
 }
 
 /**
@@ -36,15 +42,17 @@ export interface FeedInstallInputs {
  *     rollup, and no route on it needs a carried column.
  *  2. The trigger rebuild (`rebuildTriggers`), produced tables denylisted.
  *  3. A2′ (catalog): no `live_state_*` trigger survived on a produced table.
- *  4. A1′: every table a resource's delivery depends on has a change source —
- *     a trigger the rebuild installed, or a mounted change producer.
- *  5. A3: every routed table's installed triggers carry what its routes read.
+ *  4. A1′: every route table of a routed resource has a change source — a
+ *     trigger the rebuild installed, or a mounted change producer.
+ *  5. D35: every base table a view or rollup reaches has a change source, or
+ *     is opted out.
+ *  6. A3: every routed table's installed triggers carry what its routes read.
  */
 export async function installFeed(
   db: NodePgDatabase,
   inputs: FeedInstallInputs,
 ): Promise<void> {
-  const { exclusions, layouts, scoped } = inputs;
+  const { exclusions, layouts, scoped, relations } = inputs;
   assertProducedTablesDeclared(
     exclusions.produced,
     exclusions.optedOut,
@@ -53,11 +61,10 @@ export async function installFeed(
   );
   await rebuildTriggers(db, exclusions, layouts);
   await assertNoTriggerOnProduced(db, exclusions.produced);
-  // Reject dead scope policy (A1′): a resource depending on a table with no
-  // change source can never receive the delivery it declares — a routed resource
-  // is reached only through its route tables, a legacy scoped one only on
-  // origin === identityTable, and only a triggered or produced table produces
-  // either. `getCoveredTables()` is the authoritative triggered set — just
+  // Reject dead routing (A1′): a routed resource (`routes` / `reach`) is
+  // reached only through its route tables, so a route table with no change
+  // source can never deliver; only a triggered or produced table produces a
+  // change. `getCoveredTables()` is the authoritative triggered set — just
   // populated by `rebuildTriggers` above — so this one check subsumes the
   // ExcludeFromChangeFeed case AND catches typo / view / rollup / nonexistent
   // tables; the exclusion + exempt sets only classify the reason for the
@@ -70,6 +77,18 @@ export async function installFeed(
     new Set([...getCoveredTables(), ...exclusions.produced]),
     exclusions.optedOut,
     exclusions.feedExempt,
+  );
+  // D35: a legacy loader reading a view or rollup is reached through the
+  // relation's bases (the legacy router expands its read-set through them), so
+  // each base must itself produce changes: a trigger, a producer — or an
+  // explicit opt-out, whose readers accept hydrate-on-mount by declaration.
+  assertRelationBasesSourced(
+    relations,
+    new Set([
+      ...getCoveredTables(),
+      ...exclusions.produced,
+      ...exclusions.optedOut,
+    ]),
   );
   // A3: every column a route maps through, filters or matches on is carried by
   // its table's installed trigger — read back from the catalog (the trigger

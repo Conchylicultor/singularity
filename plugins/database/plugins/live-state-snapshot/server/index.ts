@@ -7,7 +7,10 @@ import {
   seedPersistedSnapshot,
   unboundedWindowKeys,
 } from "@plugins/framework/plugins/server-core/core";
-import { producedTableNames } from "@plugins/database/plugins/change-feed/server";
+import {
+  producedTableNames,
+  relationBases,
+} from "@plugins/database/plugins/change-feed/server";
 import { db } from "@plugins/database/server";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
@@ -96,7 +99,13 @@ export default {
     // The tables an in-process change producer feeds (contributions are
     // collected before this barrier): volatile, so never L2-persisted (A6).
     const produced = producedTableNames();
-    await initSnapshotSubsystem(db, produced, healed);
+    // D28: the guard and the sweep judge a read-set through the relation bases
+    // change-feed set in its `onReadyBlocking` (a dependsOn parent — it ran
+    // first); a read before that throws. Probed HERE, outside the graceful
+    // degradation below (whose catch would turn the throw into a disabled L2),
+    // so a boot-order bug blocks boot, like A20 above.
+    relationBases(LIVE_STATE_SNAPSHOT_TABLE);
+    await initSnapshotSubsystem(db, produced, relationBases, healed);
     // A6 (boot, static evidence): a key the runtime persists whose routes or
     // identity table name a produced table blocks boot. Outside the graceful
     // degradation above on purpose — it is a declaration bug, not a snapshot

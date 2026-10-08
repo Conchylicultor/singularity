@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { View } from "@plugins/database/plugins/derived-views/server";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
-import { attemptConvAgg, attemptPushAgg } from "./internal/rollup-spec";
+import { TASK_ROLLUPS } from "./internal/rollup-spec";
 import {
   taskRowsServed,
   taskDescriptionsServed,
@@ -45,9 +45,11 @@ export {
 // full-graph round trip per linked task. Built on the same derivations as the
 // live `tasks` set (./internal/derived.ts), which reads the base tables instead.
 // Today's consumers are `page/annotations/todo/task-link`'s markdown provider
-// and `tasks/automations`' open-task lookup — neither a live loader (a live
-// reader of `tasks_v` would miss conversation and push writes: the view reads
-// them only through feed-exempt rollups).
+// and `tasks/automations`' open-task lookup (read by the `automations.catalog`
+// live value). A legacy live reader of `tasks_v` is reached through the view's
+// relation bases — the rollups expand to the `conversations` and `pushes`
+// writes that move them (change-feed's `relationBases`) — at one FULL reload
+// per such write.
 export { tasks as tasksView } from "./internal/views";
 
 // Zod schemas and TS types
@@ -233,16 +235,11 @@ export default {
     ...conversationsGoneServed.declare,
     ...conversationsByIdServed.declare,
     ...conversationsGoneStatsServed.declare,
-    DerivedTable(attemptConvAgg),
-    DerivedTable(attemptPushAgg),
-    View({ view: attempts, identityTable: "attempts" }),
-    View({ view: conversations, identityTable: "conversations" }),
+    ...TASK_ROLLUPS.map((r) => DerivedTable(r)),
+    View({ view: attempts }),
+    View({ view: conversations }),
     View({ view: taskBlocking, dependsOn: ["attempts_v"] }),
-    View({
-      view: tasks,
-      dependsOn: ["task_blocking_v"],
-      identityTable: "tasks",
-    }),
+    View({ view: tasks, dependsOn: ["task_blocking_v"] }),
   ],
   register: [
     pushLanded,

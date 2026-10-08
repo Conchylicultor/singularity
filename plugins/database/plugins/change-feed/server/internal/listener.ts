@@ -148,9 +148,10 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
       //
       // On a genuine RECONNECT (mid-session socket drop), a dropped socket may have
       // missed NOTIFYs while down, so fullSweep stays as defense-in-depth: it fires
-      // a FULL invalidation across every triggered table. applyDbChange drops any
-      // table no resource reads, so the sweep only does work for currently-
-      // subscribed, DB-backed resources.
+      // a FULL invalidation across every triggered table through `routeChange`
+      // (both routers). A table no resource reads reaches nothing — no route
+      // names it and no read-set base is it — so the sweep only does work for
+      // currently-subscribed (or persisted), DB-backed resources.
       //
       // See research/2026-06-23-global-live-state-persisted-read-set-no-boot-recompute.md.
       if (firstConnect) {

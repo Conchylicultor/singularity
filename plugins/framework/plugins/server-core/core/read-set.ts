@@ -1,6 +1,6 @@
 // The runtime-owned loader → table read-set: which tables each resource's loader
 // has read, as captured at the DB pool chokepoint. It is ROUTING state — the
-// legacy change router (`applyDbChange`) inverts it into table → resource — so it
+// legacy change router (`applyLegacyFullChange`) inverts it into table → resource — so it
 // lives here, beside the runtime it feeds, and not in the profiler.
 //
 // When the profiler owned it, routing inherited the profiler's switches:
@@ -28,8 +28,9 @@ const readSetIndex = new Map<string, Set<string>>();
 // nothing never replaces a real set with an empty one.
 const lastLoaderReadSet = new Map<string, Set<string>>();
 
-// Moves whenever the union index gains or loses a (key, table) edge — the key the
-// router memoizes its table → resource inversion on.
+// Moves whenever the union index gains or loses a (key, table) edge, or the
+// relation bases the edges expand through are set — the key the router
+// memoizes its table → resource inversion on.
 let version = 0;
 
 /**
@@ -52,9 +53,18 @@ export function readSetOf(key: string): string[] {
   return set ? [...set].sort() : [];
 }
 
-/** The router's memo key: moves on every edge gained, seeded or removed. */
+/** The router's memo key: moves on every edge gained, seeded or removed, and on `setRelationBases`. */
 export function readSetVersion(): number {
   return version;
+}
+
+/**
+ * Move the version without an edge change: the router's inversion is also a
+ * function of the relation bases its read-sets expand through, so installing
+ * them (`setRelationBases`, D33) must invalidate the memo exactly like an edge.
+ */
+export function bumpReadSetVersion(): void {
+  version++;
 }
 
 /**

@@ -65,8 +65,8 @@ version-guarded read), and its failure is the query's error — never a read lef
 `pending` with no error. It stays in that error until a push, a reconnect replay
 or a `refetch()`: React Query's retry-on-mount does not reach a disabled query
 (a placeholder query used to retry when remounted). The descriptors that still carry a placeholder are the
-tree and tick ones (Resources page items 3 / 7), for their plain
-readers only: no optimistic read takes a placeholder.
+two page ones (`pagesResource`, `pageLinksResource`; Resources page item 9), for
+their plain readers only: no optimistic read takes a placeholder.
 `useOptimisticResource` reads a declaration (a `liveValue`, or a collection's
 `{ ids }`), whose overlay has no base — and no `dispatch` — until a real value
 lands, so it stays `loading` instead.
@@ -163,8 +163,8 @@ pacing.
 **Recovery resubs never echo state** (`forceFullResub`): a delta with no base or
 with drift clears the etag AND resets `version`/`lastAckVersion` to -1 before
 sending a version-less sub. "No base" means no server-vouched value
-(`hasAppliedValue`), never merely an `undefined` cache: a placeholder (the
-tree's `[]`) is not a base, and a scoped delta merged onto it — which another
+(`hasAppliedValue`), never merely an `undefined` cache: a placeholder
+(`initialData`) is not a base, and a scoped delta merged onto it — which another
 tab's subscription on the shared socket can draw before this tab's sub-ack —
 would settle the read on a false empty list. The baseline reset is load-bearing — the broken
 delta already advanced `entry.version` (the guard adopts before dispatch), so
@@ -398,8 +398,8 @@ frame can no longer be backed by a pre-commit read):
 
 ## Descriptor registry (`resourceDescriptorByKey`)
 
-Every descriptor factory (`resourceDescriptor`, `keyedResourceDescriptor`, and
-`network/live`'s `liveValue` / `liveCollection`) self-registers its result into a module-level
+Every descriptor factory (`resourceDescriptor`, and `network/live`'s
+`liveValue` / `liveCollection`) self-registers its result into a module-level
 key→descriptor map at **descriptor-module evaluation time** (the factory call runs
 on import, before first paint); `resourceDescriptorByKey(key)` reads it back.
 boot-snapshot uses it to resolve the snapshot's boot-critical keys to their client
@@ -432,16 +432,15 @@ nothing to declare. Keyed-ness is declared in **one place** — the client
 descriptor — and the server reads it from there, so the two sides cannot drift:
 
 - **Client/shared** — the descriptor carries `keyOf` (`liveCollection` sets it
-  from `id`; the tree resources, the only other keyed ones left, use
-  `keyedResourceDescriptor(key, schema, initialData, keyOf)` or
-  `queryResourceDescriptor`, which derives it from the pk). `schema` stays
-  `z.array(Element)`, so callers still get `T[]`. The `keyOf` keys prior cache
+  from `id` on its window, `:rows` and `all` descriptors — the only keyed
+  descriptors there are). `schema` stays `z.array(Element)`, so callers still
+  get `T[]`. The `keyOf` keys prior cache
   rows when merging a delta; per-row parsing goes through the array schema's
   `.element`. A delta that arrives with no cached base is dropped and a fresh
   full sub is forced (load-bearing guard).
-- **Server** — the served half takes that descriptor (`serveCollection`, or the
-  tree's `queryResource` / two-arg `defineResource(descriptor, { loader,
-  identityTable, … })`);
+- **Server** — the served half takes that descriptor (`serveCollection`, which
+  compiles it to the two-arg `defineResource(descriptor, { loader, routes,
+  membership | scopedMembership, … })`);
   `key` / `schema` / `mode: "keyed"` / `keyOf` all come from it. Do **not**
   restate `mode`/`keyOf` — `ServerResourceOptions` rejects `mode: "keyed"`, the
   flat one-arg `defineResource` form structurally cannot be keyed, and inline
@@ -455,22 +454,19 @@ descriptor — and the server reads it from there, so the two sides cannot drift
 
 Strictly additive: `push`/`invalidate` resources are untouched.
 
-### Scoped recompute (`notify(params, { affectedIds })`)
+### Scoped recompute (a routed refill)
 
-Layer 1 shrinks the wire payload but the keyed loader still recomputes the whole
-view on every fire. Layer 2 lets a caller scope the recompute:
-`notify(params, { affectedIds: [...] })` tells the loader, via `ctx.affectedIds`,
-which row ids changed, so it can `WHERE id IN (…)` and return only those. The
-scoped diff merges into the existing snapshot and ships exactly Layer 1's
-content-delta shape (`upserts`, empty `deletes`, no `order`) — **the client needs
-zero changes**.
-
-Opt-in and strictly additive: plain `notify()` keeps full-recompute semantics,
-which remain authoritative for any membership change (a scoped delta never
-asserts `order`/`deletes`). The server-side mechanics — sticky-FULL degradation,
-`affectedMap` cascade edges, and the `scopedMembership` (M5) exception where a
-scoped delta MAY assert membership (still zero client changes: a present `order`
-already takes the rebuild path) — live in
+Layer 1 shrinks the wire payload; Layer 2 shrinks the recompute. Every keyed
+resource is a routed membership entry (`resource-runtime/CLAUDE.md`, *Scoped
+change routing*): a change to a row it reads refills only that row — the
+runtime hands the loader `ctx.affectedIds` and it returns only those rows —
+and the drain merges them into the snapshot as a delta. A content-only change
+ships exactly Layer 1's content-delta shape (`upserts`, empty `deletes`, no
+`order`) — **the client needs zero changes**; a membership change (an entrant,
+an exit, an order move) MAY assert `order` / `deletes`, which a present `order`
+already takes the rebuild path for. There is no hand-scoped notify: `notify()`
+(an external resource's only spelling) always recomputes in full. The
+server-side mechanics live in
 `plugins/framework/plugins/resource-runtime/CLAUDE.md` and
 `plugins/infra/plugins/query-resource/CLAUDE.md`. See
 `research/2026-07-03-global-scoped-membership-m5.md`.
@@ -484,9 +480,9 @@ already takes the rebuild path) — live in
 > from one declaration, so a consumer asks a query (filter / order / limit, or ids)
 > and never picks the bound itself. See `plugins/network/plugins/live/CLAUDE.md` and
 > `research/2026-09-25-global-unified-live-resource-api.md`. The window / point
-> descriptors below are its substrate, never a declaration of their own; the
-> unbounded `keyedResourceDescriptor` collections left are the tree (Resources
-> page item 3) — not precedent.
+> descriptors below are its substrate, never a declaration of their own. A set
+> its readers need whole is a collection declared `all` (one param-less keyed
+> tuple), never an unbounded descriptor of its own.
 
 The bounded working-set contract rides the SAME keyed wire — **a window is just a
 params tuple**. Live-state owns only the descriptor **types** (`core/window.ts`:
@@ -775,8 +771,8 @@ pass `gate: true` (next section).
 
 ## Slice selectors (`useResource(resource, params, { select })`)
 
-**`useResource`, and `useLive(all, { select })`** — the tree / revision-tick
-readers (Resources page items 3 / 7) and a collection declared `all` (its
+**`useResource`, and `useLive(all, { select })`** — the two page resources'
+readers (Resources page item 9) and a collection declared `all` (its
 whole set held in one tuple; `network/live`, always `gate: true`). A window or
 value `useLive` has no `select`: one row of a collection is `useLiveRow(c, id)`
 (a point read, so a change elsewhere never reaches it), and a derivation of a
@@ -961,7 +957,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `useResourceContractMismatches`
     - `useResources`
 - Cross-plugin:
-  - Imported by: 196 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 195 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×50
     - `conversations` ×38
     - `ui` ×22
@@ -970,7 +966,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `page` ×11
     - `primitives` ×9
     - `active-data` ×6
-    - `infra` ×6
+    - `infra` ×5
     - `auth` ×4
     - `build` ×4
     - `plugin-meta` ×3
@@ -1005,7 +1001,6 @@ keeps every row's identity rather than re-minting each moved row.
     - `WindowSelector`
   - Exports (values):
     - `compareTxWatermark`
-    - `keyedResourceDescriptor`
     - `registerResourceDescriptor`
     - `resolvableSchema`
     - `resolved`

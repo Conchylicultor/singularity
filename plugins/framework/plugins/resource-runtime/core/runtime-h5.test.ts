@@ -42,6 +42,7 @@ import {
   tick,
   makeClientView,
 } from "./test-support";
+import { defineRoutedTable } from "./testing/routed-fixture";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
@@ -166,33 +167,28 @@ describe("H5 — notify races a fresh sub", () => {
     const supersedes: string[] = [];
     let fullLoads = 0;
     const h = createHarness({
-      readSet: () => ["row_table"],
       onStaleFlightSupersede: (key) => supersedes.push(key),
     });
     const ctl = controllable<{ id: string; n: number }[]>([
       { id: "a", n: 1 },
       { id: "b", n: 1 },
     ]);
-    h.runtime.defineResource(
-      {
-        key: "rows",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
+    // A routed alias over the identity table (the shared fixture).
+    const rows = defineRoutedTable(h, {
+      key: "rows",
+      table: "row_table",
+      membership: "alias",
+      schema: rowsSchema,
+      orderOf: async () => ctl.value.map((row) => row.id),
+      // FULL and (later) scoped both read the same controllable value; the
+      // scoped ctx narrows to the affected rows.
+      loader: (_p, c) => {
+        if (!c) fullLoads++;
+        return c
+          ? ctl.value.filter((row) => c.affectedIds.includes(row.id))
+          : ctl.loader();
       },
-      {
-        identityTable: "row_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        // FULL and (later) scoped both read the same controllable value; the
-        // scoped ctx narrows to the affected rows.
-        loader: (_p, c) => {
-          if (!c) fullLoads++;
-          return c
-            ? ctl.value.filter((row) => c.affectedIds.includes(row.id))
-            : ctl.loader();
-        },
-      },
-    );
+    });
 
     // Fresh subscribe parks; a FULL feed change (INSERT → ids null) races it.
     ctl.block();
@@ -201,14 +197,7 @@ describe("H5 — notify races a fresh sub", () => {
       { id: "b", n: 1 },
     ]);
     await h.subscribe("rows"); // sub-ack parked
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "row_table",
-      op: "I",
-      ids: null,
-      origin: "row_table",
-      identityBase: "row_table",
-    });
+    rows.feed("I", null);
     await tick();
     ctl.release();
     await tick();
@@ -233,14 +222,7 @@ describe("H5 — notify races a fresh sub", () => {
       { id: "a", n: 3 },
       { id: "b", n: 1 },
     ]);
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "row_table",
-      op: "U",
-      ids: ["a"],
-      origin: "row_table",
-      identityBase: "row_table",
-    });
+    rows.feed("U", null);
     await tick();
 
     const deltas = h.pushesFor("rows").filter((f) => f.kind === "delta");

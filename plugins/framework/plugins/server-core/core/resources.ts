@@ -24,7 +24,12 @@ import {
   getRuntimeProfile,
   registerGateGauge,
 } from "./profiler-hooks";
-import { getLastLoaderReadSet, readSetOf, readSetVersion } from "./read-set";
+import {
+  bumpReadSetVersion,
+  getLastLoaderReadSet,
+  readSetOf,
+  readSetVersion,
+} from "./read-set";
 import { defineServerContribution } from "./contributions";
 import { reportServerError, type ServerErrorReport } from "./error-reporter";
 
@@ -149,40 +154,42 @@ export const Resource = {
   }),
 };
 
-// Maps a captured read-set relation to its identity base table for the `_debug`
-// ceiling (views → their base, so it compares like-for-like with the base-table
-// `coveredOrigins`). The resolver lives in derived-views (which owns the View
-// registry), but server-core/core must NOT statically import a feature plugin —
-// that would cycle (derived-views/server already imports server-core/core). So it
-// is injected at boot via `setRelationResolver`: change-feed (the DB↔live-state
-// bridge that already imports both barrels) wires in `relationIdentityBase` once
-// the View registry is built. The holder defaults to identity, so the ceiling is
-// correct (raw == base) before the setter runs and on central (no views); the
-// closure passed to the runtime reads the CURRENT holder at call time, so it is
-// harmless that the runtime is constructed before the setter is called.
-let relationResolver: (relation: string) => string = (r) => r;
-export function setRelationResolver(fn: (relation: string) => string): void {
-  relationResolver = fn;
+// Relation bases (C30): the base tables a read of a relation depends on — a
+// view's tables, transitively, with each rollup replaced by its sources. The
+// legacy router indexes every read-set relation under its bases, so a reader of
+// `tasks_v` is reached by a `conversations` write. The graph lives in the
+// database layer (views, rollups), which server-core/core must NOT statically
+// import (derived-views/server already imports this barrel — a cycle), so
+// change-feed injects it at boot (`setRelationBases`, in its `onReadyBlocking`,
+// D34). Read before that, the holder THROWS: a router or guard running before
+// the graph is set would silently miss every view reader, so a wrong boot order
+// is loud. Setting it bumps the read-set version (D33), so the router's
+// memoized table → resource inversion is rebuilt through the new bases.
+let relationBasesHolder: ((relation: string) => readonly string[]) | null =
+  null;
+export function setRelationBases(
+  fn: (relation: string) => readonly string[],
+): void {
+  relationBasesHolder = fn;
+  bumpReadSetVersion();
 }
-
-// Feed-exempt base tables (trigger-maintained materialized rollups from
-// derived-tables) the `_debug` builder subtracts from each resource's emitted
-// read-set, so a rollup never reads as a false "silent FULL recompute" in the
-// read-set pane. Injected at boot by change-feed (the DB↔live-state bridge that
-// already imports the derived-tables barrel) via `setFeedExemptTables` — the
-// same boot-injection pattern as `setRelationResolver`, so server-core/core
-// never statically imports a feature/database plugin. Defaults to empty (no
-// filtering) before injection and on central. The closure passed to the runtime
-// reads the CURRENT holder at call time, so constructing the runtime before the
-// setter runs is harmless.
-let feedExemptTablesHolder: () => Set<string> = () => new Set<string>();
-export function setFeedExemptTables(fn: () => Set<string>): void {
-  feedExemptTablesHolder = fn;
+/** Back to "not set" (test support: a suite that set bases must not leak them into the next). */
+export function clearRelationBases(): void {
+  relationBasesHolder = null;
+  bumpReadSetVersion();
+}
+function relationBasesOf(relation: string): readonly string[] {
+  if (relationBasesHolder === null) {
+    throw new Error(
+      `[resources] relation bases read before change-feed set them (setRelationBases) — relation "${relation}"`,
+    );
+  }
+  return relationBasesHolder(relation);
 }
 
 // L2 persisted-materialization hooks — injected at boot by the
 // `live-state-snapshot` feature plugin (the same byte-for-byte pattern as
-// `setRelationResolver`). server-core/core MUST NOT statically import that plugin
+// `setRelationBases`). server-core/core MUST NOT statically import that plugin
 // (it imports `@plugins/database/server` + this barrel — a static import here
 // would cycle). So the plugin calls `setLiveStateSnapshotHooks` once at boot and
 // the runtime closures below read the CURRENT holders at call time. Before
@@ -355,15 +362,10 @@ const runtime = createResourceRuntime({
   // load under a test runner (bun:test sets NODE_ENV=test), and is reported
   // once per table in a running server.
   strictRoutes: process.env.NODE_ENV === "test",
-  // Resolve a read-set relation to its identity base table, so the _debug ceiling
-  // compares the base-resolved read-set against the base-table `coveredOrigins`.
-  // The closure reads the boot-injected holder at call time (set by change-feed
-  // to `relationIdentityBase`); identity until then and on central.
-  resolveRelation: (r) => relationResolver(r),
-  // Feed-exempt rollup tables to subtract from the _debug read-set. Reads the
-  // boot-injected holder at call time (set by change-feed to feedExemptTables());
-  // empty until then and on central, so no filtering occurs.
-  feedExemptTables: () => feedExemptTablesHolder(),
+  // The legacy router's read-set expansion (and the _debug read-set bases):
+  // the boot-injected holder, read at call time — it throws until change-feed
+  // sets it. central: omitted (identity).
+  relationBases: (r) => relationBasesOf(r),
   // L2 persisted materialization. All three read the boot-injected holder at call
   // time (set by the live-state-snapshot plugin once the DB is ready). Until then
   // — and on central, which never installs them — `shouldPersist` returns false,
@@ -433,21 +435,22 @@ export const {
   // Re-emit a registered resource to its current subscribers without a DB change
   // (a real no-op push). Drives the live-state-churn deterministic-churn emitter.
   triggerResourcePush,
-  // L4 DB change-feed router: the change-feed plugin's LISTEN consumer calls this
-  // with each parsed DB change to route it through the recompute cascade.
-  applyDbChange,
+  // L4 DB change-feed router for every non-routed resource: the change-feed's
+  // `routeChange` calls it with each change, and each legacy reader of the
+  // table (through its relation bases) recomputes FULL.
+  applyLegacyFullChange,
   // Scoped change routing for ROUTED entries (compiler-emitted routes): every
-  // change producer calls it beside `applyDbChange`; each entry is served by
-  // exactly one of the two.
+  // change producer calls it beside `applyLegacyFullChange`; each entry is
+  // served by exactly one of the two.
   routeTableChange,
   // L2 boot init: force a FULL recompute of one resource (no usable persisted
   // read-set yet), re-persisting its value AND read-set for the next boot.
   recomputeResource,
   // L4 self-verification counters (hand vs feed) for the read-set debug pane.
   notifyStatsFor,
-  // Every table a resource's scoped delivery depends on (each route of a routed
-  // entry, each legacy identityTable) — the change-feed cross-checks these against
-  // the tables it installed triggers on at boot to reject dead scope policy.
+  // Every table a routed resource's delivery depends on (each route of a routed
+  // entry) — the change-feed cross-checks these against the tables it installed
+  // triggers on at boot to reject a route no change can ever reach.
   scopedResourceTables,
   // The trigger layout each routed table needs (carried key columns, the
   // column sets its routes read) — the change feed installs the richer
@@ -547,6 +550,6 @@ export function assertPreloadedResourcesDeclared(): void {
       `The boot snapshot and the L2 persist set find preloaded resources only through Resource.Declare, ` +
       `so each would still serve but silently lose its boot hydration and persistence. ` +
       "Spread `...served.declare` into the owning plugin's `contributions` " +
-      "(`Resource.Declare(resource)` for a resource still defined with defineResource / queryResource).",
+      "(`Resource.Declare(resource)` for a resource still defined with defineResource).",
   );
 }

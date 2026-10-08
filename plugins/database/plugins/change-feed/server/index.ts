@@ -1,6 +1,4 @@
 import {
-  setRelationResolver,
-  setFeedExemptTables,
   scopedResourceTables,
   routedTableRequirements,
   type ServerPluginDefinition,
@@ -12,8 +10,10 @@ import {
 } from "@plugins/database/plugins/connection/server";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { LIVE_STATE_CHANGELOG_TABLE } from "@plugins/database/plugins/derived-views/core";
-import { relationIdentityBase } from "@plugins/database/plugins/derived-views/server";
-import { feedExemptTables } from "@plugins/database/plugins/derived-tables/server";
+import {
+  feedExemptTables,
+  rollupSources,
+} from "@plugins/database/plugins/derived-tables/server";
 import { excludedTableNames } from "./internal/exclusion";
 import { installFeed } from "./internal/install-feed";
 import {
@@ -22,6 +22,7 @@ import {
 } from "./internal/producer";
 import { startListener, stopListener } from "./internal/listener";
 import { buildViewDeps } from "./internal/view-deps";
+import { installRelationGraph } from "./internal/relation-bases";
 
 export { rebuildTriggers, getCoveredTables } from "./internal/triggers";
 // Opt a high-churn observability table out of the L4 change-feed (see
@@ -33,6 +34,11 @@ export type { DbChange } from "./internal/parse-payload";
 // driver (live-state-snapshot) so replay can never drift from the live LISTEN
 // path. See research/2026-06-22-global-live-state-l2-persisted-materialization.md.
 export { routeChange } from "./internal/route-change";
+// The base tables a read of a relation depends on (a view and a rollup expand
+// to the tables that feed them), under the graph read at boot — live-state-
+// snapshot's A6 (D28) judges a persisted read-set through it. Throws if read
+// before this plugin's `onReadyBlocking` set it.
+export { relationBases } from "./internal/relation-bases";
 // What `routeChange` takes: every change states its source (the feed, or an
 // in-process change producer).
 export type {
@@ -93,7 +99,16 @@ export default {
     // and the resource tables are derived from every registered route —
     // resources register at module eval and deferred ones bind right after
     // contributions are collected, both before this barrier.
+    //
+    // The relation graph — each view's direct reads, each rollup's sources —
+    // is read here too: the database plugin's `onReadyBlocking` (a dependsOn
+    // parent) committed the derived views and rollups before this one starts.
+    const relations = {
+      views: await buildViewDeps(db),
+      rollups: rollupSources(),
+    };
     const inputs = {
+      relations,
       exclusions: {
         feedExempt: feedExemptTables(),
         optedOut: excludedTableNames(),
@@ -103,7 +118,7 @@ export default {
       scoped: scopedResourceTables(),
     };
     // The trigger rebuild and the boot invariants it is checked against (A1′,
-    // A2′, A3, A3p — see ./internal/install-feed). Per-table DROP+CREATE
+    // A2′, A3, A3p, D35 — see ./internal/install-feed). Per-table DROP+CREATE
     // TRIGGER can wait on the previous backend's readers during a hot-swap:
     // widen the query deadline for the install's own queries.
     await withQueryDeadline(
@@ -122,27 +137,19 @@ export default {
     // runs after the barrier lifts, when the gateway may already be routing
     // traffic, and a loader running in that window would capture nothing.
     await loadKnownRelations(db);
+    // Relation bases (C30, D34): the legacy router expands every read-set
+    // relation through them, so a reader of `tasks_v` is reached by a write to
+    // `conversations` (through the `attempt_conv_agg` rollup). Set here, in the
+    // barrier, so live-state-snapshot's A6 guard and boot sweep (a dependsOn
+    // child, whose `onReadyBlocking` runs after this one) and the L2 catch-up
+    // read them; server-core's holder throws if anything reads them earlier.
+    // Setting them bumps the read-set version, so the router's memoized
+    // inversion is rebuilt through them.
+    installRelationGraph(relations);
   },
   // The LISTEN consumer is a background watcher, so it starts after the ready
-  // barrier (same phase as git-watcher's startGitWatcher). The view-dependency
-  // map is built here — by onReady the derived-views layer is rebuilt (it ran in
-  // the database plugin's onReadyBlocking barrier), so the view→base-table graph
-  // the listener uses to expand base-table changes onto view-backed resources is
-  // complete and queryable.
-  async onReady() {
-    await buildViewDeps(db);
-    // Inject the relation→identity-base resolver into server-core's live-state
-    // runtime, so the read-set `_debug` ceiling resolves view-backed read-sets
-    // into base-table space (matching `coveredOrigins`). change-feed is the wirer
-    // because it already bridges the DB and live-state layers (importing both
-    // barrels); derived-views stays a pure provider of `relationIdentityBase`,
-    // and server-core never statically imports a feature plugin (no cycle).
-    setRelationResolver(relationIdentityBase);
-    // Inject the feed-exempt rollup tables (derived-tables) into the runtime's
-    // _debug builder, so a trigger-maintained rollup a loader reads (e.g.
-    // task_latest_conversation for agent-launches) is subtracted from the
-    // emitted read-set and never shows as a false "silent FULL recompute".
-    setFeedExemptTables(feedExemptTables);
+  // barrier (same phase as git-watcher's startGitWatcher).
+  onReady() {
     startListener();
   },
   async onShutdown() {

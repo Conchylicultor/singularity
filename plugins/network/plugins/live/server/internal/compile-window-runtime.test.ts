@@ -2,7 +2,7 @@
  * End-to-end: a `compileWindowQuery`-compiled window / point resource wired
  * into a real `createResourceRuntime`, driven through the L4 change-feed's two
  * routers (`routeTableChange`, which serves these routed resources, and the
- * legacy `applyDbChange`, which must skip them). The deep membership semantics are pinned by
+ * legacy `applyLegacyFullChange`, which must skip them). The deep membership semantics are pinned by
  * `resource-runtime/core/runtime-window-membership.test.ts`; THIS suite pins
  * that the compiled artifacts (params-decoded windowed loader, `windowIdsOf`,
  * the codec-derived `idsOf`) wire those semantics correctly. The fake `db`
@@ -179,7 +179,7 @@ function harness(table = "rows") {
     },
     // One base-table change as the change feed delivers it (`routeChange`): to
     // BOTH routers — the compiled resources are routed, so `routeTableChange`
-    // serves them and the legacy `applyDbChange` must skip them (a double
+    // serves them and the legacy `applyLegacyFullChange` must skip them (a double
     // delivery would show as a second delta).
     feed(changed: string, op: "I" | "U" | "D", ids: string[]) {
       runtime.routeTableChange({
@@ -190,13 +190,9 @@ function harness(table = "rows") {
         keys: null,
         unchanged: null,
       });
-      runtime.applyDbChange({
+      runtime.applyLegacyFullChange({
         source: "feed",
         table: changed,
-        op,
-        ids,
-        origin: changed,
-        identityBase: changed,
       });
     },
   };

@@ -238,7 +238,7 @@ const WATCHED_SLOTS: { marker: string; head: string }[] = [
 // looked exactly like a plugin declaring nothing.
 //
 // Each name must still be a DISTINCT identifier for the textual scan
-// (`\bresourceDescriptor` does not match inside `queryResourceDescriptor`),
+// (`\bresourceDescriptor` does not match inside `registerResourceDescriptor`),
 // which is what `findMarkerCalls` guarantees.
 const DESCRIPTOR_FACTORIES = Object.entries(resourceDescriptorFactories);
 
@@ -338,9 +338,9 @@ async function watchedSlotIn(
  *
  * `ownerPlugin` skips the file entirely: inside the plugins that OWN the
  * factories (`isResourceVocabularyOwner`), a factory call is the wrapper
- * IMPLEMENTING one — `queryResourceDescriptor` forwarding a caller's `preload`
- * to `keyedResourceDescriptor(key, …, opts)` — with a computed key, not a
- * plugin declaring a resource. The declaration site is the caller's.
+ * IMPLEMENTING one — `liveCollection` forwarding a caller's `preload` to the
+ * window descriptor it mints under a computed key — not a plugin declaring a
+ * resource. The declaration site is the caller's.
  * The docs facet's index exempts the same plugins through the same predicate.
  */
 export function preloadedKeysIn(

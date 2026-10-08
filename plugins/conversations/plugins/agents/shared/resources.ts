@@ -35,8 +35,8 @@ export const agentRows = liveValue("agents", {
 //
 // The wire row is EXACTLY the legacy `agent-launches` row
 // (`AgentLaunchWithStatus`), under the same key: a tab still running a bundle
-// that declared the old param-less `keyedResourceDescriptor("agent-launches",
-// …)` subscribes `{}`, passes the `all` gate and parses these rows with its own
+// that declared `agent-launches` as an old param-less keyed descriptor
+// subscribes `{}`, passes the `all` gate and parses these rows with its own
 // (identical) schema — the C39 old-bundle check, pinned by
 // `../server/internal/agent-launches-oracle.test.ts`. A change to the row must
 // rename the key.

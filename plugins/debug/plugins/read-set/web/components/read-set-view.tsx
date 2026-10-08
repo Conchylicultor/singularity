@@ -11,57 +11,46 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import {
+  Collapsible,
+  CollapsibleChevron,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { resourcesReadSetEndpoint } from "../../shared/endpoints";
 import type { ResourceReadSet } from "../../shared/schema";
+import {
+  computeCeiling,
+  type Ceiling,
+  type DriftEntry,
+  type LegacyFullEntry,
+  type RoutedFullEntry,
+} from "../internal/ceiling";
 
 // Web-only debug pane consuming `GET /api/resources/_debug`. Everything below is
-// derived PURELY client-side from the `resources[].readSet` (the captured
-// loader→table index the server records, in VIEW/table space),
-// `resources[].readSetBases` (that read-set resolved into base-table space —
-// views mapped to their identity base — for like-for-like comparison with
-// coveredOrigins), `resources[].coveredOrigins` (the runtime's authoritative
-// scoped-vs-FULL routing set), `resources[].routes` (a routed resource's
-// compiler-emitted routes), `resources[].dependsOn` (the hand-drawn cascade
-// graph), and `resources[].notifyStats` (notify provenance counters). Four
-// sections:
-//   A — the captured index, inverted to table → [resource keys] (raw read-set).
-//   B — the read-set ceiling: keyed resources whose base-resolved read-set
-//       escapes their coveredOrigins (a routed resource: its route tables)
-//       silently FULL-recompute; explicit `recompute: full` opt-outs and routed
-//       `full` routes are surfaced separately (declared, not a degradation).
-//   C — the over-broad-edges diff vs `dependsOn` (cascade amplification, raw read-set).
-//   D — notify provenance: per-resource hand / feed / producer counts during
+// derived purely client-side from the payload: `resources[].notifyStats`,
+// `resources[].readSet` (the captured loader→table index the server records, in
+// view / table / rollup space), `resources[].policy` (what the entry is:
+// routed, legacy-full, external or unbound — the runtime's own
+// classification), `resources[].legacyReach` (the bases the runtime's legacy
+// router indexes the entry under — external and unbound entries included —
+// expanded through the relation bases: views transitively, rollups to their
+// sources), and `resources[].routes` / `routeDrifted` (a routed entry's routes
+// and the A8 drift guard's record). Three sections, in render order:
+//   A — notify provenance: per-resource hand / feed / producer counts during
 //       the L4 parallel run, flagging read-set-gap candidates (hand > 0 and no
 //       feed or producer delivery).
+//   B — the captured index, inverted to table → [resource keys] (raw read-set,
+//       rollups included).
+//   C — the read-set ceiling (A7, `computeCeiling` in `../internal/ceiling`):
+//       per-policy counts; every entry the legacy router reaches with its
+//       bases, FULL loads per base write and persistence (external ones
+//       tagged); every routed `full` route with its reason; routed drift; the
+//       routed, pure-external and unbound keys.
 
 interface TableEntry {
   table: string;
   readers: string[];
-}
-
-interface SilentFullFlag {
-  key: string;
-  /** Base tables R reads (views resolved) OUTSIDE coveredOrigins → silently FULL-recompute R. */
-  uncovered: string[];
-  /**
-   * The resource's scoped-vs-FULL routing set: its declared `identityTable` ∪
-   * edges, or — for a routed resource — its route tables.
-   */
-  coveredOrigins: string[];
-}
-
-interface ExplicitFullFlag {
-  key: string;
-  /** The table a routed `full` route recomputes on; absent for a `recompute` opt-out. */
-  table?: string;
-  /** The declared reason: `recompute: { kind: "full", reason }`, or a `full` route's. */
-  reason: string;
-}
-
-interface OverBroadFlag {
-  key: string;
-  /** Declared upstreams U whose read-set shares no table with R's. */
-  upstreams: string[];
 }
 
 interface NotifyEntry {
@@ -93,102 +82,6 @@ function buildCapturedIndex(resources: ResourceReadSet[]): TableEntry[] {
   return [...byTable.entries()]
     .map(([table, readers]) => ({ table, readers: [...readers].sort() }))
     .sort((a, b) => a.table.localeCompare(b.table));
-}
-
-/**
- * The read-set ceiling: classify every resource's base-resolved read-set
- * (`readSetBases` — views mapped to their identity base) against its
- * authoritative `coveredOrigins` (the runtime's scoped-vs-FULL routing set, also
- * in base-table space). Comparing in base space avoids false positives on healthy
- * view-backed resources, whose raw read-set records the VIEW (`conversations_v`)
- * while coveredOrigins names the base (`conversations`).
- *
- * - SILENT FULL (the bug signal): a resource declaring `identityTable` (intent to
- *   be scoped) whose base read-set contains a table OUTSIDE `coveredOrigins` —
- *   that table's change silently degrades the carefully-scoped cascade to FULL.
- *   A ROUTED resource is covered by its route tables instead: a table outside
- *   them is one its writes never reach (the runtime's drift guard, A8).
- * - EXPLICIT FULL (expected): a resource with a declared `recompute: full`
- *   opt-out, and every routed `full` route with its reason — surfaced
- *   informationally, never a warning.
- * - `scoped` counts the scoped resources (legacy or routed) with zero uncovered
- *   tables.
- */
-function computeCeiling(resources: ResourceReadSet[]): {
-  silentFull: SilentFullFlag[];
-  explicitFull: ExplicitFullFlag[];
-  scoped: number;
-} {
-  const silentFull: SilentFullFlag[] = [];
-  const explicitFull: ExplicitFullFlag[] = [];
-  let scoped = 0;
-
-  for (const r of resources) {
-    if (r.recompute) {
-      explicitFull.push({ key: r.key, reason: r.recompute.reason });
-      continue; // declared opt-out — not a scoped resource to flag
-    }
-    for (const route of r.routes ?? []) {
-      if (route.map !== "full") continue;
-      explicitFull.push({
-        key: r.key,
-        table: route.table,
-        reason: route.reason,
-      });
-    }
-    // A routed resource is reached through exactly its route tables; a legacy
-    // one scoped through its coveredOrigins, when it declares an identityTable.
-    const coveredOrigins = r.routes
-      ? [...new Set(r.routes.map((route) => route.table))].sort()
-      : r.identityTable
-        ? [...r.coveredOrigins].sort()
-        : null;
-    if (coveredOrigins === null || r.readSetBases.length === 0) continue; // no scoped intent / loader never ran
-
-    const covered = new Set(coveredOrigins);
-    const uncovered = r.readSetBases.filter((t) => !covered.has(t)).sort();
-    if (uncovered.length > 0) {
-      silentFull.push({ key: r.key, uncovered, coveredOrigins });
-    } else {
-      scoped += 1;
-    }
-  }
-
-  silentFull.sort((a, b) => a.key.localeCompare(b.key));
-  explicitFull.sort(
-    (a, b) =>
-      a.key.localeCompare(b.key) ||
-      (a.table ?? "").localeCompare(b.table ?? ""),
-  );
-  return { silentFull, explicitFull, scoped };
-}
-
-function computeDiff(resources: ResourceReadSet[]): {
-  overBroad: OverBroadFlag[];
-} {
-  const readsByKey = new Map<string, Set<string>>();
-  for (const r of resources) readsByKey.set(r.key, new Set(r.readSet));
-
-  const overBroad: OverBroadFlag[] = [];
-
-  for (const r of resources) {
-    const reads = readsByKey.get(r.key)!;
-    if (reads.size === 0) continue; // loader never ran — nothing to compare
-
-    // OVER-BROAD EDGES: declared upstream U sharing no read table with R.
-    const overBroadUps = r.dependsOn
-      .filter((u) => {
-        const upReads = readsByKey.get(u);
-        if (!upReads || upReads.size === 0) return false; // U's loader never ran — can't judge
-        for (const t of reads) if (upReads.has(t)) return false; // shares a table
-        return true;
-      })
-      .sort();
-    if (overBroadUps.length > 0)
-      overBroad.push({ key: r.key, upstreams: overBroadUps });
-  }
-
-  return { overBroad };
 }
 
 /**
@@ -227,7 +120,6 @@ export function ReadSetView(): ReactElement {
   const resources = useMemo(() => data?.resources ?? [], [data]);
   const captured = useMemo(() => buildCapturedIndex(resources), [resources]);
   const ceiling = useMemo(() => computeCeiling(resources), [resources]);
-  const { overBroad } = useMemo(() => computeDiff(resources), [resources]);
   const notifyEntries = useMemo(
     () => buildNotifyEntries(resources),
     [resources],
@@ -247,12 +139,7 @@ export function ReadSetView(): ReactElement {
         <Caveat />
         <NotifyProvenanceSection entries={notifyEntries} />
         <CapturedIndexSection entries={captured} />
-        <CeilingSection
-          silentFull={ceiling.silentFull}
-          explicitFull={ceiling.explicitFull}
-          scoped={ceiling.scoped}
-        />
-        <DiffSection overBroad={overBroad} />
+        <CeilingSection ceiling={ceiling} />
       </Stack>
     </Scroll>
   );
@@ -261,14 +148,14 @@ export function ReadSetView(): ReactElement {
 function Caveat(): ReactElement {
   return (
     <Placeholder tone="muted">
-      Heuristic — direct notify() sites are not modeled in this phase (L4).
-      Over-broad flags ignore affectedMap scoping. Only loaders that have run
-      since boot appear.
+      Read-sets cover only loaders that have run since boot (or were seeded from
+      a persisted row): a legacy-full entry with no bases has not loaded yet, so
+      the ceiling is a lower bound. Direct notify() sites are not modeled.
     </Placeholder>
   );
 }
 
-// ── Section A: captured table → [resources] index ──────────────────────────
+// ── Section B: captured table → [resources] index ──────────────────────────
 
 function CapturedIndexSection({
   entries,
@@ -307,7 +194,7 @@ function CapturedIndexSection({
             <ChipRow
               key={e.table}
               label={e.table}
-              count={e.readers.length}
+              aside={e.readers.length}
               chips={e.readers.map((r) => ({ key: r, text: r }))}
             />
           ))}
@@ -319,42 +206,62 @@ function CapturedIndexSection({
 
 /**
  * One labeled row: a mono identity on the left, a count on the right, and a
- * wrapping Cluster of identity chips below. Shared by Section A and B so a long
+ * wrapping Cluster of identity chips below. Shared by Sections B and C so a long
  * chip list wraps (Cluster) rather than truncating in a single-line slot.
  */
 function ChipRow({
   label,
-  count,
+  tag,
+  aside,
   chips,
   variant,
+  empty,
 }: {
   label: string;
-  count: number;
+  /** A short badge beside the label (e.g. the entry's policy when it is not the section's own). */
+  tag?: string;
+  /** Right-aligned meta: a count, or a short summary. */
+  aside: string | number;
   chips: { key: string; text: string }[];
   variant?: "warning";
+  /** Shown in place of the chips when there are none. */
+  empty?: string;
 }): ReactElement {
   return (
     <Stack gap="2xs">
       <Stack direction="row" gap="sm" align="baseline" justify="between">
-        <Text variant="caption" className="font-mono">
-          {label}
-        </Text>
+        <Cluster gap="2xs">
+          <Text variant="caption" className="font-mono">
+            {label}
+          </Text>
+          {tag !== undefined ? (
+            <Badge variant="muted" mono>
+              {tag}
+            </Badge>
+          ) : null}
+        </Cluster>
         <Text as="span" variant="caption" tone="muted" className="tabular-nums">
-          {count}
+          {aside}
         </Text>
       </Stack>
-      <Cluster gap="2xs">
-        {chips.map((c) => (
-          <Badge key={c.key} variant={variant} mono>
-            {c.text}
-          </Badge>
-        ))}
-      </Cluster>
+      {chips.length === 0 && empty !== undefined ? (
+        <Text variant="caption" tone="muted">
+          {empty}
+        </Text>
+      ) : (
+        <Cluster gap="2xs">
+          {chips.map((c) => (
+            <Badge key={c.key} variant={variant} mono>
+              {c.text}
+            </Badge>
+          ))}
+        </Cluster>
+      )}
     </Stack>
   );
 }
 
-// ── Section D: notify provenance (hand / feed / producer, L4 parallel run) ──
+// ── Section A: notify provenance (hand / feed / producer, L4 parallel run) ──
 
 function NotifyProvenanceSection({
   entries,
@@ -413,124 +320,229 @@ function NotifyRow({ entry }: { entry: NotifyEntry }): ReactElement {
   );
 }
 
-// ── Section B: read-set ceiling — silent FULL recomputes ────────────────────
+// ── Section C: read-set ceiling — what a change costs each entry ───────────
 
-function CeilingSection({
-  silentFull,
-  explicitFull,
-  scoped,
-}: {
-  silentFull: SilentFullFlag[];
-  explicitFull: ExplicitFullFlag[];
-  scoped: number;
-}): ReactElement {
+const POLICY_ORDER = ["routed", "legacy-full", "external", "unbound"] as const;
+
+function CeilingSection({ ceiling }: { ceiling: Ceiling }): ReactElement {
   return (
     <Stack as="section" gap="lg">
-      <SectionLabel>
-        Read-set ceiling — silent FULL recomputes{" "}
-        <span className="opacity-60">{silentFull.length}</span>
-      </SectionLabel>
-
-      {silentFull.length === 0 ? (
-        <Text variant="caption" tone="muted">
-          No silent FULLs — every scoped resource's read-set stays inside its
-          coveredOrigins.
-        </Text>
-      ) : (
-        <Stack gap="sm">
-          {silentFull.map((s) => (
-            <Stack key={s.key} gap="2xs">
-              <ChipRow
-                label={s.key}
-                count={s.uncovered.length}
-                variant="warning"
-                chips={s.uncovered.map((t) => ({ key: t, text: t }))}
-              />
-              <Cluster gap="2xs">
-                <Text as="span" variant="caption" tone="muted">
-                  covered
-                </Text>
-                {s.coveredOrigins.map((t) => (
-                  <Badge key={t} mono>
-                    {t}
-                  </Badge>
-                ))}
-              </Cluster>
-            </Stack>
-          ))}
-        </Stack>
-      )}
-
       <Stack gap="sm">
-        <SectionLabel>
-          Explicit FULL — declared opt-out{" "}
-          <span className="opacity-60">{explicitFull.length}</span>
-        </SectionLabel>
-        {explicitFull.length === 0 ? (
-          <Text variant="caption" tone="muted">
-            No resources declare an explicit FULL recompute.
-          </Text>
-        ) : (
-          <Stack gap="2xs">
-            {explicitFull.map((e) => (
-              <Stack
-                key={e.table === undefined ? e.key : `${e.key} ${e.table}`}
-                direction="row"
-                gap="sm"
-                align="baseline"
-                justify="between"
-              >
-                <Text variant="caption" className="font-mono">
-                  {e.table === undefined ? e.key : `${e.key} ← ${e.table}`}
-                </Text>
-                <Text as="span" variant="caption" tone="muted">
-                  {e.reason}
-                </Text>
-              </Stack>
-            ))}
-          </Stack>
-        )}
+        <SectionLabel>Read-set ceiling — change reach by policy</SectionLabel>
+        <Cluster gap="2xs">
+          {POLICY_ORDER.map((p) => (
+            <Badge key={p} variant="muted" mono>
+              {p} {ceiling.keys[p].length}
+            </Badge>
+          ))}
+        </Cluster>
       </Stack>
-
-      {scoped > 0 ? (
-        <Text variant="caption" tone="muted">
-          {scoped} resources fully scoped.
-        </Text>
-      ) : null}
+      <LegacyFullSection entries={ceiling.legacyFull} />
+      <RoutedFullSection entries={ceiling.routedFull} />
+      <DriftSection entries={ceiling.drift} />
+      <KeyListSection
+        title="Routed — reached only through their routes"
+        keys={ceiling.keys.routed}
+        empty="No routed resources."
+        collapsed
+      />
+      <KeyListSection
+        title="External — reached only by their own notify()"
+        keys={ceiling.pureExternal}
+        empty="No external resource without a captured DB read."
+      />
+      <KeyListSection
+        title="Unbound — deferred, not bound yet"
+        keys={ceiling.keys.unbound}
+        empty="Every deferred resource is bound."
+      />
     </Stack>
   );
 }
 
-// ── Section C: over-broad edges vs dependsOn ────────────────────────────────
+/** "3 s", "4 min", "2 h" — a coarse age for a debug aside. */
+function formatAge(ms: number): string {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s} s`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min`;
+  return `${Math.round(m / 60)} h`;
+}
 
-function DiffSection({
-  overBroad,
+function costAside(e: LegacyFullEntry): string {
+  const parts = [
+    `${e.loadsPerWrite} load${e.loadsPerWrite === 1 ? "" : "s"}/write`,
+    `${e.tuples} tuple${e.tuples === 1 ? "" : "s"}`,
+  ];
+  if (e.persisted) {
+    parts.push(
+      e.positionAgeMs === null
+        ? "persisted"
+        : `persisted · ${formatAge(e.positionAgeMs)} old`,
+    );
+  }
+  return parts.join(" · ");
+}
+
+/**
+ * Every entry the legacy router reaches, with its relation bases: a write to
+ * ANY of them recomputes it FULL. An external (or unbound) entry is here when
+ * its loader read the DB — the router reaches it beside its own notify().
+ */
+function LegacyFullSection({
+  entries,
 }: {
-  overBroad: OverBroadFlag[];
+  entries: LegacyFullEntry[];
 }): ReactElement {
   return (
-    <Stack as="section" gap="lg">
+    <Stack gap="sm">
       <SectionLabel>
-        Over-broad edges — cascade amplification{" "}
-        <span className="opacity-60">{overBroad.length}</span>
+        Legacy FULL — any base write recomputes every tuple{" "}
+        <span className="opacity-60">{entries.length}</span>
       </SectionLabel>
-      {overBroad.length === 0 ? (
+      {entries.length === 0 ? (
         <Text variant="caption" tone="muted">
-          No over-broad edges — every declared upstream shares a read table.
+          Nothing is reached by the legacy router — every DB-backed resource is
+          routed.
         </Text>
       ) : (
         <Stack gap="sm">
-          {overBroad.map((o) => (
+          {entries.map((e) => (
             <ChipRow
-              key={o.key}
-              label={o.key}
-              count={o.upstreams.length}
-              variant="warning"
-              chips={o.upstreams.map((u) => ({ key: u, text: `${u} →` }))}
+              key={e.key}
+              label={e.key}
+              tag={e.policy === "legacy-full" ? undefined : e.policy}
+              aside={costAside(e)}
+              chips={e.bases.map((t) => ({ key: t, text: t }))}
+              empty="No reads captured yet — its loader has not run."
             />
           ))}
         </Stack>
       )}
+    </Stack>
+  );
+}
+
+/** Every routed `full` route with its declared reason — a routed FULL is never silent. */
+function RoutedFullSection({
+  entries,
+}: {
+  entries: RoutedFullEntry[];
+}): ReactElement {
+  return (
+    <Stack gap="sm">
+      <SectionLabel>
+        Routed FULL — declared full routes{" "}
+        <span className="opacity-60">{entries.length}</span>
+      </SectionLabel>
+      {entries.length === 0 ? (
+        <Text variant="caption" tone="muted">
+          No routed resource declares a full route.
+        </Text>
+      ) : (
+        <Stack gap="2xs">
+          {entries.map((e) => (
+            <Stack
+              key={`${e.key} ${e.route}`}
+              direction="row"
+              gap="sm"
+              align="baseline"
+              justify="between"
+            >
+              <Text variant="caption" className="font-mono">
+                {`${e.key} ← ${e.table}`}
+              </Text>
+              <Text as="span" variant="caption" tone="muted">
+                {e.reason}
+              </Text>
+            </Stack>
+          ))}
+        </Stack>
+      )}
+    </Stack>
+  );
+}
+
+/**
+ * Routed drift (A8), as the runtime's guard recorded it: tables a routed
+ * entry's loader read that no route names — writes to them never reach it.
+ */
+function DriftSection({ entries }: { entries: DriftEntry[] }): ReactElement {
+  return (
+    <Stack gap="sm">
+      <SectionLabel>
+        Route drift — read but never routed{" "}
+        <span className="opacity-60">{entries.length}</span>
+      </SectionLabel>
+      {entries.length === 0 ? (
+        <Text variant="caption" tone="muted">
+          No drift — every routed resource reads only tables its routes name.
+        </Text>
+      ) : (
+        <Stack gap="sm">
+          {entries.map((d) => (
+            <ChipRow
+              key={d.key}
+              label={d.key}
+              aside={d.tables.length}
+              variant="warning"
+              chips={d.tables.map((t) => ({ key: t, text: t }))}
+            />
+          ))}
+        </Stack>
+      )}
+    </Stack>
+  );
+}
+
+function KeyListSection({
+  title,
+  keys,
+  empty,
+  collapsed,
+}: {
+  title: string;
+  keys: string[];
+  empty: string;
+  /** Start folded behind its title (a long list that is not a cost). */
+  collapsed?: boolean;
+}): ReactElement {
+  const label = (as: "div" | "span") => (
+    <SectionLabel as={as}>
+      {title} <span className="opacity-60">{keys.length}</span>
+    </SectionLabel>
+  );
+  const body =
+    keys.length === 0 ? (
+      <Text variant="caption" tone="muted">
+        {empty}
+      </Text>
+    ) : (
+      <Cluster gap="2xs">
+        {keys.map((k) => (
+          <Badge key={k} mono>
+            {k}
+          </Badge>
+        ))}
+      </Cluster>
+    );
+  if (collapsed) {
+    return (
+      <Collapsible defaultOpen={false}>
+        <Stack gap="sm">
+          <CollapsibleTrigger className="gap-xs">
+            <CollapsibleChevron className="size-3 text-muted-foreground" />
+            {label("span")}
+          </CollapsibleTrigger>
+          <CollapsibleContent>{body}</CollapsibleContent>
+        </Stack>
+      </Collapsible>
+    );
+  }
+  return (
+    <Stack gap="sm">
+      {label("div")}
+      {body}
     </Stack>
   );
 }

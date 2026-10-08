@@ -17,7 +17,7 @@ export { rebuildTriggers } from "../internal/triggers";
 // changes routed through the suite's `route`, the real `routeChange` by
 // default), and its coalescing window flushed by hand.
 export { flushNow, mountProducersForTest } from "../internal/producer"; // The boot checks a produced table's readers must pass (A3p: no route needs a
-// carried column; A1′: every table a resource depends on has a change source),
+// carried column; A1′: every route table of a routed resource has a change source),
 // for a suite that registers a REAL produced collection without booting the feed.
 export { findCarriedProducedRoutes } from "../internal/produced-tables";
 export { assertRouteTablesCovered } from "../internal/route-coverage";
@@ -32,3 +32,12 @@ export {
 // routes carry — for a suite proving a route kind's layout is checked (a
 // rollup's source routes, query-resource's C14 suite).
 export { assertRouteLayoutsInstalled } from "../internal/route-layout";
+// Relation bases over a suite's own database: its views' read graph
+// (`buildViewDeps`) expanded with its rollups (`createRelationBases`) — what a
+// suite's own runtime takes as `relationBases`, as the boot graph is for the
+// server's.
+export { buildViewDeps } from "../internal/view-deps";
+export { createRelationBases } from "../internal/relation-bases";
+// The boot install itself (change-feed's graph AND server-core's holder), for
+// a suite proving the wiring reaches server-core's legacy router.
+export { installRelationGraph } from "../internal/relation-bases";

@@ -26,15 +26,14 @@
  *     sub-ack, so the next change is incremental again;
  *   - a subscribed tuple with no snapshot (its sub-ack load failed) self-heals
  *     with a FULL update built from the entry's own (bounded) loader;
- *   - registration guards: membership XOR scopedMembership, keyed + identityTable
- *     required.
+ *   - registration guards: membership XOR scopedMembership, keyed + routes
+ *     required, routes require a membership.
  *
- * Every window / point case runs twice (`membershipSuite`): with the entry
- * declaring its `identityTable` (served by the legacy `applyDbChange`), and with
- * it declaring the identity route `compileWindowQuery` emits (served by
- * `routeTableChange`, research/2026-09-29-global-scoped-change-routing.md P1) —
- * the proof that moving a compiled collection onto the router keeps every
- * membership outcome.
+ * Every window / point case runs with the entry declaring the identity route
+ * `compileWindowQuery` emits (served by `routeTableChange`,
+ * research/2026-09-29-global-scoped-change-routing.md P1) — a membership entry
+ * is always routed; the legacy router (`applyLegacyFullChange`) serves only
+ * non-keyed entries, FULL.
  *
  * The `scopedMembership` alias's byte-identical behavior is pinned by
  * `runtime-scoped-membership.test.ts` (kept green unchanged — that suite IS the
@@ -45,59 +44,14 @@
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
 import { createHarness, tick, makeClientView } from "./test-support";
-import { mintRoutePlan, type RoutePlan } from "./routing";
+import {
+  defineRoutedTable,
+  feedChange,
+  identityPlan,
+} from "./testing/routed-fixture";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
-
-const DRIVERS = ["legacy", "routed"] as const;
-type Driver = (typeof DRIVERS)[number];
-
-// The plan `compileWindowQuery` emits for a single-table window / point set: one
-// identity route on the base table, read by every tuple as membership.
-const identityPlan = (table: string): RoutePlan =>
-  mintRoutePlan({
-    routes: [
-      { id: "base", table, map: { kind: "identity" }, columns: ["id", "n"] },
-    ],
-    usesOf: () => new Map([["base", { role: "membership" as const }]]),
-  });
-
-const scopeOf = (
-  driver: Driver,
-  table: string,
-):
-  | { identityTable: string; routes?: never }
-  | { routes: RoutePlan; identityTable?: never } =>
-  driver === "legacy"
-    ? { identityTable: table }
-    : { routes: identityPlan(table) };
-
-// One base-table change as the change feed delivers it (`routeChange`): to the
-// routed router, then the legacy one — every entry is served by exactly one.
-function feedChange(
-  h: ReturnType<typeof createHarness>,
-  table: string,
-  op: "I" | "U" | "D",
-  ids: string[] | null,
-): void {
-  h.runtime.routeTableChange({
-    source: "feed",
-    table,
-    op,
-    ids,
-    keys: null,
-    unchanged: null,
-  });
-  h.runtime.applyDbChange({
-    source: "feed",
-    table,
-    op,
-    ids,
-    origin: table,
-    identityBase: table,
-  });
-}
 
 // A simulated identity table whose total order is ascending `n` (then id). The
 // window is the first `limit` members — `windowIdsOf` carries the LIMIT, exactly
@@ -112,14 +66,13 @@ function makeTable() {
   return { table, members };
 }
 
-// Every membership case below runs under BOTH routers the change feed hands a
-// change to: `legacy` declares the table as the entry's `identityTable` (served
-// by the read-set router, `applyDbChange`); `routed` declares the one identity
-// route `compileWindowQuery` emits for it (served by `routeTableChange`). Each
-// change is delivered to both routers, as `routeChange` does, so each case also
-// pins that an entry is reached exactly once.
-function membershipSuite(driver: Driver): void {
-  const scopeFor = (table: string) => scopeOf(driver, table);
+// Every membership case below declares the one identity route
+// `compileWindowQuery` emits (served by `routeTableChange`). Each change is
+// delivered to both routers, as `routeChange` does, so each case also pins
+// that an entry is reached exactly once.
+function membershipSuite(): void {
+  // The identity route `compileWindowQuery` emits (the shared fixture).
+  const scopeFor = (table: string) => ({ routes: identityPlan(table) });
 
   // A bounded-window resource "win" over the simulated table: FULL loader = the
   // window rows (bounded by construction), scoped loader = the requested member
@@ -133,7 +86,7 @@ function membershipSuite(driver: Driver): void {
     const loaderCalls: string[] = [];
     let windowIdsOfCalls = 0;
     let failFullLoads = false;
-    const h = createHarness({ readSet: () => ["row_table"], ...runtimeOpts });
+    const h = createHarness(runtimeOpts);
     h.runtime.defineResource(
       {
         key: "win",
@@ -166,7 +119,7 @@ function membershipSuite(driver: Driver): void {
       },
     );
     const feed = (op: "I" | "U" | "D", ids: string[] | null) =>
-      feedChange(h, "row_table", op, ids);
+      feedChange(h, { table: "row_table", op, ids });
     const insert = (id: string, n: number, where = true) => {
       table.set(id, { n, where });
       feed("I", [id]);
@@ -408,6 +361,7 @@ function membershipSuite(driver: Driver): void {
         c.n = 0;
       });
       await tick();
+      expect(deltas(w.h)).toHaveLength(1); // the change itself shipped
       expect(persists).toEqual([]); // structurally excluded, not name-excluded
       // …and `persistedKeys()` is that same gate, so it lists none.
       expect(w.h.runtime.persistedKeys()).toEqual([]);
@@ -428,42 +382,27 @@ function membershipSuite(driver: Driver): void {
       const persists: string[] = [];
       const { table, members } = makeTable();
       const h = createHarness({
-        readSet: () => ["row_table"],
         shouldPersist: () => true,
         captureWatermark: async () => "xmin-1",
         persistSnapshot: async (key) => {
           persists.push(key);
         },
       });
-      h.runtime.defineResource(
-        {
-          key: "rows",
-          schema: rowsSchema,
-          keyed: { keyOf },
-          validateParams: () => {},
-        },
-        {
-          identityTable: "row_table",
-          scopedMembership: {
-            orderOf: async () => members().map((r) => r.id),
-          },
-          loader: (_p, c) =>
-            c === undefined
-              ? members()
-              : c.affectedIds
-                  .filter((id) => table.get(id)?.where)
-                  .map((id) => ({ id, n: table.get(id)!.n })),
-        },
-      );
-      table.set("a", { n: 1, where: true });
-      h.runtime.applyDbChange({
-        source: "feed",
+      const rows = defineRoutedTable(h, {
+        key: "rows",
         table: "row_table",
-        op: "U",
-        ids: ["a"],
-        origin: "row_table",
-        identityBase: "row_table",
+        membership: "alias",
+        schema: rowsSchema,
+        orderOf: async () => members().map((r) => r.id),
+        loader: (_p, c) =>
+          c === undefined
+            ? members()
+            : c.affectedIds
+                .filter((id) => table.get(id)?.where)
+                .map((id) => ({ id, n: table.get(id)!.n })),
       });
+      table.set("a", { n: 1, where: true });
+      rows.feed("I", null);
       await tick();
       expect(persists).toEqual(["rows"]);
       expect(h.runtime.persistedKeys()).toEqual(["rows"]);
@@ -580,7 +519,7 @@ function membershipSuite(driver: Driver): void {
         .sort((a, b) => a.n - b.n || (a.id < b.id ? -1 : 1));
     const loaderCalls: string[] = [];
     let windowIdsOfCalls = 0;
-    const h = createHarness({ readSet: () => ["sig_table"] });
+    const h = createHarness();
     h.runtime.defineResource(
       {
         key: "sig",
@@ -613,7 +552,7 @@ function membershipSuite(driver: Driver): void {
       },
     );
     const feed = (op: "I" | "U" | "D", ids: string[] | null) =>
-      feedChange(h, "sig_table", op, ids);
+      feedChange(h, { table: "sig_table", op, ids });
     const update = (
       id: string,
       mut: (c: { n: number; note: string }) => void,
@@ -777,11 +716,7 @@ function membershipSuite(driver: Driver): void {
     const loaderCalls: string[] = [];
     const idsOf = (p: Record<string, string>) =>
       (p.ids ?? "").split(",").filter(Boolean);
-    const h = createHarness({
-      readSet: () => ["pt_table"],
-      sockets: 2,
-      ...runtimeOpts,
-    });
+    const h = createHarness({ sockets: 2, ...runtimeOpts });
     h.runtime.defineResource(
       {
         key: "pt",
@@ -804,7 +739,7 @@ function membershipSuite(driver: Driver): void {
       },
     );
     const feed = (op: "I" | "U" | "D", ids: string[] | null) =>
-      feedChange(h, "pt_table", op, ids);
+      feedChange(h, { table: "pt_table", op, ids });
     return { h, table, loaderCalls, feed };
   }
 
@@ -900,7 +835,7 @@ function membershipSuite(driver: Driver): void {
       const table = new Map<string, { n: number }>();
       const loaderCalls: string[] = [];
       const idsOf = (p: Record<string, string>) => [p.id ?? ""];
-      const h = createHarness({ readSet: () => ["blk_table"], sockets: 2 });
+      const h = createHarness({ sockets: 2 });
       h.runtime.defineResource(
         {
           key: "blk",
@@ -919,7 +854,7 @@ function membershipSuite(driver: Driver): void {
         },
       );
       const feed = (op: "I" | "U" | "D", ids: string[]) =>
-        feedChange(h, "blk_table", op, ids);
+        feedChange(h, { table: "blk_table", op, ids });
 
       table.set("a", { n: 1 });
       table.set("b", { n: 2 });
@@ -974,18 +909,15 @@ function membershipSuite(driver: Driver): void {
   });
 }
 
-for (const driver of DRIVERS) {
-  describe(`[${driver}]`, () => membershipSuite(driver));
-}
+describe("[routed]", () => membershipSuite());
 
 describe("membership — registration guards", () => {
+  // Each guard pairs the compile-time rejection (`@ts-expect-error` FAILS if
+  // it ever stops being rejected, so the directive pins the type's behaviour as
+  // a test) with the runtime backstop for a caller who casts past the type.
   test("membership and scopedMembership are mutually exclusive", () => {
     const h = createHarness();
     expect(() =>
-      // The four-arm `ScopePolicy` rejects this combination at compile time, which
-      // is the point: `@ts-expect-error` FAILS if it ever stops being rejected, so
-      // the directive pins the type's behaviour as a test. The runtime guard below
-      // is the backstop for a caller who casts past the type.
       // @ts-expect-error — `scopedMembership` and `membership` are mutually exclusive arms
       h.runtime.defineResource(
         {
@@ -995,8 +927,11 @@ describe("membership — registration guards", () => {
           validateParams: () => {},
         },
         {
-          identityTable: "t",
-          scopedMembership: { orderOf: async () => [] },
+          routes: identityPlan("t"),
+          scopedMembership: {
+            orderOf: async () => [],
+            orderSignatureOf: () => "",
+          },
           membership: { kind: "window", windowIdsOf: async () => [] },
           loader: async () => [],
         },
@@ -1011,7 +946,6 @@ describe("membership — registration guards", () => {
         key: "bad2",
         mode: "push",
         schema: z.number(),
-        identityTable: "t",
         // @ts-expect-error — membership is not on the non-keyed input form
         membership: { kind: "point", idsOf: () => [] },
         loader: async () => 1,
@@ -1019,14 +953,10 @@ describe("membership — registration guards", () => {
     ).toThrow(/membership requires mode "keyed"/);
   });
 
-  test("membership requires an identityTable", () => {
+  test("membership requires routes", () => {
     const h = createHarness();
     expect(() =>
-      // The four-arm `ScopePolicy` rejects this combination at compile time, which
-      // is the point: `@ts-expect-error` FAILS if it ever stops being rejected, so
-      // the directive pins the type's behaviour as a test. The runtime guard below
-      // is the backstop for a caller who casts past the type.
-      // @ts-expect-error — `recompute` and `membership` are different arms
+      // @ts-expect-error — every ScopePolicy arm requires `routes`
       h.runtime.defineResource(
         {
           key: "bad3",
@@ -1035,43 +965,28 @@ describe("membership — registration guards", () => {
           validateParams: () => {},
         },
         {
-          recompute: { kind: "full", reason: "test" },
           membership: { kind: "window", windowIdsOf: async () => [] },
           loader: async () => [],
         },
       ),
-    ).toThrow(/membership requires an identityTable/);
+    ).toThrow(/membership requires routes/);
+  });
+
+  // `routes` with no membership names no tuple owner for a changed row: refused
+  // by both tsc and the runtime.
+  test("routes require a membership", () => {
+    const h = createHarness();
+    expect(() =>
+      // @ts-expect-error — routes with no membership / scopedMembership
+      h.runtime.defineResource(
+        {
+          key: "bad4",
+          schema: rowsSchema,
+          keyed: { keyOf },
+          validateParams: () => {},
+        },
+        { routes: identityPlan("t"), loader: async () => [] },
+      ),
+    ).toThrow(/"routes" requires a membership/);
   });
 });
-
-// ── `ScopePolicy`: the ONE case no guard test can express ──────────
-//
-// The registration-guard tests above (and their twins in
-// `runtime-scoped-membership.test.ts`) pin every TWO-ARMS-AT-ONCE rejection,
-// each with a `@ts-expect-error` over a runtime `toThrow` — the compile-time
-// rejection AND the runtime backstop in one test. The arms' positive spellings
-// are exercised by real call sites.
-//
-// What none of them can express is an `identityTable` with NO arm: it was the
-// legal default before the tuple-ownership half of `ScopePolicy` existed, so no
-// runtime guard rejects it and no `toThrow` can be written for it. `fanOut`
-// likewise changes NOTHING at runtime — that is the point of the arm — so only
-// `tsc` can hold the requirement, and only this fixture can hold that `tsc`
-// does. `@ts-expect-error` fails if the rejection ever stops happening.
-//
-// Never called; exported only so it is not dead code.
-export function scopePolicyMissingArmFixture(
-  h: ReturnType<typeof createHarness>,
-): void {
-  const contract = {
-    key: "fixture",
-    schema: rowsSchema,
-    keyed: { keyOf },
-    validateParams: () => {},
-  };
-  // @ts-expect-error — identityTable with no membership / scopedMembership / fanOut
-  h.runtime.defineResource(contract, {
-    identityTable: "t",
-    loader: async () => [],
-  });
-}

@@ -20,18 +20,41 @@ import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-vie
 //    runtime persists (`persistedKeys()`, its own gate) whose declared routes
 //    or identity table name a produced table blocks boot.
 //  - BOOT, stale rows (`sweepProducedSnapshots`): a persisted row whose
-//    `tables_read` names a produced table is deleted and reported once, never
+//    `tables_read` reaches a produced table is deleted and reported once, never
 //    thrown on — it can predate the code that would stop writing it.
 //  - RUNTIME (`createProducedPersistGuard`): a persist whose guard tables
 //    (`PersistMeta.guardTables` — a replace's captured read-set, a floor
 //    persist's route tables or read-set union, never empty, so a floor
-//    persist's first INSERT is judged too) name a produced table is refused — every time, so the key never writes a
+//    persist's first INSERT is judged too) reach a produced table is refused — every time, so the key never writes a
 //    row again in this process; the first refusal deletes its row and reports,
 //    once — which also breaks the loop report → recordReport → emit →
 //    recompute → refuse. The runtime's persist GATE (`shouldPersist`) is left
 //    alone on purpose: the runtime assumes it fixed for the process (snapshot
 //    ownership, the `{}` routed target and `isPersisted` all read it), so a
 //    refusal drops the WRITE, never flips the key's persisted-ness.
+//
+// "Reaches" is through the relation bases (D28): a read-set names the views and
+// rollups a loader read, so each relation is expanded to the base tables that
+// feed it (change-feed's `relationBases`, passed in) — a persisted reader of a
+// view over a produced table is as stale as a reader of the table itself.
+
+/** The base tables a relation depends on (change-feed's `relationBases`). */
+export type RelationBases = (relation: string) => readonly string[];
+
+// The produced bases a read-set reaches, deduplicated, in read-set order.
+function producedBasesOf(
+  tablesRead: readonly string[],
+  produced: ReadonlySet<string>,
+  relationBases: RelationBases,
+): string[] {
+  const hits = new Set<string>();
+  for (const relation of tablesRead) {
+    for (const base of relationBases(relation)) {
+      if (produced.has(base)) hits.add(base);
+    }
+  }
+  return [...hits];
+}
 
 /** One table a resource's delivery depends on (server-core's `scopedResourceTables()`). */
 export interface ResourceTable {
@@ -67,39 +90,78 @@ export function assertNoPersistedProducedReader(
   );
 }
 
-const SweptRowSchema = z.object({
+const SnapshotTablesSchema = z.object({
   resource_key: z.string(),
+  params_key: z.string(),
   tables_read: z.array(z.string()),
 });
 
+const SnapshotPkSchema = z.object({
+  resource_key: z.string(),
+  params_key: z.string(),
+});
+
+/** One row the stale-row sweep deleted: its PK, its read-set, the produced bases it reached. */
+export interface SweptProducedRow {
+  resource_key: string;
+  params_key: string;
+  tables_read: string[];
+  produced: string[];
+}
+
 /**
- * A6 (boot, stale rows): delete every persisted row whose `tables_read` names
- * a produced table, returning what was deleted. A no-op (no query) when no
- * table is produced.
+ * A6 (boot, stale rows): delete every persisted row whose `tables_read`
+ * reaches a produced table through the relation bases, returning what was
+ * deleted. A no-op (no query) when no table is produced. The expansion runs
+ * here, not in SQL: the bases are the change feed's boot graph. The delete is
+ * per row (`(resource_key, params_key)`, the PK), so a row whose own read-set
+ * reaches no produced table survives, and only rows the delete really removed
+ * are returned.
  */
 export async function sweepProducedSnapshots(
   db: NodePgDatabase,
   produced: ReadonlySet<string>,
-): Promise<z.infer<typeof SweptRowSchema>[]> {
+  relationBases: RelationBases,
+): Promise<SweptProducedRow[]> {
   if (produced.size === 0) return [];
-  const producedArray = drizzleSql`ARRAY[${drizzleSql.join(
-    [...produced].sort().map((t) => drizzleSql`${t}`),
-    drizzleSql`, `,
-  )}]::text[]`;
-  return executeRows(db, {
+  const rows = await executeRows(db, {
+    query: drizzleSql`
+      SELECT resource_key, params_key, tables_read
+        FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
+       ORDER BY resource_key, params_key
+    `,
+    row: SnapshotTablesSchema,
+    label: "sweepProducedSnapshots.read",
+  });
+  const swept: SweptProducedRow[] = [];
+  for (const row of rows) {
+    const hits = producedBasesOf(row.tables_read, produced, relationBases);
+    if (hits.length > 0) swept.push({ ...row, produced: hits });
+  }
+  if (swept.length === 0) return [];
+  const deleted = await executeRows(db, {
     query: drizzleSql`
       DELETE FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
-      WHERE tables_read && ${producedArray}
-      RETURNING resource_key, tables_read
+       WHERE (resource_key, params_key) IN (${drizzleSql.join(
+         swept.map((r) => drizzleSql`(${r.resource_key}, ${r.params_key})`),
+         drizzleSql`, `,
+       )})
+      RETURNING resource_key, params_key
     `,
-    row: SweptRowSchema,
-    label: "sweepProducedSnapshots",
+    row: SnapshotPkSchema,
+    label: "sweepProducedSnapshots.delete",
   });
+  const gone = new Set(
+    deleted.map((r) => JSON.stringify([r.resource_key, r.params_key])),
+  );
+  return swept.filter((r) =>
+    gone.has(JSON.stringify([r.resource_key, r.params_key])),
+  );
 }
 
 /**
  * A6 (runtime): the persist-hook guard. `refuses(key, tablesRead)` is true when
- * the read-set names a produced table, and from then on for that key whatever
+ * the read-set reaches a produced table through the relation bases, and from then on for that key whatever
  * it reads (a later read-set that happens to miss the table must not resume
  * writing a row this process already judged unsafe). `onRefused` runs on the
  * first refusal only (to delete the key's row and report). Never consulted by
@@ -107,6 +169,7 @@ export async function sweepProducedSnapshots(
  */
 export function createProducedPersistGuard(opts: {
   produced: ReadonlySet<string>;
+  relationBases: RelationBases;
   onRefused: (key: string, producedTables: readonly string[]) => Promise<void>;
 }): {
   refuses(key: string, tablesRead: readonly string[]): Promise<boolean>;
@@ -115,7 +178,11 @@ export function createProducedPersistGuard(opts: {
   return {
     async refuses(key, tablesRead) {
       if (refused.has(key)) return true;
-      const hits = tablesRead.filter((t) => opts.produced.has(t));
+      const hits = producedBasesOf(
+        tablesRead,
+        opts.produced,
+        opts.relationBases,
+      );
       if (hits.length === 0) return false;
       refused.add(key);
       await opts.onRefused(key, hits);

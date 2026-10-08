@@ -42,8 +42,8 @@ export interface ResourceDescriptor<
    * Absent (a `liveValue`, a `liveCollection`'s window / `:rows` / `:groups`)
    * ⇒ no placeholder at all: the query simply has no data until the first
    * authoritative value, still `pending` at `dataUpdatedAt === 0`. Not known
-   * yet is a state, not a stand-in value. Only the tree and tick descriptors
-   * still seed one (Resources page items 3 / 7).
+   * yet is a state, not a stand-in value. Only the two page descriptors
+   * (`resourceDescriptor`) still seed one (Resources page item 9).
    */
   initialData?: T;
   /**
@@ -112,7 +112,7 @@ export interface ResourceDescriptor<
    * practice a tab running an older bundle after a deploy — is refused as
    * `contract-mismatch` and never re-run by a push. Required, so every factory
    * decides: `liveValue` checks its declared param names, a `liveCollection`'s
-   * resources run their strict decoders, and the legacy factories below state
+   * resources run their strict decoders, and the legacy factory below states
    * {@link acceptAnyParams} by name.
    */
   validateParams: (params: Record<string, string>) => void;
@@ -121,9 +121,9 @@ export interface ResourceDescriptor<
 }
 
 /**
- * The params gate of a legacy descriptor (`resourceDescriptor`,
- * `keyedResourceDescriptor` — the tree, revision-tick and config resources):
- * accepts any params, because those loaders never declared their param names.
+ * The params gate of a legacy descriptor (`resourceDescriptor` — the two page
+ * resources): accepts any params, because those loaders never declared their
+ * param names.
  * Named, so "this resource validates nothing" is a visible choice rather than
  * an absent field.
  */
@@ -181,41 +181,6 @@ export function resourceDescriptor<
     key,
     schema,
     initialData,
-    validateParams: acceptAnyParams,
-    ...opts,
-  };
-  registerResourceDescriptor(d as ResourceDescriptor<unknown>);
-  return d;
-}
-
-// Keyed delta-sync variant of `resourceDescriptor`. The matching server
-// resource passes this descriptor to the two-arg `defineResource(descriptor,
-// opts)`, which derives `mode: "keyed"` from its `keyOf` — the keyed options
-// take no `mode`, so the row identity is declared here only. `schema`
-// stays `z.array(Element)`, so `T` (and every `useResource` caller) is
-// unchanged — the client merges per-row deltas into the same `T[]`. `keyOf`
-// lets the client key prior cache rows when applying a delta.
-// The `keyed: { keyOf }` is REQUIRED in the return type (not the descriptor's
-// optional field), so the server's two-arg `defineResource` can statically see a
-// keyed descriptor and force a scope policy on it.
-export function keyedResourceDescriptor<
-  T extends unknown[],
-  P extends Record<string, string> = Record<string, never>,
->(
-  key: string,
-  schema: ZodParser<T>,
-  initialData: T,
-  keyOf: (row: unknown) => string,
-  opts?: ResourceDescriptorOptions,
-): ResourceDescriptor<T, P> & {
-  keyed: { keyOf: (row: unknown) => string };
-  initialData: T;
-} {
-  const d = {
-    key,
-    schema,
-    initialData,
-    keyed: { keyOf },
     validateParams: acceptAnyParams,
     ...opts,
   };

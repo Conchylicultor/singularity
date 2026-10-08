@@ -646,8 +646,9 @@ async function stampSignature(
 
 // Cached at boot during rebuildTriggers — the set of public tables we installed
 // triggers on. The listener's on-reconnect FULL sweep iterates this set (see
-// listener.ts). It is the by-construction-complete table universe; applyDbChange
-// drops any table no resource reads, so sweeping all of them is safe and total.
+// listener.ts). It is the by-construction-complete table universe; a table no
+// route names and no read-set base is reaches nothing, so sweeping all of them
+// is safe and total.
 //
 // Set from the DESIRED set on every boot, including the skip-when-unchanged path
 // (where "desired" is proven to equal "installed") — `assertRouteTablesCovered`

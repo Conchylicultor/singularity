@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { compileCreateView } from "@plugins/database/plugins/derived-views/core";
 import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
-import { attemptConvAgg, attemptPushAgg } from "../internal/rollup-spec";
+import { TASK_ROLLUPS } from "../internal/rollup-spec";
 import {
   attempts,
   conversations,
@@ -37,7 +37,7 @@ export async function installTaskDerivedSchema(
   }
 
   // attempts_v LEFT JOINs the two trigger-maintained rollups.
-  await installRollups(db, [attemptConvAgg, attemptPushAgg]);
+  await installRollups(db, TASK_ROLLUPS);
 
   // Dependency order: attempts_v → task_blocking_v → tasks_v.
   for (const [name, view] of [

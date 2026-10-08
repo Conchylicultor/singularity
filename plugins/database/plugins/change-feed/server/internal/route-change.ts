@@ -1,17 +1,15 @@
 import {
-  applyDbChange,
+  applyLegacyFullChange,
   routeTableChange,
   type TableChange,
 } from "@plugins/framework/plugins/server-core/core";
 import type { ResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
-import { relationIdentityBase } from "@plugins/database/plugins/derived-views/server";
 import type { DbChange } from "./parse-payload";
-import { dependentViews } from "./view-deps";
 
 /** The two routers a change is delivered to (see `routeChange`). */
 type ResourceRuntimeRouters = Pick<
   ResourceRuntime,
-  "routeTableChange" | "applyDbChange"
+  "routeTableChange" | "applyLegacyFullChange"
 >;
 
 /** A change from the Postgres feed: a NOTIFY, a catch-up row, a reconnect sweep. */
@@ -69,18 +67,7 @@ function tableChangeOf(change: RoutedChange): TableChange {
       };
 }
 
-// Route one base-table change into the live-state recompute cascade. The change is
-// applied directly (scoped via its ids), then expanded to every view that
-// transitively depends on the table — because view-backed loaders record the VIEW
-// in their read-set, not the base table. A view whose identity base IS the changed
-// table (a 1:1 PK-preserving view, e.g. `conversations_v` ← `conversations`)
-// forwards the SAME ids, so a scoped UPDATE stays scoped through it; every other
-// view is FULL (its row identity does not map 1:1 to this base PK). Each apply is
-// tagged with `origin` (the base table that actually changed) and `identityBase`
-// (the identity of the relation being applied), so the runtime can deliver a
-// covered change via a single path instead of letting a secondary-view FULL absorb
-// the scoped one. `applyDbChange` is defensive (unknown/unread relation = no-op,
-// never throws).
+// Route one base-table change into the live-state recompute cascade.
 //
 // This is the SINGLE source of change routing: the LISTEN consumer (live changes),
 // the L2 cold-boot catch-up driver (replayed changelog rows) AND the in-process
@@ -92,12 +79,16 @@ function tableChangeOf(change: RoutedChange): TableChange {
 //
 // Two routers read each change, and each resource is served by exactly one of
 // them: `routeTableChange` serves the ROUTED resources (compiler-emitted routes —
-// per-tuple read-sets, host-id maps), `applyDbChange` every other one through the
-// read-set inversion, which skips routed keys. Both carry the change's `source`.
-// See research/2026-09-29-global-scoped-change-routing.md.
+// per-tuple read-sets, host-id maps), `applyLegacyFullChange` every other one: a
+// FULL recompute of each tracked tuple of every legacy resource whose read-set
+// reaches the table through its relation bases (a view or rollup it read
+// expands to the tables that feed it — `./relation-bases`), so a `conversations`
+// write reaches a reader of `tasks_v`. Both carry the change's `source`. See
+// research/2026-09-29-global-scoped-change-routing.md and
+// research/2026-10-08-global-scoped-change-routing-p8-steps-23-24.md.
 export const routeChange: (routed: RoutedChange) => void = createChangeRouter({
   routeTableChange,
-  applyDbChange,
+  applyLegacyFullChange,
 });
 
 /**
@@ -110,43 +101,23 @@ export const routeChange: (routed: RoutedChange) => void = createChangeRouter({
 export function createChangeRouter(
   runtime: ResourceRuntimeRouters,
 ): (routed: RoutedChange) => void {
-  const { routeTableChange, applyDbChange } = runtime;
+  const { routeTableChange, applyLegacyFullChange } = runtime;
   return (routed) => {
     const change = tableChangeOf(routed);
-    // `xid` (the source transaction — mutation-ack attribution) forwards on BOTH
-    // applies: even a view-fanout FULL recompute reads post-commit, so the ackTx
-    // claim survives the scope degrade. The change's wall clock forwards on both
-    // applies too: a view-backed list is late by the same amount as the table
-    // that fed it.
-    const attribution = {
+    // A routed table's trigger carries its key layout and, for a gated UPDATE,
+    // the unchanged columns; every other table's leaves both null (unknown).
+    routeTableChange(change);
+    // `xid` (the source transaction — mutation-ack attribution) and the change's
+    // wall clock forward to the legacy FULL too: it reads post-commit, so the
+    // ackTx claim holds, and a view-backed list is late by the same amount as
+    // the table that fed it.
+    applyLegacyFullChange({
+      table: change.table,
       source: change.source,
       ...(change.xid !== undefined ? { xid: change.xid } : {}),
       ...(change.changedAt !== undefined
         ? { changedAt: change.changedAt }
         : {}),
-    };
-    // A routed table's trigger carries its key layout and, for a gated UPDATE,
-    // the unchanged columns; every other table's leaves both null (unknown).
-    routeTableChange(change);
-    applyDbChange({
-      table: change.table,
-      op: change.op,
-      ids: change.ids,
-      origin: change.table,
-      identityBase: change.table,
-      ...attribution,
     });
-    for (const view of dependentViews(change.table)) {
-      const identityBase = relationIdentityBase(view);
-      const forwardScoped = identityBase === change.table;
-      applyDbChange({
-        table: view,
-        op: forwardScoped ? change.op : "U",
-        ids: forwardScoped ? change.ids : null,
-        origin: change.table,
-        identityBase,
-        ...attribution,
-      });
-    }
   };
 }

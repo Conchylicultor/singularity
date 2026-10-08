@@ -1,12 +1,15 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { collectContributions } from "./contributions";
 import {
   Resource,
   assertPreloadedResourcesDeclared,
+  clearRelationBases,
   defineResource,
+  setRelationBases,
   undeclaredPreloadedKeys,
 } from "./resources";
+import { readSetVersion } from "./read-set";
 
 describe("undeclaredPreloadedKeys", () => {
   test("names each preloaded key no Declare carries, sorted", () => {
@@ -93,5 +96,22 @@ describe("Resource.Declare reads", () => {
     expect(mine(Resource.Declare.getContributions())).toEqual([
       expect.objectContaining(payload),
     ]);
+  });
+});
+
+describe("setRelationBases", () => {
+  // The holder is process-global: leave it unset for the next suite.
+  afterAll(clearRelationBases);
+  // D33: the router memoizes its inversion on the read-set version, so new
+  // bases must move it — or the memo would keep serving the old expansion.
+  test("moves the read-set version", () => {
+    const before = readSetVersion();
+    setRelationBases((r) => [r]);
+    expect(readSetVersion()).toBe(before + 1);
+  });
+  test("clearRelationBases moves the version too", () => {
+    const before = readSetVersion();
+    clearRelationBases();
+    expect(readSetVersion()).toBe(before + 1);
   });
 });

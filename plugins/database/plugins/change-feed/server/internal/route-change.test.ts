@@ -5,8 +5,10 @@ import {
   defineResource,
   notificationsWsHandler,
   recordLoaderReadSet,
+  setRelationBases,
   type ResourceParams,
 } from "@plugins/framework/plugins/server-core/core";
+import { clearRelationBases } from "@plugins/framework/plugins/server-core/core/testing";
 import { mintRoutePlan } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   createTestDb,
@@ -19,7 +21,8 @@ import { rebuildTriggers } from "./triggers";
 // `routeChange` is the ONLY production path from a table change into the live
 // runtime: the LISTEN consumer, the L2 catch-up and the reconnect sweep all call
 // it. It feeds two routers — `routeTableChange` serves the ROUTED entries (every
-// collection window, `:rows` and `:groups`), `applyDbChange` every other one —
+// collection window, `:rows` and `:groups`), `applyLegacyFullChange` every
+// other one (a FULL recompute of each tracked tuple) —
 // and each entry must be reached through exactly one of them. The runtime suites
 // drive the two routers by hand, so this suite drives the real `routeChange`
 // into the real server-core runtime: with it, a `routeChange` that stopped
@@ -31,6 +34,9 @@ import { rebuildTriggers } from "./triggers";
 //
 // Requires a running Postgres cluster (started by ./singularity build) for the
 // feed half; createTestDb() throws loudly when it is unreachable.
+
+// The relation bases this file installs are process-global: reset them.
+afterAll(clearRelationBases);
 
 const RowSchema = z.object({ id: z.string(), n: z.number() });
 type Row = z.infer<typeof RowSchema>;
@@ -55,32 +61,22 @@ interface Load {
 
 /**
  * One keyed point resource over `table`, registered on the server-core runtime
- * — ROUTED (one identity route, compiler-shaped) or LEGACY (an `identityTable`,
- * reached through the read-set inversion).
+ * and ROUTED (one identity route, compiler-shaped).
  */
-function pointResource(
+function routedResource(
   key: string,
   table: string,
-  kind: "routed" | "legacy",
   read: (ids: readonly string[]) => Promise<Row[]> | Row[],
   loads: Load[],
 ): void {
-  const contract = {
-    key,
-    schema: z.array(RowSchema),
-    keyed: { keyOf: (row: unknown) => (row as Row).id },
-    validateParams: () => {},
-  };
-  const membership = { kind: "point" as const, idsOf };
-  const loader = (
-    params: ResourceParams,
-    ctx?: { affectedIds: readonly string[] },
-  ) => {
-    loads.push({ key, ids: ctx ? [...ctx.affectedIds] : "FULL" });
-    return read(ctx?.affectedIds ?? idsOf(params));
-  };
-  if (kind === "routed") {
-    defineResource(contract, {
+  defineResource(
+    {
+      key,
+      schema: z.array(RowSchema),
+      keyed: { keyOf: (row: unknown) => (row as Row).id },
+      validateParams: () => {},
+    },
+    {
       routes: mintRoutePlan({
         routes: [
           {
@@ -92,12 +88,34 @@ function pointResource(
         ],
         usesOf: () => new Map([["base", { role: "membership" as const }]]),
       }),
-      membership,
-      loader,
-    });
-  } else {
-    defineResource(contract, { identityTable: table, membership, loader });
-  }
+      membership: { kind: "point" as const, idsOf },
+      loader: (params, ctx) => {
+        loads.push({ key, ids: ctx ? [...ctx.affectedIds] : "FULL" });
+        return read(ctx?.affectedIds ?? idsOf(params));
+      },
+    },
+  );
+}
+
+/**
+ * One LEGACY resource reading `table` whole: a non-keyed push value, reached
+ * through the read-set inversion — every change it reads is one FULL load.
+ */
+function legacyResource(
+  key: string,
+  readAll: () => Promise<Row[]> | Row[],
+  loads: Load[],
+): void {
+  defineResource(
+    { key, schema: z.array(RowSchema), validateParams: () => {} },
+    {
+      mode: "push",
+      loader: () => {
+        loads.push({ key, ids: "FULL" });
+        return readAll();
+      },
+    },
+  );
 }
 
 /** A socket on the server-core runtime, recording every frame. */
@@ -126,6 +144,8 @@ function attach() {
     },
     deltas: (key: string) =>
       frames.filter((f) => f.kind === "delta" && f.key === key),
+    updates: (key: string) =>
+      frames.filter((f) => f.kind === "update" && f.key === key),
     close: () => handler.close(ws, 1000, "test"),
   };
 }
@@ -152,22 +172,25 @@ describe("routeChange — one change, both routers, each entry reached once", ()
   const loads: Load[] = [];
   const read = (ids: readonly string[]): Row[] =>
     ids.flatMap((id) => (store.has(id) ? [{ id, n: store.get(id)! }] : []));
+  const readAll = (): Row[] => read([...store.keys()]);
   const socket = attach();
 
   beforeAll(async () => {
-    pointResource(ROUTED, TABLE, "routed", read, loads);
-    pointResource(LEGACY, TABLE, "legacy", read, loads);
+    // No views or rollups here: every relation is its own base.
+    setRelationBases((r) => [r]);
+    routedResource(ROUTED, TABLE, read, loads);
+    legacyResource(LEGACY, readAll, loads);
     // The captured read-sets, as a real loader run records them at the DB pool
     // chokepoint. The routed key's must NOT make the legacy inversion reach it.
     recordLoaderReadSet(ROUTED, new Set([TABLE]));
     recordLoaderReadSet(LEGACY, new Set([TABLE]));
     await socket.subscribe(ROUTED, { ids: "a" });
-    await socket.subscribe(LEGACY, { ids: "a" });
+    await socket.subscribe(LEGACY, {});
   });
 
   afterAll(() => socket.close());
 
-  test("an UPDATE refills each subscribed entry exactly once, scoped, and acks its transaction", async () => {
+  test("an UPDATE refills the routed entry once, scoped, reloads the legacy one once, FULL, and both ack its transaction", async () => {
     const at = loads.length;
     store.set("a", 2);
     routeChange({
@@ -181,19 +204,20 @@ describe("routeChange — one change, both routers, each entry reached once", ()
     });
     await until(
       () =>
-        socket.deltas(ROUTED).length > 0 && socket.deltas(LEGACY).length > 0,
-      "both deltas",
+        socket.deltas(ROUTED).length > 0 && socket.updates(LEGACY).length > 0,
+      "the delta and the update",
     );
     await settle();
     expect(loads.slice(at)).toEqual([
       { key: ROUTED, ids: ["a"] },
-      { key: LEGACY, ids: ["a"] },
+      { key: LEGACY, ids: "FULL" },
     ]);
-    for (const key of [ROUTED, LEGACY]) {
-      expect(socket.deltas(key).map((d) => [d.upserts, d.ackTx])).toEqual([
-        [[["a", { id: "a", n: 2 }]], ["7001"]],
-      ]);
-    }
+    expect(socket.deltas(ROUTED).map((d) => [d.upserts, d.ackTx])).toEqual([
+      [[["a", { id: "a", n: 2 }]], ["7001"]],
+    ]);
+    expect(socket.updates(LEGACY).map((u) => [u.value, u.ackTx])).toEqual([
+      [[{ id: "a", n: 2 }], ["7001"]],
+    ]);
   });
 
   test("a change to a table neither reads reaches neither", async () => {
@@ -241,6 +265,12 @@ describe("the feed end to end — trigger → listener → routeChange → delta
     }
   };
 
+  const readAll = async (): Promise<Row[]> => {
+    const res = await testDb.db.execute<Row>(
+      sql`SELECT id, n FROM rc_feed_items ORDER BY id`,
+    );
+    return res.rows.map((r) => RowSchema.parse(r));
+  };
   const read = async (ids: readonly string[]): Promise<Row[]> => {
     if (ids.length === 0) return [];
     const res = await testDb.db.execute<Row>(
@@ -281,34 +311,34 @@ describe("the feed end to end — trigger → listener → routeChange → delta
     await testDb?.drop();
   });
 
-  test("an UPDATE statement reaches the routed and the legacy entry once each, as a scoped delta", async () => {
-    pointResource(ROUTED, TABLE, "routed", read, loads);
-    pointResource(LEGACY, TABLE, "legacy", read, loads);
+  test("an UPDATE statement reaches the routed entry once as a scoped delta, and the legacy one as one FULL reload", async () => {
+    setRelationBases((r) => [r]);
+    routedResource(ROUTED, TABLE, read, loads);
+    legacyResource(LEGACY, readAll, loads);
     recordLoaderReadSet(ROUTED, new Set([TABLE]));
     recordLoaderReadSet(LEGACY, new Set([TABLE]));
     socket = attach();
     await socket.subscribe(ROUTED, { ids: "a" });
-    await socket.subscribe(LEGACY, { ids: "a" });
+    await socket.subscribe(LEGACY, {});
 
     const at = loads.length;
     await testDb.db.execute(sql`UPDATE rc_feed_items SET n = 2 WHERE id = 'a'`);
     await until(
       () =>
-        socket.deltas(ROUTED).length > 0 && socket.deltas(LEGACY).length > 0,
-      "both deltas",
+        socket.deltas(ROUTED).length > 0 && socket.updates(LEGACY).length > 0,
+      "the delta and the update",
     );
     await settle();
     expect(loads.slice(at)).toEqual([
       { key: ROUTED, ids: ["a"] },
-      { key: LEGACY, ids: ["a"] },
+      { key: LEGACY, ids: "FULL" },
     ]);
-    for (const key of [ROUTED, LEGACY]) {
-      const deltas = socket.deltas(key);
-      expect(deltas.map((d) => d.upserts)).toEqual([
-        [["a", { id: "a", n: 2 }]],
-      ]);
-      // The statement's transaction id rides the trigger to the ack.
-      expect(deltas[0]!.ackTx).toHaveLength(1);
-    }
+    const deltas = socket.deltas(ROUTED);
+    expect(deltas.map((d) => d.upserts)).toEqual([[["a", { id: "a", n: 2 }]]]);
+    // The statement's transaction id rides the trigger to the ack.
+    expect(deltas[0]!.ackTx).toHaveLength(1);
+    const updates = socket.updates(LEGACY);
+    expect(updates.map((u) => u.value)).toEqual([[{ id: "a", n: 2 }]]);
+    expect(updates[0]!.ackTx).toEqual(deltas[0]!.ackTx);
   }, 20_000);
 });

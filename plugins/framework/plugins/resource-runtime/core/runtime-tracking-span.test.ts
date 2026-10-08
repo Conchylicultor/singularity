@@ -88,13 +88,9 @@ describe("a replay after a tracking gap is never up-to-date", () => {
 
     h.closeSocket(0);
     truth = "v2";
-    h.runtime.applyDbChange({
+    h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "t",
-      op: "U",
-      ids: ["x"],
-      origin: "t",
-      identityBase: "t",
     });
     await tick();
     await tick();

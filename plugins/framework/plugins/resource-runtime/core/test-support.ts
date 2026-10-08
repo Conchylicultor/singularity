@@ -135,6 +135,12 @@ export interface Harness {
   closeSocket: (socketIdx?: number) => void;
   /** Frames for `key`, excluding the initial sub-ack. Optionally scoped to one socket. */
   pushesFor: (key: string, socketIdx?: number) => RecordedFrame[];
+  /**
+   * The injected `readSet` hook's answer for `key` (`[]` when none was
+   * injected) — so the routed fixture can refuse a read-set on a routed key,
+   * which no router would ever read (`routed-fixture.ts`).
+   */
+  readSetOf: (key: string) => readonly string[];
   tick: typeof tick;
 }
 
@@ -260,6 +266,7 @@ export function createHarness(
           (socketIdx === undefined || f.socket === socketIdx),
       );
     },
+    readSetOf: (key) => runtimeOpts.readSet?.(key) ?? [],
     tick,
   };
 }

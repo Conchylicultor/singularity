@@ -177,8 +177,9 @@ after contributions are collected, both before this barrier) and handed to
 
 ## Boot-time reconciliation against consumers
 
-The feed enforces two invariants against its consumers at boot (in
-`onReadyBlocking`, after triggers are installed) — not via a static
+The feed enforces its invariants against its consumers at boot (in
+`onReadyBlocking`, after triggers are installed — `installFeed` lists them all) —
+not via a static
 `./singularity check`, because neither can reach a live DB nor the server-only
 contribution/registry sets:
 
@@ -187,13 +188,10 @@ contribution/registry sets:
   be empty by construction).
 - **`assertRouteTablesCovered`** (`internal/route-coverage.ts`, A1 of
   `research/2026-09-29-global-scoped-change-routing.md`) — **throws (blocks
-  boot)** if any live-state resource depends on a table the feed installed **no
-  trigger** on: every route table of a ROUTED resource (`routes` / `reach` — it is
-  reached only through them, so an untriggered side table is as dead as an
-  untriggered base), and every legacy `identityTable` (scoped delivery fires only
-  on `origin === identityTable`). Only a triggered table ever produces either, so
-  such a declaration is dead config that silently degrades the resource to
-  hydrate-on-mount. The single authoritative test is membership in
+  boot)** if a ROUTED resource (`routes` / `reach`) names a table with **no
+  change source** in a route — it is reached only through its route tables, so an
+  untriggered side table is as dead as an untriggered base. Such a route is dead
+  config that silently degrades the resource to hydrate-on-mount. The single authoritative test is membership in
   `getCoveredTables()` (the set `rebuildTriggers` just installed) — which subsumes
   the `ExcludeFromChangeFeed` case AND catches the other ways a table ends up
   untriggered: a **VIEW name** instead of its base table (the documented
@@ -201,8 +199,8 @@ contribution/registry sets:
   feed-exempt **derived-table rollup**, or a **typo / dropped table**. A
   legitimate base table is in the covered set by construction, so a miss is never
   a false positive. Each violation is classified (`excluded` / `rollup` /
-  `uncovered`) and names what declared the table (`identityTable` or
-  `route "<id>"`), so the error carries the right remediation. It cross-checks the
+  `uncovered`) and names the route that declared the table (`route "<id>"`),
+  so the error carries the right remediation. It cross-checks the
   resource-runtime's `scopedResourceTables()` (surfaced through `server-core`)
   against `getCoveredTables()` ∪ the produced tables (A1′ — a table fed by a
   change producer has a change source too, see below), using
@@ -212,6 +210,12 @@ contribution/registry sets:
   real triggered base table (not a view/rollup), drop the exclusion, give the table
   a change producer, or serve it from an endpoint read on open (like the Slow Ops
   pane's `listSlowOps`).
+- **`assertRelationBasesSourced`** (D35, `internal/relation-bases.ts`) — **throws**
+  if a view or rollup reaches, through its relation bases, a base table with no
+  change source that is not opted out (`ExcludeFromChangeFeed`, whose readers
+  accept hydrate-on-mount by declaration). The legacy router reaches a view's
+  reader only through those bases, so a silent one would freeze it. Known limit:
+  a view reading through a function body is invisible to `view_table_usage`.
 
 The boot body lives in `installFeed` (`internal/install-feed.ts`), parametrized
 on the database and on the contribution / registry sets, so
@@ -321,12 +325,20 @@ served by exactly one of them:
   `:groups`) is routed. A routed table's trigger carries its key layout and its
   `unchanged` set (above), which `routeChange` hands on as `keys` / `unchanged`;
   every other table's are `null` (unknown).
-- `applyDbChange` — every other resource, through the loader read-set inversion
-  (plus the view forwarding below it), which skips routed keys.
+- `applyLegacyFullChange` — every other resource, through the loader read-set
+  inversion, which skips routed keys and recomputes each reached entry in FULL.
+  A read-set names the views and rollups a loader read, so each relation is
+  indexed under its **relation bases** (`internal/relation-bases.ts`, C30): a
+  view's tables transitively, a rollup replaced by its sources. A reader of
+  `tasks_v` is reached by a write to `conversations`. The graph is read in
+  `onReadyBlocking` and installed with server-core's `setRelationBases` (D34);
+  D35 (in `installFeed`) blocks boot when a view or rollup reaches a base with
+  no change source.
 
 `route-change.test.ts` drives the real `routeChange` into the real server-core
-runtime (a routed and a legacy entry on one table: each refilled exactly once,
-scoped, with the transaction's ack), and then the whole feed on a throwaway
+runtime (a routed and a legacy entry on one table: each reached exactly once —
+the routed one scoped, the legacy one as one FULL reload — with the
+transaction's ack), and then the whole feed on a throwaway
 database — `rebuildTriggers` → a real `UPDATE` → the listener → `routeChange` → a
 delta on the wire. Without it, a `routeChange` that stopped calling a router would
 freeze every collection at its hydrated value with every other suite green.
@@ -350,7 +362,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `database/connection.DbClient`
     - `database/connection.withQueryDeadline`
     - `database/derived-tables.feedExemptTables`
-    - `database/derived-views.relationIdentityBase`
+    - `database/derived-tables.rollupSources`
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/database/plugins/change-feed/server/internal/produced-tables.ts`
   - Exports (types):
@@ -375,6 +387,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `PRODUCER_IDS_CAP`
     - `readLayout`
     - `rebuildTriggers`
+    - `relationBases`
     - `routeChange`
 - Cross-plugin:
   - Imported by:
@@ -391,12 +404,15 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
   - Server: `@plugins/database/plugins/change-feed/server/testing`
     - `assertRouteLayoutsInstalled` — A3: throw (block boot) unless every routed table's installed triggers emit what its routes read.
     - `assertRouteTablesCovered` — Throw loudly (blocking boot) if any resource depends on a table with no change source: no trigger the change-feed installed, and no change producer.
+    - `buildViewDeps` — Each public view → the relations it directly reads (sorted).
     - `createChangeFeedListener`
     - `createChangeRouter` — The routing above, into ANY runtime's two routers — `routeChange` is it bound to server-core's process-global runtime.
+    - `createRelationBases` — The memoized relation → bases function over `graph`.
     - `ensureChangelogTable`
     - `findCarriedProducedRoutes` — A3p: the produced tables whose routes need a carried column.
     - `flushNow` — Flush `producer`'s coalescing buffer now (a test drives the window by hand).
     - `installedLayouts` — What each table's installed triggers emit.
+    - `installRelationGraph` — Install the boot graph (change-feed's `onReadyBlocking`, D34): here, and in server-core's runtime (`setRelationBases`, which bumps the read-set version so the legacy router's memoized inversion is rebuilt through it).
     - `mountProducersForTest` — Mount `producers` without a booted plugin graph: each is live (A12 passes), runs as boot mode `mode` (default `"serve"`; pass `"exec"` to see A13), and routes through `route` (default the real `routeChange`).
     - `readInstalledTriggers` — Every installed `live_state_*` trigger on the given tables.
     - `rebuildTriggers`

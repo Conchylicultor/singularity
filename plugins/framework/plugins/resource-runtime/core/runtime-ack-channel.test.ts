@@ -36,40 +36,34 @@
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
 import { createHarness, snapshotControllable, tick } from "./test-support";
+import {
+  defineRoutedTable,
+  feedChange,
+  identityPlan,
+  legacyFull,
+} from "./testing/routed-fixture";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
 
-// A keyed own-identity resource "rows" over a simulated table, with a feed
-// helper carrying the optional `xid` attribution.
+// A keyed own-identity resource "rows" over a simulated table — a routed alias
+// (its identity route, the shared fixture), ordered by insertion — with a feed
+// helper carrying the optional `xid` attribution. Scoped changes reach an entry
+// only through its routes since P8 step 23a.
 function keyedHarness() {
   const table = new Map<string, number>();
   const rows = () => [...table.entries()].map(([id, n]) => ({ id, n }));
-  const h = createHarness({ readSet: () => ["row_table"], sockets: 2 });
-  h.runtime.defineResource(
-    {
-      key: "rows",
-      schema: rowsSchema,
-      keyed: { keyOf },
-      validateParams: () => {},
-    },
-    {
-      identityTable: "row_table",
-      fanOut: { reason: "one param-less tuple — nothing to narrow" },
-      loader: (_p, c) =>
-        c ? rows().filter((r) => c.affectedIds.includes(r.id)) : rows(),
-    },
-  );
+  const h = createHarness({ sockets: 2 });
+  const routed = defineRoutedTable(h, {
+    key: "rows",
+    table: "row_table",
+    membership: "alias",
+    schema: rowsSchema,
+    loader: (_p, c) =>
+      c ? rows().filter((r) => c.affectedIds.includes(r.id)) : rows(),
+  });
   const feed = (op: "I" | "U" | "D", ids: string[] | null, xid?: string) =>
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "row_table",
-      op,
-      ids,
-      origin: "row_table",
-      identityBase: "row_table",
-      ...(xid !== undefined ? { xid } : {}),
-    });
+    routed.feed(op, ids, xid !== undefined ? { xid } : {});
   return { h, table, feed };
 }
 
@@ -119,19 +113,14 @@ describe("ackTx — value frames", () => {
     const r = h.runtime.defineExternalResource({
       key: "p",
       mode: "push",
-      identityTable: "p_table",
       schema: z.number(),
       loader: async () => ++n,
     });
     await h.subscribe("p");
 
-    h.runtime.applyDbChange({
+    h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "p_table",
-      op: "U",
-      ids: null,
-      origin: "p_table",
-      identityBase: "p_table",
       xid: "600",
     });
     await tick();
@@ -160,23 +149,75 @@ describe("ackTx — value frames", () => {
     expect("ackTx" in synthUpdate).toBe(false);
   });
 
+  // The upstream's change xids ride the FULL `dependsOn` cascade: the
+  // downstream recompute folds in the same source transactions, so its frame
+  // acks them too (`cascadeSourceTx` → `cascadeDownstream`'s merge). An
+  // overflowed upstream forwards nothing — a torn set is worse than none.
+  function cascadeHarness() {
+    const h = createHarness({
+      readSet: (k) => (k === "up" ? ["up_table"] : []),
+    });
+    let u = 0;
+    let d = 0;
+    const up = h.runtime.defineExternalResource({
+      key: "up",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => ++u,
+    });
+    h.runtime.defineResource({
+      key: "down",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => ++d,
+      dependsOn: [{ resource: up }],
+    });
+    return h;
+  }
+  const lastUpdate = (h: ReturnType<typeof createHarness>, key: string) =>
+    h
+      .pushesFor(key)
+      .filter((f) => f.kind === "update")
+      .at(-1) as { ackTx?: string[] } | undefined;
+
+  test("a dependsOn cascade forwards the upstream's xids onto the downstream's frame", async () => {
+    const h = cascadeHarness();
+    await h.subscribe("up");
+    await h.subscribe("down");
+    legacyFull(h, "up_table", { xid: "42" });
+    await tick();
+    expect(lastUpdate(h, "up")?.ackTx).toEqual(["42"]);
+    expect(lastUpdate(h, "down")?.ackTx).toEqual(["42"]);
+  });
+
+  test("an overflowed upstream (> 64 xids) forwards no ackTx down the cascade", async () => {
+    const h = cascadeHarness();
+    await h.subscribe("up");
+    await h.subscribe("down");
+    for (let i = 0; i < 65; i++)
+      legacyFull(h, "up_table", { xid: `${3000 + i}` });
+    await tick();
+    // Both frames ship (the cascade ran); neither carries a torn set.
+    const upFrame = lastUpdate(h, "up");
+    const downFrame = lastUpdate(h, "down");
+    expect(upFrame).toBeDefined();
+    expect(downFrame).toBeDefined();
+    expect("ackTx" in upFrame!).toBe(false);
+    expect("ackTx" in downFrame!).toBe(false);
+  });
+
   test("invalidate frames NEVER carry ackTx (the base does not yet reflect the tx)", async () => {
     const h = createHarness({ readSet: () => ["i_table"] });
     h.runtime.defineExternalResource({
       key: "i",
       mode: "invalidate",
-      identityTable: "i_table",
       schema: z.number(),
       loader: async () => 1,
     });
     await h.subscribe("i");
-    h.runtime.applyDbChange({
+    h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "i_table",
-      op: "U",
-      ids: null,
-      origin: "i_table",
-      identityBase: "i_table",
       xid: "700",
     });
     await tick();
@@ -229,7 +270,7 @@ describe("ackTx — coalescing", () => {
     // BOTH sourceTx claims — the FULL read is post-commit for both.
     const table = new Map<string, number>();
     const rows = () => [...table.entries()].map(([id, n]) => ({ id, n }));
-    const h = createHarness({ readSet: () => ["m_table"] });
+    const h = createHarness();
     h.runtime.defineResource(
       {
         key: "m",
@@ -238,20 +279,20 @@ describe("ackTx — coalescing", () => {
         validateParams: () => {},
       },
       {
-        identityTable: "m_table",
-        scopedMembership: { orderOf: async () => [...table.keys()] },
+        routes: identityPlan("m_table"),
+        scopedMembership: {
+          orderOf: async () => [...table.keys()],
+          orderSignatureOf: () => "",
+        },
         loader: (_p, c) =>
           c ? rows().filter((r) => c.affectedIds.includes(r.id)) : rows(),
       },
     );
     const feed = (op: "I" | "U" | "D", ids: string[] | null, xid: string) =>
-      h.runtime.applyDbChange({
-        source: "feed",
+      feedChange(h, {
         table: "m_table",
         op,
         ids,
-        origin: "m_table",
-        identityBase: "m_table",
         xid,
       });
     table.set("a", 1);
@@ -303,7 +344,7 @@ describe("standalone ack frames — no-value-change recomputes", () => {
       const table = new Map<string, number>();
       const idsOf = (p: Record<string, string>) =>
         (p.ids ?? "").split(",").filter(Boolean);
-      const h = createHarness({ readSet: () => ["pt_table"] });
+      const h = createHarness();
       h.runtime.defineResource(
         {
           key: "pt",
@@ -312,7 +353,7 @@ describe("standalone ack frames — no-value-change recomputes", () => {
           validateParams: () => {},
         },
         {
-          identityTable: "pt_table",
+          routes: identityPlan("pt_table"),
           membership: { kind: "point", idsOf },
           loader: (p, c) => {
             const ids = c ? [...c.affectedIds] : idsOf(p);
@@ -323,13 +364,10 @@ describe("standalone ack frames — no-value-change recomputes", () => {
         },
       );
       const feed = (op: "I" | "U" | "D", ids: string[] | null, xid?: string) =>
-        h.runtime.applyDbChange({
-          source: "feed",
+        feedChange(h, {
           table: "pt_table",
           op,
           ids,
-          origin: "pt_table",
-          identityBase: "pt_table",
           ...(xid !== undefined ? { xid } : {}),
         });
       return { h, table, feed };
@@ -373,7 +411,7 @@ describe("standalone ack frames — no-value-change recomputes", () => {
       [...table.entries()]
         .map(([id, n]) => ({ id, n }))
         .sort((a, b) => a.n - b.n || (a.id < b.id ? -1 : 1));
-    const h = createHarness({ readSet: () => ["w_table"] });
+    const h = createHarness();
     h.runtime.defineResource(
       {
         key: "win",
@@ -382,7 +420,7 @@ describe("standalone ack frames — no-value-change recomputes", () => {
         validateParams: () => {},
       },
       {
-        identityTable: "w_table",
+        routes: identityPlan("w_table"),
         membership: {
           kind: "window",
           windowIdsOf: async () =>
@@ -399,13 +437,10 @@ describe("standalone ack frames — no-value-change recomputes", () => {
       },
     );
     const feed = (op: "I" | "U" | "D", ids: string[] | null, xid: string) =>
-      h.runtime.applyDbChange({
-        source: "feed",
+      feedChange(h, {
         table: "w_table",
         op,
         ids,
-        origin: "w_table",
-        identityBase: "w_table",
         xid,
       });
     table.set("a", 1);
@@ -502,6 +537,11 @@ describe("standalone ack frames — no-value-change recomputes", () => {
     k.feed("U", ["a"], "1340");
     await tick();
     expect(acks(k.h, "rows")).toHaveLength(0);
+    // Positive control: the holding tab's own request is honoured.
+    await k.h.subAcks("rows", {}, true, { tabId: "t1" });
+    k.feed("U", ["a"], "1341");
+    await tick();
+    expect(acks(k.h, "rows")).toHaveLength(1);
   });
 
   test("a sub-batch entry restates the tab's request", async () => {
@@ -533,20 +573,15 @@ describe("ackTx — stale-flight REFUSAL (co-production made exact)", () => {
     // value and the test cannot tell a join from a refusal. That is exactly how
     // this case read green while pinning the bug.
     const ctl = snapshotControllable([{ id: "a", n: 1 }]);
-    const h = createHarness({ readSet: () => ["c_table"], sockets: 2 });
-    h.runtime.defineResource(
-      {
-        key: "c",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
-      },
-      {
-        identityTable: "c_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        loader: ctl.loader,
-      },
-    );
+    const h = createHarness({ sockets: 2 });
+    const c = defineRoutedTable(h, {
+      key: "c",
+      table: "c_table",
+      membership: "alias",
+      schema: rowsSchema,
+      orderOf: async () => ["a"],
+      loader: ctl.loader,
+    });
     await h.subscribe("c", {}, { socket: 0 }); // seeds the snapshot
 
     // Park a READ flight (socket 1's full-path sub) holding the PRE-commit rows,
@@ -555,15 +590,7 @@ describe("ackTx — stale-flight REFUSAL (co-production made exact)", () => {
     const p = h.subscribe("c", {}, { socket: 1 });
     await tick(); // the pre-commit read is in the air
     ctl.setValue([{ id: "a", n: 2 }]);
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "c_table",
-      op: "U",
-      ids: null,
-      origin: "c_table",
-      identityBase: "c_table",
-      xid: "1400",
-    });
+    c.feed("U", null, { xid: "1400" }); // unknown rows: the FULL drain
     await tick(); // the drain runs — and refuses the parked flight
     ctl.release();
     await p;
@@ -576,15 +603,7 @@ describe("ackTx — stale-flight REFUSAL (co-production made exact)", () => {
 
     // And an idle-time FULL change — nothing in flight to refuse — is unchanged.
     ctl.setValue([{ id: "a", n: 3 }]);
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "c_table",
-      op: "U",
-      ids: null,
-      origin: "c_table",
-      identityBase: "c_table",
-      xid: "1401",
-    });
+    c.feed("U", null, { xid: "1401" });
     await tick();
     expect((deltas(h, "c").at(-1) as { ackTx?: string[] }).ackTx).toEqual([
       "1401",
@@ -594,37 +613,32 @@ describe("ackTx — stale-flight REFUSAL (co-production made exact)", () => {
 
 describe("ackTx — failure and overflow", () => {
   test("loader failure ships neither a frame nor an ack (no false ack)", async () => {
-    const h = createHarness({ readSet: () => ["f_table"] });
+    const h = createHarness();
     let boom = false;
-    h.runtime.defineResource(
-      {
-        key: "f",
-        schema: rowsSchema,
-        keyed: { keyOf },
-        validateParams: () => {},
+    const f = defineRoutedTable(h, {
+      key: "f",
+      table: "f_table",
+      membership: "alias",
+      schema: rowsSchema,
+      orderOf: async () => ["a"],
+      loader: async () => {
+        if (boom) throw new Error("loader boom");
+        return [{ id: "a", n: 1 }];
       },
-      {
-        identityTable: "f_table",
-        fanOut: { reason: "one param-less tuple — nothing to narrow" },
-        loader: async () => {
-          if (boom) throw new Error("loader boom");
-          return [{ id: "a", n: 1 }];
-        },
-      },
-    );
+    });
     await h.subscribe("f", {}, { acks: true });
     boom = true;
-    h.runtime.applyDbChange({
-      source: "feed",
-      table: "f_table",
-      op: "U",
-      ids: ["a"],
-      origin: "f_table",
-      identityBase: "f_table",
-      xid: "1500",
-    });
+    f.feed("U", null, { xid: "1500" });
     await tick();
     expect(h.pushesFor("f")).toHaveLength(0);
+    // Positive control: the same change once the loader recovers ships its
+    // frame with the ack.
+    boom = false;
+    f.feed("U", null, { xid: "1501" });
+    await tick();
+    expect(
+      h.pushesFor("f").map((x) => (x as { ackTx?: string[] }).ackTx),
+    ).toEqual([["1501"]]);
   });
 
   test("crossing the sourceTx cap (64) suppresses ackTx for the whole cycle", async () => {

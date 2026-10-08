@@ -22,7 +22,6 @@ describe("changedAt on pushed frames", () => {
     h.runtime.defineResource({
       key: "r",
       mode: "push",
-      identityTable: "t",
       schema: z.number(),
       loader: async () => 1,
     });
@@ -31,13 +30,9 @@ describe("changedAt on pushed frames", () => {
 
     // Two changes land in one pending before the flush: later first, earlier second.
     for (const changedAt of [2_000, 1_000]) {
-      h.runtime.applyDbChange({
+      h.runtime.applyLegacyFullChange({
         source: "feed",
         table: "t",
-        op: "U",
-        ids: ["a"],
-        origin: "t",
-        identityBase: "t",
         changedAt,
       });
     }
@@ -54,7 +49,6 @@ describe("changedAt on pushed frames", () => {
     h.runtime.defineResource({
       key: "r",
       mode: "push",
-      identityTable: "t",
       schema: z.number(),
       loader: async () => 1,
     });
@@ -89,19 +83,14 @@ describe("changedAt on pushed frames", () => {
     h.runtime.defineResource({
       key: "r",
       mode: "push",
-      identityTable: "t",
       schema: z.number(),
       loader: async () => 1,
     });
     await h.subscribe("r");
     const before = h.frames.length;
-    h.runtime.applyDbChange({
+    h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "t",
-      op: "U",
-      ids: ["a"],
-      origin: "t",
-      identityBase: "t",
     });
     await tick();
     const update = (h.frames.slice(before) as Stamped[]).find(

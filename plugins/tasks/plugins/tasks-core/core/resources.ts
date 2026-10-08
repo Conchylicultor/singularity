@@ -12,12 +12,12 @@ import { AttemptWithConversationsSchema } from "./schemas";
 // conversations the queue's Done section and the welcome recents show).
 export const RECENT_GONE_LIMIT = 30;
 
-// Client/shared live-state descriptors for the tasks/attempts FK cluster. THE
+// Client/shared live-state declarations for the tasks/attempts FK cluster. THE
 // single source of truth for each resource's key / schema / keyed-ness: the
-// tasks-core *server* resources are built from these via
-// `defineResource(descriptor, serverOpts)`, so the server cannot drift from the
-// client (a server `mode: "keyed"` against a client descriptor that forgot its
-// `keyOf` is a guaranteed client crash with no compile-time signal).
+// tasks-core *server* resources are served from these (`serveCollection`), so
+// the server cannot drift from the client (a server `mode: "keyed"` against a
+// client descriptor that forgot its `keyOf` is a guaranteed client crash with
+// no compile-time signal).
 //
 // They live in `tasks-core/core` — next to the schemas they build on — rather
 // than in the `tasks` umbrella, so the tasks-core server
@@ -34,9 +34,9 @@ export const RECENT_GONE_LIMIT = 30;
 //
 // The wire row is EXACTLY `TaskListItem` — every `tasks_v` column but the
 // heavy `description` (read per task from `taskDescriptions` below) — under
-// the legacy key `tasks`: a tab still running a bundle that declared the old
-// param-less `queryResourceDescriptor("tasks", TaskListItemSchema, …)`
-// subscribes `{}`, passes the `all` gate and parses these rows with its own
+// the legacy key `tasks`: a tab still running a bundle that declared `tasks`
+// as an old param-less keyed descriptor over `TaskListItemSchema` subscribes
+// `{}`, passes the `all` gate and parses these rows with its own
 // (identical) schema — the C39 old-bundle check, pinned by
 // `../server/internal/tree-oracle.test.ts`. A change to the row must rename
 // the key.
@@ -81,8 +81,8 @@ export const taskDescriptions = liveCollection("task-descriptions", {
 // breaks ties).
 //
 // The wire row is EXACTLY `AttemptWithConversations`, under the legacy key
-// `attempts`: a tab still running a bundle that declared the old param-less
-// `keyedResourceDescriptor("attempts", …)` subscribes `{}`, passes the `all`
+// `attempts`: a tab still running a bundle that declared `attempts` as an old
+// param-less keyed descriptor subscribes `{}`, passes the `all`
 // gate and parses these rows with its own (identical) schema — the C39
 // old-bundle check, pinned by `../server/internal/tree-oracle.test.ts`. A
 // change to the row must rename the key.
@@ -139,8 +139,8 @@ export const pushRows = liveCollection("pushes", {
 // write no field reads (a hold, a status flip) loads nothing (W4).
 //
 // The keys are the legacy ones: a tab still running a bundle that declared
-// the old param-less `queryResourceDescriptor("conversations-active",
-// ConversationSchema, "id")` subscribes `{}`, passes the `all` gate and
+// `conversations-active` as an old param-less keyed descriptor over
+// `ConversationSchema` subscribes `{}`, passes the `all` gate and
 // parses these rows with its own (identical) schema — the C39 old-bundle
 // check, pinned by `../server/internal/tree-oracle.test.ts`. A change to the
 // row must rename the keys.

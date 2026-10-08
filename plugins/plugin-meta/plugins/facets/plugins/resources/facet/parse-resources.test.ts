@@ -25,9 +25,11 @@ const where = {
 describe("buildDescriptorIndex", () => {
   it("indexes each descriptor factory with its key, keyed-ness and membership", () => {
     const src = `
-      export const tasksResource = keyedResourceDescriptor<TaskListItem[]>(
-        "tasks", z.array(TaskListItemSchema), [], (r) => r.id, { preload: "boot" },
-      );
+      export const tasksResource = liveCollection("tasks", {
+        row: TaskListItemSchema, id: "id",
+        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree" } },
+        preload: "boot",
+      });
       export const taskDetailResource = resourceDescriptor<Task | null, { id: string }>(
         "task-detail", TaskSchema.nullable(), null,
       );
@@ -35,9 +37,6 @@ describe("buildDescriptorIndex", () => {
         schema: AuthStateValueSchema,
         origin: "central",
       });
-      export const queryBackedResource = queryResourceDescriptor<Row>(
-        "query-backed", RowSchema, "id",
-      );
     `;
     const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
     expect(index.get("tasksResource")).toEqual([
@@ -46,6 +45,7 @@ describe("buildDescriptorIndex", () => {
         keyed: true,
         membership: null,
       },
+      { key: "tasks:rows", keyed: true, membership: "point" },
     ]);
     expect(index.get("taskDetailResource")).toEqual([
       {
@@ -60,13 +60,6 @@ describe("buildDescriptorIndex", () => {
       {
         key: "auth-state",
         keyed: false,
-        membership: null,
-      },
-    ]);
-    expect(index.get("queryBackedResource")).toEqual([
-      {
-        key: "query-backed",
-        keyed: true,
         membership: null,
       },
     ]);
@@ -201,8 +194,8 @@ describe("buildDescriptorIndex", () => {
   it("resolves a local (non-exported) const and ignores factory names in strings/comments", () => {
     const src = `
       const localDesc = resourceDescriptor("local", S, null);
-      // export const commented = keyedResourceDescriptor("commented", …)
-      const label = "keyedResourceDescriptor(\\"fake\\", …)";
+      // export const commented = liveValue("commented", …)
+      const label = "liveValue(\\"fake\\", …)";
     `;
     const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
     expect(index.get("localDesc")).toEqual([
@@ -232,12 +225,12 @@ describe("buildDescriptorIndex", () => {
   });
 
   it("lets the plugin that OWNS a factory call it with a computed key", () => {
-    // `queryResourceDescriptor` implemented in terms of
-    // `keyedResourceDescriptor` — the wrapper, not a declaration.
+    // A wrapper minting a descriptor under its caller's key — the
+    // implementation of a factory, not a declaration.
     const src = `
-      export function queryResourceDescriptor(key, rowSchema, pkField, opts) {
-        const descriptor = keyedResourceDescriptor(key, z.array(rowSchema), [], keyOf, opts);
-        return Object.assign(descriptor, { queryPk: pkField });
+      export function pagedDescriptor(key, rowSchema, opts) {
+        const descriptor = resourceDescriptor(key, z.array(rowSchema), [], opts);
+        return Object.assign(descriptor, { paged: true });
       }
     `;
     expect(() =>
@@ -368,7 +361,7 @@ describe("resolveRegisterCall", () => {
   it("resolves a descriptor identifier through an import alias, keyed → keyed", () => {
     const def = resolveRegisterCall(
       "defineResource",
-      `tasksDescriptor, { identityTable: "tasks", loader }`,
+      `tasksDescriptor, { routes, membership, loader }`,
       bound("tasksDescriptor", "tasksResource", "../../shared/resources"),
       index,
       where,
@@ -620,7 +613,7 @@ describe("resolveRegisterCall", () => {
   it("resolves a descriptor declared in ANOTHER plugin through the imported resolver", () => {
     const def = resolveRegisterCall(
       "defineResource",
-      `mailSyncStateResource, { mode: "push", identityTable: "mail_sync_state", loader }`,
+      `mailSyncStateResource, { mode: "push", loader }`,
       bound(
         "mailSyncStateResource",
         "mailSyncStateResource",
@@ -655,7 +648,10 @@ describe("parseRegisterCalls (end to end over runtime sources)", () => {
   const index = buildDescriptorIndex(
     [
       file(`
-      export const tasksResource = keyedResourceDescriptor<T[]>("tasks", S, [], k);
+      export const tasks = liveCollection("tasks", {
+        row: S, id: "id",
+        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree" } },
+      });
       export const pushesResource = resourceDescriptor<P[]>("pushes", S, []);
       export const notifications = liveCollection("notifications", {
         row: S, id: "id", filterable: {}, sortable: ["createdAt"],
@@ -672,11 +668,11 @@ describe("parseRegisterCalls (end to end over runtime sources)", () => {
       import { defineResource } from "@plugins/framework/plugins/server-core/core";
       import { serveCollection } from "@plugins/network/plugins/live/server";
       import {
-        tasksResource as tasksDescriptor,
+        tasks,
         pushesResource as pushesDescriptor,
         notifications,
       } from "../../shared/resources";
-      export const tasksResource = defineResource(tasksDescriptor, { identityTable: "tasks", loader });
+      export const tasksServed = serveCollection(tasks, { from });
       export const pushesResource = defineResource(pushesDescriptor, { mode: "push", loader });
       export const notificationsServed = serveCollection(notifications, { from, where });
       export const prototypesResource = defineExternalResource({ key: "prototypes", mode: "invalidate", loader });
@@ -690,6 +686,7 @@ describe("parseRegisterCalls (end to end over runtime sources)", () => {
       { key: "prototypes", mode: "invalidate" },
       { key: "pushes", mode: "push" },
       { key: "tasks", mode: "keyed" },
+      { key: "tasks:rows", mode: "keyed", membership: "point" },
     ]);
   });
 

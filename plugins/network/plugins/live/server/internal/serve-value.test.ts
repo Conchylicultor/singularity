@@ -1,7 +1,7 @@
 /**
  * `serveValue` / `compileValue`: the options a `liveValue` folds into, driven
  * through a real `createResourceRuntime` (no database — the db arm's change is
- * delivered through `applyDbChange`, exactly what the change feed calls), plus
+ * delivered through `applyLegacyFullChange`, exactly what the change feed calls), plus
  * the registering `serveValue` on the server runtime for the served shape and
  * its `Resource.Declare` payload.
  */
@@ -114,13 +114,9 @@ describe("compileValue", () => {
     expect(h.of("sub-ack", v.key)[0]!.value).toEqual({ n: 1 });
 
     n = 2;
-    h.runtime.applyDbChange({
+    h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "t",
-      op: "U",
-      ids: ["x"],
-      origin: "t",
-      identityBase: "t",
     });
     await h.until(() => h.of("update", v.key).length > 0, "update");
     expect(h.of("update", v.key)[0]!.value).toEqual({ n: 2 });
@@ -139,13 +135,9 @@ describe("compileValue", () => {
     );
     await h.subscribe(v.key);
     n = 2;
-    h.runtime.applyDbChange({
+    h.runtime.applyLegacyFullChange({
       source: "feed",
       table: "t",
-      op: "U",
-      ids: ["x"],
-      origin: "t",
-      identityBase: "t",
     });
     await h.until(() => h.of("invalidate", v.key).length > 0, "invalidate");
     expect(h.of("update", v.key)).toEqual([]);

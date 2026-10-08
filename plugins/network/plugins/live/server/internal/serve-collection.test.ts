@@ -3,7 +3,7 @@
  * specs compiled by `compileWindowQuery`, wired into a real
  * `createResourceRuntime`, reading a real Postgres table (a throwaway database)
  * and driven through the change feed's two routers (`routeTableChange` serves
- * these routed resources; `applyDbChange` must skip them). The membership
+ * these routed resources; `applyLegacyFullChange` must skip them). The membership
  * semantics themselves are pinned by `resource-runtime`'s
  * `runtime-window-membership` suite; THIS suite pins that the decoded
  * where / order / limit reach the SQL each subscription tuple runs.
@@ -227,7 +227,7 @@ function attach(
     },
     // One change as the change feed delivers it (`routeChange`): to BOTH
     // routers. Every served resource is routed, so `routeTableChange` serves
-    // it and the legacy `applyDbChange` must skip it.
+    // it and the legacy `applyLegacyFullChange` must skip it.
     change(op: "I" | "U" | "D", ids: string[]) {
       this.changeOn(table, op, ids);
     },
@@ -240,13 +240,9 @@ function attach(
         keys: null,
         unchanged: null,
       });
-      runtime.applyDbChange({
+      runtime.applyLegacyFullChange({
         source: "feed",
         table: changed,
-        op,
-        ids,
-        origin: changed,
-        identityBase: changed,
       });
     },
   };

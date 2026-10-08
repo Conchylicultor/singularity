@@ -132,7 +132,12 @@ export function diffKeyedFull(
     prevOrder.length === order.length &&
     prevOrder.every((id, i) => id === order[i]);
   return {
-    diff: { upserts, deletes, order: orderUnchanged ? undefined : order, hadSnapshot },
+    diff: {
+      upserts,
+      deletes,
+      order: orderUnchanged ? undefined : order,
+      hadSnapshot,
+    },
     nextSnapshot: next,
   };
 }
@@ -142,8 +147,10 @@ export function diffKeyedFull(
  * affected rows. The changed rows are MERGED into a copy of `prev` (never a
  * replace): each row whose hash differs becomes an upsert and its hash is
  * written into `nextSnapshot`; rows not in `scopedRows` are carried over intact.
- * `deletes` is necessarily empty and `order` is undefined — a scoped notify
- * never asserts membership/order. Pure — does not mutate `prev`.
+ * `deletes` is necessarily empty and `order` is undefined — a scoped diff
+ * never asserts membership/order (the runtime's membership drains use
+ * `diffKeyedScopedMembership`; this one is kept for the live-state client
+ * round-trip suite, via `core/testing`). Pure — does not mutate `prev`.
  *
  * Precondition: a `prev` snapshot exists (the caller only enters the scoped path
  * when a snapshot was already seeded). Returns the partial-update upserts plus

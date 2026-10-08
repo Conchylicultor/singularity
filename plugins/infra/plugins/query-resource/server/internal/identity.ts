@@ -1,20 +1,12 @@
 import { Column, getTableColumns, getTableName, is } from "drizzle-orm";
-import {
-  PgTable,
-  PgView,
-  getTableConfig,
-  getViewConfig,
-  type PgColumn,
-} from "drizzle-orm/pg-core";
-import type { EntitySource, QuerySource, SelectMap } from "./spec";
+import { PgTable, getTableConfig, type PgColumn } from "drizzle-orm/pg-core";
+import type { EntitySource, RoutedSource, SelectMap } from "./spec";
 
-// The resolved identity of a query source: the base table its change scopes to,
-// the relation to select from, the single-column primary key, the client
-// keyField (the JS/alias key the pk is exposed under on the wire), and the
-// projection (undefined ⇒ select-all).
+// The resolved identity of a routed source: the table to select from, the
+// single-column primary key, the client keyField (the JS/alias key the pk is
+// exposed under on the wire), and the projection (undefined ⇒ select-all).
 export interface ResolvedIdentity {
-  tableName: string;
-  rel: PgTable | PgView;
+  rel: PgTable;
   pkColumn: PgColumn;
   keyField: string;
   selectMap?: SelectMap;
@@ -28,10 +20,10 @@ export interface ResolvedIdentity {
 }
 
 // Structural entity detection — an `infra/entities` Entity is the only source
-// shape carrying all four of these; a raw PgTable/PgView carries none of
+// shape carrying all four of these; a raw PgTable carries none of
 // `wireColumns`. (See the collection-consumer note: we detect by shape, never by
 // importing the concrete entity type.)
-function isEntitySource(from: QuerySource): from is EntitySource {
+function isEntitySource(from: RoutedSource): from is EntitySource {
   return (
     typeof from === "object" &&
     from !== null &&
@@ -45,7 +37,7 @@ function isEntitySource(from: QuerySource): from is EntitySource {
 // The single primary-key column of a table, or a loud throw. A composite PK
 // (declared via `primaryKey({ columns })`) or >1 inline `.primaryKey()` cannot
 // key a single-column keyed resource — the caller must pass `identity.pk` to
-// pick one, or keep the resource on a plain push `defineResource`.
+// pick one.
 function singlePrimary(
   table: PgTable,
   columns: Record<string, PgColumn>,
@@ -57,15 +49,14 @@ function singlePrimary(
   );
   if (compositeWide || primaries.length > 1) {
     throw new Error(
-      `queryResource: ${label} has a composite primary key — a keyed resource ` +
-        `needs a single-column identity. Pass identity.pk to pick one, or keep ` +
-        `this resource on a plain push defineResource.`,
+      `query-resource: ${label} has a composite primary key — a keyed ` +
+        `resource needs a single-column identity. Pass identity.pk to pick one.`,
     );
   }
   if (primaries.length === 0) {
     throw new Error(
-      `queryResource: ${label} has no primary-key column — cannot derive a keyed ` +
-        `identity. Pass identity.pk, or keep this on a plain push defineResource.`,
+      `query-resource: ${label} has no primary-key column — cannot derive a ` +
+        `keyed identity. Pass identity.pk.`,
     );
   }
   return primaries[0]!;
@@ -73,12 +64,11 @@ function singlePrimary(
 
 /**
  * The JS/alias key under which `column` is projected, or undefined when it is
- * not projected. Matched by column identity first, else by DB column NAME (view
- * columns are distinct objects from the base table's, so object identity is
- * unreliable across the view boundary; the DB column name is stable) — never
- * a joined column's. With a select
- * projection, the alias key is returned; without one, the JS property name off
- * the relation's column record. Shared by the pk keyField derivation below and
+ * not projected. Matched by column identity first, else by DB column NAME —
+ * preferring the column's own relation, so a joined `id` is never taken for
+ * the base's while the base's is projected. With a select projection, the
+ * alias key is returned; without one, the JS property name off the relation's
+ * column record. Shared by the pk keyField derivation below and
  * compile-window's order-signature field resolution.
  */
 export function wireFieldFor(
@@ -90,8 +80,10 @@ export function wireFieldFor(
   const entries = Object.entries(map);
   for (const [key, value] of entries) if (value === column) return key;
   // By name: first within the column's own relation — a joined `id` (rendered
-  // against its join's alias) is not the base's — then across relations (a
-  // view's columns are its base table's under the view's name).
+  // against its join's alias) is not the base's — then across relations, so a
+  // key field that projects only a joined column of the pk's name is still
+  // found, and refused by name (arm-plan's "projects a joined column") rather
+  // than reported as an unprojected pk.
   const relation = getTableName(column.table);
   const byName = entries.filter(
     ([, value]) => is(value, Column) && value.name === column.name,
@@ -113,77 +105,37 @@ function keyFieldFor(
   const field = wireFieldFor(selectMap, columns, pkColumn);
   if (field !== undefined) return field;
   throw new Error(
-    `queryResource: ${label} — the primary-key column "${pkColumn.name}" is not ` +
+    `query-resource: ${label} — the primary-key column "${pkColumn.name}" is not ` +
       `present in the ${selectMap ? "select projection" : "column set"}. A keyed ` +
       `resource must project its identity column so the client keyOf can read it.`,
   );
 }
 
 /**
- * Resolve the identity of a query source per the derivation rules:
- * - **Entity** → base table = `entity.name`; pk = the single primary of
- *   `getTableColumns(entity.table)`; default projection = `wireColumns`.
- * - **PgTable** → base table = `getTableConfig(table).name`; pk = its single
- *   primary; default projection = select-all.
- * - **PgView** → REQUIRES `identity.pk` AND `identity.table`. A view carries no
- *   pk metadata, and its identity base CANNOT be derived here: the
- *   `View({ view, identityTable })` contribution that would name it is collected
- *   at boot, while `queryResource(...)` resolves at module eval — always before
- *   collection (the owning barrel evaluates its `resources.ts` import first). A
- *   `relationIdentityBase` fallback was tried and is structurally dead code at
- *   this point in the lifecycle, so the base table is declared explicitly.
+ * Resolve the identity of a routed source:
+ * - **Entity** → pk = the single primary of `getTableColumns(entity.table)`;
+ *   default projection = `wireColumns`.
+ * - **PgTable** → pk = its single primary; default projection = select-all.
  *
- * `identity.pk` overrides the derived pk anywhere; a composite / missing pk (with
- * no override) throws.
+ * Never a view: `RoutedSource` has no spelling for one (a view's changes arrive
+ * under its base tables' names, which no route of the view could state).
+ * `identity.pk` overrides the derived pk; a composite / missing pk (with no
+ * override) throws.
  */
 export function resolveIdentity(
-  from: QuerySource,
-  identity: { table?: string; pk: PgColumn } | undefined,
+  from: RoutedSource,
+  identity: { pk: PgColumn } | undefined,
   select: SelectMap | undefined,
 ): ResolvedIdentity {
-  // The `is()` checks run FIRST (entityKind-branded, unforgeable); the
+  // The `is()` check runs FIRST (entityKind-branded, unforgeable); the
   // structural entity check runs LAST — so a table whose COLUMNS happen to be
   // named `name`/`table`/`schema`/`wireColumns` can never be misdetected as an
-  // entity (an Entity object itself is never `is()` a PgTable/PgView).
-  if (is(from, PgView)) {
-    const viewName = getViewConfig(from).name;
-    const label = `view "${viewName}"`;
-    if (!identity?.pk) {
-      throw new Error(
-        `queryResource: ${label} needs identity.pk — a PgView carries no ` +
-          `primary-key metadata, so its identity column must be declared explicitly.`,
-      );
-    }
-    const tableName = identity.table;
-    if (!tableName) {
-      throw new Error(
-        `queryResource: ${label} needs identity.table — a view's identity base ` +
-          `cannot be derived at module eval (the View({ view, identityTable }) ` +
-          `contribution is only collected at boot, after this call). Pass the ` +
-          `base table name explicitly, matching the view's derived-views ` +
-          `identityTable declaration.`,
-      );
-    }
-    const columns = getViewConfig(from).selectedFields as Record<
-      string,
-      PgColumn
-    >;
-    return {
-      tableName,
-      rel: from,
-      pkColumn: identity.pk,
-      keyField: keyFieldFor(select, columns, identity.pk, label),
-      selectMap: select,
-      columns,
-    };
-  }
-
+  // entity (an Entity object itself is never `is()` a PgTable).
   if (is(from, PgTable)) {
     const columns = getTableColumns(from);
     const label = `table "${getTableConfig(from).name}"`;
     const pkColumn = identity?.pk ?? singlePrimary(from, columns, label);
     return {
-      tableName: identity?.table ?? getTableConfig(from).name,
       rel: from,
       pkColumn,
       keyField: keyFieldFor(select, columns, pkColumn, label),
@@ -198,7 +150,6 @@ export function resolveIdentity(
     const pkColumn = identity?.pk ?? singlePrimary(from.table, columns, label);
     const selectMap = select ?? from.wireColumns;
     return {
-      tableName: identity?.table ?? from.name,
       rel: from.table,
       pkColumn,
       keyField: keyFieldFor(selectMap, columns, pkColumn, label),
@@ -208,7 +159,7 @@ export function resolveIdentity(
   }
 
   throw new Error(
-    `queryResource: unsupported \`from\` source — expected a drizzle PgTable, ` +
-      `PgView, or an infra/entities Entity.`,
+    `query-resource: unsupported \`from\` source — expected a drizzle PgTable ` +
+      `or an infra/entities Entity.`,
   );
 }

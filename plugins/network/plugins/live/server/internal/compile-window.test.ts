@@ -85,9 +85,8 @@ describe("compileWindowQuery — window SQL", () => {
       db,
     });
     expect(keyField).toBe("id");
-    // Routed, not identity-scoped: the base table is its identity route.
-    expect(serverOpts.identityTable).toBeUndefined();
-    expect(serverOpts.routes!.routes.map((r) => [r.table, r.map])).toEqual([
+    // Routed: the base table is its identity route.
+    expect(serverOpts.routes.routes.map((r) => [r.table, r.map])).toEqual([
       ["rows", { kind: "identity" }],
     ]);
     await serverOpts.loader({ limit: "100" });
@@ -677,7 +676,7 @@ describe("windowQueryResource — descriptor/keyField assertion", () => {
   test("throws loudly when queryPk disagrees with the derived keyField", () => {
     const { db } = fakeDb();
     // keyField derives to "id"; the descriptor keys on "n" → throw BEFORE any
-    // real defineResource registration (mirrors the queryResource guard).
+    // real defineResource registration.
     const descriptor = windowQueryResourceDescriptor(
       "test.cw.mismatch",
       rowSchema,

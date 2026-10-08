@@ -44,7 +44,9 @@ import {
   notificationsWsHandler,
   routedTableRequirements,
   type ResourceParams,
+  setRelationBases,
 } from "@plugins/framework/plugins/server-core/core";
+import { clearRelationBases } from "@plugins/framework/plugins/server-core/core/testing";
 import {
   makeClientView,
   type ClientView,
@@ -125,6 +127,12 @@ async function insertSource(id: string): Promise<void> {
 }
 
 beforeAll(async () => {
+  // What change-feed's boot installs before its listener starts (D34). This
+  // suite reaches only routed entries, but the legacy router runs on every
+  // change too, over whatever legacy read-sets other suites in this bun
+  // process left: with no bases set it would report on each one. No views
+  // matter here, so every relation is its own base.
+  setRelationBases((r) => [r]);
   testDb = await createTestDb({ prefix: "events_runs_oracle" });
   await runMigrations(testDb.db);
   // The collection's resources, compiled from the REAL declaration with the
@@ -202,6 +210,7 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(async () => {
+  clearRelationBases();
   handler.close(ws, 1000, "test");
   await listener?.stop();
   await testDb?.drop();

@@ -173,10 +173,10 @@ const NOT_OWNER = { ownerPlugin: false };
 
 describe("preloadedKeysIn", () => {
   test("a vocabulary owner's wrapper call is not a declaration site; the same call elsewhere throws", () => {
-    // A factory wrapping another (`queryResourceDescriptor` over
-    // `keyedResourceDescriptor`) with a literal preload flag and a computed key.
+    // A wrapper forwarding a literal preload flag to a factory under a
+    // computed key — the shape of a vocabulary owner implementing one.
     const src = `
-      const descriptor = keyedResourceDescriptor<Row[]>(key, z.array(rowSchema), [], keyOf, {
+      const descriptor = resourceDescriptor<Row[]>(key, z.array(rowSchema), [], {
         preload: "boot",
       });
     `;
@@ -184,7 +184,7 @@ describe("preloadedKeysIn", () => {
       preloadedKeysIn(src, "descriptor.ts", { ownerPlugin: true }),
     ).toEqual([]);
     expect(() => preloadedKeysIn(src, "descriptor.ts", NOT_OWNER)).toThrow(
-      /descriptor\.ts:2: keyedResourceDescriptor/,
+      /descriptor\.ts:2: resourceDescriptor/,
     );
   });
 
@@ -193,18 +193,22 @@ describe("preloadedKeysIn", () => {
     // kept its own four-name list and the bounded factories were never added, so
     // a preloaded resource under `apps/plugins/**` silently stayed deferred.
     const src = `
-      export const tasksResource = keyedResourceDescriptor<T[]>(
-        "tasks", S, [], k, { preload: "boot" },
+      export const pagesResource = resourceDescriptor<T[]>(
+        "pages", S, [], { preload: "boot" },
       );
-      export const pushesResource = queryResourceDescriptor<P>(
-        "pushes", S, "id", { preload: "boot-and-keep" },
-      );
+      export const unread = liveValue("unread", { schema: S, preload: "boot-and-keep" });
+      export const tasks = liveCollection("tasks", {
+        row: S, id: "id",
+        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree" } },
+        preload: "boot",
+      });
       export const quietResource = resourceDescriptor<Q>("quiet", S, null);
       export const offResource = resourceDescriptor<Q>("off", S, null, { preload: "none" });
     `;
     expect(preloadedKeysIn(src, "a.ts", NOT_OWNER)).toEqual([
+      "pages",
+      "unread",
       "tasks",
-      "pushes",
     ]);
   });
 
@@ -301,10 +305,10 @@ describe("preloadedKeysIn", () => {
     // `opts?: { preload?: ResourcePreload }` is a type position — `preload?:` is
     // not the `preload:` field the scan reads.
     const src = `
-      export function queryResourceDescriptor<Row>(
-        key: string, rowSchema: ZodParser<Row>, pkField: keyof Row & string,
+      export function resourceDescriptor<T>(
+        key: string, schema: ZodParser<T>, initialData: T,
         opts?: { preload?: ResourcePreload },
-      ): QueryResourceContract<Row> { return d; }
+      ): ResourceDescriptor<T> { return d; }
     `;
     expect(preloadedKeysIn(src, "descriptor.ts", NOT_OWNER)).toEqual([]);
   });

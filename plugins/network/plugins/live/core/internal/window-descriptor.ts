@@ -47,8 +47,8 @@ import type {
 //
 // Neither descriptor has a placeholder (`initialData`), exactly like a
 // `liveValue`: a window or id set not loaded yet is `pending`, never `[]`. So
-// each is minted here and registered directly, not through
-// `keyedResourceDescriptor`, whose placeholder is a required argument.
+// each is minted here and registered directly, with no placeholder argument
+// to fill.
 //
 // A failed DECODE throws `ResourceContractError` (a subscription's params do
 // not match the declaration — the runtime refuses it as `contract-mismatch`); a

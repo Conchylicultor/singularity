@@ -53,7 +53,7 @@ Consumers read only the generic aggregate:
   reaches it. Read only through the two hooks above (`useLive(taskCategories,
   { select })`); the declaration itself is plugin-private.
 - **The wire row is the legacy row, under the legacy key.** A tab still on a
-  bundle with the old param-less `queryResourceDescriptor` subscribes `{}`,
+  bundle that declared the key as an old param-less keyed descriptor subscribes `{}`,
   passes the `all` gate and parses these rows with its own schema (C39). A
   change to the row must rename the key (`unknown-key` is a `skew` verdict).
 - Tests: `server/internal/task-categories-oracle.test.ts` — the tree oracle
