@@ -9,6 +9,26 @@ export interface TranscriptSelection {
 }
 
 /**
+ * The part of `range` that lies inside `scope`, or null when none does. A
+ * triple-click on the transcript's last paragraph ends the range at the start of
+ * the next text in the page — past the scroller, in an overlay strip or the
+ * prompt box — so its end is cut back to the scroller's rather than refused.
+ */
+export function rangeWithin(range: Range, scope: HTMLElement): Range | null {
+  if (!range.intersectsNode(scope)) return null;
+  const clipped = range.cloneRange();
+  const inner = document.createRange();
+  inner.selectNodeContents(scope);
+  if (clipped.compareBoundaryPoints(Range.START_TO_START, inner) < 0) {
+    clipped.setStart(scope, 0);
+  }
+  if (clipped.compareBoundaryPoints(Range.END_TO_END, inner) > 0) {
+    clipped.setEnd(scope, scope.childNodes.length);
+  }
+  return clipped.collapsed ? null : clipped;
+}
+
+/**
  * The keys of the transcript rows the range selects text in. Not the rows its
  * two ends sit in: a triple-click (or a drag past the end of a paragraph) ends
  * the range at offset 0 of the NEXT row, which holds none of the selection.
@@ -31,7 +51,7 @@ function rowKeysWithSelectedText(range: Range, scope: HTMLElement): string[] {
 }
 
 /**
- * The document selection, when it lies inside `root` and every row it selects
+ * The document selection's part inside `root`, when every row it selects
  * text in is one `accepts` takes — else null. Settles on release: while a pointer is
  * down the selection is still being made, so nothing is reported until it
  * comes up (a keyboard selection reports as it changes).
@@ -48,14 +68,10 @@ export function useTranscriptSelection(
     let pointerDown = false;
 
     function read() {
-      const range = selectionRange();
-      if (!range || range.collapsed) return setSelection(null);
-      if (
-        !scope.contains(range.startContainer) ||
-        !scope.contains(range.endContainer)
-      ) {
-        return setSelection(null);
-      }
+      const selected = selectionRange();
+      if (!selected || selected.collapsed) return setSelection(null);
+      const range = rangeWithin(selected, scope);
+      if (!range) return setSelection(null);
       const rows = rowKeysWithSelectedText(range, scope);
       if (rows.length === 0 || !rows.every(accepts)) return setSelection(null);
       const text = range.toString().trim();
