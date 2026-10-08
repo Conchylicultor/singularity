@@ -3,8 +3,9 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
 /**
  * The machine watcher's host-global files:
  *
- * - `status.json` — the last supervision status main's sentinel host wrote,
- *   plus its pid. Main writes it on every transition; every backend watches it
+ * - `status.<pid>.json` — one per watcher host: the last supervision status
+ *   that host wrote, its pid and when it claimed the watcher (the newest claim
+ *   is the one reported). The host writes it on every transition; every backend watches it
  *   to serve the health report's "Machine watcher" row, and the build CLI reads
  *   it at the admission valve.
  * - `vitals.json` — the watcher's latest reading (every signal that can trip
@@ -21,7 +22,7 @@ export const sentinelStatusDir = defineDataDir({
   name: "sentinel",
   owner: "debug/sentinel/status-file",
   description:
-    "The machine watcher's (cluster sentinel's) status file, written by main on every supervision transition and read by every backend's health report and the build CLI's admission valve; and its vitals file, the latest reading the sentinel worker writes every tick for the health report's Machine watcher stats",
+    "The machine watcher's (cluster sentinel's) per-host status files, written by main on every supervision transition and read by every backend's health report and the build CLI's admission valve; and its vitals file, the latest reading the sentinel worker writes every tick for the health report's Machine watcher stats",
   // Deleting it while main runs would show "no watcher has run" until the next
   // transition (the vitals file comes back on the next tick); once nothing is
   // running it carries nothing.

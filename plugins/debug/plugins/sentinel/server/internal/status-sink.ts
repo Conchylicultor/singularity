@@ -14,9 +14,13 @@ export type DownStatus = Extract<SentinelStatus, { state: "down" }>;
 export function createStatusSink(opts: {
   dir: string;
   pid?: number;
+  claimedAt?: number;
   reportDown: (status: DownStatus) => void;
 }): (status: SentinelStatus) => void {
-  const write = createStatusWriter(opts.dir, opts.pid);
+  const write = createStatusWriter(opts.dir, {
+    ...(opts.pid === undefined ? {} : { pid: opts.pid }),
+    ...(opts.claimedAt === undefined ? {} : { claimedAt: opts.claimedAt }),
+  });
   return (status) => {
     if (status.state === "down") opts.reportDown(status);
     write(status);

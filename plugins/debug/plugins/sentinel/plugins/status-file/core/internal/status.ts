@@ -45,21 +45,29 @@ export const SentinelStatusSchema = z.discriminatedUnion("state", [
 ]);
 export type SentinelStatus = z.infer<typeof SentinelStatusSchema>;
 
-/** The host-global status file's content: the status plus the pid that wrote it. */
+/**
+ * One watcher host's status file content: the status, the pid that wrote it, and
+ * when that host claimed the watcher. Each host writes only its own file
+ * (`status.<pid>.json`); the latest claim is the host the row reports on.
+ */
 export const SentinelStatusRecordSchema = z.object({
   status: SentinelStatusSchema,
   /** The backend process holding the watcher — a status is only as live as it. */
   pid: z.number().int().positive(),
+  /** Epoch ms the host started supervising the watcher; the newest claim wins. */
+  claimedAt: z.number(),
 });
 export type SentinelStatusRecord = z.infer<typeof SentinelStatusRecordSchema>;
 
 /**
- * What a reader can say about the watcher, read from the status file.
+ * What a reader can say about the watcher, read from the newest-claimed host's
+ * status file.
  *
  * - `none` — no file: no backend on this machine has ever run the watcher.
- * - `recorded` — the last status main wrote, and whether the process that wrote
- *   it is still alive (a `running` written by a dead process is not running).
- * - `unreadable` — the file exists but does not parse; the reason, never a guess.
+ * - `recorded` — the last status the newest watcher host wrote, and whether that
+ *   process is still alive (a `running` written by a dead process is not running).
+ * - `unreadable` — a status file does not parse, so which host is newest cannot
+ *   be told; the reason, never a guess.
  */
 export const SentinelWatchSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("none") }),

@@ -43,7 +43,10 @@ const alive = () => true;
 describe("sentinel.vitals value", () => {
   test("current only when the running watcher's pid wrote the reading", () => {
     const dir = newDir();
-    createStatusWriter(dir, 100)({ state: "running", since: Date.now() });
+    createStatusWriter(dir, { pid: 100, alive })({
+      state: "running",
+      since: Date.now(),
+    });
 
     writeSentinelVitals(dir, record(100));
     expect(readVitalsValue(dir, alive)).toMatchObject({
@@ -61,7 +64,7 @@ describe("sentinel.vitals value", () => {
 
   test("not current once the watcher's process is gone or it stopped", () => {
     const dir = newDir();
-    const write = createStatusWriter(dir, 100);
+    const write = createStatusWriter(dir, { pid: 100, alive });
     write({ state: "running", since: Date.now() });
     writeSentinelVitals(dir, record(100));
     expect(readVitalsValue(dir, () => false)).toMatchObject({ current: false });
@@ -81,9 +84,17 @@ describe("the status watcher's routing", () => {
       status: false,
       vitals: true,
     });
-    expect(resourcesForFile("/x/locks/sentinel/status.json")).toEqual({
+    expect(resourcesForFile("/x/locks/sentinel/status.4242.json")).toEqual({
       status: true,
       vitals: true,
+    });
+    // A write's temp file, and the retired shared file.
+    expect(
+      resourcesForFile("/x/locks/sentinel/status.4242.json.4242.tmp"),
+    ).toEqual({ status: false, vitals: false });
+    expect(resourcesForFile("/x/locks/sentinel/status.json")).toEqual({
+      status: false,
+      vitals: false,
     });
     expect(resourcesForFile("/x/locks/duress/duress.latch")).toEqual({
       status: true,

@@ -18,8 +18,8 @@ import {
 import {
   readSentinelVitals,
   readSentinelWatch,
+  isStatusFilename,
   sentinelStatusDir,
-  STATUS_FILENAME,
   VITALS_FILENAME,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
 
@@ -80,10 +80,10 @@ export function resourcesForFile(path: string): {
   status: boolean;
   vitals: boolean;
 } {
-  switch (basename(path)) {
-    case STATUS_FILENAME:
-      // `current` on the vitals value is read against the status file.
-      return { status: true, vitals: true };
+  const name = basename(path);
+  // `current` on the vitals value is read against the status files.
+  if (isStatusFilename(name)) return { status: true, vitals: true };
+  switch (name) {
     case VITALS_FILENAME:
       return { status: false, vitals: true };
     case LATCH_FILENAME:

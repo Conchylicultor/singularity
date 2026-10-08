@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The machine watcher's (cluster sentinel's) host-global status file: its schemas, the one writer main's watcher host uses, the per-tick vitals file the watcher's worker writes (the latest reading, limits and trip state), the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
+- Description: The machine watcher's (cluster sentinel's) host-global status files (one per watcher host, the newest claim reported): their schemas, the writer main's watcher host uses, the per-tick vitals file the watcher's worker writes (the latest reading, limits and trip state), the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
 - Cross-plugin:
   - Imported by: `debug/sentinel`
 - Server:
@@ -12,11 +12,10 @@
   - Exports (values):
     - `createStatusWriter`
     - `isPidAlive`
+    - `isStatusFilename`
     - `readSentinelVitals`
     - `readSentinelWatch`
     - `sentinelStatusDir`
-    - `STATUS_FILENAME`
-    - `statusFilePath`
     - `VITALS_FILENAME`
     - `vitalsFilePath`
     - `writeSentinelVitals`

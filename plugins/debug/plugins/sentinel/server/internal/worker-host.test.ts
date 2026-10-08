@@ -1,11 +1,14 @@
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { SentinelStatus } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import type { DetectorThresholds } from "./detector";
-import { readSentinelWatch } from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
+import {
+  createStatusWriter,
+  readSentinelWatch,
+} from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
 import { defineDaemon } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import { createStatusSink, type DownStatus } from "./status-sink";
 import {
@@ -208,23 +211,55 @@ describe("sentinel worker host", () => {
 });
 
 describe("status file ownership", () => {
-  test("a later host's claim wins; the old host's writes stop landing", () => {
+  test("a later host's claim wins; the old host's writes stop counting", () => {
     const dir = newTmpDir("sentinel-owner-");
-    const oldHost = createStatusSink({ dir, pid: 111, reportDown: () => {} });
-    const newHost = createStatusSink({ dir, pid: 222, reportDown: () => {} });
+    const both = (pid: number) => pid === 111 || pid === 222;
+    const oldHost = createStatusWriter(dir, {
+      pid: 111,
+      claimedAt: 1,
+      alive: both,
+    });
+    const newHost = createStatusWriter(dir, {
+      pid: 222,
+      claimedAt: 2,
+      alive: both,
+    });
 
     oldHost({ state: "running", since: 1 });
     newHost({ state: "starting", since: 2 });
     // The hot restart's old backend shuts down after the new one started.
     oldHost({ state: "stopped", since: 3 });
-
-    const watch = readSentinelWatch(dir, (pid) => pid === 222);
-    expect(watch).toEqual({
+    expect(readSentinelWatch(dir, both)).toEqual({
       kind: "recorded",
       status: { state: "starting", since: 2 },
       pid: 222,
       ownerAlive: true,
     });
+
+    // 2026-10-08: the old host's `stopped` landed in the same instant as the
+    // new host's first write, and over one shared file it won — the row read
+    // "not running" while the new watcher ran. Each host's later writes still
+    // count, whatever the interleaving.
+    newHost({ state: "running", since: 4 });
+    oldHost({ state: "stopped", since: 5 });
+    expect(readSentinelWatch(dir, both)).toMatchObject({
+      status: { state: "running", since: 4 },
+      pid: 222,
+    });
+  });
+
+  test("a new host's claim reclaims the files of hosts that are gone", () => {
+    const dir = newTmpDir("sentinel-reclaim-");
+    createStatusWriter(dir, { pid: 111, claimedAt: 1 })({
+      state: "stopped",
+      since: 1,
+    });
+    writeFileSync(join(dir, "status.json"), "{}");
+    createStatusWriter(dir, { pid: 222, claimedAt: 2, alive: () => false })({
+      state: "starting",
+      since: 2,
+    });
+    expect(readdirSync(dir).sort()).toEqual(["status.222.json"]);
   });
 
   test("a status written by a process that is gone reads as not alive", () => {
@@ -240,7 +275,7 @@ describe("status file ownership", () => {
   test("no file → none; garbage → unreadable", () => {
     const dir = newTmpDir("sentinel-empty-");
     expect(readSentinelWatch(dir)).toEqual({ kind: "none" });
-    writeFileSync(join(dir, "status.json"), "{not json");
+    writeFileSync(join(dir, "status.444.json"), "{not json");
     expect(readSentinelWatch(dir).kind).toBe("unreadable");
   });
 });

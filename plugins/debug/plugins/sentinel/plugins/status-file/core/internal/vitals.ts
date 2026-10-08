@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // The machine watcher's latest reading — the host-global `vitals.json` beside
-// `status.json`. The sentinel WORKER writes it every tick (not main), so the
+// the `status.<pid>.json` files. The sentinel WORKER writes it every tick (not main), so the
 // file carries exactly the readings, limits and trip state the onset detector
 // acted on: a wedged main cannot make the health row lie, and a dead worker
 // makes the file stop changing, which the row shows as stale.
