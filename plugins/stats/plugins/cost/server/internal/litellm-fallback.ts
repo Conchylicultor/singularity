@@ -1,4 +1,4 @@
-import type { PriceTable } from "./price-table";
+import type { PriceTable } from "../../core";
 
 // ─── Vendored LiteLLM snapshot ────────────────────────────────────────────────
 //
@@ -51,7 +51,9 @@ let fallbackPromise: Promise<PriceTable> | undefined;
 /** The vendored table, ready for `mergePriceTable` to layer a fetched one on top. */
 export function loadFallbackPriceTable(): Promise<PriceTable> {
   if (fallbackPromise === undefined) {
-    fallbackPromise = import("./litellm-fallback.json").then((mod) => mod.default as PriceTable);
+    fallbackPromise = import("./litellm-fallback.json").then(
+      (mod) => mod.default as PriceTable,
+    );
   }
   return fallbackPromise;
 }

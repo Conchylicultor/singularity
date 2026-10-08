@@ -20,9 +20,12 @@ import {
 } from "@plugins/stats/plugins/commits/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useEndpoint,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { getCostAvgPerConversation } from "../../shared/endpoints";
-import { formatUsd, formatUsdCompact, formatTokensCompact } from "./format";
+import { formatUsd, formatUsdCompact, formatTokensCompact } from "../../core";
 import { useScope } from "./use-scope";
 
 interface ByFamilyEntry {
@@ -36,7 +39,10 @@ interface Point {
   avgTokens: number;
   sessionCount: number;
   byFamily: Record<string, ByFamilyEntry>;
-  rolling7ByFamily: Record<string, { cost: number | null; tokens: number | null }>;
+  rolling7ByFamily: Record<
+    string,
+    { cost: number | null; tokens: number | null }
+  >;
   rolling7Cost: number | null;
   rolling7Tokens: number | null;
 }
@@ -92,7 +98,11 @@ function flattenTokens(
 
 export function AvgCostPerConversationChart() {
   const { scope } = useScope();
-  const { data: resp, error } = useEndpoint(getCostAvgPerConversation, {}, { query: { scope } });
+  const { data: resp, error } = useEndpoint(
+    getCostAvgPerConversation,
+    {},
+    { query: { scope } },
+  );
 
   const points = resp?.points ?? [];
   const families = resp?.families ?? [];
@@ -102,7 +112,11 @@ export function AvgCostPerConversationChart() {
   return (
     <Stack gap="xl">
       <Stack gap="md">
-        <Text as="h3" variant="caption" className="font-medium text-muted-foreground">
+        <Text
+          as="h3"
+          variant="caption"
+          className="font-medium text-muted-foreground"
+        >
           Avg cost / conversation by model
         </Text>
         <div className="h-56 w-full">
@@ -181,7 +195,11 @@ export function AvgCostPerConversationChart() {
       </Stack>
 
       <Stack gap="md">
-        <Text as="h3" variant="caption" className="font-medium text-muted-foreground">
+        <Text
+          as="h3"
+          variant="caption"
+          className="font-medium text-muted-foreground"
+        >
           Avg tokens / conversation by model
         </Text>
         <div className="h-56 w-full">

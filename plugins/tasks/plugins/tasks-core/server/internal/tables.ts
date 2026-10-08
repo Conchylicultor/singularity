@@ -194,6 +194,10 @@ const conversationsEntity = defineEntity("conversations", conversationFields, {
     // Backs the All-conversations DataView's default keyset (createdAt DESC, id
     // ASC tiebreaker) so the global list pages index-only at scale.
     index("conversations_created_id_idx").on(t.createdAt, t.id),
+    // Which conversation a written transcript belongs to: the live session id
+    // (the chain's floor) looked up from a transcript-write event's session id
+    // (conversations/usage).
+    index("conversations_claude_session_id_idx").on(t.claudeSessionId),
   ],
 });
 export const _conversations = conversationsEntity.table;

@@ -394,6 +394,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `apps/chord/song-index`
     - `apps/chord/video-availability`
     - `apps/deploy/analytics/collect`
+    - `conversations/usage`
     - `database/live-state-snapshot`
     - `debug/latency-ledger`
     - `debug/slow-ops`

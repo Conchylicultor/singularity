@@ -3,6 +3,8 @@ import type { FileChangeEvent } from "@plugins/infra/plugins/file-watcher/server
 import {
   notifySessionTranscriptWrites,
   onSessionTranscriptWritten,
+  onTranscriptWritten,
+  writtenOwnerSessionIds,
   writtenSessionIds,
 } from "./session-writes";
 
@@ -59,6 +61,47 @@ describe("onSessionTranscriptWritten", () => {
       [ev("create", `${PROJECTS}/-wt-b/${B}.jsonl`)],
       PROJECTS,
     );
+    expect(heard).toEqual([[A]]);
+  });
+});
+
+describe("writtenOwnerSessionIds", () => {
+  test("names the owning session of session and sub-agent transcripts", () => {
+    const ids = writtenOwnerSessionIds(
+      [
+        ev("update", `${PROJECTS}/-wt-a/${A}.jsonl`),
+        ev("create", `${PROJECTS}/-wt-b/${B}/subagents/agent-1.jsonl`),
+        ev(
+          "update",
+          `${PROJECTS}/-wt-b/${B}/subagents/workflows/wf_x/agent-2.jsonl`,
+        ),
+      ],
+      PROJECTS,
+    );
+    expect([...ids].sort()).toEqual([A, B].sort());
+  });
+
+  test("ignores deletions, foreign roots and non-agent files", () => {
+    const ids = writtenOwnerSessionIds(
+      [
+        ev("delete", `${PROJECTS}/-wt-a/${A}/subagents/agent-1.jsonl`),
+        ev("create", `${PROJECTS}/-wt-a/${A}/subagents/notes.jsonl`),
+        ev("create", `${PROJECTS}/-wt-a/notes/subagents/agent-1.jsonl`),
+        ev("create", `/elsewhere/-wt-a/${B}/subagents/agent-1.jsonl`),
+      ],
+      PROJECTS,
+    );
+    expect(ids.size).toBe(0);
+  });
+
+  test("onTranscriptWritten hears sub-agent writes", () => {
+    const heard: string[][] = [];
+    const off = onTranscriptWritten((ids) => heard.push([...ids]));
+    notifySessionTranscriptWrites(
+      [ev("update", `${PROJECTS}/-wt-a/${A}/subagents/agent-1.jsonl`)],
+      PROJECTS,
+    );
+    off();
     expect(heard).toEqual([[A]]);
   });
 });

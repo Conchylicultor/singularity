@@ -1,5 +1,8 @@
 import type { z } from "zod";
-import { liveCollection } from "@plugins/network/plugins/live/core";
+import {
+  liveCollection,
+  type WithContributedColumns,
+} from "@plugins/network/plugins/live/core";
 import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
 import { CONVERSATION_FILTERABLE, CONVERSATION_SORTABLE } from "./fields";
 
@@ -30,6 +33,14 @@ export const ConversationListRowSchema = ConversationSchema.pick({
 });
 export type ConversationListRow = z.infer<typeof ConversationListRowSchema>;
 
+/**
+ * A row as the two live lists deliver it: the list row plus every contributed
+ * column under `$columns` (both collections are `contributed: true`). What a
+ * field extension of either list is typed over.
+ */
+export type ConversationListLiveRow =
+  WithContributedColumns<ConversationListRow>;
+
 // The two lists share one shape; each is its own collection because a
 // collection's `columnScope` is the one DataView surface whose custom columns
 // sort and filter it (asserted equal to the surface's `storageKey` at mount).
@@ -57,6 +68,9 @@ export const allConversations = liveCollection("conversations.all", {
   maxLimit: CONVERSATION_LIST_MAX_LIMIT,
   scroll: true,
   columnScope: "all-conversations",
+  // Other plugins' columns (conversations/usage: cost, tokens, agents) sort
+  // and filter it too, under `$columns.<contributor>`.
+  contributed: true,
 });
 
 /**
@@ -74,4 +88,5 @@ export const conversationHistory = liveCollection("conversations.history", {
   maxLimit: CONVERSATION_LIST_MAX_LIMIT,
   scroll: true,
   columnScope: "conversations-sidebar",
+  contributed: true,
 });

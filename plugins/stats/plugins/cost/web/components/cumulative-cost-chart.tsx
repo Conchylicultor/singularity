@@ -17,16 +17,23 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
 } from "@plugins/stats/plugins/commits/web";
-import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useEndpoint,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { getCostCumulative } from "../../shared/endpoints";
 import { useShowEmptyDays } from "@plugins/stats/web";
-import { formatUsd, formatUsdCompact } from "./format";
+import { formatUsd, formatUsdCompact } from "../../core";
 import { useScope } from "./use-scope";
 
 export function CumulativeCostChart() {
   const { scope } = useScope();
   const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(getCostCumulative, {}, { query: { scope } });
+  const { data: resp, error } = useEndpoint(
+    getCostCumulative,
+    {},
+    { query: { scope } },
+  );
   const points = useMemo(() => {
     const raw = resp?.points ?? [];
     return showEmptyDays ? fillGaps(raw, "date", "day", "carry") : raw;
@@ -45,11 +52,7 @@ export function CumulativeCostChart() {
           >
             <CartesianGrid {...gridProps} />
             <XAxis dataKey="date" {...axisProps} minTickGap={32} />
-            <YAxis
-              {...axisProps}
-              width={56}
-              tickFormatter={formatUsdCompact}
-            />
+            <YAxis {...axisProps} width={56} tickFormatter={formatUsdCompact} />
             <Tooltip
               isAnimationActive={false}
               contentStyle={tooltipContentStyle}

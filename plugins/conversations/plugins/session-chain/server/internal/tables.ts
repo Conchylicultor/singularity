@@ -29,7 +29,7 @@ const conversationSessionFields = {
 // transcript files can still be located (swept later if needed) — the same
 // contract as the append-only `conversation_summaries` precedent.
 //
-// Two indexes, each load-bearing:
+// Three indexes, each load-bearing:
 //   • (conversationId, seenAt) serves BOTH reads — the tail probe
 //     (ORDER BY seen_at DESC LIMIT 1) and the oldest→newest chain listing.
 //   • UNIQUE (conversationId, claudeSessionId) is the CONSTRAINT that makes the
@@ -39,6 +39,9 @@ const conversationSessionFields = {
 //     id appears exactly once in a chain, pinned at its first-seen position, so a
 //     session that flaps away and back (A→B→A) does not re-append A and make a
 //     consumer read the same transcript file twice.
+//   • (claudeSessionId) serves the reverse lookup — which conversation a
+//     written transcript belongs to (`listConversationsForSessions`, the usage
+//     accumulator's per-write mapping).
 const conversationSessions = defineEntity(
   "conversation_sessions",
   conversationSessionFields,
@@ -53,6 +56,7 @@ const conversationSessions = defineEntity(
         t.conversationId,
         t.claudeSessionId,
       ),
+      index("conversation_sessions_by_session_idx").on(t.claudeSessionId),
     ],
   },
 );

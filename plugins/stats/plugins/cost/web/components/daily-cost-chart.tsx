@@ -18,10 +18,13 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
 } from "@plugins/stats/plugins/commits/web";
-import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useEndpoint,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { getCostDaily } from "../../shared/endpoints";
 import { useShowEmptyDays } from "@plugins/stats/web";
-import { formatUsd, formatUsdCompact } from "./format";
+import { formatUsd, formatUsdCompact } from "../../core";
 import { useScope } from "./use-scope";
 
 // Family-based palette; specific revisions (opus-4-7, sonnet-4-6, …)
@@ -50,10 +53,17 @@ function colorFor(model: string, idx: number): string {
 export function DailyCostChart() {
   const { scope } = useScope();
   const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(getCostDaily, {}, { query: { scope } });
+  const { data: resp, error } = useEndpoint(
+    getCostDaily,
+    {},
+    { query: { scope } },
+  );
   const models = resp?.models ?? [];
   const rows = useMemo(() => {
-    const raw = (resp?.points ?? []).map((p) => ({ date: p.date, ...p.byModel }));
+    const raw = (resp?.points ?? []).map((p) => ({
+      date: p.date,
+      ...p.byModel,
+    }));
     return showEmptyDays ? fillGaps(raw, "date", "day") : raw;
   }, [resp?.points, showEmptyDays]);
 
@@ -71,11 +81,7 @@ export function DailyCostChart() {
           >
             <CartesianGrid {...gridProps} />
             <XAxis dataKey="date" {...axisProps} minTickGap={32} />
-            <YAxis
-              {...axisProps}
-              width={56}
-              tickFormatter={formatUsdCompact}
-            />
+            <YAxis {...axisProps} width={56} tickFormatter={formatUsdCompact} />
             <Tooltip
               isAnimationActive={false}
               contentStyle={tooltipContentStyle}

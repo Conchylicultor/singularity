@@ -37,6 +37,10 @@ export { findTranscriptPath } from "./internal/find-transcript-path";
 // transcript that does not exist yet (the status reconciler's session-id gate)
 // learns that it now does.
 export { onSessionTranscriptWritten } from "./internal/session-writes";
+// Every session OR sub-agent transcript written on the host, keyed by the owning
+// session id — how an accumulator over a conversation's whole tree (its usage
+// totals) hears about a sub-agent's append.
+export { onTranscriptWritten } from "./internal/session-writes";
 export { resolveConversationTranscriptPaths } from "./internal/resolve-chain";
 // The ownership partition itself, for consumers that need the rejected half —
 // a monitor auditing chains, or the status reconciler's adoption gate — rather than just

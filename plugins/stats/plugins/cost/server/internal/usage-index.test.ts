@@ -2,8 +2,8 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { TIER_THRESHOLD } from "./buckets";
-import type { PriceTable } from "./price-table";
+import { TIER_THRESHOLD } from "../../core/buckets";
+import type { PriceTable } from "../../core/pricing";
 import { parseTranscript, rollup, type FilePartial } from "./usage-index";
 
 // ─── Fixture ─────────────────────────────────────────────────────────────────
@@ -48,7 +48,13 @@ function line(
   );
 }
 
-function entry(reqId: string, msgId: string, model: string, day: string, io: [number, number]) {
+function entry(
+  reqId: string,
+  msgId: string,
+  model: string,
+  day: string,
+  io: [number, number],
+) {
   return line(reqId, msgId, model, day, {
     input_tokens: io[0],
     output_tokens: io[1],
@@ -163,12 +169,18 @@ test("parseTranscript dedups repeated (messageId, requestId) pairs within a file
   expect(partial.outputTokens).toBe(20);
 });
 
-test("speed normalizes absent / null / \"standard\" to standard, and \"fast\" through", async () => {
+test('speed normalizes absent / null / "standard" to standard, and "fast" through', async () => {
   const partial = await parseInline(
     "speed",
     line("r1", "m1", "model-flat", "2026-07-01", { input_tokens: 10 }) +
-      line("r2", "m2", "model-flat", "2026-07-01", { input_tokens: 10, speed: null }) +
-      line("r3", "m3", "model-flat", "2026-07-01", { input_tokens: 10, speed: "standard" }),
+      line("r2", "m2", "model-flat", "2026-07-01", {
+        input_tokens: 10,
+        speed: null,
+      }) +
+      line("r3", "m3", "model-flat", "2026-07-01", {
+        input_tokens: 10,
+        speed: "standard",
+      }),
   );
   // All three collapse into ONE bucket — the key dimension is normalized, not raw.
   expect(partial.dayBuckets).toHaveLength(1);
@@ -177,11 +189,20 @@ test("speed normalizes absent / null / \"standard\" to standard, and \"fast\" th
 
   const fast = await parseInline(
     "speed-fast",
-    line("r1", "m1", "model-flat", "2026-07-01", { input_tokens: 10, speed: "standard" }) +
-      line("r2", "m2", "model-flat", "2026-07-01", { input_tokens: 10, speed: "fast" }),
+    line("r1", "m1", "model-flat", "2026-07-01", {
+      input_tokens: 10,
+      speed: "standard",
+    }) +
+      line("r2", "m2", "model-flat", "2026-07-01", {
+        input_tokens: 10,
+        speed: "fast",
+      }),
   );
   // Different speeds are different buckets (the multiplier is a whole-entry scalar).
-  expect(fast.dayBuckets.map((b) => b.speed).sort()).toEqual(["fast", "standard"]);
+  expect(fast.dayBuckets.map((b) => b.speed).sort()).toEqual([
+    "fast",
+    "standard",
+  ]);
 });
 
 test("an entry above the 200k threshold splits into below/above and prices at both rates", async () => {
@@ -221,14 +242,16 @@ test("tiering is per ENTRY: two entries of one (date, model) are not tiered on t
   const price = TABLE.models["model-tiered"]!;
   const { sessions } = rollup(new Map([["p", partial]]), TABLE);
   const perEntry =
-    (TIER_THRESHOLD * price.input + 50_000 * price.inputAbove200k!) +
+    TIER_THRESHOLD * price.input +
+    50_000 * price.inputAbove200k! +
     small * price.input;
   expect(sessions[0]!.cost).toBeCloseTo(perEntry, 12);
 
   // …and that answer really differs from the aggregate-then-tier one.
   const total = big + small;
   const aggregateThenTier =
-    TIER_THRESHOLD * price.input + (total - TIER_THRESHOLD) * price.inputAbove200k!;
+    TIER_THRESHOLD * price.input +
+    (total - TIER_THRESHOLD) * price.inputAbove200k!;
   expect(aggregateThenTier).toBeGreaterThan(perEntry);
 });
 
@@ -296,7 +319,10 @@ test("the 200k threshold is apportioned across 5m/1h by their share of the combi
   expect(b.cacheCreate1h.above).toBeCloseTo(TIER_THRESHOLD * 0.75, 6);
   // Conserves exactly: nothing is created or lost by the apportioning.
   expect(
-    b.cacheCreate5m.below + b.cacheCreate5m.above + b.cacheCreate1h.below + b.cacheCreate1h.above,
+    b.cacheCreate5m.below +
+      b.cacheCreate5m.above +
+      b.cacheCreate1h.below +
+      b.cacheCreate1h.above,
   ).toBeCloseTo(combined, 6);
 
   const price = TABLE.models["model-tiered"]!;
@@ -333,7 +359,9 @@ test("each session gets its OWN exact cost, not a token-share split of a project
   const total = sessions.reduce((a, s) => a + s.cost, 0);
   expect(daily.reduce((a, r) => a + r.totalCost, 0)).toBeCloseTo(total, 12);
 
-  const alphaDay1 = daily.find((r) => r.date === "2026-07-01" && r.project === ALPHA)!;
+  const alphaDay1 = daily.find(
+    (r) => r.date === "2026-07-01" && r.project === ALPHA,
+  )!;
   expect(alphaDay1.inputTokens).toBe(1100);
   expect(alphaDay1.outputTokens).toBe(550);
   expect(alphaDay1.modelBreakdowns).toEqual([
@@ -349,8 +377,13 @@ test("modelBreakdowns split a day's cost per model, exactly", async () => {
   );
   const { daily } = rollup(new Map([["p", partial]]), TABLE);
   expect(daily).toHaveLength(1);
-  const byModel = new Map(daily[0]!.modelBreakdowns.map((m) => [m.modelName, m.cost]));
-  expect(byModel.get("model-flat")).toBeCloseTo(1000 * TABLE.models["model-flat"]!.input, 12);
+  const byModel = new Map(
+    daily[0]!.modelBreakdowns.map((m) => [m.modelName, m.cost]),
+  );
+  expect(byModel.get("model-flat")).toBeCloseTo(
+    1000 * TABLE.models["model-flat"]!.input,
+    12,
+  );
   expect(byModel.get("model-tiered")).toBeCloseTo(
     1000 * TABLE.models["model-tiered"]!.input,
     12,
@@ -379,10 +412,19 @@ test("DailyRow.cacheCreationTokens is 5m + 1h combined", async () => {
 test("an unknown model surfaces in `unpriced` with summed tokens and adds no silent $0", async () => {
   const partial = await parseInline(
     "unknown-model",
-    line("r1", "m1", "ghost-model", "2026-07-12", { input_tokens: 100, output_tokens: 20 }) +
-      line("r2", "m2", "ghost-model", "2026-07-13", { input_tokens: 5, output_tokens: 1 }),
+    line("r1", "m1", "ghost-model", "2026-07-12", {
+      input_tokens: 100,
+      output_tokens: 20,
+    }) +
+      line("r2", "m2", "ghost-model", "2026-07-13", {
+        input_tokens: 5,
+        output_tokens: 1,
+      }),
   );
-  const { sessions, daily, unpriced } = rollup(new Map([["p", partial]]), EMPTY_TABLE);
+  const { sessions, daily, unpriced } = rollup(
+    new Map([["p", partial]]),
+    EMPTY_TABLE,
+  );
 
   // Deduped by model, tokens summed across both buckets.
   expect(unpriced).toEqual([{ model: "ghost-model", tokens: 126 }]);

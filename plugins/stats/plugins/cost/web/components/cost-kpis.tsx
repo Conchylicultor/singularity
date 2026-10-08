@@ -8,7 +8,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ScopeToggle } from "./scope-toggle";
 import { useScope } from "./use-scope";
-import { formatTokensCompact, formatUsd } from "./format";
+import { formatTokensCompact, formatUsd } from "../../core";
 
 interface Totals {
   totalCost: number;

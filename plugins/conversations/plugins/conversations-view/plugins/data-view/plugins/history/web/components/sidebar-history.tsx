@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactElement } from "react";
 import {
+  defineFieldExtensions,
   defineItemActions,
   liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -11,7 +12,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   CONVERSATION_SEARCHABLE,
   conversationHistory,
-  type ConversationListRow,
+  type ConversationListLiveRow,
 } from "@plugins/conversations/plugins/all-conversations/core";
 import { useConversationFieldDefs } from "@plugins/conversations/plugins/all-conversations/web";
 import {
@@ -24,7 +25,14 @@ const closeIcon = symbol("close");
 
 // Per-consumer trailing-action slot. The close action contribution lives in this
 // plugin's `web/index.ts`.
-export const HistoryItemActions = defineItemActions<ConversationListRow>();
+export const HistoryItemActions = defineItemActions<ConversationListLiveRow>();
+
+/**
+ * Fields other plugins add to the History list — typically bound to their
+ * contributed columns of `conversations.history` (read off `$columns`), so the
+ * list sorts and filters by them server-side.
+ */
+export const HistoryFields = defineFieldExtensions<ConversationListLiveRow>();
 
 /**
  * The per-render close handler cannot ride on `itemActions` props (item-action
@@ -38,7 +46,7 @@ const CloseConversationContext = createContext<
 /** The hover-revealed Close action contributed into {@link HistoryItemActions}. */
 export function CloseConvAction({
   row,
-}: ItemActionProps<ConversationListRow>): ReactElement | null {
+}: ItemActionProps<ConversationListLiveRow>): ReactElement | null {
   const onCloseConversation = useContext(CloseConversationContext);
   if (!onCloseConversation) return null;
   return (
@@ -79,14 +87,15 @@ export function HistorySource({
 
   return (
     <CloseConversationContext.Provider value={onCloseConversation}>
-      {render<ConversationListRow>({
+      {render<ConversationListLiveRow>({
         fields,
+        fieldExtensions: HistoryFields,
         source: historySource,
         selectedRowId: activeId ?? undefined,
         rowActivation: (c) => linkTo(c.id),
         viewOptions: {
           list: {
-            renderRow: (c: ConversationListRow) => (
+            renderRow: (c: ConversationListLiveRow) => (
               <SidebarConversationItem conv={c} />
             ),
             size: "sm",

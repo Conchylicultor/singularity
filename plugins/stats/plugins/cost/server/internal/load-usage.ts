@@ -25,8 +25,8 @@ import {
   loadPriceTable,
   mergePriceTable,
   savePriceTable,
-  type PriceTable,
 } from "./price-table";
+import type { PriceTable } from "../../core";
 import { reportCostAnomalies } from "./record-anomalies";
 import {
   INDEX_VERSION,
@@ -159,7 +159,29 @@ export async function refreshPriceTable(): Promise<{ models: number }> {
   const next = mergePriceTable(existing, fetched);
   await savePriceTable(PRICE_TABLE_PATH, next);
   priceTable = next;
+  for (const listener of priceTableListeners) listener();
   return { models: Object.keys(next.models).length };
+}
+
+const priceTableListeners = new Set<() => void>();
+
+/**
+ * The price table every cost in the app is priced with — the same one Stats →
+ * Cost reads (loaded once per process, the vendored snapshot as its floor).
+ */
+export async function currentPriceTable(): Promise<PriceTable> {
+  return await ensurePriceTable();
+}
+
+/**
+ * Hear when the daily refresh adopts a new price table, so a consumer that
+ * stores priced totals re-prices them. Called synchronously after the save: a
+ * listener must be cheap (enqueue its work) and must not throw. Returns the
+ * unsubscribe.
+ */
+export function onPriceTableUpdated(listener: () => void): () => void {
+  priceTableListeners.add(listener);
+  return () => priceTableListeners.delete(listener);
 }
 
 // The permanent archive, read from disk ONCE per process. `buildBundle` folds the

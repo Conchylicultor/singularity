@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
@@ -117,4 +117,26 @@ export async function listSharedClaudeSessionIds(
     .groupBy(_conversationSessions.claudeSessionId)
     .having(sql`count(DISTINCT ${_conversationSessions.conversationId}) > 1`)
     .orderBy(asc(_conversationSessions.claudeSessionId));
+}
+
+/**
+ * The conversations whose chain holds any of `claudeSessionIds` — the reverse of
+ * {@link listSessionChain}, for a consumer that hears about a written transcript
+ * by its session id. Usually one conversation per id; more only under the
+ * corruption {@link listSharedClaudeSessionIds} reports, and a caller resolving
+ * files must still go through the anchored chain. An empty array is a
+ * legitimate answer (no conversation recorded the id); a DB error propagates.
+ */
+export async function listConversationsForSessions(
+  claudeSessionIds: readonly string[],
+  conn: NodePgDatabase = db,
+): Promise<string[]> {
+  if (claudeSessionIds.length === 0) return [];
+  const rows = await conn
+    .selectDistinct({ conversationId: _conversationSessions.conversationId })
+    .from(_conversationSessions)
+    .where(
+      inArray(_conversationSessions.claudeSessionId, [...claudeSessionIds]),
+    );
+  return rows.map((r) => r.conversationId);
 }

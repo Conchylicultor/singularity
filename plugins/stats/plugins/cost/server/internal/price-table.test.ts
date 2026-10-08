@@ -7,16 +7,14 @@ import {
   ConversationModelSchema,
   cliFlagFor,
 } from "@plugins/conversations/plugins/model-provider/core";
-import type { DayBucket, TieredTokens } from "./buckets";
+import type { DayBucket, TieredTokens } from "../../core/buckets";
+import { priceBucket, resolveModel, type PriceTable } from "../../core/pricing";
 import { loadFallbackPriceTable } from "./litellm-fallback";
 import {
   loadPriceTable,
   mergePriceTable,
   parseLiteLlmTable,
-  priceBucket,
-  resolveModel,
   savePriceTable,
-  type PriceTable,
 } from "./price-table";
 
 // ─── Fixture ─────────────────────────────────────────────────────────────────

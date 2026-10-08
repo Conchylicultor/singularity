@@ -105,6 +105,7 @@ memo degrades to a full chain re-read on every push.
     - `conversationChainTag`
     - `findTranscriptPath`
     - `onSessionTranscriptWritten`
+    - `onTranscriptWritten`
     - `readChainLines`
     - `readJsonlEvents`
     - `readJsonlEventsFromChain`
@@ -126,6 +127,7 @@ memo degrades to a full chain re-read on every push.
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/transcript-api`
     - `conversations/transcript-retention`
+    - `conversations/usage`
     - `debug/session-divergence`
 - Core:
   - Exports (types):

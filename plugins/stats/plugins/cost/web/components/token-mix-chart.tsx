@@ -19,10 +19,13 @@ import {
   tooltipLabelStyle,
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
-import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useEndpoint,
+  getEndpointErrorMessage,
+} from "@plugins/infra/plugins/endpoints/web";
 import { getCostTokenMix } from "../../shared/endpoints";
 import { useShowEmptyDays } from "@plugins/stats/web";
-import { formatTokens } from "./format";
+import { formatTokens } from "../../core";
 import { useScope } from "./use-scope";
 
 const SERIES = [
@@ -35,7 +38,11 @@ const SERIES = [
 export function TokenMixChart() {
   const { scope } = useScope();
   const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(getCostTokenMix, {}, { query: { scope } });
+  const { data: resp, error } = useEndpoint(
+    getCostTokenMix,
+    {},
+    { query: { scope } },
+  );
   const points = useMemo(() => {
     const raw = resp?.points ?? [];
     return showEmptyDays ? fillGaps(raw, "date", "day") : raw;
@@ -52,7 +59,13 @@ export function TokenMixChart() {
     const key = typeof entry?.dataKey === "string" ? entry.dataKey : undefined;
     const isHidden = key ? (hidden[key] ?? false) : false;
     return (
-      <span style={{ opacity: isHidden ? 0.4 : 1, cursor: "pointer", userSelect: "none" }}>
+      <span
+        style={{
+          opacity: isHidden ? 0.4 : 1,
+          cursor: "pointer",
+          userSelect: "none",
+        }}
+      >
         {value}
       </span>
     );

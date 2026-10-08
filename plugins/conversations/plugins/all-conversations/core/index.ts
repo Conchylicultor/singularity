@@ -14,4 +14,7 @@ export {
   conversationHistory,
   ConversationListRowSchema,
 } from "./internal/collection";
-export type { ConversationListRow } from "./internal/collection";
+export type {
+  ConversationListLiveRow,
+  ConversationListRow,
+} from "./internal/collection";

@@ -9868,8 +9868,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UpdateAgentBodySchema`
     - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar. Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
       - Web:
-        - Slots: `allConversationsPane.Actions`
-        - Slot contributors: `allConversationsPane.Actions` ← `primitives.pane`
+        - Slots:
+          - `allConversationsPane.Actions`
+          - `AllConversationsFields`
+        - Slot contributors:
+          - `allConversationsPane.Actions` ← `primitives.pane`
+          - `AllConversationsFields` ← `conversations.usage`
         - Contributes:
           - `Pane.Register` "all-conversations"
           - `Shell.Sidebar` "Conversations"
@@ -9882,6 +9886,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
+          - `primitives/data-view.defineFieldExtensions`
           - `primitives/data-view.liveDataSource`
           - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
@@ -9890,6 +9895,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/relative-time.RelativeTime`
           - `shell.Shell`
         - Exports (values):
+          - `AllConversationsFields`
           - `allConversationsPane`
           - `useConversationFieldDefs`
       - Server:
@@ -9919,6 +9925,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/model-provider.ModelCatalog`
           - `conversations/model-provider.modelMeta`
           - `network/live.liveCollection`
+          - `network/live.WithContributedColumns`
           - `network/live/filter.liveInstant`
           - `network/live/filter.liveText`
           - `tasks/tasks-core.ConversationKindSchema`
@@ -9927,6 +9934,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `ConversationFieldSpec`
           - `ConversationFieldType`
+          - `ConversationListLiveRow`
           - `ConversationListRow`
         - Exports (values):
           - `allConversations`
@@ -9941,6 +9949,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/conversations-view/data-view/history`
           - `conversations/conversations-view/data-view/queue`
+          - `conversations/usage`
     - **`conversation-category`** — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Paints the sidebar avatar from the category chosen for it.
       - Web:
         - Contributes:
@@ -11450,6 +11459,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/transcript-watcher.watchPaths`
                   - `infra/git/git-read-cache.createSignedMemo`
                   - `network/live.serveValue`
+                - Exports (values):
+                  - `listSubagentEntries`
+                  - `subagentDirOf`
                 - Resources:
                   - `subagent-activity` (push)
                   - `subagent-transcript` (push)
@@ -11545,6 +11557,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
                   - `conversations/conversation-view/running-agents`
+                  - `conversations/usage`
             - **`summary`** — Renders summary separator events in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "summary" → `SummaryRow`
@@ -12685,8 +12698,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Plugins:
             - **`history`** — Contributes the History list (a live source over the `conversations.history` collection) as the History source of the merged conversation-sidebar DataView.
               - Web:
-                - Slots: `history-actions`
-                - Slot contributors: `history-actions` ← `conversations.conversations-view.data-view.history`
+                - Slots:
+                  - `history-actions`
+                  - `HistoryFields`
+                - Slot contributors:
+                  - `history-actions` ← `conversations.conversations-view.data-view.history`
+                  - `HistoryFields` ← `conversations.usage`
                 - Contributes:
                   - `SidebarSources` "History" → `HistorySource`
                   - `history-actions` "close" → `CloseConvAction`
@@ -12695,9 +12712,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversations-view/data-view.ConversationSidebarProps`
                   - `conversations/conversations-view/data-view.SidebarConversationItem`
                   - `conversations/conversations-view/data-view.SidebarSources`
+                  - `primitives/data-view.defineFieldExtensions`
                   - `primitives/data-view.defineItemActions`
                   - `primitives/data-view.liveDataSource`
                   - `primitives/icon-button.IconButton`
+                - Exports (values): `HistoryFields`
+              - Cross-plugin:
+                - Imported by: `conversations/usage`
             - **`queue`** — Contributes the priority Queue (pin/status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue source of the merged conversation-sidebar DataView.
               - Web:
                 - Slots: `queue-actions`
@@ -13246,6 +13267,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SessionChainEntry`
           - `SharedSessionId`
         - Exports (values):
+          - `listConversationsForSessions`
           - `listSessionChain`
           - `listSharedClaudeSessionIds`
           - `recordSessionId`
@@ -13253,6 +13275,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations`
           - `conversations/transcript-watcher`
+          - `conversations/usage`
           - `debug/session-divergence`
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - Web:
@@ -13377,6 +13400,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationChainTag`
           - `findTranscriptPath`
           - `onSessionTranscriptWritten`
+          - `onTranscriptWritten`
           - `readChainLines`
           - `readJsonlEvents`
           - `readJsonlEventsFromChain`
@@ -13398,6 +13422,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/transcript-api`
           - `conversations/transcript-retention`
+          - `conversations/usage`
           - `debug/session-divergence`
       - Core:
         - Exports (types):
@@ -13422,6 +13447,45 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unwrapRelayEnvelopes`
           - `userPromptText`
           - `wrapPreprompt`
+    - **`usage`** — Cost, Tokens and Agents fields on the conversation lists (All-conversations, sidebar History), bound to the lists' `usage` columns so they sort and filter server-side. Per-conversation usage — cost, tokens and launched sub-agents — counted incrementally from the transcripts (the anchored session chain plus every sub-agent), stored in conversations_ext_usage and served as the conversation lists' `usage` columns.
+      - Web:
+        - Contributes:
+          - `AllConversationsFields` "usage" → `AllConversationsUsageFields`
+          - `HistoryFields` "usage" → `HistoryUsageFields`
+        - Uses:
+          - `conversations/all-conversations.AllConversationsFields`
+          - `conversations/conversations-view/data-view/history.HistoryFields`
+      - Server:
+        - Contributes:
+          - `live.columns.serve` "conversations.all ← usage"
+          - `live.columns.serve` "conversations.history ← usage"
+          - `change-feed-exclusion` "conversation_usage_files"
+        - Uses:
+          - `conversations/conversation-view/jsonl-viewer/subagents.listSubagentEntries`
+          - `conversations/conversation-view/jsonl-viewer/subagents.subagentDirOf`
+          - `conversations/session-chain.listConversationsForSessions`
+          - `conversations/transcript-watcher.onTranscriptWritten`
+          - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
+          - `database.db`
+          - `database/change-feed.ExcludeFromChangeFeed`
+          - `database/sql-column.parsedJson`
+          - `database/sql-column.parsedText`
+          - `infra/entity-extensions.defineExtension`
+          - `infra/jobs.defineJob`
+          - `infra/paths.isHostSingleton`
+          - `infra/warmup.defineWarmup`
+          - `network/live.LiveColumns`
+          - `network/live.serveColumns`
+          - `stats/cost.currentPriceTable`
+          - `stats/cost.onPriceTableUpdated`
+          - `tasks/tasks-core._conversations`
+        - DB schema: `plugins/conversations/plugins/usage/server/internal/tables.ts`
+        - Entity extension of: `tasks/tasks-core` (table `conversations_ext_usage`)
+        - Register:
+          - `defineJob('conversations.usage.sync')`
+          - `defineJob('conversations.usage.backfill')`
+          - `defineJob('conversations.usage.reprice')`
+          - `defineWarmup('conversations.usage.backfill')`
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Server:
@@ -13447,11 +13511,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadKnownRelations`
       - `quotedRelationsIn`
   - Cross-plugin:
-    - Imported by: 102 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 103 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×29
       - `page` ×14
       - `infra` ×12
-      - `conversations` ×10
+      - `conversations` ×11
       - `tasks` ×8
       - `debug` ×6
       - `primitives` ×4
@@ -13580,6 +13644,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/chord/song-index`
           - `apps/chord/video-availability`
           - `apps/deploy/analytics/collect`
+          - `conversations/usage`
           - `database/live-state-snapshot`
           - `debug/latency-ledger`
           - `debug/slow-ops`
@@ -14051,10 +14116,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `QueryDeadlineHitSchema`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×5
+          - `conversations` ×4
           - `infra` ×4
-          - `conversations` ×3
           - `fields` ×3
           - `debug` ×2
           - `backup`
@@ -20159,10 +20224,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×13
           - `tasks` ×8
-          - `conversations` ×5
+          - `conversations` ×6
           - `page` ×2
           - `plugin-meta/plugin-health`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger(). Contributes a BackgroundTriggerSource so the Background activity catalog names the events that start each job.
@@ -21022,9 +21087,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 64 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 65 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×17
-          - `conversations` ×12
+          - `conversations` ×13
           - `infra` ×11
           - `debug` ×9
           - `database` ×3
@@ -21406,13 +21471,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 53 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 54 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×10
           - `build` ×7
           - `infra` ×7
           - `backup` ×4
+          - `conversations` ×4
           - `framework` ×4
-          - `conversations` ×3
           - `primitives` ×3
           - `release` ×3
           - `code-explorer` ×2
@@ -22094,6 +22159,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/auto-icon`
           - `apps/pages/content-search`
           - `apps/sonata/sources/midi/folders`
+          - `conversations/usage`
           - `infra/corpus-index`
           - `infra/warmup/background-arm`
           - `infra/worktree/spare-pool`
@@ -22890,9 +22956,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveValue`
           - `scopedLiveColumns`
       - Cross-plugin:
-        - Imported by: 162 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 163 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×48
-          - `conversations` ×33
+          - `conversations` ×34
           - `tasks` ×21
           - `infra` ×9
           - `debug` ×8
@@ -32723,8 +32789,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 228 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×228
+    - Contributes: 230 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×230
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -32756,8 +32822,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 227 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×227
+    - Contributes: 229 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×229
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -34213,6 +34279,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports.ReportKind`
           - `tasks/tasks-core._conversations`
         - DB schema: `plugins/stats/plugins/cost/server/internal/price-table.ts`
+        - Exports (values):
+          - `currentPriceTable`
+          - `onPriceTableUpdated`
         - Register:
           - `defineWarmup('stats.cost.usage')`
           - `defineFileWatcher('corpus-index.stats.cost.usage')`
@@ -34226,6 +34295,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GET /api/stats/cost/sessions`
           - `GET /api/stats/cost/distribution`
           - `GET /api/stats/cost/avg-per-conversation`
+      - Cross-plugin:
+        - Imported by: `conversations/usage`
+      - Core:
+        - Exports (types):
+          - `CountedUsage`
+          - `DayBucket`
+          - `ModelPrice`
+          - `PriceTable`
+          - `TieredTokens`
+          - `UsageBuckets`
+        - Exports (values):
+          - `emptyUsageBuckets`
+          - `foldUsageEntry`
+          - `formatTokens`
+          - `formatTokensCompact`
+          - `formatUsd`
+          - `formatUsdCompact`
+          - `priceBucket`
+          - `resumeUsageBuckets`
       - Shared:
         - Exports (values):
           - `costConfig`
@@ -35737,8 +35825,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatusSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 59 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×25
+        - Imported by: 60 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×26
           - `tasks` ×12
           - `debug` ×6
           - `active-data` ×5
@@ -35756,6 +35844,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-progress` (table `conversations_ext_progress`)
           - `conversations/conversations-view/queue` (table `conversations_ext_queue`)
           - `conversations/conversation-view/turn-summary` (table `conversations_ext_turn_summary`)
+          - `conversations/usage` (table `conversations_ext_usage`)
           - `tasks/auto-start` (table `tasks_ext_auto_start`)
           - `tasks/task-category` (table `tasks_ext_category`)
           - `tasks/task-effort` (table `tasks_ext_effort`)

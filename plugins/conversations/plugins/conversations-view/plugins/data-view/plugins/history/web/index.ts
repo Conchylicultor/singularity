@@ -3,8 +3,11 @@ import { SidebarSources } from "@plugins/conversations/plugins/conversations-vie
 import {
   HistorySource,
   HistoryItemActions,
+  HistoryFields,
   CloseConvAction,
 } from "./components/sidebar-history";
+
+export { HistoryFields } from "./components/sidebar-history";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
@@ -21,5 +24,5 @@ export default {
     }),
     HistoryItemActions({ id: "close", component: CloseConvAction }),
   ],
-  slots: { historyActions: HistoryItemActions },
+  slots: { historyActions: HistoryItemActions, historyFields: HistoryFields },
 } satisfies PluginDefinition;

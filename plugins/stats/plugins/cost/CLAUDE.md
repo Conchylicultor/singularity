@@ -229,6 +229,9 @@ override where it survives.
     - `reports.ReportKind`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/stats/plugins/cost/server/internal/price-table.ts`
+  - Exports (values):
+    - `currentPriceTable`
+    - `onPriceTableUpdated`
   - Register:
     - `defineWarmup('stats.cost.usage')`
     - `defineFileWatcher('corpus-index.stats.cost.usage')`
@@ -242,6 +245,25 @@ override where it survives.
     - `GET /api/stats/cost/sessions`
     - `GET /api/stats/cost/distribution`
     - `GET /api/stats/cost/avg-per-conversation`
+- Cross-plugin:
+  - Imported by: `conversations/usage`
+- Core:
+  - Exports (types):
+    - `CountedUsage`
+    - `DayBucket`
+    - `ModelPrice`
+    - `PriceTable`
+    - `TieredTokens`
+    - `UsageBuckets`
+  - Exports (values):
+    - `emptyUsageBuckets`
+    - `foldUsageEntry`
+    - `formatTokens`
+    - `formatTokensCompact`
+    - `formatUsd`
+    - `formatUsdCompact`
+    - `priceBucket`
+    - `resumeUsageBuckets`
 - Shared:
   - Exports (values):
     - `costConfig`

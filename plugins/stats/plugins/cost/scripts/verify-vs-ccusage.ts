@@ -53,12 +53,11 @@ import { loadSessionData } from "ccusage/data-loader";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/core";
 import { costUsageDir } from "../data-dirs";
 import { loadFallbackPriceTable } from "../server/internal/litellm-fallback";
+import type { ModelPrice, PriceTable } from "../core";
 import {
   fetchPriceTable,
   loadPriceTable,
   mergePriceTable,
-  type ModelPrice,
-  type PriceTable,
 } from "../server/internal/price-table";
 import {
   parseTranscript,

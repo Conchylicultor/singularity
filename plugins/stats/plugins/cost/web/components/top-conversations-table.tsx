@@ -9,7 +9,7 @@ import {
 import { getCostSessions } from "../../shared/endpoints";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { formatTokensCompact, formatUsd } from "./format";
+import { formatTokensCompact, formatUsd } from "../../core";
 import { useScope } from "./use-scope";
 
 interface Row {

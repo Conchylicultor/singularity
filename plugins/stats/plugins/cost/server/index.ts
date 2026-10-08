@@ -12,6 +12,10 @@ import {
   handleTotals,
 } from "./internal/handlers";
 import { costUsageWarmup, costUsageWatcher } from "./internal/load-usage";
+
+// The price table, for a plugin that prices token buckets (`priceBucket`,
+// `foldUsageEntry` in `../core`) itself and stores the result.
+export { currentPriceTable, onPriceTableUpdated } from "./internal/load-usage";
 import {
   archiveShrinkKind,
   unpricedModelKind,

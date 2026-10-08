@@ -1,4 +1,4 @@
-import { basename, dirname } from "node:path";
+import { basename, dirname, relative, sep } from "node:path";
 import type { FileChangeEvent } from "@plugins/infra/plugins/file-watcher/server";
 
 // "A session's transcript was written" as a broadcast, fed by the one projects-
@@ -11,9 +11,11 @@ import type { FileChangeEvent } from "@plugins/infra/plugins/file-watcher/server
 type Listener = (sessionIds: ReadonlySet<string>) => void;
 
 const listeners = new Set<Listener>();
+const ownerListeners = new Set<Listener>();
 
 /** A top-level session transcript is `<projects>/<dir>/<uuid>.jsonl`. */
 const SESSION_FILE_RE = /^([0-9a-f-]{36})\.jsonl$/;
+const SESSION_ID_RE = /^[0-9a-f-]{36}$/;
 
 /**
  * The session ids whose top-level transcript a batch created or appended to.
@@ -37,6 +39,36 @@ export function writtenSessionIds(
 }
 
 /**
+ * The session ids that OWN a transcript a batch created or appended to: the
+ * session itself for a top-level `<dir>/<uuid>.jsonl`, and the parent session
+ * for a sub-agent's `<dir>/<uuid>/subagents/…/agent-<id>.jsonl` (workflow
+ * agents included, one level deeper under `workflows/wf_<run>/`).
+ */
+export function writtenOwnerSessionIds(
+  events: readonly FileChangeEvent[],
+  projectsDir: string,
+): Set<string> {
+  const ids = new Set<string>();
+  for (const event of events) {
+    if (event.type === "delete") continue;
+    const parts = relative(projectsDir, event.path).split(sep);
+    if (parts[0] === "..") continue; // outside the projects dir
+    if (parts.length === 2) {
+      const match = SESSION_FILE_RE.exec(parts[1]!);
+      if (match) ids.add(match[1]!);
+    } else if (
+      parts.length >= 4 &&
+      parts[2] === "subagents" &&
+      SESSION_ID_RE.test(parts[1]!) &&
+      parts.at(-1)!.startsWith("agent-")
+    ) {
+      ids.add(parts[1]!);
+    }
+  }
+  return ids;
+}
+
+/**
  * Hear about every session transcript written on this host, as the set of
  * session ids each watcher batch touched. Called on the watcher's batch, so a
  * listener must be cheap (a map lookup) and must not throw. Returns the
@@ -47,13 +79,29 @@ export function onSessionTranscriptWritten(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
+/**
+ * Hear about every write to a session's transcript OR to one of its sub-agents'
+ * transcripts, as the set of OWNING session ids each watcher batch touched
+ * ({@link writtenOwnerSessionIds}). Same contract as
+ * {@link onSessionTranscriptWritten}: cheap, must not throw. Returns the
+ * unsubscribe.
+ */
+export function onTranscriptWritten(listener: Listener): () => void {
+  ownerListeners.add(listener);
+  return () => ownerListeners.delete(listener);
+}
+
 /** Fan a watcher batch out to the listeners. */
 export function notifySessionTranscriptWrites(
   events: readonly FileChangeEvent[],
   projectsDir: string,
 ): void {
-  if (listeners.size === 0) return;
-  const ids = writtenSessionIds(events, projectsDir);
-  if (ids.size === 0) return;
-  for (const listener of listeners) listener(ids);
+  if (listeners.size > 0) {
+    const ids = writtenSessionIds(events, projectsDir);
+    if (ids.size > 0) for (const listener of listeners) listener(ids);
+  }
+  if (ownerListeners.size > 0) {
+    const ids = writtenOwnerSessionIds(events, projectsDir);
+    if (ids.size > 0) for (const listener of ownerListeners) listener(ids);
+  }
 }

@@ -4,6 +4,7 @@ export {
   recordSessionId,
   listSessionChain,
   listSharedClaudeSessionIds,
+  listConversationsForSessions,
 } from "./internal/record";
 export type { SessionChainEntry, SharedSessionId } from "./internal/record";
 

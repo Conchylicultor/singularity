@@ -23,6 +23,7 @@
     - `apps/pages/auto-icon`
     - `apps/pages/content-search`
     - `apps/sonata/sources/midi/folders`
+    - `conversations/usage`
     - `infra/corpus-index`
     - `infra/warmup/background-arm`
     - `infra/worktree/spare-pool`
