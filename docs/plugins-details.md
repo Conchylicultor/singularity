@@ -4609,29 +4609,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/audio/sample-loader.sharedSampleLoader`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
-        - **`chord-chart`** — Sonata Display: the chord grid. Lays the song's chords out as bars in rows of four under their section headers, each bar split by beats into chord boxes painted in the root's degree colour (held chords drawn as ties), labelled by the shared chord-label mode, following playback with the active bar washed, the sounding chord ringed and a beat line through the bar. A reading view (no time-axis / pitch-plane capabilities); click a chord to seek.
+        - **`chord-chart`** — Sonata Display: the chord grid. Lays the song's chords out as bars in rows of four under their section headers, each bar split by beats into chord boxes painted in the root's degree colour (held chords drawn as ties), labelled by the shared chord-label mode, optionally with the songsheet lines sung in each row printed under it (the Lyrics under bars view option), following playback with the active bar washed, the sounding chord ringed and a beat line through the bar. A reading view (no time-axis / pitch-plane capabilities); click a chord to seek. Server registration of the Sonata chord grid config (lyrics under bars).
           - Web:
-            - Contributes: `SonataPlayer.Display` "Chord grid" → `ChordChart`
-            - Uses:
+            - Contributes:
+              - `SonataPlayer.Display` "Chord grid" → `ChordChart`
+              - `ConfigV2.WebRegister` "config"
+              - `Sonata.ViewOption` "chord-chart-lyrics"
+            - Uses: 24 symbols — full list in [`plugins/apps/plugins/sonata/plugins/chord-chart/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/chord-chart/REFERENCE.md)
+              - `apps/sonata/rich/chord-label` ×3
+              - `apps/sonata/session` ×3
+              - `apps/sonata/lyric-line` ×2
+              - `config_v2` ×2
+              - `music/chord-box` ×2
+              - `primitives/css/spacing` ×2
               - `apps/sonata/document.useSongDocument`
               - `apps/sonata/player.SonataPlayer`
-              - `apps/sonata/rich/chord-label.chordBoxFace`
-              - `apps/sonata/rich/chord-label.ChordBoxFace`
-              - `apps/sonata/rich/chord-label.useChordDisplayMode`
-              - `apps/sonata/session.useCursorApi`
-              - `apps/sonata/session.useCursorSelector`
-              - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
-              - `music/chord-box.ChordBox`
               - `primitives/css/center.Center`
               - `primitives/css/column.Column`
               - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/spacing.Inset`
-              - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
+          - Server:
+            - Contributes: `ConfigV2.Register` "config"
+            - Uses: `config_v2.ConfigV2`
         - **`controls`** — Keyboard transport for Sonata players: Space toggles play/pause and ←/→ seek the playhead (tap to jump a bar, hold to scrub) on every shown player — the Sonata app's and a file preview's alike — and, in the Sonata app, ↑/↓ speed up / slow down the tempo. All focus-scoped per surface.
           - Web:
             - Contributes:
@@ -4875,6 +4878,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SONATA_LOOK_STYLES`
               - `SONATA_LOOKS`
               - `sonataLookConfig`
+        - **`lyric-line`** — One songsheet line as text: <LyricLineText> — the chord row (each chord pinned over its lyric column) stacked over the words, monospace so a column is one character, with no chrome of its own and an optional chordStyle so the caller paints the chords. Shared by the Songsheet and the Chord grid's lyrics.
+          - Web:
+            - Uses:
+              - `primitives/css/coords.Placed`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
+            - Exports (types):
+              - `LyricChordStyle`
+              - `LyricLineTextProps`
+            - Exports (values): `LyricLineText`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/sonata/chord-chart`
+              - `apps/sonata/songsheet`
+          - Core:
+            - Exports (types): `ActiveChord`
+            - Exports (values):
+              - `activeLyricChord`
+              - `lyricLines`
+              - `sameActiveChord`
         - **`notation`** — Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
           - Web:
             - Contributes:
@@ -5780,10 +5804,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.Hud`
               - `Sonata.ViewOption`
               - `Sonata.Section`
-            - Slot contributors: 33 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+            - Slot contributors: 34 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
               - `Sonata.Section` ×12
+              - `Sonata.ViewOption` ×7
               - `Sonata.Effect` ×6
-              - `Sonata.ViewOption` ×6
               - `Sonata.Hud` ×3
               - `Sonata.TransportOverlay` ×2
               - `Sonata.Home` ← `apps.sonata.library`
@@ -5823,12 +5847,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `SonataPlayer.Display` "Songsheet" → `Songsheet`
             - Uses:
               - `apps/sonata/document.useSongDocument`
+              - `apps/sonata/lyric-line.LyricLineText`
               - `apps/sonata/player.SonataPlayer`
               - `apps/sonata/session.useCursorSelector`
               - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
               - `primitives/css/center.Center`
-              - `primitives/css/coords.Placed`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/scroll.Scroll`
@@ -9117,8 +9141,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 81 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×81
+    - Slot contributors: 82 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×82
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -9270,8 +9294,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 101 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×22
+    - Imported by: 102 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×23
       - `debug` ×14
       - `backup` ×13
       - `conversations` ×12
@@ -27732,8 +27756,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 375 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×92
+            - Imported by: 376 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×93
               - `conversations` ×59
               - `primitives` ×50
               - `debug` ×34
@@ -27918,8 +27942,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 346 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×89
+            - Imported by: 347 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×90
               - `conversations` ×67
               - `primitives` ×39
               - `debug` ×32
@@ -28160,9 +28184,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 379 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 380 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×100
-              - `apps` ×67
+              - `apps` ×68
               - `conversations` ×50
               - `page` ×24
               - `debug` ×23

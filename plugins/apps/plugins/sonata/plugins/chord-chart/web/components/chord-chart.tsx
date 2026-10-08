@@ -12,6 +12,8 @@ import {
   effectiveKeyAt,
   type ChordAnnotation,
   type ChordBar,
+  type LyricAnnotation,
+  type LyricChord,
   type Score,
   type SectionAnnotation,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -20,7 +22,18 @@ import {
   useChordDisplayMode,
   type ChordBoxFace,
 } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label/web";
-import { ChordBox } from "@plugins/music/plugins/chord-box/web";
+import { ChordBox, chordToneStyle } from "@plugins/music/plugins/chord-box/web";
+import { useConfig } from "@plugins/config_v2/web";
+import {
+  activeLyricChord,
+  lyricLines,
+  sameActiveChord,
+  type ActiveChord,
+} from "@plugins/apps/plugins/sonata/plugins/lyric-line/core";
+import {
+  LyricLineText,
+  type LyricChordStyle,
+} from "@plugins/apps/plugins/sonata/plugins/lyric-line/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -31,6 +44,8 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import { chordChartConfig } from "../../shared/config";
+import { lyricRows, type RowLyric } from "../lyric-rows";
 import "./chord-chart.css";
 
 /** Props the player's `SonataPlayer.Display.Dispatch` passes to the chosen
@@ -77,6 +92,9 @@ function groupBars(
   return groups;
 }
 
+/** A bar as the grid places it: the bar and its index into the flat list. */
+type IndexedBar = BarGroup["bars"][number];
+
 /** The playhead's position through `bar`, 0 at its downbeat to 1 at its end. */
 function barProgress(bar: ChordBar, beat: number): number {
   const p = (beat - bar.startBeat) / (bar.endBeat - bar.startBeat);
@@ -88,6 +106,7 @@ function ChordChartInner({ score }: ChordChartProps) {
   const cursor = useCursorApi();
   const { content } = useSongDocument();
   const mode = useChordDisplayMode();
+  const lyricsOn = useConfig(chordChartConfig).lyrics;
   const scorePending = content.kind === "pending";
   const scoreFailure = content.kind === "failed" ? content.failure : null;
 
@@ -101,6 +120,22 @@ function ChordChartInner({ score }: ChordChartProps) {
         ),
       ),
     [bars, score.annotations],
+  );
+
+  // With the option on and lyrics in the score, each group's bars as rows
+  // that start at a lyric line, the line printed under its row; otherwise
+  // `null` and every group renders as one grid of its bars, as without the
+  // option.
+  const lines = useMemo(() => lyricLines(score), [score]);
+  const rows = useMemo(
+    () =>
+      lyricsOn && lines.length > 0
+        ? lyricRows(
+            groups.map((g) => g.bars),
+            lines,
+          )
+        : null,
+    [lyricsOn, lines, groups],
   );
 
   // Each chord's face (paint + text) under the active label mode, in the key in
@@ -123,6 +158,46 @@ function ChordChartInner({ score }: ChordChartProps) {
     }
     return m;
   }, [bars, score, mode]);
+
+  // The chord sounding under each lyric chord's beat (the grid's own chord
+  // annotation there), so a chord over the words wears its tile's colour.
+  // Keyed by the score's own lyric chord reference.
+  const lyricFaces = useMemo(() => {
+    const chords = score.annotations.filter(
+      (a): a is ChordAnnotation => a.type === "chord",
+    );
+    const m = new Map<LyricChord, ChordBoxFace | undefined>();
+    for (const l of lines) {
+      for (const c of l.data.chords) {
+        const chord = chords.find(
+          (a) => a.start <= c.beat + EPS && a.end > c.beat + EPS,
+        );
+        m.set(c, chord === undefined ? undefined : faces.get(chord));
+      }
+    }
+    return m;
+  }, [score.annotations, lines, faces]);
+  const chordStyle = (c: LyricChord, active: boolean): LyricChordStyle => ({
+    className: active
+      ? "chord-chart-lyric-chord chord-chart-lyric-chord-now font-bold"
+      : "chord-chart-lyric-chord font-semibold",
+    style: chordToneStyle(lyricFaces.get(c)?.degree ?? null),
+  });
+
+  // The lyric line under the playhead (-1 between lines) and the lyric chord
+  // sounding — reconciled only on a line or chord boundary.
+  const activeLine = useCursorSelector(
+    (beat) =>
+      rows === null
+        ? -1
+        : lines.findIndex((l) => beat >= l.start - EPS && beat < l.end - EPS),
+    [lines, rows],
+  );
+  const activeLyric = useCursorSelector<ActiveChord | null>(
+    (beat) => (rows === null ? null : activeLyricChord(lines, beat)),
+    [lines, rows],
+    sameActiveChord,
+  );
 
   // The bar holding the playhead (-1 outside the chart) and the chord sounding
   // there. Both reconcile only when the playhead crosses a boundary.
@@ -196,6 +271,19 @@ function ChordChartInner({ score }: ChordChartProps) {
     );
   }
 
+  const renderBar = ({ bar, index }: IndexedBar) => (
+    <BarCell
+      key={index}
+      ref={(el) => {
+        barRefs.current[index] = el;
+      }}
+      bar={bar}
+      active={index === activeBar}
+      activeChord={index === activeBar ? activeChord : undefined}
+      faces={faces}
+      onSeek={seekTo}
+    />
+  );
   return (
     <Column
       fill
@@ -225,23 +313,28 @@ function ChordChartInner({ score }: ChordChartProps) {
                       {group.section.data.name}
                     </Text>
                   ) : null}
-                  <div className="chord-chart-bars">
-                    {group.bars.map(({ bar, index }) => (
-                      <BarCell
-                        key={index}
-                        ref={(el) => {
-                          barRefs.current[index] = el;
-                        }}
-                        bar={bar}
-                        active={index === activeBar}
-                        activeChord={
-                          index === activeBar ? activeChord : undefined
-                        }
-                        faces={faces}
-                        onSeek={seekTo}
-                      />
-                    ))}
-                  </div>
+                  {rows === null ? (
+                    <div className="chord-chart-bars">
+                      {group.bars.map(renderBar)}
+                    </div>
+                  ) : (
+                    <Stack gap="sm">
+                      {rows[gi]!.map((row, ri) => (
+                        <Stack key={ri} gap="2xs">
+                          <div className="chord-chart-bars">
+                            {row.bars.map(renderBar)}
+                          </div>
+                          <LyricRow
+                            lyrics={row.lines}
+                            activeLine={activeLine}
+                            activeChord={activeLyric}
+                            chordStyle={chordStyle}
+                            onSeek={seekTo}
+                          />
+                        </Stack>
+                      ))}
+                    </Stack>
+                  )}
                 </Stack>
               ))}
             </Stack>
@@ -249,6 +342,72 @@ function ChordChartInner({ score }: ChordChartProps) {
         </Inset>
       }
     />
+  );
+}
+
+/**
+ * The songsheet lines starting in one row of bars, printed under it from its
+ * first column across the whole row, chords over the words in their tiles'
+ * colours. No frame — plain text under the bars. Clicking a line seeks to its
+ * start; while playing, the lines the playhead is not in recede.
+ */
+function LyricRow({
+  lyrics,
+  activeLine,
+  activeChord,
+  chordStyle,
+  onSeek,
+}: {
+  lyrics: RowLyric[];
+  activeLine: number;
+  activeChord: ActiveChord | null;
+  chordStyle: (c: LyricChord, active: boolean) => LyricChordStyle;
+  onSeek: (beat: number) => void;
+}) {
+  if (lyrics.length === 0) return null;
+  return (
+    <div className="chord-chart-lyrics">
+      {lyrics.map(({ line, index }) => (
+        <LyricCell
+          key={index}
+          line={line}
+          active={index === activeLine}
+          activeChord={activeChord?.line === index ? activeChord.chord : null}
+          chordStyle={chordStyle}
+          onSeek={onSeek}
+        />
+      ))}
+    </div>
+  );
+}
+
+function LyricCell({
+  line,
+  active,
+  activeChord,
+  chordStyle,
+  onSeek,
+}: {
+  line: LyricAnnotation;
+  active: boolean;
+  activeChord: number | null;
+  chordStyle: (c: LyricChord, active: boolean) => LyricChordStyle;
+  onSeek: (beat: number) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="chord-chart-lyric"
+      data-active={active ? "" : undefined}
+      onClick={() => onSeek(line.start)}
+      title={`Seek to beat ${line.start.toFixed(2)}`}
+    >
+      <LyricLineText
+        lyric={line}
+        activeChord={activeChord}
+        chordStyle={chordStyle}
+      />
+    </button>
   );
 }
 

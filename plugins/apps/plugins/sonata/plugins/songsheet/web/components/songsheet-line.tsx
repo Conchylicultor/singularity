@@ -1,44 +1,27 @@
-import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { forwardRef } from "react";
 import type { LyricAnnotation } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { LyricLineText } from "@plugins/apps/plugins/sonata/plugins/lyric-line/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-
-/** Identity of the active chord within a line, derived from the cursor selector. */
-export interface ActiveChord {
-  /** Index of the active line. */
-  line: number;
-  /** Index of the active chord within that line's `chords`. */
-  chord: number;
-}
 
 interface SongsheetLineProps {
   /** This line's lyric annotation (text + chords-over-columns). */
   lyric: LyricAnnotation;
-  /** Index of this line among all lines (matched against the active selectors). */
-  index: number;
   /** True when the playhead is within this line's beat range. */
   isActive: boolean;
-  /** The active chord, or null when none / not in this line. */
-  activeChord: ActiveChord | null;
+  /** Index (into this line's chords) of the chord sounding now, or null. */
+  activeChord: number | null;
   /** Seek the transport to this line's start beat. */
   onSeek: (beat: number) => void;
 }
 
 /**
- * One songsheet line: a chord row (chords absolutely positioned over their
- * lyric column) stacked over a lyric row, in a monospace `whitespace-pre`
- * context so `1ch` equals exactly one printed column — chords land over the
- * syllable they sound on, classic-songbook style.
- *
- * The whole line is a click-to-seek button. The active line (playhead inside its
- * range) gets a raised surface tint and a left accent bar; the active chord is
+ * One songsheet line: the shared chord-over-words block (`LyricLineText`) as a
+ * full-width click-to-seek button. The active line (playhead inside its range)
+ * gets a raised surface tint and a left accent bar; the active chord is
  * emphasised in the chord row.
  */
 export const SongsheetLine = forwardRef<HTMLButtonElement, SongsheetLineProps>(
-  function SongsheetLine({ lyric, index, isActive, activeChord, onSeek }, ref) {
-    const { text, chords } = lyric.data;
+  function SongsheetLine({ lyric, isActive, activeChord, onSeek }, ref) {
     return (
       <button
         ref={ref}
@@ -53,56 +36,7 @@ export const SongsheetLine = forwardRef<HTMLButtonElement, SongsheetLineProps>(
           isActive ? "border-l-primary bg-muted/60" : null,
         )}
       >
-        <Stack gap="none">
-          {/* Chord row: monospace baseline; each chord pinned to its column via
-              an inline `left: <charOffset>ch` (a computed geometric value, not a
-              spacing token). `whitespace-pre` keeps the empty row's height. */}
-          <Text
-            variant="body"
-            as="div"
-            // `relative` is the positioning context the absolutely-placed
-            // chords below need.
-            className="relative h-[1.5em] whitespace-pre font-mono font-semibold"
-          >
-            {chords.length === 0
-              ? " "
-              : chords.map((c, i) => (
-                  // Pinned to its exact monospace column: `start` is a computed
-                  // `ch` offset (one column = one char), not a spacing token.
-                  <Placed
-                    key={i}
-                    as="span"
-                    x={{ start: `${c.charOffset}ch` }}
-                    y={{ end: 0 }}
-                  >
-                    <Text
-                      as="span"
-                      className={cn(
-                        "font-mono",
-                        activeChord &&
-                          activeChord.line === index &&
-                          activeChord.chord === i
-                          ? "font-bold text-primary"
-                          : "font-semibold text-primary/70",
-                      )}
-                    >
-                      {c.symbol}
-                    </Text>
-                  </Placed>
-                ))}
-          </Text>
-
-          {/* Lyric row: the raw text, leading spaces preserved. An empty line
-              renders a non-breaking space so the row keeps its height. */}
-          <Text
-            variant="body"
-            as="div"
-            tone={text.trim().length === 0 ? "muted" : "default"}
-            className="whitespace-pre font-mono"
-          >
-            {text.length === 0 ? " " : text}
-          </Text>
-        </Stack>
+        <LyricLineText lyric={lyric} activeChord={activeChord} />
       </button>
     );
   },

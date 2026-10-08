@@ -11,6 +11,12 @@ import type {
   Score,
   SectionAnnotation,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import {
+  activeLyricChord,
+  lyricLines,
+  sameActiveChord,
+  type ActiveChord,
+} from "@plugins/apps/plugins/sonata/plugins/lyric-line/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -22,7 +28,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
-import { SongsheetLine, type ActiveChord } from "./songsheet-line";
+import { SongsheetLine } from "./songsheet-line";
 
 /** Props the player's `SonataPlayer.Display.Dispatch` passes to the chosen display. The
  *  playback cursor is NOT a prop — it's read from the cursor store via
@@ -85,13 +91,7 @@ function SongsheetInner({ score }: SongsheetProps) {
 
   // Lyric lines, sorted by start = the songsheet's rows. Memoized off the Score
   // so the per-frame cursor selectors below only walk this stable array.
-  const lines = useMemo(
-    () =>
-      score.annotations
-        .filter((a): a is LyricAnnotation => a.type === "lyric")
-        .sort((a, b) => a.start - b.start),
-    [score.annotations],
-  );
+  const lines = useMemo(() => lyricLines(score), [score]);
 
   const sections = useMemo(
     () =>
@@ -115,21 +115,9 @@ function SongsheetInner({ score }: SongsheetProps) {
   // scanning lines in order. Returns a stable {line, chord} identity (compared by
   // value below) so the highlight reconciles only on a chord boundary.
   const activeChord = useCursorSelector<ActiveChord | null>(
-    (beat) => {
-      let best: ActiveChord | null = null;
-      let bestBeat = -Infinity;
-      lines.forEach((l, li) => {
-        l.data.chords.forEach((c, ci) => {
-          if (c.beat <= beat + EPS && c.beat >= bestBeat) {
-            bestBeat = c.beat;
-            best = { line: li, chord: ci };
-          }
-        });
-      });
-      return best;
-    },
+    (beat) => activeLyricChord(lines, beat),
     [lines],
-    (a, b) => a?.line === b?.line && a?.chord === b?.chord,
+    sameActiveChord,
   );
 
   const lineRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -198,9 +186,10 @@ function SongsheetInner({ score }: SongsheetProps) {
                         lineRefs.current[index] = el;
                       }}
                       lyric={line}
-                      index={index}
                       isActive={index === activeLine}
-                      activeChord={activeChord}
+                      activeChord={
+                        activeChord?.line === index ? activeChord.chord : null
+                      }
                       onSeek={seekTo}
                     />
                   ))}

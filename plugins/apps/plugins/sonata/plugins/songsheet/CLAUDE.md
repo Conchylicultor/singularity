@@ -9,12 +9,12 @@
   - Contributes: `SonataPlayer.Display` "Songsheet" → `Songsheet`
   - Uses:
     - `apps/sonata/document.useSongDocument`
+    - `apps/sonata/lyric-line.LyricLineText`
     - `apps/sonata/player.SonataPlayer`
     - `apps/sonata/session.useCursorSelector`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
     - `primitives/css/center.Center`
-    - `primitives/css/coords.Placed`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`

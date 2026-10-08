@@ -137,3 +137,46 @@
     transition: none;
   }
 }
+
+/* ── Lyrics under the bars (the "Lyrics under bars" option) ─────────────────
+ * Every lyric line starts a row of bars (a row of one to four bars, at the
+ * grid's column width — a short row leaves the rest empty), and prints under
+ * it from the row's first column across its whole width. Plain text — no
+ * frame, no fill. Lines starting in the same bar stack. */
+.chord-chart-lyrics {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+/* A line: a seek button with no chrome but its focus ring. Its words may run
+ * past the row rather than wrap — `white-space: pre` keeps the chords over
+ * their columns. */
+.chord-chart-lyric {
+  padding: 2px 8px;
+  border-radius: var(--radius-md);
+  text-align: start;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.chord-chart-lyric:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+/* A chord over the words, in its tile's colour (`--fn`, from
+ * `chordToneStyle`), muted; the sounding one in full colour. */
+.chord-chart-lyric-chord {
+  color: color-mix(in srgb, var(--fn, var(--chord-outside)) 75%, var(--muted-foreground));
+}
+.chord-chart-lyric-chord-now {
+  color: var(--fn, var(--chord-outside));
+}
+/* While playing, the lines the playhead is not in recede. */
+[data-playing] .chord-chart-lyric:not([data-active]) {
+  opacity: 0.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chord-chart-lyric {
+    transition: none;
+  }
+}

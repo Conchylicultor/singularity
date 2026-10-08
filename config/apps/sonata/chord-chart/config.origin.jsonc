@@ -1,0 +1,5 @@
+// @hash 2088090192d3
+{
+  // Print the lyric lines sung in each row of bars under it, with their chords.
+  "lyrics": false
+}

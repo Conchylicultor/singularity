@@ -46,10 +46,10 @@ persistence); an effect that must run wherever a song plays is a
     - `Sonata.Hud`
     - `Sonata.ViewOption`
     - `Sonata.Section`
-  - Slot contributors: 33 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 34 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Sonata.Section` ×12
+    - `Sonata.ViewOption` ×7
     - `Sonata.Effect` ×6
-    - `Sonata.ViewOption` ×6
     - `Sonata.Hud` ×3
     - `Sonata.TransportOverlay` ×2
     - `Sonata.Home` ← `apps.sonata.library`
