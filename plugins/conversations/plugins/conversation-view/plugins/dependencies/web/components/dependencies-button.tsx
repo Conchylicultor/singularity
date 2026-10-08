@@ -1,3 +1,4 @@
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   Button,
   ButtonGroup,
@@ -9,11 +10,10 @@ import { useActiveConversations } from "@plugins/conversations/web";
 import {
   ResourceErrorInline,
   useCombinedResources,
-  useResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { addTaskDependency, removeTaskDependency } from "@plugins/tasks/core";
 import {
-  tasksResource,
+  taskRows,
   TaskGraph,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
@@ -38,7 +38,7 @@ export function DependenciesButton({
 }: {
   conversation: ConversationRecord;
 }) {
-  const tasksResult = useResource(tasksResource);
+  const tasksResult = useLive(taskRows);
   const activeResult = useActiveConversations();
   const combined = useCombinedResources({
     tasks: tasksResult,

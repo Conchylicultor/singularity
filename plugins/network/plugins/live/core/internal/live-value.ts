@@ -225,10 +225,9 @@ export type LivePreloadedParamValue<
  *   schema: NotificationsUnreadSchema,
  *   preload: "boot",                 // "none" (default) | "boot" | "boot-and-keep"
  * });
- * export const taskDetail = liveValue("task-detail", {
- *   schema: TaskDetailSchema,
- *   params: ["id"],                  // → P = { id: string }
- *   load: "on-demand",               // "push" (default) | "on-demand"
+ * export const pluginChanges = liveValue("review.plugin-changes", {
+ *   schema: PluginChangesSchema,
+ *   params: ["conversationId"],      // → P = { conversationId: string }
  * });
  * export const configValues = liveValue("config-v2.values", {
  *   schema: ConfigValuesSchema,

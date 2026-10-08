@@ -420,7 +420,9 @@ describe("serveCollection with expression fields — misuse", () => {
         },
         db: recordingQueryDb().db,
       }),
-    ).toThrow(/"v" is an expression that may read NULL/);
+    ).toThrow(
+      /"v" is a computed read \(an expression or an aggregate\) that may read NULL/,
+    );
   });
 
   test("a bare column — plain or defaulted — throws: bind a ColumnRef", () => {

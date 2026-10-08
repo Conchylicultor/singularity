@@ -60,6 +60,7 @@ import {
   routedTableRequirements,
   type ResourceParams,
 } from "@plugins/framework/plugins/server-core/core";
+import { createResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   makeClientView,
   type ClientView,
@@ -136,6 +137,16 @@ async function until(cond: () => boolean, what: () => string): Promise<void> {
   }
 }
 
+/**
+ * The compiled server options of the three resources this suite registers,
+ * kept for the A17 check: the conversation lists' OWN routes, read off a
+ * runtime holding nothing else. (The process-global registry also holds every
+ * entry the tasks-core server barrel registers at import — the tree's sets,
+ * whose rollup and children routes carry `attempt_id` on `conversations` —
+ * so its union is not this suite's to assert.)
+ */
+const registeredHere: { descriptor: unknown; opts: unknown }[] = [];
+
 const tupleKey = (key: string, params: ResourceParams) =>
   `${key} ${JSON.stringify(params)}`;
 
@@ -185,6 +196,7 @@ beforeAll(async () => {
       ...windowOpts,
       loader: record(collection.key, windowOpts.loader),
     });
+    registeredHere.push({ descriptor: collection.window, opts: windowOpts });
     truth.set(collection.key, (p) => windowOpts.loader(p as never));
   }
   const rowsOpts = compileWindowQuery(
@@ -195,6 +207,7 @@ beforeAll(async () => {
     ...rowsOpts,
     loader: record(allConversations.rows.key, rowsOpts.loader),
   });
+  registeredHere.push({ descriptor: allConversations.rows, opts: rowsOpts });
   truth.set(allConversations.rows.key, (p) => rowsOpts.loader(p as never));
 
   // The feed, installed from the routes just registered.
@@ -448,8 +461,15 @@ function prng(seed: number): () => number {
 
 describe("conversation lists — scoped differential oracle", () => {
   test("the collections route conversations, attempts and tasks; pk reverses carry no key (A17)", () => {
+    const local = createResourceRuntime();
+    for (const { descriptor, opts } of registeredHere) {
+      local.defineResource(
+        descriptor as Parameters<typeof local.defineResource>[0],
+        opts as Parameters<typeof local.defineResource>[1],
+      );
+    }
     const required = new Map(
-      routedTableRequirements().map((r) => [r.table, r.carry]),
+      local.routedTableRequirements().map((r) => [r.table, r.carry]),
     );
     expect(required.get("conversations")).toEqual([]);
     expect(required.get("attempts")).toEqual([]);

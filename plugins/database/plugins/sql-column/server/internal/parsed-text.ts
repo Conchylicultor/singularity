@@ -56,6 +56,7 @@
  */
 import { customType } from "drizzle-orm/pg-core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import { recordColumnSchema } from "./column-schema";
 import { crossBoundary } from "./cross-boundary";
 
 /**
@@ -90,5 +91,5 @@ export function parsedText<T extends string>(
       return crossBoundary(this, name, schema, value, "write");
     },
   });
-  return codec(name);
+  return recordColumnSchema(codec(name), schema);
 }

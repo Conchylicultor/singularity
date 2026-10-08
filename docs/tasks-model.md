@@ -118,24 +118,14 @@ support (I6). The attempt statuses say how the session ended; the task's
 
 ## Cascade
 
-Resources form a DAG via `dependsOn` (`tasks-core/server/internal/resources.ts`). The DB change feed routes each commit to the resources that read the changed table, and the cascade runs in one flush:
+The DB change feed routes each commit to the resources that read the changed table. The `tasks` set (`taskRows`, `tasks-core/server/internal/task-rows.ts`) and the `attempts` set (`attemptRows`, `attempt-rows.ts`) are routed `all` collections over the base tables and the two attempt rollups — never a view — so a write reaches exactly the rows it moves:
 
-```
-conversationsActiveResource   (key conversations-active)
-  ↑ changed by: any conversations write
-  ↓ feeds: attemptsResource   (conversation id → its attempt)
+- an attempt write: that attempt's row, and its task's (plus the task's dependents);
+- a conversation write: its attempt's row (when it moves a column the attempt reads: `attempt_id`, `kind`, `title`, `status`, `created_at`, `spawned_by`, `ended_at`) and, through the `attempt_conv_agg` source route, its attempt's task and that task's dependents (when it moves `status` / `ended_at`);
+- a push: its attempt's row and its task's (the `attempt_push_agg` source route on `pushes`, carrying `attempt_id`);
+- an edge write: its task and every task that transitively runs after it (the blocking closure's dependents probe).
 
-pushesAttemptsCascade         (key pushes.attempts-cascade — server-only carrier)
-  ↑ changed by: any pushes write (the push ledger)
-  ↓ feeds: attemptsResource   (push id → its attempt)
-
-attemptsResource              (loader: SELECT * FROM attempts_v)
-  ↓ feeds: tasksResource      (attempt id → its task)
-
-tasksResource                 (loader: SELECT * FROM tasks_v)
-```
-
-A conversation going `gone` → `conversations-active` recomputes → `attemptsResource` re-loads that attempt (it flips `in_progress → dormant` or `pushed → completed`) → `tasksResource` re-loads that task (it flips to `attempted` or `done`). Every badge downstream updates from one commit. The push surfaces themselves read the `pushes` `liveCollection` (`pushRows`), not the carrier.
+A conversation going `gone` refills its attempt (`in_progress → dormant`) and its task (`attempted`) in one commit; a write no row reads (a poller's `waiting_for`, a `last_viewed_at`) reaches neither. The conversation lists are still legacy until P8 step 22.
 
 ## Schema layout
 

@@ -29,7 +29,6 @@ export type {
 } from "./rewind";
 export {
   listConversations,
-  listGoneConversations,
   getConversation,
   createConversation,
   deleteConversation,
@@ -39,14 +38,12 @@ export {
   closeConversation,
   CreateConversationBodySchema,
   PostTurnBodySchema,
-  ListGoneQuerySchema,
   ListTurnsQuerySchema,
   DeleteConversationQuerySchema,
 } from "./endpoints";
 export type {
   CreateConversationBody,
   PostTurnBody,
-  ListGoneQuery,
   ListTurnsQuery,
   DeleteConversationQuery,
 } from "./endpoints";

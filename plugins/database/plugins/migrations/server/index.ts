@@ -10,6 +10,7 @@ export {
 export type {
   Migration,
   SchemaLayerInputs,
+  SchemaLayerResult,
   SchemaPlan,
   SchemaStep,
 } from "./internal/runner";

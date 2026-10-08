@@ -49,8 +49,6 @@ type Filters = {
   onlySystem?: boolean;
   active?: boolean;
   activeOrHeldTask?: boolean;
-  endedAtNotNull?: boolean;
-  endedAtBefore?: Date;
   taskIds?: readonly string[];
   convIds?: readonly string[];
 };
@@ -62,15 +60,13 @@ function buildWhere(f: Filters): SQL | undefined {
   if (f.active !== undefined) clauses.push(eq(conversations.active, f.active));
   if (f.activeOrHeldTask)
     clauses.push(or(eq(conversations.active, true), onHeldTask())!);
-  if (f.endedAtNotNull) clauses.push(isNotNull(conversations.endedAt));
-  if (f.endedAtBefore) clauses.push(lt(conversations.endedAt, f.endedAtBefore));
   if (f.taskIds) clauses.push(inArray(conversations.taskId, [...f.taskIds]));
   if (f.convIds) clauses.push(inArray(conversations.id, [...f.convIds]));
   return clauses.length ? and(...clauses) : undefined;
 }
 
 type Order = {
-  col: typeof conversations.createdAt | typeof conversations.endedAt;
+  col: typeof conversations.createdAt;
   dir: "asc" | "desc";
 };
 
@@ -154,9 +150,7 @@ export async function listExistingConversationIds(
 }
 
 // User-visible list, newest-first. Sidebar / list endpoint. Pass `taskIds` to
-// scope to just those tasks' conversations (Layer-2 scoped recompute — e.g.
-// agent-launches recomputing only the affected launches' latest conversation);
-// omit it for the full list.
+// scope to just those tasks' conversations; omit it for the full list.
 export function listConversationsForDisplay(
   taskIds?: readonly string[],
 ): Promise<Conversation[]> {
@@ -192,56 +186,24 @@ export function listRetainedConversations(): Promise<Conversation[]> {
   );
 }
 
+// The ended user-visible conversations, counted off the `conversations` TABLE
+// rather than `conversations_v`: the same set (the view inner-joins the
+// attempt and its task, both NOT NULL FKs, and its `active` is
+// `status <> 'done'`), but the live `conversations-gone-stats` value reading
+// it would otherwise capture the view's whole read-set — `tasks` and
+// `attempts` included — and recount on every task and attempt write.
 export async function countGoneConversations(): Promise<number> {
   const [row] = await db
     .select({ value: count() })
-    .from(conversations)
-    .where(buildWhere({ active: false, endedAtNotNull: true }));
+    .from(_conversations)
+    .where(
+      and(
+        ne(_conversations.kind, "system"),
+        eq(_conversations.status, "done"),
+        isNotNull(_conversations.endedAt),
+      ),
+    );
   return row?.value ?? 0;
-}
-
-// Ended user-visible rows, newest-first by endedAt. Pass `before` for pagination.
-export function listGoneConversations(
-  opts: {
-    before?: Date;
-    limit?: number;
-  } = {},
-): Promise<Conversation[]> {
-  return queryConversations(
-    { active: false, endedAtNotNull: true, endedAtBefore: opts.before },
-    { col: conversations.endedAt, dir: "desc" },
-    opts.limit,
-  );
-}
-
-// Narrow projection used by attemptsResource. Sorted oldest-first so the
-// client renders them in attempt-order without further sorting. Pass
-// `attemptIds` to scope the join to just those attempts (Layer 2 scoped
-// recompute); omit it for the full list.
-export async function listConversationSummariesByAttempt(
-  attemptIds?: readonly string[],
-): Promise<
-  Pick<
-    Conversation,
-    "id" | "attemptId" | "title" | "status" | "kind" | "createdAt" | "spawnedBy"
-  >[]
-> {
-  const where = attemptIds
-    ? and(notSystem, inArray(conversations.attemptId, [...attemptIds]))
-    : notSystem;
-  return db
-    .select({
-      id: conversations.id,
-      attemptId: conversations.attemptId,
-      title: conversations.title,
-      status: conversations.status,
-      kind: conversations.kind,
-      createdAt: conversations.createdAt,
-      spawnedBy: conversations.spawnedBy,
-    })
-    .from(conversations)
-    .where(where)
-    .orderBy(asc(conversations.createdAt));
 }
 
 // Every conversation id of one attempt — INCLUDING system kinds, unlike every
@@ -250,53 +212,20 @@ export async function listConversationSummariesByAttempt(
 // by a machine-spawned conversation is still that attempt's landed work: an
 // omitted id would read as "nothing landed", which is exactly the false negative
 // the git-derived standing exists to remove.
+//
+// Read off the `conversations` TABLE, not `conversations_v`: the set is the
+// same (the view inner-joins the attempt, and `attempt_id` is a NOT NULL FK),
+// but a live loader reading it (attempt-work's) would otherwise capture the
+// view's whole read-set — `tasks` and `attempts` included — and recompute
+// (git work) on every task write.
 export async function listConversationIdsForAttempt(
   attemptId: string,
 ): Promise<string[]> {
   const rows = await db
-    .select({ id: conversations.id })
-    .from(conversations)
-    .where(eq(conversations.attemptId, attemptId));
-  return rows.map((r) => r.id);
-}
-
-// Transient conversation columns the aggregate resources (attempts / tasks /
-// agent-launches) never read. The status reconciler rewrites these on every
-// status transition of an active conversation: `waitingFor` (interactive-prompt hint), `updatedAt` (derived
-// per `touchedBy` in `tables.ts`, it moves only alongside a counted column), and `lastViewedAt` (selection / turn-sent). The aggregates
-// derive only coarse facts — liveness (status), title, kind, ownership, ended/
-// created timestamps — so a write touching ONLY these columns would otherwise
-// cascade into attempts → tasks → agent-launches and recompute-then-diff-to-
-// empty on every transition. See the `signature` cascade gate below.
-const TRANSIENT_CONVERSATION_FIELDS = [
-  "waitingFor",
-  "updatedAt",
-  "lastViewedAt",
-] as const;
-
-// Cascade relevance signature for a conversation change (see
-// DependsOnEntry.signature). Returns id → hash of the conversation row MINUS the
-// transient fields above, so the conv → attempts and conv → agent-launches edges
-// skip a downstream recompute when only a transient field moved. We hash the
-// whole row minus a small deny-list (rather than an allow-list of consumed
-// columns) so a newly-consumed conversation column is covered automatically —
-// the only failure mode of a missed strip is re-churn (which the
-// live-state-churn detector re-flags), never stale aggregate data.
-export async function conversationCascadeSignatures(
-  convIds: ReadonlySet<string>,
-): Promise<Map<string, string>> {
-  if (convIds.size === 0) return new Map();
-  const rows = await db
-    .select()
+    .select({ id: _conversations.id })
     .from(_conversations)
-    .where(inArray(_conversations.id, [...convIds]));
-  const sigs = new Map<string, string>();
-  for (const row of rows) {
-    const relevant: Record<string, unknown> = { ...row };
-    for (const f of TRANSIENT_CONVERSATION_FIELDS) delete relevant[f];
-    sigs.set(row.id, JSON.stringify(relevant));
-  }
-  return sigs;
+    .where(eq(_conversations.attemptId, attemptId));
+  return rows.map((r) => r.id);
 }
 
 // Idle-kill candidates: waiting, not already hibernated, resumable (has a

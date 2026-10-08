@@ -78,14 +78,39 @@ export const LIVE_STATE_TRIGGER_STATE_TABLE = "live_state_trigger_state";
 export const LIVE_STATE_SNAPSHOT_TABLE = "live_state_snapshot";
 
 /**
+ * The L2 changelog's prune horizon, created imperatively by live-state-snapshot
+ * (`plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts`)
+ * — one row: the highest changelog xid the prune ever deleted, written by the
+ * prune's own statement. Catch-up reads it to tell "history at or after this
+ * floor was pruned" (backstop) from "no change happened since it" (replay). Not
+ * present in the drizzle snapshot; the orphaned-db-tables check treats it as
+ * declared.
+ */
+export const LIVE_STATE_CHANGELOG_HORIZON_TABLE =
+  "live_state_changelog_horizon";
+
+/**
  * Public table created imperatively by the derived-table rebuilder
  * (`plugins/database/plugins/derived-tables/server/internal/rebuild.ts`) — holds
- * the rollup layer's DEFINITION signature (create + function + trigger DDL),
- * the twin of `DERIVED_VIEW_STATE_TABLE_NAME` and `LIVE_STATE_TRIGGER_STATE_TABLE`.
- * It gates only the definition half: each rollup's `reconcileDdl` still runs on
+ * the rollup layer's DEFINITION signatures, one row per object (each rollup's
+ * maintain functions, each source table's rollup triggers), the twin of
+ * `DERIVED_VIEW_STATE_TABLE_NAME` and `LIVE_STATE_TRIGGER_STATE_TABLE`.
+ * It gates only the definition half: each rollup's reconcile still runs on
  * every boot, because a rollup holds ROWS and can drift from its source with its
  * definition unchanged. Not present in the drizzle snapshot; the
  * orphaned-db-tables check treats it as declared.
+ */
+export const DERIVED_TABLE_OBJECT_STATE_TABLE = "derived_table_object_state";
+
+/**
+ * LEGACY: the rollup layer's former ONE-ROW whole-layer signature table
+ * (`id boolean, signature`), still read and written by builds before
+ * `defineRollup`. The derived-table rebuilder keeps it in that shape and only
+ * empties it every boot, so an older build booting on this database (a revert
+ * of main, a branch on a fork of main) finds no signature and reinstalls its
+ * own triggers instead of trusting a stale one. Created only by those older
+ * builds; drop it once no supported build reads it. Not present in the drizzle
+ * snapshot; the orphaned-db-tables check treats it as declared.
  */
 export const DERIVED_TABLE_STATE_TABLE = "derived_table_state";
 
@@ -93,12 +118,12 @@ export const DERIVED_TABLE_STATE_TABLE = "derived_table_state";
  * A trigger-maintained materialized rollup ("hand-rolled IVM"): the latest
  * non-system conversation per task, maintained incrementally by STATEMENT
  * triggers on `conversations` and rebuilt from source on boot. Created
- * imperatively inside change-feed's trigger-rebuild transaction
- * (`rebuildDerivedTables`, via the `DerivedTable` contribution in
+ * imperatively by the boot schema layer (`rebuildDerivedTables`, from the
+ * `defineRollup` declaration in
  * `plugins/conversations/plugins/agents/server/internal/rollup-spec.ts`). Not
  * present in the drizzle snapshot; the orphaned-db-tables check treats it as
- * declared. The constant must appear literally on the `CREATE TABLE` line in
- * that spec (the imperative-create-table-allowlisted check enforces this).
+ * declared. `defineRollup` generates its `CREATE TABLE` from the read handle,
+ * so the line carries `assertImperativePublicTable(…)` instead of this constant.
  */
 export const TASK_LATEST_CONVERSATION_TABLE = "task_latest_conversation";
 
@@ -106,12 +131,12 @@ export const TASK_LATEST_CONVERSATION_TABLE = "task_latest_conversation";
  * A trigger-maintained materialized rollup ("hand-rolled IVM"): the per-attempt
  * conversation aggregate (has-conversation / has-live-conversation / max ended_at)
  * backing `attempts_v`, maintained incrementally by STATEMENT triggers on
- * `conversations` and rebuilt from source on boot. Created imperatively by
- * `rebuildDerivedTables` (via the `DerivedTable` contribution in
+ * `conversations` and reconciled from source on boot. Created imperatively by
+ * `rebuildDerivedTables` (from the `defineRollup` declaration in
  * `plugins/tasks/plugins/tasks-core/server/internal/rollup-spec.ts`). Not present
  * in the drizzle snapshot; the orphaned-db-tables check treats it as declared.
- * The constant must appear literally on the `CREATE TABLE` line in that spec (the
- * imperative-create-table-allowlisted check enforces this).
+ * `defineRollup` generates its `CREATE TABLE` from the read handle, so the line
+ * carries `assertImperativePublicTable(…)` instead of this constant.
  */
 export const ATTEMPT_CONV_AGG_TABLE = "attempt_conv_agg";
 
@@ -119,11 +144,11 @@ export const ATTEMPT_CONV_AGG_TABLE = "attempt_conv_agg";
  * A trigger-maintained materialized rollup ("hand-rolled IVM"): the per-attempt
  * push aggregate (has-push / min created_at) backing `attempts_v`, maintained
  * incrementally by STATEMENT triggers on `pushes` and rebuilt from source on
- * boot. Created imperatively by `rebuildDerivedTables` (via the `DerivedTable`
- * contribution in `plugins/tasks/plugins/tasks-core/server/internal/rollup-spec.ts`).
+ * boot. Created imperatively by `rebuildDerivedTables` (from the `defineRollup`
+ * declaration in `plugins/tasks/plugins/tasks-core/server/internal/rollup-spec.ts`).
  * Not present in the drizzle snapshot; the orphaned-db-tables check treats it as
- * declared. The constant must appear literally on the `CREATE TABLE` line in that
- * spec (the imperative-create-table-allowlisted check enforces this).
+ * declared. `defineRollup` generates its `CREATE TABLE` from the read handle, so
+ * the line carries `assertImperativePublicTable(…)` instead of this constant.
  */
 export const ATTEMPT_PUSH_AGG_TABLE = "attempt_push_agg";
 
@@ -156,7 +181,9 @@ export const IMPERATIVE_PUBLIC_TABLES = {
   LIVE_STATE_TRIGGER_STATE_TABLE,
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
+  LIVE_STATE_CHANGELOG_HORIZON_TABLE,
   DERIVED_TABLE_STATE_TABLE,
+  DERIVED_TABLE_OBJECT_STATE_TABLE,
   TASK_LATEST_CONVERSATION_TABLE,
   ATTEMPT_CONV_AGG_TABLE,
   ATTEMPT_PUSH_AGG_TABLE,
@@ -179,3 +206,25 @@ export const IMPERATIVE_PUBLIC_TABLE_NAMES: readonly string[] = Object.values(
 export const IMPERATIVE_PUBLIC_TABLE_CONSTS: readonly string[] = Object.keys(
   IMPERATIVE_PUBLIC_TABLES,
 );
+
+/**
+ * The RUNTIME half of the allowlist, for a create site that cannot spell its
+ * table's constant on the `CREATE TABLE` line because it GENERATES the DDL from
+ * data (derived-tables' `defineRollup`, which renders a rollup's table from its
+ * drizzle read handle). Returns `name` unchanged when it is an allowlisted
+ * imperative table, and throws otherwise — so an unallowlisted generated table
+ * fails at module eval (where `defineRollup` calls it) and again at the create
+ * site, never silently at a later orphaned-db-tables scan.
+ *
+ * The `imperative-create-table-allowlisted` check accepts a `CREATE TABLE` line
+ * that CALLS this function in place of naming a constant: the call is the
+ * line's evidence that its table name is checked against this same record.
+ */
+export function assertImperativePublicTable(name: string): string {
+  if (!IMPERATIVE_PUBLIC_TABLE_NAMES.includes(name)) {
+    throw new Error(
+      `"${name}" is not an imperative public table: add a name constant for it to IMPERATIVE_PUBLIC_TABLES (plugins/database/plugins/derived-views/core/internal/imperative-tables.ts, by shorthand) and re-export it from the derived-views core barrel.`,
+    );
+  }
+  return name;
+}

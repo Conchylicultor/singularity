@@ -36,12 +36,6 @@ export type PostTurnBody = z.infer<typeof PostTurnBodySchema>;
 
 // --- Query schemas ---
 
-export const ListGoneQuerySchema = z.object({
-  before: z.string(),
-  limit: z.string().optional(),
-});
-export type ListGoneQuery = z.infer<typeof ListGoneQuerySchema>;
-
 export const ListTurnsQuerySchema = z.object({
   since: z.string().optional(),
 });
@@ -59,15 +53,6 @@ export type DeleteConversationQuery = z.infer<
 export const listConversations = defineEndpoint({
   route: "GET /api/conversations",
   response: z.array(ConversationSchema),
-});
-
-export const listGoneConversations = defineEndpoint({
-  route: "GET /api/conversations/gone",
-  query: ListGoneQuerySchema,
-  response: z.object({
-    items: z.array(ConversationSchema),
-    hasMore: z.boolean(),
-  }),
 });
 
 export const getConversation = defineEndpoint({

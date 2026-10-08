@@ -389,8 +389,10 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `reports`
 - Test helpers:
   - Server: `@plugins/database/plugins/change-feed/server/testing`
+    - `assertRouteLayoutsInstalled` — A3: throw (block boot) unless every routed table's installed triggers emit what its routes read.
     - `assertRouteTablesCovered` — Throw loudly (blocking boot) if any resource depends on a table with no change source: no trigger the change-feed installed, and no change producer.
     - `createChangeFeedListener`
+    - `createChangeRouter` — The routing above, into ANY runtime's two routers — `routeChange` is it bound to server-core's process-global runtime.
     - `ensureChangelogTable`
     - `findCarriedProducedRoutes` — A3p: the produced tables whose routes need a carried column.
     - `flushNow` — Flush `producer`'s coalescing buffer now (a test drives the window by hand).

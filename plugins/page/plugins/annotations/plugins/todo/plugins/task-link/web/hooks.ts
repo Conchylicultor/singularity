@@ -1,16 +1,16 @@
 import {
   combineResources,
   mapResource,
-  useResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
   mapRow,
   useLiveRow,
   type LiveRowResult,
+  useLive,
 } from "@plugins/network/plugins/live/web";
 import {
-  tasksResource,
+  taskRows,
   type TaskStatus,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { todoTasks, type TodoTaskLink } from "../shared/schemas";
@@ -56,7 +56,7 @@ export function useTodoTaskState(
   blockId: string,
 ): ResourceResult<TodoTaskState | null> {
   const taskId = mapRow(useTodoTask(blockId), (row) => row?.taskId ?? null);
-  const tasks = useResource(tasksResource);
+  const tasks = useLive(taskRows);
   if (taskId.status === "ready" && taskId.data === null)
     return mapResource(taskId, () => null);
   return mapResource(

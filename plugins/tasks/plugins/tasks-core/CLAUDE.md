@@ -174,14 +174,41 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
 readers import the declaration from `tasks-core/core`); `server/internal/resources.ts`
 serves them.
 
-- **Plain values** are `liveValue` declarations served with
-  `serveValue({ source: "db" })` and read with `useLive` (`network/live`):
-  - `taskDetail` (`task-detail`, params `{ id }`) — one task's full row,
-    including the `description` the lean `tasks` list omits. `null` is a settled
-    answer (no such task); not loaded yet is `pending`.
-  - `conversationsGoneStats` (`conversations-gone-stats`, `preload: "boot"`) —
-    `{ totalGoneCount }`, the ended-conversation total beside the
-    `RECENT_GONE_LIMIT` gone window.
+- **`taskRows`** (`tasks`) — every task, the WHOLE ordered set
+  (`liveCollection(key, { all })`, `rank` then `createdAt`, `preload: "boot"`),
+  read with `useLive(taskRows[, { select }])` / `useLiveRow(taskRows, id)`. The
+  row is exactly `TaskListItem` (every `tasks_v` column but `description`),
+  under the legacy key, so an old-bundle tab subscribing `{}` parses it with its
+  own schema (C39, pinned by `tree-oracle.test.ts`); a row change must rename
+  the key. Served by `serveCollection` from `server/internal/task-rows.ts` —
+  the ONE spelling the server and the tests compile — over the base tables and
+  the attempt rollups, never a view: `att` (children over `attempts`, each with
+  its two rollup rows), `deps` (the task's own edges → `dependencies`) and
+  `blocking` (a closure over `task_dependencies`, each ancestor with its own
+  attempts). Costs, pinned per step by the tree oracle: a task write is its own
+  row's refill (plus every transitive dependent when it moves `held_at` /
+  `dropped_at`); an attempt / conversation / push write its task's and that
+  task's dependents'; an edge write the edge's task and its dependents; an
+  insert an entrant, a delete an exit; a write no row field reads (a
+  conversation's `waiting_for`) nothing.
+- **`taskDescriptions`** (`task-descriptions`, lookup-only: `:rows`) — one
+  task's `description`, the heavy text the set omits, by id
+  (`useLiveRow(taskDescriptions, id)`). A description autosave is that row's
+  refill, and also the task's one-row refill in `tasks` (the derived
+  `updated_at` moves).
+- **`conversationsGoneStats`** (`conversations-gone-stats`, `preload: "boot"`)
+  is a `liveValue` served with `serveValue({ source: "db" })` —
+  `{ totalGoneCount }`, the ended-conversation total beside the
+  `RECENT_GONE_LIMIT` gone window. Counted off the `conversations` table, not
+  `conversations_v`, so its read-set is that table alone: a task or attempt
+  write does not recount it.
+- **One definition, two readers.** `server/internal/derived.ts` holds the
+  tree's derivations (`attemptDerived`, `taskAttemptAggregates`, `taskDerived`,
+  `depIsBlocking`); `views.ts` (`attempts_v`, `task_blocking_v`, `tasks_v`) and
+  `task-rows.ts` both interpolate them, and `all-parity.test.ts` holds the
+  shipped `tasks` set equal to `tasks_v` row for row. `tasks_v` reads no
+  `conversations` and no `pushes`: "waiting" is `attempt_conv_agg.has_waiting_conv`
+  and the first push is `attempt_push_agg.min_push_at`.
 - **`pushRows`** (`pushes`) is a `liveCollection` over the `pushes` table,
   served with `serveCollection`: `filterable: { attemptId }`, `createdAt` desc,
   100 / 500. Every push surface is attempt-scoped and reads
@@ -197,14 +224,46 @@ serves them.
   to its conversations, a task write through `attempts` (never the changed
   `tasks`, A10). The conversation lists (`all-conversations`) serve through
   them; the tree's conversation collections reuse them.
-- **The tree** (`tasks`, `attempts`, `conversations-active` / `-system` /
-  `-gone`) stays on the old descriptor + `defineResource` / `queryResource`
-  spellings until Resources page item 3
-  (`research/2026-09-27-global-live-resources-phase3-bulk-migration.md`). So
-  does `pushesAttemptsCascade` (`pushes.attempts-cascade`): a server-only,
-  reader-less flat `defineResource` over the whole `pushes` table whose only
-  job is to anchor the `attempts` status edge (`rel()`, push id → attempt id).
-  Item 3 re-anchors that edge on `pushRows` and deletes it.
+- **`attemptRows`** (`attempts`) — every attempt with its non-system
+  conversations (`AttemptWithConversations`), the WHOLE ordered set
+  (`createdAt`, `preload: "boot"`), read with `useLive(attemptRows[, { select
+  }])` (`web/hooks.ts`' `useTaskAttempts` / `useTaskConversations`). Same
+  legacy-key C39 rule as `tasks`. Served from `server/internal/attempt-rows.ts`
+  over `attempts`, the two rollups joined row-wise (`attemptDerived`) and a
+  children `jsonAgg` of its conversations (`kind <> 'system'`, oldest first;
+  `createdAt` crosses as ISO text). Costs: an attempt write its own row; a
+  conversation write its attempt's — gated on what the list and the rollup
+  read, so `waiting_for` / `last_viewed_at` / `updated_at` reach nothing; a
+  push its attempt's (the push rollup's source route — C1: no carrier, no
+  FULL); an insert an entrant, a delete an exit.
+- **A live loader reads a table, not a view** (C36). `getAttemptRow` is the
+  `attempts` row alone; commits-graph and attempt-work (git-work loaders) read
+  it, and `listConversationIdsForAttempt` reads `conversations`, so a task or
+  conversation write does not recompute them through a view's read-set.
+- **The conversation lists** (P8 v3 step 22), served from
+  `server/internal/conversation-rows.ts` — the ONE spelling the server and the
+  tests compile — over the `conversations` table with
+  `conversationOwnerJoins` (never `conversations_v`); every row is the full
+  `Conversation` (`active` = `status <> 'done'`):
+  - **`conversationsActive`** (`conversations-active`) and
+    **`conversationsSystem`** (`conversations-system`) — the WHOLE ordered sets
+    of live conversations (`all`, `createdAt` desc, `preload: "boot"`), the
+    non-`system` and the `system` ones, read with `useLive(c[, { select }])`.
+    Same legacy-key C39 rule as `tasks`. Costs, pinned by the tree oracle: a
+    conversation write is its own row's refill (`waiting_for` included — the
+    one-row refill a poller tick costs), a close an exit, an insert an
+    entrant; a task rename or an attempt move the conversations it owns; any
+    other task or attempt write nothing (W4).
+  - **`conversationsGone`** (`conversations-gone`) — a WINDOW of the ended
+    conversations (`endedAt` desc, default `RECENT_GONE_LIMIT`, `maxLimit`
+    100, `preload: "boot"`; nothing filters it), so it leaves L2: the queue's
+    Done section and the welcome recents read the default, Recovery 50.
+  - **`conversationsById`** (`conversations.by-id`, lookup-only: `:rows`) —
+    any conversation by id, whatever its status or age
+    (`useLiveRow(conversationsById, id)`; `conversations/web`'s
+    `useConversation` / `useConversationById` and the conversation pane's
+    resolver read it). It is what finds a done conversation older than the
+    gone window (W9), with no REST fallback.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -213,26 +272,11 @@ serves them.
 - Description: tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
 - Load-bearing: yes
 - Server:
-  - Contributes:
-    - `resource.declare` "attempts"
-    - `resource.declare` "conversations-active"
-    - `resource.declare` "conversations-gone"
-    - `resource.declare` "conversations-gone-stats"
-    - `resource.declare` "conversations-system"
-    - `resource.declare` "pushes"
-    - `resource.declare` "pushes.attempts-cascade"
-    - `resource.declare` "pushes:groups"
-    - `resource.declare` "pushes:rows"
-    - `resource.declare` "task-detail"
-    - `resource.declare` "tasks"
-    - `derived-table` "attempt_conv_agg"
-    - `derived-table` "attempt_push_agg"
-    - `derived-view` "attempts_v"
-    - `derived-view` "conversations_v"
-    - `derived-view` "task_blocking_v"
-    - `derived-view` "tasks_v"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/query-resource` ×3
+  - Contributes: 23 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `resource.declare` ×17
+    - `derived-view` ×4
+    - `derived-table` ×2
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/rank` ×3
     - `database/sql-projection` ×2
     - `infra/entities` ×2
@@ -290,20 +334,14 @@ serves them.
     - `addTaskDependency`
     - `adoptOrphanConversation`
     - `AttemptSchema`
-    - `attemptsResource`
     - `AttemptStatusSchema`
     - `clusterLabelOf`
     - `conversationAttachments`
-    - `conversationCascadeSignatures`
     - `ConversationKindSchema`
     - `conversationOwnerColumns`
     - `conversationOwnerJoins`
-    - `conversationsActiveResource`
     - `ConversationSchema`
-    - `conversationsGoneResource`
-    - `conversationsSystemResource`
     - `conversationStatusChanged`
-    - `conversationsView`
     - `createAttempt`
     - `createTask`
     - `deleteAttempt`
@@ -313,6 +351,7 @@ serves them.
     - `ensurePushLedgerFresh`
     - `findNextRankInFolder`
     - `getAttempt`
+    - `getAttemptRow`
     - `getConversation`
     - `getConversationClaudeSessionId`
     - `getConversationRuntime`
@@ -332,9 +371,7 @@ serves them.
     - `listConversationsForInfra`
     - `listDependentIds`
     - `listExistingConversationIds`
-    - `listGoneConversations`
     - `listHibernationCandidates`
-    - `listPushes`
     - `listPushesByPushId`
     - `listPushesForAttempt`
     - `listRetainedConversations`
@@ -351,7 +388,6 @@ serves them.
     - `taskDependsOn`
     - `TaskListItemSchema`
     - `TaskSchema`
-    - `tasksResource`
     - `taskStatusChanged`
     - `TaskStatusSchema`
     - `tasksView`
@@ -371,20 +407,24 @@ serves them.
     - `defineRefReaction('tasks.push-ledger (refs/heads/main)')`
   - Resources:
     - `attempts` (keyed)
+    - `attempts:rows` (keyed, point)
     - `conversations-active` (keyed)
-    - `conversations-gone` (keyed)
+    - `conversations-active:rows` (keyed, point)
+    - `conversations-gone` (keyed, window)
     - `conversations-gone-stats` (push)
+    - `conversations-gone:groups` (push)
+    - `conversations-gone:rows` (keyed, point)
     - `conversations-system` (keyed)
+    - `conversations-system:rows` (keyed, point)
+    - `conversations.by-id:rows` (keyed, point)
     - `pushes` (keyed, window)
     - `pushes:groups` (push)
     - `pushes:rows` (keyed, point)
-    - `pushes.attempts-cascade` (push)
-    - `task-detail` (push)
+    - `task-descriptions:rows` (keyed, point)
     - `tasks` (keyed)
+    - `tasks:rows` (keyed, point)
 - Web:
-  - Uses:
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
+  - Uses: `network/live.useLive`
   - Exports (values):
     - `useTaskAttempts`
     - `useTaskConversations`
@@ -400,11 +440,9 @@ serves them.
     - `fields/text/config.enumTextField`
     - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
-    - `infra/query-resource.queryResourceDescriptor`
     - `network/live.liveCollection`
     - `network/live.liveValue`
     - `network/live/filter.liveText`
-    - `primitives/live-state.keyedResourceDescriptor`
     - `primitives/pane.defineRoute`
     - `primitives/rank.RankSchema`
   - Exports (types):
@@ -423,19 +461,19 @@ serves them.
     - `TrailerCommit`
   - Exports (values):
     - `ADOPTED_SPAWNED_BY`
+    - `attemptRows`
     - `AttemptSchema`
-    - `attemptsResource`
     - `AttemptStatusSchema`
-    - `AttemptWithConversationsSchema`
     - `BLOCKED_STATUSES`
     - `buildTaskPrompt`
     - `CONVERSATION_TRAILER_KEY`
     - `ConversationKindSchema`
-    - `conversationsActiveResource`
+    - `conversationsActive`
+    - `conversationsById`
     - `ConversationSchema`
-    - `conversationsGoneResource`
+    - `conversationsGone`
     - `conversationsGoneStats`
-    - `conversationsSystemResource`
+    - `conversationsSystem`
     - `ConversationStatusSchema`
     - `ConversationSummarySchema`
     - `isAdoptedConversation`
@@ -450,12 +488,11 @@ serves them.
     - `PushSchema`
     - `RECENT_GONE_LIMIT`
     - `SETTLED_STATUSES`
-    - `taskDetail`
+    - `taskDescriptions`
     - `taskDetailRoute`
     - `TaskGraph`
-    - `TaskListItemSchema`
+    - `taskRows`
     - `TaskSchema`
-    - `tasksResource`
     - `tasksRootRoute`
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
@@ -493,7 +530,14 @@ serves them.
   - Exempts itself from: `live/no-legacy-resource-spelling` — `core/resources.ts`, `server/internal/resources.ts`, `web/hooks.ts` (debt)
 - Test helpers:
   - Server: `@plugins/tasks/plugins/tasks-core/server/testing`
+    - `canonical` — JSON with sorted keys, so a row compares by content whatever its key order.
+    - `createTreeOracle`
     - `installTaskDerivedSchema`
     - `runStatusBatchOn`
+    - `TREE_IDS` — The tree workload's ids, for suites interleaving their own statements.
+    - `treeSeed` — The seed: five tasks, three edges, two attempts, two conversations, a push.
+    - `treeSteps` — The scripted tree writes, in order: every kind of write the app makes to the tree — an insert, a rename, a status flip, an edge added and removed, a drag reorder, an attempt, a conversation and a push landing, a poller write, an attempt moved between tasks, cascade deletes of an attempt and a task, a drop.
+    - `withSteps` — The script with a suite's own steps spliced in: each `after[label]` runs right after the step of that label (an unknown label throws, so a renamed step cannot silently drop a suite's case).
+    - Types: `TreeLoad`, `TreeOracle`, `TreeOracleOptions`, `TreeStep`, `TreeStepCost`
 
 <!-- AUTOGENERATED:END -->

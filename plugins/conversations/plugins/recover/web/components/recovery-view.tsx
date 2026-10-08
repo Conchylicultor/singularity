@@ -5,16 +5,15 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useCallback, useMemo, useState } from "react";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { conversationsGoneResource } from "@plugins/tasks/plugins/tasks-core/core";
-import { listGoneConversations } from "@plugins/conversations/core";
+import { conversationsGone } from "@plugins/tasks/plugins/tasks-core/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { restoreBatch } from "../../shared/endpoints";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
@@ -23,8 +22,10 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const historyIcon = symbol("history");
 
+// The newest ended conversations Recovery lists: a window of the live
+// `conversations-gone` collection (its `maxLimit` admits it), so a close
+// enters at the top and a restore leaves, pushed — no REST page to re-fetch.
 const GONE_PAGE_SIZE = 50;
-const QUERY_KEY = ["conversations-recover", "recent-closed"];
 
 const CLUSTER_WINDOW_MS = 1000;
 
@@ -56,44 +57,22 @@ function formatTime(date: Date): string {
 }
 
 export function RecoveryView() {
-  const resource = useResource(conversationsGoneResource);
-  const queryClient = useQueryClient();
-
-  const q = useQuery({
-    queryKey: QUERY_KEY,
-    queryFn: async (): Promise<Conversation[]> => {
-      const before = new Date().toISOString();
-      const data = await fetchEndpoint(
-        listGoneConversations,
-        {},
-        { query: { before, limit: String(GONE_PAGE_SIZE) } },
-      );
-      return data.items;
-    },
-    placeholderData: (prev) => prev,
+  const gone = useLive(conversationsGone, { limit: GONE_PAGE_SIZE });
+  // What to list: the window (already newest-first by `endedAt`), or — when a
+  // re-read failed — the rows last seen; `undefined` while nothing is known.
+  const items = foldResource(gone, {
+    loading: () => undefined,
+    error: (_error, stale) => stale,
+    ready: (rows) => rows,
   });
-
-  useEffect(() => {
-    if (resource.status === "ready") {
-      // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab maintains its own query cache, no cross-tab write to deduplicate
-      void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-    }
-  }, [resource.status, queryClient]);
-
-  const items = useMemo(() => q.data ?? [], [q.data]);
-  const isLoading = q.isLoading;
 
   const [pending, setPending] = useState<Set<string>>(new Set());
   const [rowErrors, setRowErrors] = useState<Map<string, string>>(new Map());
 
-  const groups = useMemo(() => {
-    const sorted = [...items].sort((a, b) => {
-      const aMs = a.endedAt?.getTime() ?? 0;
-      const bMs = b.endedAt?.getTime() ?? 0;
-      return bMs - aMs;
-    });
-    return groupByEndedAt(sorted);
-  }, [items]);
+  const groups = useMemo(
+    () => (items === undefined ? [] : groupByEndedAt(items)),
+    [items],
+  );
 
   const setPendingFor = useCallback((ids: string[], value: boolean) => {
     setPending((prev) => {
@@ -159,7 +138,7 @@ export function RecoveryView() {
           >
             Recovery
           </Text>
-          {items.length > 0 && (
+          {items !== undefined && items.length > 0 && (
             <Text as="span" variant="caption" tone="muted" className="truncate">
               {items.length} recently closed
             </Text>
@@ -168,23 +147,22 @@ export function RecoveryView() {
       </Stack>
 
       <Scroll axis="both" fill>
-        {isLoading && items.length === 0 ? (
+        {gone.status === "loading" ? (
           <Loading />
-        ) : q.isError && items.length === 0 ? (
+        ) : gone.status === "error" && items === undefined ? (
           <Stack gap="sm" align="start" className="py-sm">
             <Placeholder tone="error">
-              Couldn't load recently closed conversations
-              {q.error instanceof Error ? `: ${q.error.message}` : ""}.
+              Couldn't load recently closed conversations: {gone.error.message}.
             </Placeholder>
             <div className="px-md">
               <ControlSizeProvider size="sm">
-                <Button variant="outline" onClick={() => void q.refetch()}>
+                <Button variant="outline" onClick={() => void gone.refetch()}>
                   Retry
                 </Button>
               </ControlSizeProvider>
             </div>
           </Stack>
-        ) : items.length === 0 ? (
+        ) : items === undefined || items.length === 0 ? (
           <Placeholder>No recently closed conversations.</Placeholder>
         ) : (
           <Stack gap="none">

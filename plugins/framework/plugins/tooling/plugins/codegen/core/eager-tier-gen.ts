@@ -19,6 +19,7 @@ import {
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
   isResourceVocabularyOwner,
+  mintsOf,
   resourceDescriptorFactories,
   type PreloadFlag,
 } from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
@@ -356,6 +357,13 @@ export function preloadedKeysIn(
     for (const span of markerCallSpans(masked, factory)) {
       const argsText = src.slice(span.open + 1, span.close);
       const where = { file: displayPath, line: lineAt(src, span.identifier) };
+      // The mints this call's spec actually makes — one reading, shared with
+      // the docs facet (`requires`: a collection's `k` is its window under
+      // `default`, its whole set under `all`, never both). Read BEFORE the
+      // preload test: a spec whose fields are not in the call's text (an
+      // identifier, a wrapper call) hides its `preload:` too, and mintsOf
+      // throws on it instead of letting it read as "not preloaded".
+      const mints = mintsOf(entry, argsText, where);
       if (!preloadsBoot(factory, entry.preload, argsText, where)) continue;
       const id = parseStaticCallId(src, span);
       if (id.kind !== "value") {
@@ -372,7 +380,7 @@ export function preloadedKeysIn(
           }),
         );
       }
-      for (const m of entry.mints) {
+      for (const m of mints) {
         if (m.preloadable) keys.push(id.value + m.suffix);
       }
     }

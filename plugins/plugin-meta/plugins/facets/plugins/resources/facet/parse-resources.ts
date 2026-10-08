@@ -16,6 +16,7 @@ import {
   resourceDescriptorFactories,
   resourceRegisterMarkers,
   isResourceVocabularyOwner,
+  mintsOf,
   type ResourceMembership,
 } from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
 import type { ResourceDef, ResourceFacetData } from "../core";
@@ -102,8 +103,9 @@ export type ImportedDescriptorResolver = (
  * Scan sources for descriptor factory calls and map each declared const name to
  * one `{ key, keyed, membership }` PER RESOURCE THE CALL MINTS — one for a plain
  * descriptor factory, three for `liveCollection("k", …)` (`k`, `k:rows` and
- * `k:groups`), or only `k:rows` when it is lookup-only (no `default:` — a mint
- * whose `requires` field the call does not set is skipped). Pass the WHOLE plugin's sources: a descriptor
+ * `k:groups`), only `k:rows` when it is lookup-only, or `k` and `k:rows` when
+ * it is declared `all` (the vocabulary's `mintsOf` keeps the mints whose
+ * `requires` field the spec sets). Pass the WHOLE plugin's sources: a descriptor
  * is declared in `core/`/`shared/` but referenced by the register call in
  * `server/`/`central/`.
  *
@@ -153,26 +155,16 @@ export function buildDescriptorIndex(
           );
         }
         const argsText = src.slice(span.open + 1, span.close);
-        const onDemand = declaresOnDemand(argsText, {
-          file: path,
-          line: lineAt(src, span.identifier),
-        });
+        const where = { file: path, line: lineAt(src, span.identifier) };
+        const onDemand = declaresOnDemand(argsText, where);
         index.set(
           name,
-          entry.mints
-            .filter((m) => {
-              const requires = "requires" in m ? m.requires : undefined;
-              return (
-                requires === undefined ||
-                parseStringField(argsText, requires).kind !== "absent"
-              );
-            })
-            .map((m) => ({
-              key: id.value + m.suffix,
-              keyed: m.keyed,
-              membership: m.membership,
-              ...(onDemand ? { onDemand: true as const } : {}),
-            })),
+          mintsOf(entry, argsText, where).map((m) => ({
+            key: id.value + m.suffix,
+            keyed: m.keyed,
+            membership: m.membership,
+            ...(onDemand ? { onDemand: true as const } : {}),
+          })),
         );
       }
     }

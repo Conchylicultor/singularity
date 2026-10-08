@@ -183,6 +183,7 @@ caller**. Omitting `path` keeps the `ts` loader — correct only for `.ts`-only 
     - `framework/tooling/boundaries`
     - `framework/tooling/checks`
     - `framework/tooling/codegen`
+    - `framework/tooling/resource-vocabulary`
     - `framework/tooling/test-layout`
     - `plugin-meta/plugin-refs`
     - `plugin-meta/plugin-tree`

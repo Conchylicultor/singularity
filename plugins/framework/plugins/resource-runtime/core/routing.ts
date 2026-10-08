@@ -218,12 +218,43 @@ export interface TupleUse {
 // missing key, and the runtime refuses an unmarked plan an `as` cast let through.
 const MINTED: unique symbol = Symbol("route-plan.minted");
 
+/**
+ * A DERIVED relation a compiled SQL reads that no route names: a
+ * trigger-maintained rollup (derived-tables), which has no change-feed trigger
+ * of its own (A1: no route names a rollup). Its rows move only when one of its
+ * `sources` is written, and every source is a route table of the same plan
+ * (A22, asserted by `mintRoutePlan`) — so a read of `table` is reached through
+ * those routes, and the drift guard (A8) accepts it in a loader's capture.
+ */
+export interface DerivedRead {
+  /** The derived table's name, as a captured read-set records it. */
+  table: string;
+  /** The base tables whose writes move it — each one a route table of the plan. */
+  sources: readonly string[];
+}
+
 /** The fields of a plan, before it is minted (see `mintRoutePlan`). */
 export interface RoutePlanInput<
   P extends Record<string, string> = Record<string, string>,
 > {
   routes: readonly Route[];
   usesOf(params: P): ReadonlyMap<string, TupleUse>;
+  /**
+   * The derived relations (rollups) the compiled SQL reads beside its route
+   * tables — see `DerivedRead`. Absent = none: the plan reads only its route
+   * tables (every compile but one joining a rollup).
+   */
+  derivedReads?: readonly DerivedRead[];
+  /**
+   * A deterministic fingerprint of the compiled SQL and its decoding — the
+   * L2 definition (A18). A persisted row written under another definition is
+   * not usable: every L2 read matches `definition IS NOT DISTINCT FROM` the
+   * running entry's (`persistedDefinitions()`), so a code change that moves
+   * the SQL never serves a value computed by the old one. Absent = the entry
+   * persists with a NULL definition (a hand-declared resource, or a compiler
+   * that does not fingerprint yet).
+   */
+  definition?: string;
 }
 
 /**
@@ -253,6 +284,15 @@ export interface ReachPlanInput<
   P extends Record<string, string> = Record<string, string>,
 > extends RoutePlanInput<P> {
   routes: readonly FullRoute[];
+  /** A non-keyed (`:groups`) entry is never L2-persisted, so it has no definition. */
+  definition?: never;
+  /**
+   * A grouping joins no rollup (C9 / D24 of
+   * research/2026-10-06-global-scoped-change-routing-p8-v3.md): its routes are
+   * one `full` route per relation it reads, which a rollup — routed through
+   * its sources — cannot be.
+   */
+  derivedReads?: never;
 }
 
 /**
@@ -267,18 +307,75 @@ export interface ReachPlan<
   P extends Record<string, string> = Record<string, string>,
 > extends RoutePlan<P> {
   routes: readonly FullRoute[];
+  definition?: never;
+  derivedReads?: never;
+}
+
+/**
+ * A plan's derived reads must be reached through its routes, and never be
+ * routed themselves — checked when the plan is minted, i.e. at the compile's
+ * module eval:
+ *
+ * - A1: a derived table is not a route table (a rollup has no change-feed
+ *   trigger; a route on it would wait for a change that never arrives);
+ * - A22: every source of a derived table is a route table of THIS plan, so a
+ *   write that moves the derived rows reaches the entry (the drift guard then
+ *   accepts the derived table in a loader's capture — A8);
+ * - one entry per derived table, and at least one source each.
+ */
+function assertDerivedReads(
+  routes: readonly Route[],
+  derivedReads: readonly DerivedRead[],
+): void {
+  const routed = new Set(routes.map((r) => r.table));
+  const seen = new Set<string>();
+  for (const d of derivedReads) {
+    if (seen.has(d.table)) {
+      throw new Error(
+        `mintRoutePlan: derived read "${d.table}" is listed twice — one entry per derived table.`,
+      );
+    }
+    seen.add(d.table);
+    if (routed.has(d.table)) {
+      throw new Error(
+        `mintRoutePlan: "${d.table}" is both a derived read and a route table — a derived table (a rollup) has no change-feed trigger, so no route may name it (A1); it is reached through its sources' routes.`,
+      );
+    }
+    if (d.sources.length === 0) {
+      throw new Error(
+        `mintRoutePlan: derived read "${d.table}" names no source — nothing would route a change to it.`,
+      );
+    }
+    const unrouted = d.sources.filter((s) => !routed.has(s));
+    if (unrouted.length > 0) {
+      throw new Error(
+        `mintRoutePlan: derived read "${d.table}" is moved by ${unrouted.map((s) => `"${s}"`).join(", ")}, which no route of the plan names — a write there would change what the SQL reads without reaching the entry (A22). Its compiler must route every source.`,
+      );
+    }
+  }
 }
 
 /**
  * Mint a compiler's route plan — the only way to make a `RoutePlan`. Called by
  * the query compilers (`infra/query-resource`), which emit every route from the
  * same declaration they render the SQL from, and by tests; the
- * `resource-runtime:compiled-routes` check refuses any other caller.
+ * `resource-runtime:compiled-routes` check refuses any other caller. Throws on
+ * `derivedReads` that a route names (A1) or whose sources it does not (A22).
  */
 export function mintRoutePlan<P extends Record<string, string>>(
   plan: RoutePlanInput<P>,
 ): RoutePlan<P> {
-  return { routes: plan.routes, usesOf: plan.usesOf, [MINTED]: true };
+  const derivedReads = plan.derivedReads ?? [];
+  assertDerivedReads(plan.routes, derivedReads);
+  return {
+    routes: plan.routes,
+    usesOf: plan.usesOf,
+    ...(plan.definition !== undefined ? { definition: plan.definition } : {}),
+    // Only when non-empty: a plan reading no derived table is the shape it
+    // always was.
+    ...(derivedReads.length > 0 ? { derivedReads } : {}),
+    [MINTED]: true,
+  };
 }
 
 /** Mint a non-keyed entry's reach plan (see `mintRoutePlan`). */

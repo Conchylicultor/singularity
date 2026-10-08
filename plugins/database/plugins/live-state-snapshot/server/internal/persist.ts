@@ -1,4 +1,5 @@
 import { sql as drizzleSql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import {
@@ -9,6 +10,7 @@ import {
   Resource,
   removeReadSetTable,
 } from "@plugins/framework/plugins/server-core/core";
+import type { PersistMeta } from "@plugins/framework/plugins/server-core/core";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { emitReadSetShrink } from "./read-set-shrink-hook";
 
@@ -37,6 +39,43 @@ export function preloadedKeys(): Set<string> {
 
 export function shouldPersist(key: string): boolean {
   return preloadedKeys().has(key);
+}
+
+/**
+ * What a USABLE L2 row must match (A18 as a read predicate, C22, C23) — the
+ * runtime's own answer, passed to every read: the keys it persists right now
+ * (`persistedKeys()` — a bounded or external key's leftover row is never
+ * served) and each one's definition (`persistedDefinitions()`; a key absent
+ * from the map expects NULL).
+ */
+export interface L2Expectation {
+  persisted: readonly string[];
+  definitions: Readonly<Record<string, string>>;
+}
+
+// A JS string list as ONE Postgres text[] value. Drizzle expands a JS array in
+// a `sql` template into a comma-separated list of bound params — not an array
+// — so the constructor is spelled out; an empty list is `ARRAY[]::text[]`.
+function textArray(values: readonly string[]): SQL {
+  return drizzleSql`ARRAY[${drizzleSql.join(
+    values.map((v) => drizzleSql`${v}`),
+    drizzleSql`, `,
+  )}]::text[]`;
+}
+
+/**
+ * The usable-row predicate every L2 read applies (§4.2): the key is persisted
+ * now, the row was written under the running definition, and by a writer that
+ * knew the `definition_at` column — an older backend's upsert (a hot swap)
+ * moves `persisted_at` but not `definition_at`, so the row it leaves
+ * invalidates itself rather than carrying the new definition over an old value.
+ */
+export function usableRowSql(exp: L2Expectation): SQL {
+  return drizzleSql`(
+    resource_key = ANY(${textArray(exp.persisted)})
+    AND definition IS NOT DISTINCT FROM (${JSON.stringify(exp.definitions)}::jsonb ->> resource_key)
+    AND definition_at IS NOT DISTINCT FROM persisted_at
+  )`;
 }
 
 // The query's `::text` cast is what makes this a plain `text` column, so the
@@ -71,62 +110,111 @@ const ReadSetDiffRowSchema = z.object({
   new_tables: z.array(z.string()),
 });
 
-// Persist the FULL value under (resource_key, params_key) with its watermark and
-// the per-resource read-set (the tables the loader read while computing `value`,
-// written atomically with it so it is always consistent with the value it
-// describes). Called by the runtime only on loader success. `value` is serialized
-// to jsonb via the parameter binding (drizzle passes a JS object as a json param).
+// Persist a value under (resource_key, params_key) — the runtime's persist hook,
+// called only on a whole value (never a loader's failure path) and serialized
+// per (key, params). `meta.mode` (see `PersistMeta`):
 //
-// `tablesRead` binds as a Postgres text[]: drizzle expands a JS array inside a
-// `sql` template into a comma-separated list of bound params (NOT a single array
-// value), so an `ARRAY[…]` constructor is built explicitly via `sql.join`. An
-// empty array yields `ARRAY[]::text[]`, a valid empty text[] literal.
+//  - `replace` — a FULL recompute: value, position (the flight's watermark),
+//    `position_at`, `tables_read` (`meta.guardTables`, the run's read-set,
+//    written atomically with the value it describes) and the definition are all
+//    replaced. Also reads its own pre-upsert `tables_read` back (a
+//    data-modifying CTE) to detect a read-set SHED and emit it on the
+//    read-set-shrink seam — pure observability, a synchronous in-memory hand-off
+//    that never throws into the persist path;
+//  - `floor` — a persisted alias's snapshot after scoped refills: the value, and
+//    the position only ever LOWERED to the snapshot's base floor (`LEAST`); its
+//    `position_at` and `tables_read` are kept, because neither a replace nor a
+//    read-set describes it. A missing row — or one this writer could not use
+//    (another definition's, or an older writer's) — gets the floor, a NULL
+//    `position_at` (the compact job then targets it) and `meta.guardTables`.
 //
-// The upsert ALSO reads its own pre-upsert `tables_read` back (via a data-modifying
-// CTE) to detect a read-set SHED — the new set dropping a table the old set had —
-// and emits it on the read-set-shrink seam for human confirmation. This is pure
-// observability: the persisted set is written exactly as before (REPLACE), and the
-// emit is a synchronous in-memory hand-off that never throws into the persist path.
+// Both write the definition and stamp `definition_at` with the same `now()` as
+// `persisted_at`, which is what makes the row usable (`usableRowSql`). `value`
+// binds as one jsonb param.
 export async function persistSnapshot(
   db: NodePgDatabase,
   key: string,
   paramsKey: string,
   value: unknown,
   watermark: string,
-  tablesRead: readonly string[],
+  meta: PersistMeta,
 ): Promise<void> {
-  const tablesArray = drizzleSql`ARRAY[${drizzleSql.join(
-    tablesRead.map((t) => drizzleSql`${t}`),
-    drizzleSql`, `,
-  )}]::text[]`;
-  // Single-statement upsert that ALSO returns the PRE-upsert `tables_read` (via a
-  // data-modifying CTE — the `prev` SELECT sees the row as of statement start,
-  // before the ON CONFLICT update takes effect) alongside the freshly-written set.
-  // Comparing them detects a SHED (the new read-set drops a table the old one had)
-  // with zero extra round-trip. On a first INSERT there is no prior row → `prev`
-  // is empty → old_tables is NULL → treated as "no shed".
-  const rows = await executeRows(db, {
-    query: drizzleSql`
-      WITH prev AS (
-        SELECT tables_read AS old_tables
-        FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
-        WHERE resource_key = ${key} AND params_key = ${paramsKey}
-      )
-      INSERT INTO ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
-        (resource_key, params_key, value, position, tables_read, persisted_at)
+  const table = drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE);
+  const tablesArray = textArray(meta.guardTables);
+  if (meta.mode === "floor") {
+    // The stored row was not usable for THIS writer: another definition wrote
+    // it (a hot swap), or a writer that predates `definition_at` upserted it
+    // (C22). Its `tables_read` and `position_at` describe someone else's
+    // replace, so the floor write treats it as a missing row — the guard
+    // tables and a NULL `position_at` (the compact job replaces it) — rather
+    // than re-validating foreign metadata under this definition. (Inside DO
+    // UPDATE, `s.*` is the row as it was before this statement.)
+    const foreignRow = drizzleSql`(
+      s.definition IS DISTINCT FROM EXCLUDED.definition
+      OR s.definition_at IS DISTINCT FROM s.persisted_at
+    )`;
+    await db.execute(drizzleSql`
+      INSERT INTO ${table} AS s
+        (resource_key, params_key, value, position, tables_read, persisted_at,
+         position_at, definition, definition_at)
       VALUES (
         ${key},
         ${paramsKey},
         ${JSON.stringify(value)}::jsonb,
         ${watermark}::numeric,
         ${tablesArray},
+        now(),
+        NULL,
+        ${meta.definition}::text,
+        now()
+      )
+      ON CONFLICT (resource_key, params_key) DO UPDATE
+        SET value = EXCLUDED.value,
+            position = LEAST(s.position, EXCLUDED.position),
+            tables_read = CASE WHEN ${foreignRow}
+              THEN EXCLUDED.tables_read ELSE s.tables_read END,
+            position_at = CASE WHEN ${foreignRow}
+              THEN NULL ELSE s.position_at END,
+            persisted_at = EXCLUDED.persisted_at,
+            definition = EXCLUDED.definition,
+            definition_at = EXCLUDED.definition_at
+    `);
+    return;
+  }
+  // Single-statement upsert that ALSO returns the PRE-upsert `tables_read` (the
+  // `prev` SELECT sees the row as of statement start, before the ON CONFLICT
+  // update takes effect) alongside the freshly-written set — a SHED with zero
+  // extra round-trip. On a first INSERT `prev` is empty → old_tables is NULL →
+  // "no shed".
+  const rows = await executeRows(db, {
+    query: drizzleSql`
+      WITH prev AS (
+        SELECT tables_read AS old_tables
+        FROM ${table}
+        WHERE resource_key = ${key} AND params_key = ${paramsKey}
+      )
+      INSERT INTO ${table}
+        (resource_key, params_key, value, position, tables_read, persisted_at,
+         position_at, definition, definition_at)
+      VALUES (
+        ${key},
+        ${paramsKey},
+        ${JSON.stringify(value)}::jsonb,
+        ${watermark}::numeric,
+        ${tablesArray},
+        now(),
+        now(),
+        ${meta.definition}::text,
         now()
       )
       ON CONFLICT (resource_key, params_key) DO UPDATE
         SET value = EXCLUDED.value,
             position = EXCLUDED.position,
             tables_read = EXCLUDED.tables_read,
-            persisted_at = EXCLUDED.persisted_at
+            persisted_at = EXCLUDED.persisted_at,
+            position_at = EXCLUDED.position_at,
+            definition = EXCLUDED.definition,
+            definition_at = EXCLUDED.definition_at
       RETURNING
         (SELECT old_tables FROM prev) AS old_tables,
         tables_read AS new_tables
@@ -161,19 +249,21 @@ const PersistedReadSetRowSchema = z.object({
   tables_read: z.array(z.string()),
 });
 
-// Read the persisted read-sets for the param-less ("{}") snapshots in ONE query,
-// for the boot seed. Returns resource_key → string[] (the pg driver returns a
-// text[] column as a JS string[]). A key with an empty `tables_read` is "no usable
-// read-set" — the caller (boot init) force-FULL recomputes it.
+// Read the persisted read-sets of the USABLE param-less ("{}") rows in ONE
+// query, for the boot seed and the onReady usable check. Returns resource_key →
+// string[] (the pg driver returns a text[] column as a JS string[]). A key with
+// no usable row, or an empty `tables_read`, is "no usable read-set" — the caller
+// (boot init) force-FULL recomputes it.
 export async function readPersistedReadSets(
   db: NodePgDatabase,
+  exp: L2Expectation,
 ): Promise<Map<string, string[]>> {
   const out = new Map<string, string[]>();
   const rows = await executeRows(db, {
     query: drizzleSql`
       SELECT resource_key, tables_read
       FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
-      WHERE params_key = '{}'
+      WHERE params_key = '{}' AND ${usableRowSql(exp)}
     `,
     row: PersistedReadSetRowSchema,
     label: "readPersistedReadSets",
@@ -233,71 +323,107 @@ export async function reconcileReadSetTable(
 
 // `value` is the loader's own output round-tripped through `jsonb` — genuinely
 // caller-shaped, so `z.unknown()` is the honest assertion and the only one.
+// `position` is cast to text (an xid8-family numeric near 2^63 must never pass
+// through a JS number); `position_at_ms` is epoch milliseconds, NULL until a
+// replace persist wrote the row.
 const PersistedSnapshotRowSchema = z.object({
   resource_key: z.string(),
   value: z.unknown(),
+  position: z.string(),
+  position_at_ms: z.number().nullable(),
 });
 
-// Read the persisted param-less ("{}") values for the given resource keys in ONE
-// query, for the boot-snapshot hot path. Returns a key→value map; a key with no
-// persisted row is simply absent (the caller falls back to a from-scratch load).
+/** One usable persisted row: its value, its catch-up floor, and when a replace last set it. */
+export interface PersistedSnapshotRow {
+  value: unknown;
+  position: string;
+  /** `position_at` in epoch ms; null when no replace persist ever wrote the row. */
+  positionAt: number | null;
+}
+
+// Read the USABLE persisted param-less ("{}") rows for the given resource keys
+// in ONE query — the boot snapshot's L2 fast path and the boot seed. A key with
+// no usable row is simply absent (the caller falls back to a from-scratch load).
 export async function readPersistedSnapshots(
   db: NodePgDatabase,
-  keys: string[],
-): Promise<Map<string, unknown>> {
-  const out = new Map<string, unknown>();
+  keys: readonly string[],
+  exp: L2Expectation,
+): Promise<Map<string, PersistedSnapshotRow>> {
+  const out = new Map<string, PersistedSnapshotRow>();
   if (keys.length === 0) return out;
-  // Drizzle expands a JS array inside a `sql` template into a comma-separated
-  // list of bound params — correct for `IN (…)` but NOT for `ANY(…)` (which
-  // needs a single array value, and otherwise raises "op ANY/ALL (array)
-  // requires array on right side" → 500). Use the `IN` form so the expansion is
-  // well-formed. The `keys.length === 0` early return above guarantees a
-  // non-empty list.
   const rows = await executeRows(db, {
     query: drizzleSql`
-      SELECT resource_key, value
+      SELECT resource_key, value, position::text AS position,
+             (extract(epoch FROM position_at) * 1000)::float8 AS position_at_ms
       FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
       WHERE params_key = '{}'
-        AND resource_key IN (${drizzleSql.join(keys, drizzleSql`, `)})
+        AND resource_key = ANY(${textArray(keys)})
+        AND ${usableRowSql(exp)}
     `,
     row: PersistedSnapshotRowSchema,
     label: "readPersistedSnapshots",
   });
-  for (const row of rows) out.set(row.resource_key, row.value);
+  for (const row of rows) {
+    out.set(row.resource_key, {
+      value: row.value,
+      position: row.position,
+      positionAt: row.position_at_ms,
+    });
+  }
   return out;
 }
 
-// Boot sweep: DELETE every persisted row whose `resource_key` is NOT in the
-// currently-PERSISTABLE set, returning the number of rows removed. This evicts
-// stale snapshots that a prior boot wrote for a key that is no longer persisted —
-// a resource migrated to the bounded working-set contract (window / point, which
-// the runtime NEVER persists) or one whose `preload` flag was dropped. Served
-// via the L2 boot fast path (`readPersistedSnapshots`), such a leftover would
-// hydrate the client with a stale, possibly-unbounded value under a key whose
-// loader now returns something else. Rows for keys that don't exist at all are
-// swept too (harmless cleanup). The exclusion form needs no memory of the OLD
-// state — "not persistable now" is the whole predicate. Empty `keepKeys` is a
-// no-op guard (never nuke everything): at a real boot the persistable set is
-// non-empty, and persistence is a graceful-degradation accelerator anyway. Unlike
-// `clearPersistedSnapshots` this is NOT scoped to `params_key = '{}'`. `RETURNING`
-// makes the count robust regardless of the driver's `rowCount` typing.
-export async function clearSnapshotsExceptKeys(
+// The compact job's targets: every persisted key WITHOUT a usable row whose
+// `position_at` is within the last hour — a missing row, an unusable one, and a
+// NULL `position_at` (a row only floor persists ever wrote) all count. Their
+// FULL recompute replaces the row, so the global catch-up floor (and the
+// changelog prune pinned to it) advances at least hourly.
+export async function compactTargets(
   db: NodePgDatabase,
-  keepKeys: readonly string[],
+  exp: L2Expectation,
+): Promise<string[]> {
+  if (exp.persisted.length === 0) return [];
+  const fresh = await executeRows(db, {
+    query: drizzleSql`
+      SELECT resource_key
+      FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
+      WHERE params_key = '{}'
+        AND ${usableRowSql(exp)}
+        AND position_at >= now() - interval '1 hour'
+    `,
+    row: ResourceKeyRowSchema,
+    label: "compactTargets",
+  });
+  const freshKeys = new Set(fresh.map((r) => r.resource_key));
+  return exp.persisted.filter((k) => !freshKeys.has(k));
+}
+
+// Boot sweep: DELETE every row that is not USABLE (`usableRowSql`), returning the
+// number removed. That evicts a row for a key that is no longer persisted — one
+// migrated to the bounded working-set contract (window / point, which the
+// runtime NEVER persists), an external one, or one whose `preload` was dropped
+// — and a row a different definition or an older writer left. Served via the
+// L2 boot fast path, such a leftover would hydrate the client with a stale,
+// possibly-unbounded value under a key whose loader now returns something
+// else; every read refuses it anyway (the predicate), so the sweep is cleanup.
+// Rows for keys that don't exist at all are swept too. An empty persisted set
+// is a no-op guard (never nuke everything): at a real boot it is non-empty, and
+// persistence is a graceful-degradation accelerator anyway. Not scoped to
+// `params_key = '{}'` — only `{}` rows are ever usable. `RETURNING` makes the
+// count robust regardless of the driver's `rowCount` typing.
+export async function sweepUnusableSnapshots(
+  db: NodePgDatabase,
+  exp: L2Expectation,
 ): Promise<number> {
-  if (keepKeys.length === 0) return 0;
-  const keepArray = drizzleSql`ARRAY[${drizzleSql.join(
-    keepKeys.map((k) => drizzleSql`${k}`),
-    drizzleSql`, `,
-  )}]::text[]`;
+  if (exp.persisted.length === 0) return 0;
   const removed = await executeRows(db, {
     query: drizzleSql`
       DELETE FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
-      WHERE resource_key <> ALL(${keepArray})
+      WHERE NOT (params_key = '{}' AND ${usableRowSql(exp)})
       RETURNING resource_key
     `,
     row: ResourceKeyRowSchema,
-    label: "clearSnapshotsExceptKeys",
+    label: "sweepUnusableSnapshots",
   });
   return removed.length;
 }

@@ -1,11 +1,9 @@
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useMemo } from "react";
-import {
-  foldResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import {
-  tasksResource,
+  taskRows,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 
@@ -14,7 +12,7 @@ export function ChildCountAction({
   hasChildren,
 }: ItemActionProps<TaskListItem>) {
   const taskId = row.id;
-  const result = useResource(tasksResource);
+  const result = useLive(taskRows);
   // No count until the task list is known — never a stand-in `0`. A failed
   // read shows none either: the list this row sits in reads the same resource
   // and renders the failure.

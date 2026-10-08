@@ -52,6 +52,39 @@ export type PointQueryResourceContract<Row> = PointResourceDescriptor<Row> & {
 };
 
 /**
+ * The whole ordered set of a collection declared `all`
+ * (`liveCollection(key, { all })`): ONE param-less keyed resource whose value
+ * is every row, in `orderBy` order (pk as the tiebreaker). Unbounded by
+ * declaration — `unbounded.reason` says why the set is small enough to hold
+ * whole — so it has no window codec, no limit and no default tuple: boot
+ * hydrates the `{}` tuple, and any param is a subscription this declaration
+ * never minted (`validateParams` throws `ResourceContractError`). No
+ * placeholder (`initialData`): not loaded yet is `pending`, never `[]`.
+ *
+ * Only the TYPE lives here, like the window and point contracts: the server
+ * compiler (`compileAllCollection`) consumes it, and its one factory is
+ * internal to `network/live`, minted by `liveCollection`.
+ */
+export type AllQueryResourceContract<Row> = ResourceDescriptor<
+  Row[],
+  Record<string, never>
+> & {
+  keyed: { keyOf: (row: unknown) => string };
+  initialData?: never;
+  all: {
+    /**
+     * The total order: row fields, each with its direction. The pk breaks
+     * ties, so the order is total whatever the fields.
+     */
+    orderBy: readonly (readonly [keyof Row & string, "asc" | "desc"])[];
+    /** Why the whole set is held: the `all` arm has no other bound. */
+    unbounded: { reason: string };
+  };
+  /** The row field the client `keyOf` reads — matched against the server keyField. */
+  queryPk: string;
+};
+
+/**
  * Declare a keyed live-state resource whose rows are a flat SQL query result.
  * A thin wrapper over `keyedResourceDescriptor`: the payload schema is
  * `z.array(rowSchema)`, the initial data is `[]`, and the client `keyOf` reads

@@ -19,6 +19,8 @@ import {
  * - `server-error`: the query that could not be formed or paged, in words;
  * - `error`: a failed read — the host's `errorState`, else the read's own
  *   failure with Retry (or Reload for an out-of-date tab);
+ * - `field-error`: a field the view is laid out by failed to load its values
+ *   — the host's `errorState`, else that failure, naming the field;
  * - `loading`: the host's `loadingState`, else the view type's skeleton.
  */
 export function BodyFallback(props: {
@@ -47,6 +49,17 @@ export function BodyFallback(props: {
           <ResourceErrorInline
             error={state.error.error}
             refetch={state.error.refetch}
+            variant="block"
+          />
+        )
+      );
+    case "field-error":
+      return (
+        props.errorState ?? (
+          <ResourceErrorInline
+            error={state.error}
+            refetch={state.refetch}
+            subject={state.field}
             variant="block"
           />
         )

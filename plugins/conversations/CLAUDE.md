@@ -10,17 +10,14 @@
   - Contributes: `ConfigV2.WebRegister` "auto-answer"
   - Uses:
     - `config_v2.ConfigV2`
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
+    - `network/live.mapRow`
     - `network/live.useLive`
-    - `primitives/live-state.combineResources`
+    - `network/live.useLiveRow`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useCombinedResources`
-    - `primitives/live-state.useResource`
   - Exports (values):
-    - `GonePageSchema`
     - `useActiveConversations`
     - `useConversation`
     - `useConversationById`
@@ -41,8 +38,8 @@
     - `report-kind` "auto-start-model-unavailable"
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
-  - Uses: 68 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×28
+  - Uses: 67 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×27
     - `conversations/transcript-watcher` ×7
     - `config_v2` ×3
     - `infra/claude-cli/availability` ×3
@@ -117,7 +114,6 @@
     - `defineTimer('conversations.status-shadow-audit')`
   - Routes:
     - `GET /api/conversations`
-    - `GET /api/conversations/gone`
     - `GET /api/conversations/:id`
     - `POST /api/conversations`
     - `DELETE /api/conversations`
@@ -141,7 +137,6 @@
     - `CutLosses`
     - `CutRefusal`
     - `DeleteConversationQuery`
-    - `ListGoneQuery`
     - `ListTurnsQuery`
     - `PostTurnBody`
     - `ResumeBlocked`
@@ -167,8 +162,6 @@
     - `isActiveStatus`
     - `listConversations`
     - `listConversationTurns`
-    - `listGoneConversations`
-    - `ListGoneQuerySchema`
     - `ListTurnsQuerySchema`
     - `postConversationTurn`
     - `PostTurnBodySchema`

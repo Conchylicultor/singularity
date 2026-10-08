@@ -1,4 +1,4 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   defineRoute,
@@ -6,7 +6,7 @@ import {
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { attemptsResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { attemptRows } from "@plugins/tasks/plugins/tasks-core/core";
 import { AttemptPane, AttemptsTitle } from "./components/attempt-pane";
 
 function useResolveAttempt({
@@ -14,7 +14,7 @@ function useResolveAttempt({
 }: {
   attemptId: string;
 }): ResolveResult {
-  return resolveFrom(useResource(attemptsResource), (attempts) =>
+  return resolveFrom(useLive(attemptRows), (attempts) =>
     attempts.some((a) => a.id === attemptId),
   );
 }

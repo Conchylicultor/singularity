@@ -17,20 +17,35 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { eq, gt, sql } from "drizzle-orm";
 import {
+  boolean,
+  index,
   integer,
   pgTable,
   primaryKey,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import type {
-  ExtensionJoin,
-  KeyedSideJoin,
-  LookupJoin,
-  WindowQueryResourceContract,
+import { defineRollup } from "@plugins/database/plugins/derived-tables/core";
+import { parsed } from "@plugins/database/plugins/sql-projection/server";
+import {
+  ATTEMPT_CONV_AGG_TABLE,
+  TASK_LATEST_CONVERSATION_TABLE,
+} from "@plugins/database/plugins/derived-views/core";
+import {
+  aggregate,
+  BASE_RELATION,
+  childrenJoin,
+  closureJoin,
+  expr,
+  jsonAgg,
+  type ExtensionJoin,
+  type KeyedSideJoin,
+  type LookupJoin,
+  type WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
 import type { WindowQueryResourceSpec } from "@plugins/infra/plugins/query-resource/server";
 import {
+  compileAllCollection,
   compileWindowQuery,
   recordingQueryDb,
   type RecordedQuery,
@@ -73,10 +88,11 @@ export const COMPILE_SQL_GOLDEN_FILE = fileURLToPath(
   new URL("./compile-sql-golden.json", import.meta.url),
 );
 
-type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
+export type Json =
+  null | boolean | number | string | Json[] | { [key: string]: Json };
 
 /** A JSON spelling of anything a compile hands back — functions, Sets, Maps, Dates and errors included. */
-function plain(value: unknown): Json {
+export function plain(value: unknown): Json {
   if (value === undefined) return "$undefined";
   if (value === null) return null;
   if (typeof value === "function") return "$function";
@@ -106,7 +122,7 @@ function byJson(a: Json, b: Json): number {
 }
 
 /** Runs one shape, answering its value or the message it threw — a throw is part of the record. */
-async function outcome(run: () => unknown): Promise<Json> {
+export async function outcome(run: () => unknown): Promise<Json> {
   try {
     return { value: plain(await run()) };
   } catch (err) {
@@ -176,7 +192,7 @@ function counted<P extends ResourceParams>(
   };
 }
 
-type ServerOpts = ReturnType<typeof compileWindowQuery>["serverOpts"];
+export type ServerOpts = ReturnType<typeof compileWindowQuery>["serverOpts"];
 
 /** The compiled options as data: every option, a function as `$function`, the routes apart. */
 function optionsOf(opts: ServerOpts): Json {
@@ -190,13 +206,13 @@ function optionsOf(opts: ServerOpts): Json {
   return plain(rest);
 }
 
-interface Harness {
+export interface Harness {
   calls: RecordedQuery[];
   counters: Counters;
 }
 
 /** One shape run: its outcome, the SQL it sent, and the per-tuple resolutions it made. */
-async function shape(h: Harness, run: () => unknown): Promise<Json> {
+export async function shape(h: Harness, run: () => unknown): Promise<Json> {
   const from = h.calls.length;
   h.counters.where = 0;
   h.counters.orderBy = 0;
@@ -208,17 +224,42 @@ async function shape(h: Harness, run: () => unknown): Promise<Json> {
   };
 }
 
-async function routesOf(h: Harness, opts: ServerOpts): Promise<Json> {
+/**
+ * The reverse probes' inputs: the changed looked-up ids, and the `within` set
+ * of host keys (a union's are `kind:raw`, so its record passes its own).
+ */
+export interface ProbeIds {
+  within: readonly string[];
+}
+const DEFAULT_PROBE: ProbeIds = { within: ["h2", "h1"] };
+/** The raw ids an encoded identity / alias map is called on. */
+const ENCODE_PROBE = ["7", "a1", "x:y"] as const;
+
+async function routesOf(
+  h: Harness,
+  opts: ServerOpts,
+  probe: ProbeIds = DEFAULT_PROBE,
+): Promise<Json> {
   const plan = opts.routes;
   if (plan === undefined) return "$none";
   const out: Json[] = [];
   for (const route of plan.routes) {
     const entry: Record<string, Json> = { route: plain(route) };
+    // A union's identity / alias maps carry its arm's key encode (a single
+    // compile's never do, so its record has no `encoded`): record what it
+    // makes of a fixed raw-id list, not just that it is a function.
+    if (
+      (route.map.kind === "identity" || route.map.kind === "alias") &&
+      route.map.encode !== undefined
+    ) {
+      const { encode } = route.map;
+      entry.encoded = plain(ENCODE_PROBE.map((id) => encode(id)));
+    }
     if (route.map.kind === "reverse") {
       const { resolve } = route.map;
       entry.resolve = [
         await shape(h, () => resolve(["x1", "x2"], null, 500)),
-        await shape(h, () => resolve(["x1"], new Set(["h2", "h1"]), 500)),
+        await shape(h, () => resolve(["x1"], new Set(probe.within), 500)),
         await shape(h, () => resolve(["x1"], null, 1)),
         await shape(h, () => resolve([], null, 500)),
         await shape(h, () => resolve(["x1"], new Set(), 500)),
@@ -239,11 +280,12 @@ function usesOf(
 }
 
 /** Every shape of a window resource, per tuple. */
-async function windowRecord(
+export async function windowRecord(
   h: Harness,
   opts: ServerOpts,
   tuples: Record<string, ResourceParams>,
   affected: readonly string[] = ["r1", "r2"],
+  probe: ProbeIds = DEFAULT_PROBE,
 ): Promise<Json> {
   const membership = opts.membership as {
     kind: string;
@@ -279,16 +321,18 @@ async function windowRecord(
   return {
     options: optionsOf(opts),
     membership: membership.kind,
-    routes: await routesOf(h, opts),
+    routes: await routesOf(h, opts, probe),
     tuples: perTuple,
   };
 }
 
 /** Every shape of a point resource, per id set. */
-async function pointRecord(
+export async function pointRecord(
   h: Harness,
   opts: ServerOpts,
   tuples: Record<string, PointParams>,
+  affected: readonly string[] = ["p9", "p8"],
+  probe: ProbeIds = DEFAULT_PROBE,
 ): Promise<Json> {
   const membership = opts.membership as {
     kind: string;
@@ -302,7 +346,7 @@ async function pointRecord(
       ids: await outcome(() => membership.idsOf(params)),
       full: await shape(h, () => opts.loader(params as never)),
       scoped: await shape(h, () =>
-        opts.loader(params as never, { affectedIds: ["p9", "p8"] }),
+        opts.loader(params as never, { affectedIds: affected }),
       ),
       empty: await shape(h, () =>
         opts.loader(params as never, { affectedIds: [] }),
@@ -312,13 +356,13 @@ async function pointRecord(
   return {
     options: optionsOf(opts),
     membership: membership.kind,
-    routes: await routesOf(h, opts),
+    routes: await routesOf(h, opts, probe),
     tuples: perTuple,
   };
 }
 
 /** A collection's `:groups`: its reach routes, and per grouping its uses and SQL. */
-async function groupsRecord(
+export async function groupsRecord(
   h: Harness,
   groups: {
     mode: string;
@@ -1052,6 +1096,388 @@ async function collectionCases(): Promise<Record<string, Json>> {
   return out;
 }
 
+// ── The `all` group (P8 v3 step 16b.5) ───────────────────────────────────────
+//
+// `compileAllCollection` over two declarations — a flat one (a static `where`,
+// a two-key order) and a tree-shaped one (a required lookup, a top-level
+// rollup, a children join with a nested rollup and a `jsonAgg`, a second
+// children join, and a closure whose ancestors carry a rollup and a children
+// join) — recorded shape by shape: full, scoped, orderIds, `:rows`, every
+// route (each reverse probe's SQL), the uses, the order signature and the
+// definition (A18: a byte of SQL moving moves it).
+
+const allTasks = pgTable("golden_all_tasks", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  ownerId: text("owner_id").notNull(),
+  heldAt: timestamp("held_at", { withTimezone: true }),
+  droppedAt: timestamp("dropped_at", { withTimezone: true }),
+  rank: integer("rank").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+const allOwners = pgTable("golden_all_owners", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+});
+const allAttempts = pgTable(
+  "golden_all_attempts",
+  {
+    id: text("id").primaryKey(),
+    taskId: text("task_id").notNull(),
+    status: text("status").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("golden_all_attempts_task_idx").on(t.taskId)],
+);
+const allDeps = pgTable(
+  "golden_all_deps",
+  {
+    taskId: text("task_id").notNull(),
+    dependsOn: text("depends_on").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.taskId, t.dependsOn] }),
+    index("golden_all_deps_depends_on_idx").on(t.dependsOn),
+  ],
+);
+const allConvs = pgTable(
+  "golden_all_convs",
+  {
+    id: text("id").primaryKey(),
+    attemptId: text("attempt_id").notNull(),
+    status: text("status").notNull(),
+  },
+  (t) => [index("golden_all_convs_attempt_idx").on(t.attemptId)],
+);
+const allPushes = pgTable("golden_all_pushes", {
+  id: text("id").primaryKey(),
+  attemptId: text("attempt_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
+const allConvAggT = pgTable(ATTEMPT_CONV_AGG_TABLE, {
+  attemptId: text("attempt_id").primaryKey(),
+  hasLive: boolean("has_live"),
+});
+const allConvAgg = defineRollup({
+  table: allConvAggT,
+  key: allConvAggT.attemptId,
+  select: (scope) =>
+    `SELECT c.attempt_id, bool_or(c.status <> 'done') AS has_live FROM golden_all_convs c WHERE ${scope("c.attempt_id")} GROUP BY c.attempt_id`,
+  sources: [
+    { table: allConvs, carry: allConvs.attemptId, reads: [allConvs.status] },
+  ],
+});
+// A rollup keyed by TASK, through the attempts hop (A35: attempts is a source
+// of its own carrying the task id).
+const allTaskPushT = pgTable(TASK_LATEST_CONVERSATION_TABLE, {
+  taskId: text("task_id").primaryKey(),
+  firstPushAt: timestamp("first_push_at", { withTimezone: true }),
+});
+const allTaskPush = defineRollup({
+  table: allTaskPushT,
+  key: allTaskPushT.taskId,
+  select: (scope) =>
+    `SELECT a.task_id, min(p.created_at) AS first_push_at FROM golden_all_pushes p JOIN golden_all_attempts a ON a.id = p.attempt_id WHERE ${scope("a.task_id")} GROUP BY a.task_id`,
+  sources: [
+    {
+      table: allPushes,
+      carry: allPushes.attemptId,
+      via: {
+        table: allAttempts,
+        match: allAttempts.id,
+        key: allAttempts.taskId,
+      },
+      reads: [allPushes.createdAt],
+    },
+    {
+      table: allAttempts,
+      carry: allAttempts.taskId,
+      reads: [],
+      ops: ["update", "delete"],
+    },
+  ],
+});
+
+const AllFlatRow = z.object({
+  id: z.string(),
+  title: z.string(),
+  rank: z.number(),
+  createdAt: z.date(),
+});
+const AllTreeRow = z.object({
+  id: z.string(),
+  title: z.string(),
+  createdAt: z.date(),
+  ownerName: z.string(),
+  firstPushAt: z.date().nullable(),
+  done: z.boolean(),
+  live: z.boolean().nullable(),
+  attempts: z.array(z.unknown()),
+  dependencies: z.array(z.string()),
+  blocked: z.boolean(),
+  status: z.string(),
+});
+
+/** The recording script of the `all` shapes: rows of exactly the projection each runs. */
+function allScript(sample: Record<string, unknown>) {
+  return (q: RecordedQuery): unknown[] => {
+    if (q.sql.startsWith("select distinct"))
+      return [{ id: "h1" }, { id: "h2" }];
+    if (q.sql.startsWith("SELECT DISTINCT"))
+      return [{ __h: "h1" }, { __h: "h2" }];
+    if (q.sql.startsWith("WITH RECURSIVE __d_"))
+      return [{ __n: "d1" }, { __n: "d2" }];
+    if (/^SELECT \S+ AS __id /.test(q.sql))
+      return [{ __id: "r2" }, { __id: "r1" }];
+    return [sample, { ...sample, id: "r2" }];
+  };
+}
+
+async function allRecord(
+  compileIt: (
+    db: ReturnType<typeof recordingQueryDb>["db"],
+  ) => ReturnType<typeof compileAllCollection>,
+  sample: Record<string, unknown>,
+): Promise<Json> {
+  const recording = recordingQueryDb(allScript(sample));
+  const h: Harness = {
+    calls: recording.calls,
+    counters: { where: 0, orderBy: 0 },
+  };
+  const compiled = compileIt(recording.db);
+  const all = compiled.all as unknown as ServerOpts & {
+    scopedMembership: {
+      orderOf(p: ResourceParams): Promise<string[]>;
+      orderSignatureOf(row: unknown, p: ResourceParams): string;
+    };
+  };
+  let fullRows: unknown[] = [];
+  const full = await shape(h, async () => {
+    fullRows = (await all.loader({} as never)) as unknown[];
+    return fullRows;
+  });
+  return {
+    keyField: compiled.keyField,
+    definition: compiled.definition,
+    options: optionsOf(all),
+    routes: await routesOf(h, all),
+    uses: await outcome(() => usesOf(all.routes!, {})),
+    full,
+    scoped: await shape(h, () =>
+      all.loader({} as never, { affectedIds: ["r1", "r2"] }),
+    ),
+    orderIds: await shape(h, () => all.scopedMembership.orderOf({})),
+    signatures: await shape(h, () =>
+      fullRows.map((row) => all.scopedMembership.orderSignatureOf(row, {})),
+    ),
+    rows: await pointRecord(h, compiled.rows as unknown as ServerOpts, {
+      one: { ids: "r1" },
+      two: { ids: "r1,r2" },
+    }),
+  };
+}
+
+async function allCases(): Promise<Record<string, Json>> {
+  const flat = liveCollection("golden.all-flat", {
+    row: AllFlatRow,
+    id: "id",
+    all: {
+      orderBy: [
+        ["rank", "asc"],
+        ["createdAt", "desc"],
+      ],
+      unbounded: { reason: "a golden fixture" },
+    },
+  });
+  const tree = liveCollection("golden.all-tree", {
+    row: AllTreeRow,
+    id: "id",
+    all: {
+      orderBy: [["createdAt", "asc"]],
+      unbounded: { reason: "a golden fixture" },
+    },
+    preload: "boot",
+  });
+  const owner: LookupJoin<"owner", typeof allOwners> = {
+    kind: "lookup",
+    alias: "owner",
+    table: allOwners,
+    pk: allOwners.id,
+    on: { from: BASE_RELATION, col: allTasks.ownerId },
+    required: true,
+  };
+  const convRollup = {
+    kind: "rollup",
+    alias: "conv",
+    rollup: allConvAgg,
+    on: allAttempts.id,
+  } as const;
+  const att = childrenJoin({
+    alias: "att",
+    table: allAttempts,
+    fk: allAttempts.taskId,
+    rollups: [convRollup],
+    where: (c) => sql`${c.att.status} <> 'system'`,
+    aggregates: (c) => ({
+      done: aggregate(sql`bool_or(${c.att.status} = 'completed')`, {
+        decoder: Boolean,
+        sqlType: "boolean",
+        notNull: true,
+        ifNone: sql`false`,
+      }),
+      live: aggregate(sql`bool_or(${c.conv.hasLive})`, {
+        decoder: Boolean,
+        sqlType: "boolean",
+      }),
+      list: jsonAgg(
+        {
+          id: c.att.id,
+          status: c.att.status,
+          createdAt: c.att.createdAt,
+          live: c.conv.hasLive,
+        },
+        { orderBy: [[c.att.createdAt, "desc"]] },
+      ),
+    }),
+  });
+  const deps = childrenJoin({
+    alias: "deps",
+    table: allDeps,
+    fk: allDeps.taskId,
+    aggregates: (c) => ({
+      ids: aggregate(
+        sql`array_agg(${c.deps.dependsOn} ORDER BY ${c.deps.createdAt})`,
+        {
+          decoder: parsed(z.array(z.string()), "golden.deps.ids"),
+          sqlType: "text[]",
+          notNull: true,
+          ifNone: sql`ARRAY[]::text[]`,
+        },
+      ),
+    }),
+  });
+  const ancAtt = childrenJoin({
+    alias: "att",
+    table: allAttempts,
+    fk: allAttempts.taskId,
+    rollups: [convRollup],
+    aggregates: (c) => ({
+      done: aggregate(
+        sql`bool_or(${c.att.status} = 'completed' AND NOT COALESCE(${c.conv.hasLive}, false))`,
+        {
+          decoder: Boolean,
+          sqlType: "boolean",
+          notNull: true,
+          ifNone: sql`false`,
+        },
+      ),
+    }),
+  });
+  const blocking = closureJoin({
+    alias: "blocking",
+    edges: allDeps,
+    child: allDeps.taskId,
+    parent: allDeps.dependsOn,
+    nodes: allTasks,
+    ancestorJoins: [
+      { kind: "rollup", alias: "push", rollup: allTaskPush, on: allTasks.id },
+      ancAtt,
+    ],
+    aggregates: (c) => ({
+      blocked: aggregate(
+        sql`bool_or(${c.anc.droppedAt} IS NULL AND ${c.push.firstPushAt} IS NULL AND NOT ${c.att.done})`,
+        {
+          decoder: Boolean,
+          sqlType: "boolean",
+          notNull: true,
+          ifNone: sql`false`,
+        },
+      ),
+    }),
+  });
+  const createdAt = "2026-10-06 10:00:00+00";
+  return {
+    flat: await allRecord(
+      (db) =>
+        compileAllCollection(
+          { all: flat.all, rows: flat.rows },
+          {
+            from: allTasks,
+            select: ({ j, render }) => ({
+              id: render(j.base.id),
+              title: render(j.base.title),
+              rank: render(j.base.rank),
+              createdAt: render(j.base.createdAt),
+            }),
+            where: sql`${allTasks.droppedAt} IS NULL AND ${allTasks.rank} > ${0}`,
+            debounceMs: 250,
+            db,
+          },
+        ),
+      { id: "r1", title: "T", rank: 1, createdAt },
+    ),
+    tree: await allRecord(
+      (db) =>
+        compileAllCollection(
+          { all: tree.all, rows: tree.rows },
+          {
+            from: allTasks,
+            joins: [
+              owner,
+              {
+                kind: "rollup",
+                alias: "first",
+                rollup: allTaskPush,
+                on: { from: BASE_RELATION, col: allTasks.id },
+              },
+              att,
+              deps,
+              blocking,
+            ],
+            select: ({ j, render, aggregate: agg, expr: ex }) => ({
+              id: render(j.base.id),
+              title: render(j.base.title),
+              createdAt: render(j.base.createdAt),
+              ownerName: render(j.owner.name),
+              firstPushAt: render(j.first.firstPushAt),
+              done: agg(j.att.done),
+              live: agg(j.att.live),
+              attempts: agg(j.att.list),
+              dependencies: agg(j.deps.ids),
+              blocked: agg(j.blocking.blocked),
+              status: ex(
+                expr(
+                  sql`CASE WHEN ${j.base.heldAt} IS NOT NULL THEN 'held' WHEN ${j.att.done} THEN 'done' WHEN ${j.blocking.blocked} THEN 'blocked' ELSE 'new' END`,
+                  { decoder: String, sqlType: "text", notNull: true },
+                ),
+                "status",
+              ),
+            }),
+            wire: {
+              encodeRow: (row) => row,
+              ids: { title: "golden:identity" },
+            },
+            db,
+          },
+        ),
+      {
+        id: "r1",
+        title: "T",
+        createdAt,
+        ownerName: "o",
+        firstPushAt: null,
+        done: false,
+        live: null,
+        attempts: [],
+        dependencies: [],
+        blocked: false,
+        status: "new",
+      },
+    ),
+  };
+}
+
 /**
  * The whole golden record, deterministic for one source tree: every case
  * builds its own declarations (unique keys) and recording db, in a fixed order.
@@ -1061,5 +1487,6 @@ export async function recordCompileGolden(): Promise<Json> {
     window: await directWindowCases(),
     point: await directPointCases(),
     collections: await collectionCases(),
+    all: await allCases(),
   };
 }

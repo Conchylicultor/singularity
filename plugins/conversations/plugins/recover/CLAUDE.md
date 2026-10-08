@@ -14,6 +14,7 @@
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
@@ -23,7 +24,7 @@
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/live-state.useResource`
+    - `primitives/live-state.foldResource`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

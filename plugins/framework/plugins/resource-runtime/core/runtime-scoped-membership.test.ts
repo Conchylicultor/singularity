@@ -15,8 +15,8 @@
  *   - a mixed I/U/D window coalesces to one frame;
  *   - a sticky-FULL contributor absorbs a membership change (FULL recompute);
  *   - an empty (no-op) window bumps no version and ships no frame;
- *   - a PERSISTED entry reconstructs+persists a FULL-equal value, watermark before
- *     the refill;
+ *   - a PERSISTED entry floor-persists a FULL-equal value, once per trailing
+ *     window, floored by the snapshot's base (never a drain-time capture);
  *   - a scoped change with no snapshot degrades to FULL, then resumes incremental;
  *   - a persisted sm snapshot survives the N→0 sub transition;
  *   - a DELETE cascades FULL downstream while an INSERT cascades scoped;
@@ -280,45 +280,378 @@ describe("scopedMembership — no-op window", () => {
   });
 });
 
-describe("scopedMembership — L2 persisted reconstruct-and-persist", () => {
-  test("a scoped change reconstructs a FULL-equal value and persists it, watermark captured BEFORE the refill", async () => {
-    const log: string[] = [];
-    const persistArgs: Array<{ value: unknown; wm: string }> = [];
+describe("scopedMembership — L2 persisted floor persist", () => {
+  // The harness of the cases below: a persisted alias whose persists are
+  // recorded (with their mode), the trailing window at 0 ms.
+  function persistedHarness(log: string[], wm = "xmin-42", windowMs = 0) {
+    const persistArgs: Array<{
+      value: unknown;
+      wm: string;
+      mode: string;
+      guard: readonly string[];
+    }> = [];
+    let wmTag = wm;
     const m = membershipHarness(
       {
         shouldPersist: (k) => k === "rows",
+        persistWindowMs: windowMs,
         captureWatermark: async () => {
           log.push("wm");
-          return "xmin-42";
+          return wmTag;
         },
-        persistSnapshot: async (_key, _pk, value, wm) => {
-          log.push("persist");
-          persistArgs.push({ value, wm });
+        persistSnapshot: async (_key, _pk, value, w, meta) => {
+          log.push(`persist:${meta.mode}`);
+          persistArgs.push({
+            value,
+            wm: w,
+            mode: meta.mode,
+            guard: meta.guardTables,
+          });
         },
       },
       log,
     );
+    return {
+      m,
+      persistArgs,
+      setWm: (w: string) => {
+        wmTag = w;
+      },
+    };
+  }
+
+  test("a scoped change floor-persists a FULL-equal value, floored by the snapshot's BASE — no capture at the drain", async () => {
+    const log: string[] = [];
+    const { m, persistArgs, setWm } = persistedHarness(log);
     m.table.set("a", { n: 1, where: true });
     m.table.set("b", { n: 1, where: true });
-    await m.h.subscribe("rows"); // FULL seed + persist
+    await m.h.subscribe("rows"); // FULL seed (base floor xmin-42)
+    await tick();
     log.length = 0;
     persistArgs.length = 0;
+    // A later capture would describe a newer read — it must NOT floor the value.
+    setWm("xmin-99");
 
     m.update("a", (cell) => {
       cell.n = 5;
     });
     await tick();
+    await tick();
 
-    // Watermark BEFORE the (scoped) refill, then persist — and the change took the
-    // INCREMENTAL path (load:scoped), not a forced FULL.
-    expect(log).toEqual(["wm", "load:scoped", "persist"]);
+    // No watermark is captured on the scoped path; the INCREMENTAL refill runs,
+    // then ONE floor persist.
+    expect(log).toEqual(["load:scoped", "persist:floor"]);
     expect(persistArgs).toHaveLength(1);
     expect(persistArgs[0]!.wm).toBe("xmin-42");
+    expect(persistArgs[0]!.mode).toBe("floor");
+    // The guard tables are the key's read-set union (no routes).
+    expect(persistArgs[0]!.guard).toEqual(["row_table"]);
     // The reconstructed value is byte-identical to a FULL recompute of the members.
     expect(persistArgs[0]!.value).toEqual([
       { id: "a", n: 5 },
       { id: "b", n: 1 },
     ]);
+  });
+
+  test("a burst of scoped changes inside one window costs ONE floor persist of the latest value", async () => {
+    const log: string[] = [];
+    const { m, persistArgs } = persistedHarness(log, "xmin-42", 30);
+    m.table.set("a", { n: 1, where: true });
+    m.table.set("b", { n: 1, where: true });
+    await m.h.subscribe("rows");
+    await tick();
+    persistArgs.length = 0;
+    // Three changes, each drained on its own flush, all inside the 30 ms window.
+    m.update("a", (cell) => {
+      cell.n = 2;
+    });
+    await tick();
+    m.insert("c", 3);
+    await tick();
+    m.del("b");
+    await tick();
+    expect(persistArgs).toEqual([]); // the window has not fired yet
+    await new Promise((r) => setTimeout(r, 60));
+    expect(persistArgs).toHaveLength(1);
+    expect(persistArgs[0]!.mode).toBe("floor");
+    expect(persistArgs[0]!.wm).toBe("xmin-42");
+    expect(persistArgs[0]!.value).toEqual(m.members());
+
+    // The window is fixed, not a debounce: a second burst after it fired
+    // arms a fresh one and costs exactly one more persist.
+    m.update("a", (cell) => {
+      cell.n = 4;
+    });
+    await tick();
+    m.insert("d", 5);
+    await tick();
+    expect(persistArgs).toHaveLength(1);
+    await new Promise((r) => setTimeout(r, 60));
+    expect(persistArgs).toHaveLength(2);
+    expect(persistArgs[1]!.mode).toBe("floor");
+    expect(persistArgs[1]!.value).toEqual(m.members());
+  });
+
+  test("a floor window elapsing while a replace is in flight writes no pre-replace value over it", async () => {
+    // The FULL drain awaits its replace BEFORE it rebuilds the snapshot, so a
+    // window left armed would fire mid-write, chain a floor link behind the
+    // replace, and write the OLD snapshot (at the OLD base floor) over it.
+    const persisted: Array<{ value: unknown; mode: string }> = [];
+    let blockReplace = false;
+    let release: (() => void) | undefined;
+    const m = membershipHarness({
+      shouldPersist: (k) => k === "rows",
+      persistWindowMs: 20,
+      captureWatermark: async () => "xmin-1",
+      persistSnapshot: async (_k, _pk, value, _w, meta) => {
+        if (meta.mode === "replace" && blockReplace) {
+          await new Promise<void>((r) => {
+            release = r;
+          });
+        }
+        persisted.push({ value, mode: meta.mode });
+      },
+    });
+    m.table.set("a", { n: 1, where: true });
+    await m.h.subscribe("rows");
+    await tick();
+    persisted.length = 0;
+    // A scoped change arms the 20 ms window …
+    m.update("a", (cell) => {
+      cell.n = 2;
+    });
+    await tick();
+    // … then a FULL recompute (of a value the snapshot does not hold yet)
+    // whose replace stalls well past the window.
+    blockReplace = true;
+    m.table.get("a")!.n = 3;
+    m.h.runtime.recomputeResource("rows");
+    await tick();
+    expect(release).toBeDefined();
+    await new Promise((r) => setTimeout(r, 50));
+    release!();
+    await tick();
+    await new Promise((r) => setTimeout(r, 40));
+    expect(persisted).toEqual([
+      { value: [{ id: "a", n: 3 }], mode: "replace" },
+    ]);
+  });
+
+  test("a sub-ack seed under a scoped drain never leaves the base floor above the snapshot it wrote", async () => {
+    // The drain writes `prev` + its refill over the sub-ack's seed, so the base
+    // floor must stay `prev`'s — the sub-ack's newer watermark would claim
+    // commits the written value never read.
+    const persisted: Array<{ value: unknown; wm: string; mode: string }> = [];
+    let wm = "xmin-1";
+    const table = new Map<string, number>([
+      ["a", 1],
+      ["b", 1],
+    ]);
+    const full = () =>
+      [...table.entries()]
+        .map(([id, n]) => ({ id, n }))
+        .sort((x, y) => (x.id < y.id ? -1 : 1));
+    let gate: (() => void) | undefined;
+    const h = createHarness({
+      sockets: 2,
+      readSet: () => ["row_table"],
+      shouldPersist: (k) => k === "rows",
+      persistWindowMs: 0,
+      captureWatermark: async () => wm,
+      persistSnapshot: async (_k, _pk, value, w, meta) => {
+        persisted.push({ value, wm: w, mode: meta.mode });
+      },
+    });
+    h.runtime.defineResource(
+      {
+        key: "rows",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
+      {
+        identityTable: "row_table",
+        scopedMembership: { orderOf: async () => full().map((r) => r.id) },
+        loader: async (_p, c) => {
+          if (!c) return full();
+          await new Promise<void>((r) => {
+            gate = r;
+          });
+          return c.affectedIds
+            .filter((id) => table.has(id))
+            .map((id) => ({ id, n: table.get(id)! }));
+        },
+      },
+    );
+    await h.subscribe("rows"); // base floor xmin-1
+    await tick();
+    persisted.length = 0;
+    wm = "xmin-5";
+    table.set("a", 2);
+    h.runtime.applyDbChange({
+      source: "feed",
+      table: "row_table",
+      op: "U",
+      ids: ["a"],
+      origin: "row_table",
+      identityBase: "row_table",
+    });
+    await tick(); // the drain is parked in its scoped refill
+    expect(gate).toBeDefined();
+    // A second subscriber's sub-ack re-seeds the snapshot at xmin-5 meanwhile.
+    await h.subscribe("rows", {}, { socket: 1 });
+    gate!();
+    await tick();
+    await tick();
+    const floors = persisted.filter((p) => p.mode === "floor");
+    expect(floors).toHaveLength(1);
+    expect(floors[0]!.wm).toBe("xmin-1");
+    expect(floors[0]!.value).toEqual(full());
+  });
+
+  test("a reorder-then-floor value equals the FULL output (alias orderSignatureOf)", async () => {
+    // An alias that declares `orderSignatureOf` re-derives its order when a
+    // member's ORDER BY projection moves, so the floor-persisted value is the
+    // FULL loader's — not the stale position.
+    const log: string[] = [];
+    const persisted: Array<{ value: unknown; mode: string }> = [];
+    const table = new Map<string, number>([
+      ["a", 1],
+      ["b", 2],
+      ["c", 3],
+    ]);
+    const full = () =>
+      [...table.entries()]
+        .map(([id, n]) => ({ id, n }))
+        .sort((x, y) => x.n - y.n || (x.id < y.id ? -1 : 1));
+    let orderOfCalls = 0;
+    const h = createHarness({
+      readSet: () => ["row_table"],
+      shouldPersist: (k) => k === "rows",
+      persistWindowMs: 0,
+      captureWatermark: async () => "xmin-1",
+      persistSnapshot: async (_k, _pk, value, _w, meta) => {
+        persisted.push({ value, mode: meta.mode });
+      },
+    });
+    h.runtime.defineResource(
+      {
+        key: "rows",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
+      {
+        identityTable: "row_table",
+        scopedMembership: {
+          orderOf: async () => {
+            orderOfCalls++;
+            return full().map((r) => r.id);
+          },
+          orderSignatureOf: (row) => String((row as { n: number }).n),
+        },
+        loader: (_p, c) => {
+          log.push(c ? "scoped" : "FULL");
+          if (!c) return full();
+          return c.affectedIds
+            .filter((id) => table.has(id))
+            .map((id) => ({ id, n: table.get(id)! }));
+        },
+      },
+    );
+    await h.subscribe("rows");
+    await tick();
+    persisted.length = 0;
+    // Move "a" to the end: an in-place UPDATE of the order column.
+    table.set("a", 9);
+    h.runtime.applyDbChange({
+      source: "feed",
+      table: "row_table",
+      op: "U",
+      ids: ["a"],
+      origin: "row_table",
+      identityBase: "row_table",
+    });
+    await tick();
+    await tick();
+    expect(orderOfCalls).toBe(1); // the moved signature re-derived the order
+    expect(persisted.at(-1)).toEqual({ value: full(), mode: "floor" });
+    const cv = makeClientView(keyOf);
+    cv.applyAll(h.frames);
+    expect(cv.value).toEqual(full());
+  });
+
+  test("a successful replace cancels an armed floor window", async () => {
+    const log: string[] = [];
+    const m = membershipHarness(
+      {
+        shouldPersist: (k) => k === "rows",
+        persistWindowMs: 30,
+        captureWatermark: async () => "xmin-1",
+        persistSnapshot: async (_k, _pk, _v, _w, meta) => {
+          log.push(`persist:${meta.mode}`);
+        },
+      },
+      log,
+    );
+    m.table.set("a", { n: 1, where: true });
+    await m.h.subscribe("rows");
+    await tick();
+    log.length = 0;
+    // A scoped change arms the 30 ms window …
+    m.update("a", (cell) => {
+      cell.n = 2;
+    });
+    await tick();
+    expect(log).toEqual(["load:scoped"]);
+    // … and a FULL recompute replaces the row before it fires, cancelling it.
+    m.h.runtime.recomputeResource("rows");
+    await tick();
+    await new Promise((r) => setTimeout(r, 60));
+    expect(log.filter((l) => l.startsWith("persist"))).toEqual([
+      "persist:replace",
+    ]);
+  });
+
+  test("dropPendingPersists drops an armed window without writing it", async () => {
+    const log: string[] = [];
+    const persistArgs: unknown[] = [];
+    const m = membershipHarness(
+      {
+        shouldPersist: (k) => k === "rows",
+        persistWindowMs: 50,
+        captureWatermark: async () => "xmin-1",
+        persistSnapshot: async (_k, _pk, value) => {
+          persistArgs.push(value);
+        },
+      },
+      log,
+    );
+    m.table.set("a", { n: 1, where: true });
+    await m.h.subscribe("rows");
+    await tick();
+    persistArgs.length = 0;
+    m.update("a", (cell) => {
+      cell.n = 2;
+    });
+    await tick(); // drained: the window is armed
+    expect(m.h.runtime.dropPendingPersists()).toBe(1);
+    await new Promise((r) => setTimeout(r, 80));
+    expect(persistArgs).toEqual([]);
+  });
+
+  test("keptSnapshotValue serves the alias's current in-memory value", async () => {
+    const log: string[] = [];
+    const { m } = persistedHarness(log);
+    expect(m.h.runtime.keptSnapshotValue("rows")).toBeUndefined(); // no snapshot yet
+    m.table.set("a", { n: 1, where: true });
+    await m.h.subscribe("rows");
+    await m.h.unsub("rows"); // kept across N→0
+    m.update("a", (cell) => {
+      cell.n = 7;
+    });
+    await tick();
+    expect(m.h.runtime.keptSnapshotValue("rows")).toEqual([{ id: "a", n: 7 }]);
   });
 });
 
@@ -370,10 +703,17 @@ describe("scopedMembership — L2 boot seed skips the first-change FULL", () => 
     // the in-memory diff base from the durable value, exactly as onReady does before
     // catch-up. This is the ONLY difference from the "degrade to FULL" test above,
     // which does not seed and therefore FULL-recomputes its first change.
-    m.h.runtime.seedPersistedSnapshot("rows", "{}", [
-      { id: "a", n: 1 },
-      { id: "b", n: 1 },
-    ]);
+    expect(
+      m.h.runtime.seedPersistedSnapshot(
+        "rows",
+        "{}",
+        [
+          { id: "a", n: 1 },
+          { id: "b", n: 1 },
+        ],
+        { position: "1", positionAt: null },
+      ),
+    ).toEqual({ kind: "seeded" });
 
     // The very first scoped change now finds the seeded snapshot → incremental.
     m.update("a", (cell) => {
@@ -400,7 +740,12 @@ describe("scopedMembership — L2 boot seed skips the first-change FULL", () => 
 
     // A late seed with a STALE value must be a no-op (snapshot already present), so
     // the next change still diffs against the fresh base and stays scoped/correct.
-    m.h.runtime.seedPersistedSnapshot("rows", "{}", [{ id: "a", n: 999 }]);
+    expect(
+      m.h.runtime.seedPersistedSnapshot("rows", "{}", [{ id: "a", n: 999 }], {
+        position: "1",
+        positionAt: null,
+      }),
+    ).toEqual({ kind: "skipped" });
     m.update("a", (cell) => {
       cell.n = 5;
     });
@@ -413,6 +758,106 @@ describe("scopedMembership — L2 boot seed skips the first-change FULL", () => 
       { id: "b", n: 1 },
     ]);
     expect(cv.driftResubs).toBe(0);
+  });
+});
+
+describe("scopedMembership — A30: an L2 value that does not parse seeds nothing", () => {
+  test("a value the payload schema rejects is `invalid`: no snapshot, so the first change rebuilds FULL", async () => {
+    const log: string[] = [];
+    const m = membershipHarness(
+      {
+        shouldPersist: (k) => k === "rows",
+        captureWatermark: async () => "xmin-1",
+        persistSnapshot: async () => {},
+      },
+      log,
+    );
+    m.table.set("a", { n: 1, where: true });
+    // A row schema moved under the L2 row (an opaque transform's body the
+    // definition does not fingerprint): `n` is no longer a number.
+    const outcome = m.h.runtime.seedPersistedSnapshot(
+      "rows",
+      "{}",
+      [{ id: "a", n: "one" }],
+      { position: "1", positionAt: null },
+    );
+    expect(outcome.kind).toBe("invalid");
+    expect(m.h.runtime.keptSnapshotValue("rows")).toBeUndefined();
+    // Nothing was seeded: the first change cannot diff against a base.
+    m.update("a", (cell) => {
+      cell.n = 2;
+    });
+    await tick();
+    expect(log).toEqual(["load:FULL"]);
+    expect(m.h.runtime.keptSnapshotValue("rows")).toEqual([{ id: "a", n: 2 }]);
+  });
+
+  test("an unknown key, or a key that is no unbounded-window alias, is `skipped`", () => {
+    const m = membershipHarness({}, []);
+    // A registered keyed entry WITHOUT scopedMembership: no alias, never
+    // seeded — and never parsed, so even a value its schema rejects skips.
+    m.h.runtime.defineResource(
+      {
+        key: "plain",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
+      {
+        identityTable: "row_table",
+        fanOut: { reason: "one param-less tuple — nothing to narrow" },
+        loader: () => [],
+      },
+    );
+    const base = { position: "1", positionAt: null };
+    for (const key of ["nope", "plain"]) {
+      expect(m.h.runtime.seedPersistedSnapshot(key, "{}", [], base)).toEqual({
+        kind: "skipped",
+      });
+      expect(
+        m.h.runtime.seedPersistedSnapshot(key, "{}", { not: "rows" }, base),
+      ).toEqual({ kind: "skipped" });
+      expect(m.h.runtime.validatePersistedValue(key, { not: "rows" })).toEqual({
+        kind: "skipped",
+      });
+    }
+  });
+
+  test("a tuple that already holds a fresher snapshot is `skipped` before any parse — an invalid late value leaves it untouched", async () => {
+    const m = membershipHarness({
+      shouldPersist: (k) => k === "rows",
+      captureWatermark: async () => "xmin-1",
+      persistSnapshot: async () => {},
+    });
+    m.table.set("a", { n: 1, where: true });
+    await m.h.subscribe("rows"); // seeds the `{}` snapshot
+    const before = m.h.runtime.keptSnapshotValue("rows");
+    expect(before).toEqual([{ id: "a", n: 1 }]);
+    // Skipped, not invalid: the snapshot-present check runs first, so the
+    // caller (`runBootCatchUp`) lowers the replay floor rather than clearing
+    // the row a fresher base already stands in front of.
+    expect(
+      m.h.runtime.seedPersistedSnapshot("rows", "{}", [{ id: "a", n: "one" }], {
+        position: "1",
+        positionAt: null,
+      }),
+    ).toEqual({ kind: "skipped" });
+    expect(m.h.runtime.keptSnapshotValue("rows")).toEqual(before);
+  });
+
+  test("validatePersistedValue is A30's parse alone: valid / invalid, seeding nothing", () => {
+    const m = membershipHarness({
+      shouldPersist: (k) => k === "rows",
+      captureWatermark: async () => "xmin-1",
+      persistSnapshot: async () => {},
+    });
+    expect(
+      m.h.runtime.validatePersistedValue("rows", [{ id: "a", n: 1 }]),
+    ).toEqual({ kind: "valid" });
+    expect(
+      m.h.runtime.validatePersistedValue("rows", [{ id: "a", n: "one" }]).kind,
+    ).toBe("invalid");
+    expect(m.h.runtime.keptSnapshotValue("rows")).toBeUndefined();
   });
 });
 

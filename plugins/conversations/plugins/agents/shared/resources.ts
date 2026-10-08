@@ -1,27 +1,11 @@
 // In-plugin imports go straight to the leaf so the frontend bundle doesn't
 // pull `server/api`'s runtime surface. Cross-plugin consumers go through
 // `@plugins/conversations/plugins/agents/server/api`.
-import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
-import { keyedResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
-import { liveValue } from "@plugins/network/plugins/live/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { z } from "zod";
-import {
-  AgentSchema,
-  AgentLaunchWithStatusSchema,
-  type AgentLaunchWithStatus,
-} from "./schemas";
+import { AgentSchema, AgentLaunchWithStatusSchema } from "./schemas";
 
 export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./schemas";
-
-// Launch rows embed a pointer to the most recent conversation bound to their
-// taskId so clients can render activity dots and launch links without
-// subscribing to the bounded conversations live resources (which truncate old
-// conversations). `null` when no conversation exists for the task.
-export type AgentLaunchConversationRef = {
-  id: string;
-  title: string | null;
-  status: ConversationStatus;
-};
 
 // The user's agent roster — every row of `agents_v`, ordered by (rank,
 // createdAt) — as ONE value, not a collection: the Agents sidebar renders the
@@ -35,15 +19,38 @@ export const agentRows = liveValue("agents", {
   preload: "boot",
 });
 
-// Keyed delta-sync: mirrors the server resource's `mode: "keyed"` + `keyOf`.
-// Must stay in lockstep — a plain `resourceDescriptor` here crashes the client
-// the moment the server ships a row-level delta (no keyOf to merge by).
-export const agentLaunchesResource = keyedResourceDescriptor<
-  AgentLaunchWithStatus[]
->(
-  "agent-launches",
-  z.array(AgentLaunchWithStatusSchema),
-  [],
-  (row) => (row as AgentLaunchWithStatus).id,
-  { preload: "boot" },
-);
+// Every agent launch — the WHOLE ordered set (`all`), each with a pointer to
+// the latest non-system conversation of its task (`latestConversation`, and
+// its status flat as `latestConversationStatus`), so the agent avatars, the
+// status dots and an agent's Attempts list render activity without
+// subscribing to the bounded conversation lists (which truncate old
+// conversations). `null` while the task has no conversation.
+//
+// Served over `agent_launches` joined to the `task_latest_conversation`
+// rollup on the launch's task (`../server/internal/agent-launch-rows.ts`): a
+// launch insert is an entrant, its delete an exit, and a conversation or
+// attempt write reaches the launches of its task through the rollup's two
+// source routes — never a whole-set reload. Ordered as the old list was:
+// `createdAt` (the id breaks ties).
+//
+// The wire row is EXACTLY the legacy `agent-launches` row
+// (`AgentLaunchWithStatus`), under the same key: a tab still running a bundle
+// that declared the old param-less `keyedResourceDescriptor("agent-launches",
+// …)` subscribes `{}`, passes the `all` gate and parses these rows with its own
+// (identical) schema — the C39 old-bundle check, pinned by
+// `../server/internal/agent-launches-oracle.test.ts`. A change to the row must
+// rename the key.
+//
+// Boot-critical (`preload: "boot"`): the avatars paint settled.
+export const agentLaunchRows = liveCollection("agent-launches", {
+  row: AgentLaunchWithStatusSchema,
+  id: "id",
+  all: {
+    orderBy: [["createdAt", "asc"]],
+    unbounded: {
+      reason:
+        "every agent avatar, status dot and Attempts list looks a launch up by task or agent; launches grow only by hand (one per agent launch)",
+    },
+  },
+  preload: "boot",
+});

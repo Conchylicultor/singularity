@@ -1,5 +1,5 @@
 import { ConversationChip } from "@plugins/conversations/plugins/conversation-ui/plugins/chip/web";
-import { useConversationById } from "@plugins/conversations/web";
+import { useConversation } from "@plugins/conversations/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type { PageReferenceChipProps } from "@plugins/page/plugins/page-reference/web";
@@ -21,11 +21,9 @@ function ChipLoading() {
  * creator.
  *
  * Two reads, and neither answers "nobody" for "not known yet": the authorship
- * record, then the conversation it names. Both wait as a chip-sized shimmer
- * (which paints only on a slow load). The second has one blind spot it inherits
- * from `useConversationById`, which answers `null` both while an older
- * conversation is being fetched and when it is gone for good — so a deleted
- * creator keeps the shimmer rather than claiming either.
+ * record, then the conversation it names (its by-id read, which finds any
+ * conversation however old). Both wait as a chip-sized shimmer (which paints
+ * only on a slow load); a creator whose conversation was deleted shows no chip.
  */
 export function AgentPageCreatorChip({ pageId }: PageReferenceChipProps) {
   const creator = useAgentNotesCreator(pageId);
@@ -46,7 +44,18 @@ export function AgentPageCreatorChip({ pageId }: PageReferenceChipProps) {
 
 /** The creator's chip, split out so the lookup hook only runs with an id. */
 function CreatorChip({ conversationId }: { conversationId: string }) {
-  const conv = useConversationById(conversationId);
-  if (conv === null) return <ChipLoading />;
-  return <ConversationChip conv={conv} />;
+  const conv = useConversation(conversationId);
+  if (conv.status === "loading") return <ChipLoading />;
+  if (conv.status === "error") {
+    return (
+      <ResourceErrorInline
+        error={conv.error}
+        refetch={conv.refetch}
+        variant="icon"
+        subject="the page's creator"
+      />
+    );
+  }
+  if (conv.data === null) return null;
+  return <ConversationChip conv={conv.data} />;
 }

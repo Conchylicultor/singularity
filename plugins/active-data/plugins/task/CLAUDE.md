@@ -25,12 +25,13 @@ gets a `useId()`-derived Lexical namespace.
 - Web:
   - Contributes: `ActiveData.Tag` "task" → `TaskCard`
   - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×3
     - `active-data` ×2
+    - `primitives/live-state` ×2
     - `conversations/conversation-ui/row.ConversationRow`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversationById`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/spacing.Stack`

@@ -103,9 +103,9 @@ matches, so a steady-state boot is a read. **That is sound only because their
 output IS their definition** — recreate a view or a trigger from the same text and
 you get the same object. It does NOT transfer to anything holding rows.
 `rebuildDerivedTables` rebuilds a materialized rollup, whose correctness depends
-on source DATA; its `reconcileDdl` is documented as the self-heal for "drift from
-downtime / bulk loads", and both rollup specs explicitly say the reconcile is the
-safety net _regardless of_ their trigger-completeness argument. A definition
+on source DATA; its reconcile is documented as the self-heal for "drift from
+downtime / bulk loads", and the rollup declarations explicitly say the reconcile
+is the safety net _regardless of_ their trigger-completeness argument. A definition
 signature cannot observe that drift, so skipping on one would trade a boot cost
 for a silently stale rollup. Split the two halves before reaching for a signature:
 definition DDL can be signature-skipped, a rebuild-from-source cannot. That split
@@ -113,11 +113,11 @@ is now implemented — see `plugins/database/plugins/derived-tables/CLAUDE.md`.
 
 **The accepted residual: every `exec` child still runs a full rollup reconcile
 before it can start its work.** That is a deliberate trade, not an oversight. The
-definition half — including the `DROP`/`CREATE TRIGGER` that takes an
-AccessExclusive lock on `conversations` / `pushes` — is skipped when unchanged, so
-an exec child no longer contends with the live backend for a hot source table.
-What remains is a scan against the rollup: it costs boot latency and blocks
-nothing. If an exec child ever proves too slow to boot because of it, that is a
+definition half — including the trigger DDL that locks `conversations` /
+`pushes` — is skipped when unchanged, per source table, so an exec child no
+longer contends with the live backend for a hot source table. What remains is a
+diff-first scan against the rollup that writes nothing when nothing drifted: it
+costs boot latency and blocks nothing. If an exec child ever proves too slow to boot because of it, that is a
 measured problem wanting a measured fix — a bounded or incremental reconcile, or
 moving repair off the boot path with an explicit invalidation. **The fix is NOT to
 put the reconcile behind the definition signature**: rollups are feed-exempt, so a
@@ -126,8 +126,9 @@ it was wrong.
 
 **3. A blocking hook that scopes a write by the DECLARED resource/plugin set is
 safe only while registry selection and DB selection agree.**
-`live-state-snapshot`'s `clearSnapshotsExceptKeys` DELETEs persisted snapshot rows
-whose keys are no longer declared. That is a no-op in an `exec` child today
+`live-state-snapshot`'s `sweepUnusableSnapshots` DELETEs persisted snapshot rows
+that are not usable — keys the runtime no longer persists, another definition, an
+older writer. That is a no-op in an `exec` child today
 because `bin/active-runtime.ts` selects the registry from the namespace's own
 `spec.json` and the database is derived from that same namespace — so a child's
 declared key set always matches the serving backend's. If those two selections
@@ -274,6 +275,9 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `LoadedServerPlugin`
     - `LoaderAggregateView`
     - `MemoryCheckpoint`
+    - `PersistedBase`
+    - `PersistedValueCheck`
+    - `PersistMeta`
     - `PhaseId`
     - `ProcMemory`
     - `ProfilerHooks`
@@ -288,6 +292,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ResourceParams`
     - `ResourcePushObserver`
     - `RuntimeProfileView`
+    - `SeedOutcome`
     - `ServerContribution`
     - `ServerContributionToken`
     - `ServerFatalReport`
@@ -308,10 +313,12 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `defineExternalResource`
     - `defineResource`
     - `defineServerContribution`
+    - `dropPendingPersists`
     - `getBootMode`
     - `getProfilingData`
     - `handleResourceHttp`
     - `isServerReady`
+    - `keptSnapshotValue`
     - `loadResourceByKey`
     - `markServerReady`
     - `measureSubscribeCycle`
@@ -320,6 +327,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `onDeferredResourcesBound`
     - `onResourceDelivery`
     - `onResourcePush`
+    - `persistedDefinitions`
     - `persistedKeys`
     - `physFootprintBytes`
     - `procMemory`
@@ -347,6 +355,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `setRelationResolver`
     - `triggerResourcePush`
     - `unboundedWindowKeys`
+    - `validatePersistedValue`
     - `withNotifyBatch`
 - Cross-plugin:
   - Imported by:

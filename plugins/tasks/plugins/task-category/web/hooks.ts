@@ -1,38 +1,44 @@
 import { useMemo } from "react";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  foldResource,
-  useResource,
+  mapResource,
+  useEndpointResource,
+  type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
   listTaskCategories,
   type TaskCategoryDef,
 } from "@plugins/tasks/plugins/task-category/core";
-import { taskCategoriesResource } from "../shared/resources";
+import { taskCategories, type TaskCategoryRow } from "../shared/resources";
 
-// Categories are static after boot (each filing plugin contributes its own at
-// load time), so cache indefinitely — never refetch. Ordered server-side by
-// `order ?? 0` then id.
-export function useTaskCategories(): TaskCategoryDef[] {
-  const { data } = useEndpoint(
-    listTaskCategories,
-    {},
-    { staleTime: Infinity, gcTime: Infinity },
-  );
-  return data?.categories ?? [];
+const NO_REFETCH = { staleTime: Infinity, gcTime: Infinity } as const;
+
+/**
+ * The registered categories: a read — loading, failed, or the list. Static
+ * after boot (each filing plugin contributes its own at load time), so cached
+ * indefinitely and never refetched. Ordered server-side by `order ?? 0` then
+ * id. Not known yet is the loading arm, never an empty registry.
+ */
+export function useTaskCategories(): ResourceResult<TaskCategoryDef[]> {
+  const result = useEndpointResource(listTaskCategories, {}, NO_REFETCH);
+  return useMemo(() => mapResource(result, (r) => r.categories), [result]);
 }
 
-// Map<taskId, categoryId> from the live keyed resource. Empty while loading or
-// failed — consumers treat a missing entry as "no category" (the "None"
-// bucket), the category is cosmetic grouping, and the resource is
-// boot-critical so it is hydrated before first paint anyway.
-export function useTaskCategoryMap(): ReadonlyMap<string, string> {
-  const result = useResource(taskCategoriesResource);
-  return useMemo(() => {
-    return foldResource(result, {
-      loading: () => new Map<string, string>(),
-      error: () => new Map<string, string>(),
-      ready: (rows) => new Map(rows.map((r) => [r.taskId, r.category])),
-    });
-  }, [result]);
+/** taskId → categoryId, one entry per categorized task. */
+export type TaskCategoryMap = ReadonlyMap<string, string>;
+
+// Stable (module-level), so the `select` re-runs only when the set changes.
+function toCategoryMap(rows: TaskCategoryRow[]): TaskCategoryMap {
+  return new Map(rows.map((r) => [r.taskId, r.category]));
+}
+
+/**
+ * Every categorized task's category, from the live `task-categories` set: a
+ * read — loading, failed, or the map. A task missing from a READY map has no
+ * category (the "None" bucket); not loaded yet is the loading arm, never an
+ * empty map (which would claim every task is uncategorized). The set is
+ * preloaded, so a boot-hydrated read renders ready on its first render.
+ */
+export function useTaskCategoryMap(): ResourceResult<TaskCategoryMap> {
+  return useLive(taskCategories, { select: toCategoryMap });
 }

@@ -5,7 +5,8 @@ clickable chips. Agents write the bare id in their text — no tag wrapping
 needed — and the active-data linkify primitive replaces matches at render time.
 
 Clicking opens the task in `taskDetailPane` (`/tasks/t/:taskId`). The chip
-resolves the task title and current status via `tasksResource`; falls back to
+resolves the task title and current status via the live `tasks` set
+(`useLive(taskRows)`); falls back to
 the raw id if the task isn't in the index yet.
 
 Two task ID formats exist in the codebase (seconds + 4-char suffix from
@@ -23,10 +24,10 @@ which renders `<task>prompt</task>` *block* tags as editable creation cards.
 - Web:
   - Contributes: `InlineChip.Tag` "task-link" → `TaskLinkChip`
   - Uses:
+    - `network/live.useLive`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/live-state.matchResource`
-    - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
     - `primitives/text-editor/inline-chip.inlineChip`
     - `primitives/text-editor/inline-chip.InlineChip`

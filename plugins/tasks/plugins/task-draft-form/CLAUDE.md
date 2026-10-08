@@ -125,15 +125,16 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `primitives/text-editor/composer` ×3
     - `config_v2` ×2
     - `infra/endpoints` ×2
-    - `primitives/live-state` ×2
     - `primitives/shortcuts` ×2
     - `apps-core.useCurrentAppId`
+    - `network/live.useLive`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
+    - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/persistent-draft.useDraft`

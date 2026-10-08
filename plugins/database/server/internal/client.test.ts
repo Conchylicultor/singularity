@@ -25,9 +25,48 @@ import {
   extractReadTablesFromSql,
   installQueryWrapper,
   POOL_MAX,
+  quotedRelationsIn,
   RESERVED_INTERACTIVE,
   setKnownRelations,
 } from "./client";
+
+// The quoted half of the read-set capture, with no relation set at all: what a
+// raw-SQL compiler checks its rendered text against (a quoted CTE name would
+// land in every read-set the query is captured under).
+describe("quotedRelationsIn", () => {
+  afterEach(() => setKnownRelations(null));
+
+  it("returns the quoted FROM / JOIN names, deduped, in order of first appearance", () => {
+    const sql =
+      'select * from "tasks" t left join "attempts" a on a.task_id = t.id inner join "tasks" t2 on true';
+    expect(quotedRelationsIn(sql)).toEqual(["tasks", "attempts"]);
+  });
+
+  it("ignores unquoted names whatever relation set is installed", () => {
+    setKnownRelations(new Set(["tasks", "__agg"]));
+    const sql =
+      'with __agg as (select 1) select * from tasks join __agg on true join "pushes" p on true';
+    expect(quotedRelationsIn(sql)).toEqual(["pushes"]);
+  });
+
+  it("reports a quoted CTE name — the spelling a raw shape must avoid", () => {
+    const sql = 'with "__agg" as (select 1) select * from "__agg"';
+    expect(quotedRelationsIn(sql)).toEqual(["__agg"]);
+  });
+
+  it("drops write targets and IS DISTINCT FROM operands, like the capture", () => {
+    const sql =
+      'delete from "notifications" where "a" is distinct from "b" and exists (select 1 from "reports")';
+    expect(quotedRelationsIn(sql)).toEqual(["reports"]);
+  });
+
+  it("agrees with the capture's quoted branch when no relation set is installed", () => {
+    setKnownRelations(null);
+    const sql =
+      'select * from "tasks" join attempts on true join "pushes" on true, lateral (select 1) x';
+    expect(quotedRelationsIn(sql)).toEqual(extractReadTablesFromSql(sql));
+  });
+});
 
 // A loader's read-set contains only tables it READS (FROM / JOIN). Write targets
 // (INSERT INTO / UPDATE / DELETE) must never appear — they are foreign

@@ -12,6 +12,10 @@ import type {
   TableChange as RtTableChange,
   ChangeSource as RtChangeSource,
   TableLayoutRequirement as RtTableLayoutRequirement,
+  PersistMeta as RtPersistMeta,
+  PersistedBase as RtPersistedBase,
+  SeedOutcome as RtSeedOutcome,
+  PersistedValueCheck as RtPersistedValueCheck,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   recordEntrySpan,
@@ -82,6 +86,14 @@ export type TableChange = RtTableChange;
 export type ChangeSource = RtChangeSource;
 // One routed table's trigger layout (`routedTableRequirements`).
 export type TableLayoutRequirement = RtTableLayoutRequirement;
+/** How one L2 persist writes its row (replace / floor) — see `LiveStateSnapshotHooks`. */
+export type PersistMeta = RtPersistMeta;
+/** The L2 row a boot seed restores (`seedPersistedSnapshot`). */
+export type PersistedBase = RtPersistedBase;
+/** What a boot seed did with an L2 value (`seedPersistedSnapshot`; A30 refuses one that does not parse). */
+export type SeedOutcome = RtSeedOutcome;
+/** Whether an L2 value parses as its alias's payload (`validatePersistedValue`, A30). */
+export type PersistedValueCheck = RtPersistedValueCheck;
 
 // Resource.Declare stays here — its ~37 contributors import it from server-core.
 // `preload` (`"boot"` / `"boot-and-keep"`) is a param-less resource's opt-in to
@@ -182,16 +194,24 @@ export function setFeedExemptTables(fn: () => Set<string>): void {
 export interface LiveStateSnapshotHooks {
   shouldPersist: (key: string) => boolean;
   captureWatermark: () => Promise<string>;
+  /** See `ResourceRuntimeOptions.persistSnapshot`: `meta.mode` is replace or floor. */
   persistSnapshot: (
     key: string,
     paramsKey: string,
     value: unknown,
     watermark: string,
-    tablesRead: readonly string[],
+    meta: PersistMeta,
   ) => Promise<void>;
 }
 let liveStateSnapshotHooks: LiveStateSnapshotHooks | null = null;
-export function setLiveStateSnapshotHooks(hooks: LiveStateSnapshotHooks): void {
+/**
+ * Install the L2 hooks — or, with `null`, uninstall them: an init that failed
+ * after installing them (they must be installed before `persistedKeys()` can
+ * answer) degrades to "nothing persisted" exactly as if it never had.
+ */
+export function setLiveStateSnapshotHooks(
+  hooks: LiveStateSnapshotHooks | null,
+): void {
   liveStateSnapshotHooks = hooks;
 }
 
@@ -360,7 +380,7 @@ const runtime = createResourceRuntime({
     }
     return liveStateSnapshotHooks.captureWatermark();
   },
-  persistSnapshot: (key, paramsKey, value, watermark, tablesRead) => {
+  persistSnapshot: (key, paramsKey, value, watermark, meta) => {
     if (!liveStateSnapshotHooks) {
       throw new Error(
         "persistSnapshot called before live-state-snapshot hooks installed",
@@ -371,7 +391,7 @@ const runtime = createResourceRuntime({
       paramsKey,
       value,
       watermark,
-      tablesRead,
+      meta,
     );
   },
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
@@ -443,8 +463,20 @@ export const {
   // Unbounded-window (scopedMembership alias) keys — the live-state-snapshot boot
   // seed picks these to reconstruct the in-memory diff base from their L2 value.
   unboundedWindowKeys,
-  // L2 boot seed: restore a persisted alias's in-memory diff base before catch-up.
+  // L2 boot seed: restore a persisted alias's in-memory diff base (and its base
+  // floor) before catch-up.
   seedPersistedSnapshot,
+  // A30's parse alone: the live-state-snapshot barrier clears every persisted
+  // alias row whose value its payload schema rejects, before readiness flips.
+  validatePersistedValue,
+  // The L2 definition of every persisted key that has one — the expected map
+  // every L2 read path matches rows against (A18).
+  persistedDefinitions,
+  // A persisted alias's current value from its in-memory snapshot — the boot
+  // snapshot serves it ahead of the trailing L2 row.
+  keptSnapshotValue,
+  // Shutdown: drop the armed trailing floor persists (catch-up replays them).
+  dropPendingPersists,
 } = runtime;
 
 // ── Boot: bind the deferred resources ──────────────────────────────────────

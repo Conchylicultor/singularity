@@ -14,6 +14,11 @@ export type {
   ResourceParams,
   DependsOnEntry,
   KeyedMembership,
+  AliasMembership,
+  PersistMeta,
+  PersistedBase,
+  SeedOutcome,
+  PersistedValueCheck,
   NotifyCounts,
   ScopedResourceTable,
   RoutedRecomputeOn,
@@ -27,6 +32,7 @@ export {
 } from "./routing";
 export type {
   ChangeSource,
+  DerivedRead,
   FullRoute,
   HostMap,
   ReachPlan,

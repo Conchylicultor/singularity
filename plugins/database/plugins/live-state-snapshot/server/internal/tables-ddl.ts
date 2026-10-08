@@ -1,6 +1,12 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
-import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
+import { z } from "zod";
+import { executeOne } from "@plugins/database/plugins/sql-rows/core";
+import {
+  LIVE_STATE_CHANGELOG_HORIZON_TABLE,
+  LIVE_STATE_CHANGELOG_TABLE,
+  LIVE_STATE_SNAPSHOT_TABLE,
+} from "@plugins/database/plugins/derived-views/core";
 
 // `live_state_snapshot` — the persisted materialized value. One row per
 // (resource_key, params_key); `params_key = "{}"` for the param-less
@@ -22,6 +28,9 @@ CREATE TABLE IF NOT EXISTS ${LIVE_STATE_SNAPSHOT_TABLE} (
   position     numeric NOT NULL,
   tables_read  text[]  NOT NULL DEFAULT '{}'::text[],
   persisted_at timestamptz NOT NULL DEFAULT now(),
+  definition    text,
+  definition_at timestamptz,
+  position_at   timestamptz,
   PRIMARY KEY (resource_key, params_key)
 );
 `;
@@ -55,8 +64,90 @@ END
 $$;
 `;
 
+// Idempotent in-place upgrade adding the L2 definition columns (A18 / C22):
+//  - `definition`    — the fingerprint of the compiled SQL that wrote the value;
+//  - `definition_at` — stamped with the same `now()` as `persisted_at` by every
+//    writer that knows the column. NO default on purpose: an older backend's
+//    upsert (a hot swap) moves `persisted_at` and leaves this behind, so the
+//    row it wrote stops matching the usable-row predicate instead of carrying
+//    the new definition over an old value;
+//  - `position_at`   — when a REPLACE persist last set `position` (a floor
+//    persist keeps it): the compact job's age, NULL until a replace wrote it.
+// Existing rows get NULL `definition_at` and so fail the predicate once — the
+// intended one-time recompute. Derived DDL, NOT a drizzle migration.
+const SNAPSHOT_TABLE_ADD_DEFINITION = `
+ALTER TABLE ${LIVE_STATE_SNAPSHOT_TABLE}
+  ADD COLUMN IF NOT EXISTS definition text,
+  ADD COLUMN IF NOT EXISTS definition_at timestamptz,
+  ADD COLUMN IF NOT EXISTS position_at timestamptz;
+`;
+
+// `live_state_changelog_horizon` — ONE row: the highest changelog xid the
+// prune ever deleted (`max_pruned_xid`), written by the prune's own statement
+// (`pruneChangelog`), NULL while nothing was. It is what catch-up judges a floor
+// by: history at or after a floor is missing exactly when the prune deleted a
+// row at or after it. The oldest RETAINED xid cannot say that — the changelog
+// is sparse (a row per write), so after any prune the oldest survivor sits
+// above the snapshot floor with nothing missing in between, and every boot
+// would clear and recompute every persisted key.
+const HORIZON_TABLE_DDL = `
+CREATE TABLE IF NOT EXISTS ${LIVE_STATE_CHANGELOG_HORIZON_TABLE} (
+  id             boolean PRIMARY KEY DEFAULT true CHECK (id),
+  max_pruned_xid numeric
+);
+`;
+
+const PresentRowSchema = z.object({ present: z.boolean() });
+
+async function relationExists(
+  db: NodePgDatabase,
+  name: string,
+): Promise<boolean> {
+  const row = await executeOne(db, {
+    query: drizzleSql`SELECT to_regclass(${`public.${name}`}) IS NOT NULL AS present`,
+    row: PresentRowSchema,
+    label: "ensureSnapshotTable/relation-exists",
+  });
+  return row.present;
+}
+
+// Create the horizon and seed its row when it has none (a new table; a
+// database restored without it). What was pruned before the row existed is
+// unknown, so the seed is the most that could have been — the old rule, frozen
+// at that instant:
+//  - no changelog yet → nothing was ever pruned (NULL);
+//  - a changelog with rows → everything below its oldest row may have been;
+//  - an empty changelog → everything so far may have been (the current xid).
+// A fork copies the row: xids are cluster-wide, so the source's horizon lies
+// below every position the fork will ever persist. `ON CONFLICT DO NOTHING`: a
+// concurrent boot (hot swap) seeds it once.
+async function ensureChangelogHorizon(db: NodePgDatabase): Promise<void> {
+  await db.execute(drizzleSql.raw(HORIZON_TABLE_DDL));
+  const seeded = await executeOne(db, {
+    query: drizzleSql.raw(
+      `SELECT EXISTS (SELECT 1 FROM ${LIVE_STATE_CHANGELOG_HORIZON_TABLE}) AS present`,
+    ),
+    row: PresentRowSchema,
+    label: "ensureSnapshotTable/horizon-seeded",
+  });
+  if (seeded.present) return;
+  const seed = (await relationExists(db, LIVE_STATE_CHANGELOG_TABLE))
+    ? `SELECT true, COALESCE(min(xid) - 1, pg_current_xact_id()::text::numeric)
+       FROM ${LIVE_STATE_CHANGELOG_TABLE}`
+    : `SELECT true, NULL::numeric`;
+  await db.execute(
+    drizzleSql.raw(
+      `INSERT INTO ${LIVE_STATE_CHANGELOG_HORIZON_TABLE} (id, max_pruned_xid)
+       ${seed}
+       ON CONFLICT (id) DO NOTHING`,
+    ),
+  );
+}
+
 export async function ensureSnapshotTable(db: NodePgDatabase): Promise<void> {
   await db.execute(drizzleSql.raw(SNAPSHOT_TABLE_DDL));
   await db.execute(drizzleSql.raw(SNAPSHOT_TABLE_ADD_TABLES_READ));
   await db.execute(drizzleSql.raw(SNAPSHOT_TABLE_RENAME_PERSISTED_AT));
+  await db.execute(drizzleSql.raw(SNAPSHOT_TABLE_ADD_DEFINITION));
+  await ensureChangelogHorizon(db);
 }

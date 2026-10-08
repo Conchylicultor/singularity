@@ -1,16 +1,17 @@
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  ResourceErrorInline,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { addTaskDependency, type TaskChainTarget } from "@plugins/tasks/core";
 import {
-  tasksResource,
+  taskRows,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { useTaskCategoryMap } from "@plugins/tasks/plugins/task-category/web";
+import {
+  useTaskCategoryMap,
+  type TaskCategoryMap,
+} from "@plugins/tasks/plugins/task-category/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import {
@@ -26,7 +27,7 @@ import {
 
 function targetForSibling(
   task: TaskListItem,
-  categoryMap: ReadonlyMap<string, string>,
+  categoryMap: TaskCategoryMap,
 ): TaskChainTarget {
   if (task.folderId) {
     return { kind: "folder", folderTaskId: task.folderId };
@@ -49,13 +50,32 @@ function targetForSibling(
  * never split the way the read-only lists were.
  */
 export function TaskDependenciesActions({ taskId }: { taskId: string }) {
-  const tasksResult = useResource(tasksResource);
-  const categoryMap = useTaskCategoryMap();
+  const tasksResult = useLive(taskRows);
+  const categoryResult = useTaskCategoryMap();
 
-  // No header actions until the task list is known; a failed read shows none
-  // either — the card's body renders the failure with Retry.
+  // No header actions until the task list and the categories are known (the
+  // draft's target is the task's category — an unknown one is not "root"). A
+  // failed tasks read shows none: the card's body reads the same tasks and
+  // renders that failure with Retry. The body never reads categories, so a
+  // failed categories read with nothing held renders HERE, in place of the
+  // actions, with its own Retry.
   if (tasksResult.status === "loading" || tasksResult.status === "error")
     return null;
+  if (categoryResult.status === "loading") return null;
+  let categoryMap: TaskCategoryMap;
+  if (categoryResult.status === "ready") categoryMap = categoryResult.data;
+  else if (categoryResult.stale !== undefined)
+    categoryMap = categoryResult.stale;
+  else {
+    return (
+      <ResourceErrorInline
+        variant="inline"
+        subject="task categories"
+        error={categoryResult.error}
+        refetch={categoryResult.refetch}
+      />
+    );
+  }
   const tasks = tasksResult.data;
   const task = tasks.find((t) => t.id === taskId);
   if (!task) return null;
@@ -108,7 +128,7 @@ export function TaskDependenciesActions({ taskId }: { taskId: string }) {
  * vertical space plus a second title to scan.
  */
 export function TaskDependencies({ taskId }: { taskId: string }) {
-  const tasksResult = useResource(tasksResource);
+  const tasksResult = useLive(taskRows);
 
   if (tasksResult.status === "loading") return <Loading variant="rows" />;
   if (tasksResult.status === "error") {

@@ -165,6 +165,25 @@ only where that type admits it — a nullable column or a `nullable(…)` decode
 the projection does not name, fails the parse — sql-rows reports it with the
 column's OID. A decoder's own throw (`parsed`) propagates as is.
 
+## What a decoder is, as data — `decoderOrigin`
+
+A reader that must tell two decoders apart **across processes** — a persisted
+compile's definition (query-resource's `all` compiler, A18), whose hash must
+move when a field decodes differently — cannot key on a function's identity
+(it differs per process) or its source (not data, and not stable across
+formatting). `decoderOrigin(decoder)` reads it as data instead:
+
+| origin | what it carries |
+|---|---|
+| `column` | the drizzle column itself |
+| `builtin` | `Number` / `String` / `Boolean` / `BigInt`, recognised by identity with the global |
+| `parsed` | its schema and label — `parsed` records them on the function it makes |
+| `nullable` | the decoder it wraps — `nullable` records it |
+| `opaque` | any other function: nothing about it is readable, so a definition must refuse it |
+
+It unwraps the `{ mapFromDriverValue: fn }` object `.mapWith(fn)` stores, so a
+rendered read's `.decoder` reads like the function it was given.
+
 ## The rule
 
 `sql-projection/no-asserted-sql-type` reports the two spellings that let you name
@@ -203,6 +222,7 @@ Design: `research/2026-08-25-database-mapped-sql-projections.md`.
     - `apps/deploy/deployments/runs-arm`
     - `backup/runs-arm`
     - `build/runs-arm`
+    - `conversations/agents`
     - `conversations/conversation-preprompt`
     - `conversations/session-chain`
     - `infra/query-resource`
@@ -216,11 +236,13 @@ Design: `research/2026-08-25-database-mapped-sql-projections.md`.
 - Server:
   - Exports (types):
     - `DecodedRow`
+    - `DecoderOrigin`
     - `SqlDecoder`
     - `SqlDecoderLike`
     - `SqlProjectionFailure`
   - Exports (values):
     - `decodedRow`
+    - `decoderOrigin`
     - `formatSqlProjectionError`
     - `nullable`
     - `parsed`

@@ -33,6 +33,9 @@ export type {
   LiveValueSpec,
 } from "./internal/live-value";
 export type {
+  LiveAllCollection,
+  LiveAllOrder,
+  LiveAllSpec,
   LiveArms,
   LiveArmsCollection,
   LiveArmsSpec,
@@ -43,6 +46,8 @@ export type {
   LiveGroupsDescriptor,
   LiveLookupCollection,
   LiveLookupSpec,
+  LiveNoWindowCollection,
+  LiveNoWindowSpec,
   LivePreload,
   LiveRowsCollection,
   LiveRowSchema,

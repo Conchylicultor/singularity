@@ -136,19 +136,23 @@ and re-export it from `core/index.ts`. See
     - `conversations/agents`
     - `database`
     - `database/change-feed`
+    - `database/derived-tables`
     - `database/migrations`
     - `tasks/tasks-core`
 - Core:
   - Exports (types): `RegisteredView`
   - Exports (values):
+    - `assertImperativePublicTable`
     - `ATTEMPT_CONV_AGG_TABLE`
     - `ATTEMPT_PUSH_AGG_TABLE`
     - `compileCreateView`
+    - `DERIVED_TABLE_OBJECT_STATE_TABLE`
     - `DERIVED_TABLE_STATE_TABLE`
     - `DERIVED_VIEW_STATE_TABLE_NAME`
     - `IMPERATIVE_PUBLIC_TABLE_CONSTS`
     - `IMPERATIVE_PUBLIC_TABLE_NAMES`
     - `IMPERATIVE_PUBLIC_TABLES`
+    - `LIVE_STATE_CHANGELOG_HORIZON_TABLE`
     - `LIVE_STATE_CHANGELOG_TABLE`
     - `LIVE_STATE_SNAPSHOT_TABLE`
     - `LIVE_STATE_TRIGGER_STATE_TABLE`

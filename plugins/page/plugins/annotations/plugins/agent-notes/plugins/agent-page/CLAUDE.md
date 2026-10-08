@@ -49,10 +49,10 @@ page a human made with `/agent-page` has no record, so it shows no chip until an
 agent writes into it — that first writer then counts as the creator.
 
 Neither of the chip's two reads answers "nobody" for "not known yet": the
-authorship record, then the conversation it names, each wait as a chip-sized
-shimmer. `useConversationById` cannot tell "still fetching an older
-conversation" from "deleted", so a page whose creating conversation was deleted
-keeps the shimmer — the same gap `authorship`'s popover documents.
+authorship record, then the conversation it names (`useConversation`, its
+`conversations.by-id` read, which finds any conversation however old), each
+wait as a chip-sized shimmer. A page whose creating conversation was deleted
+shows no chip; a failed read shows the inline error with Retry.
 
 ## The name is taken
 
@@ -72,7 +72,7 @@ ones.
     - `PageReference.Decoration` → `AgentPageCreatorChip`
     - `Editor.InsertAction` "Agent page"
   - Uses:
-    - `conversations.useConversationById`
+    - `conversations.useConversation`
     - `conversations/conversation-ui/chip.ConversationChip`
     - `infra/endpoints.fetchEndpoint`
     - `page/annotations/agent-notes/authorship.useAgentNotesCreator`

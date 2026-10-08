@@ -1,6 +1,5 @@
 import {
   ResourceErrorInline,
-  useResource,
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -11,7 +10,7 @@ import {
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import {
-  agentLaunchesResource,
+  agentLaunchRows,
   agentRows,
   type Agent,
   type AgentLaunchWithStatus,
@@ -22,7 +21,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 export function AgentAvatarTitlePrefix() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
-  const launchesResult = useResource(agentLaunchesResource);
+  const launchesResult = useLive(agentLaunchRows);
   const agentsResult = useLive(agentRows);
   const combined = useCombinedResources({
     launches: launchesResult,

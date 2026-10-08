@@ -416,7 +416,8 @@ Array resources that rebroadcast the whole list on every change can opt into
 row-level delta sync: the resource still runs its full loader, but the server
 diffs the new result against a per-`(key,params)` id→hash snapshot and broadcasts
 only `upserts`/`deletes`. The client merges by id and keeps unchanged rows' object
-references, so memoized row components don't re-render.
+references — moved ones included (the cache's structural sharing keeps a
+reference the previous array held) — so memoized row components don't re-render.
 
 Client merge contract: when `order` is **present** the client rebuilds the array
 from it (authoritative); when **absent** it maps over its prior array in place,
@@ -774,10 +775,12 @@ pass `gate: true` (next section).
 
 ## Slice selectors (`useResource(resource, params, { select })`)
 
-**`useResource` only** — it remains for the tree / revision-tick readers
-(Resources page items 3 / 7). `useLive` has no `select`: one row of a
-collection is `useLiveRow(c, id)` (a point read, so a change elsewhere never
-reaches it), and a derivation of a value is a `useMemo` over its settled data.
+**`useResource`, and `useLive(all, { select })`** — the tree / revision-tick
+readers (Resources page items 3 / 7) and a collection declared `all` (its
+whole set held in one tuple; `network/live`, always `gate: true`). A window or
+value `useLive` has no `select`: one row of a collection is `useLiveRow(c, id)`
+(a point read, so a change elsewhere never reaches it), and a derivation of a
+value is a `useMemo` over its settled data.
 
 A **point or derived read of a list resource** must not re-render on every push
 to the whole list. Pass a `select` to subscribe to a derived **slice**: the
@@ -812,14 +815,53 @@ Harmless for point lookups — the caller sees the same value either way. Pass a
 **stable** selector (`useCallback`) so it is not re-run every render.
 
 **`gate: true`** fixes that caveat for select-based READINESS reads (e.g. a
-boolean deciding a destructive button mode): the subscription stays un-scoped
-until the first authoritative value arrives — at most a couple of pushes — so the
-loading→ready flip always re-renders, then narrows to the select-scoped
-subscription with steady-state behavior identical to plain `select`. Without it,
-a gate built on a select result can wedge as loading forever.
+boolean deciding a destructive button mode): the notifications stay un-scoped
+until the tuple holds a value, so the loading→ready flip always re-renders,
+then narrow to `["data", "error"]` with steady-state behavior identical to plain
+`select`. Without it, a gate built on a select result can wedge as loading
+forever.
+
+The latch is **derived, never held** (P8 v3 C17, D29): narrowed exactly while
+the tuple's query has a value (`dataUpdatedAt` past epoch 0), read from the
+query cache through `useSyncExternalStore` (`useTupleHasValue`, woken only by
+its own tuple's events). It holds a cache listener only while the latch is
+OPEN: `QueryCache.notify` runs every listener on every event of any query, and
+each observer of a pushed tuple emits one, so a listener per settled gated read
+would make every push cost O(observers × gated reads). A read whose tuple
+already holds a value subscribes nothing, and an open read's listener removes
+itself with the event that lands the value; after that its own observer covers
+a reset (the narrowed observer re-renders on the `data` change). So a tuple
+already cached — boot-hydrated, or held by another observer — renders ONCE,
+narrowed, on its first render; a params change re-gates exactly when the new
+tuple has no value yet; and there is no settle effect whose `setState` costs a
+render. Only the notifications are gated: the selector runs on every render
+(placeholder included), so the slice is always the current tuple's — a
+selector switched off and on across a params change let React Query hand back
+the slice it had memoized for the PREVIOUS tuple. Pinned by
+`web/__tests__/use-resource-gate-latch.test.tsx`.
+
+**A gated read needs no selector** (`useResource(resource, params, { gate:
+true })`, `UseResourceGateOptions`): it hands React Query no `select`, so `data`
+IS the cached value — every observer of the tuple holds the same object and,
+for an array, the same row objects (a select, even the identity, gives each
+observer its own structurally-shared copy) — and narrows to `["data",
+"error"]` once the tuple holds a value, so a push that leaves the cached value
+unchanged re-renders nothing. `useLive(all)` reads its whole set this way. A
+selector that MAY be absent (`select: cond ? f : undefined`) types the read
+`ResourceResult<T | S>` — it may hand back the whole value — so tsc never
+vouches for a slice it does not deliver; an always-present selector is
+`{ select, gate: true }` → `ResourceResult<S>`.
 
 This narrows re-renders, not the WS subscription: N callers of the same
 `(key, params)` still share one refcounted sub (deduped server-side).
+
+**Structural sharing keeps moved elements** (`internal/structural-sharing.ts`,
+the query's `structuralSharing` for every resource, applied to the cache write
+and to each select output): positional sharing first (a deeply-equal element
+keeps the previous one), and an array element that is not, but IS by reference
+an element the previous array held at another index, is kept as that object.
+A keyed `order` delta moves rows by reusing their cached objects, so a reorder
+keeps every row's identity rather than re-minting each moved row.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -919,11 +961,11 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `useResourceContractMismatches`
     - `useResources`
 - Cross-plugin:
-  - Imported by: 197 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 195 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×49
-    - `conversations` ×39
+    - `conversations` ×38
     - `ui` ×22
-    - `tasks` ×19
+    - `tasks` ×18
     - `debug` ×11
     - `page` ×11
     - `primitives` ×9
@@ -975,6 +1017,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
 - Test helpers:
   - Web: `@plugins/primitives/plugins/live-state/web/testing`
     - `markResourceContractMismatch` — Record that the server refused `key` for this tab.
+    - `mergeKeyedDelta` — Merge a row-keyed delta into the prior cached array.
     - `noteResourceTxAcks` — Record the server-acknowledged source-transaction ids for (key, params), then notify subscribers (emit-after-note: a listener reading `hasResourceTxAck` inside its callback already sees the freshly-noted acks).
     - `noteResourceWatermark` — Adopt a frame's commit watermark for (key, params), monotonically: an equal or older watermark than the stored one is a no-op (compared causally via `compareTxWatermark`, never as strings).
     - `NotificationsClient`

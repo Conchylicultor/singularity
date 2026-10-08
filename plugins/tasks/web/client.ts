@@ -1,12 +1,12 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import {
   mapResource,
-  useResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
-  tasksResource,
+  taskRows,
   TaskGraph,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
@@ -42,18 +42,23 @@ export async function setAutoStart(
 }
 
 /**
- * One task out of the live task list — a resource result whose ready arm is the
- * task, or `null` when the list is known and holds no such task (or `id` is
+ * One task out of the live task set — a resource result whose ready arm is the
+ * task, or `null` when the set is known and holds no such task (or `id` is
  * empty). Loading and a failed read stay their own states, so a caller never
  * mistakes "not known yet" or "could not be read" for "no such task".
+ *
+ * A `select` over the set: a caller re-renders when ITS task changes (an
+ * untouched row keeps its identity across a push), not on every push.
  */
 export function useTask(
   id: string | null | undefined,
 ): ResourceResult<TaskListItem | null> {
-  const result = useResource(tasksResource);
-  return mapResource(result, (tasks) =>
-    id ? (tasks.find((t) => t.id === id) ?? null) : null,
+  const select = useCallback(
+    (tasks: TaskListItem[]) =>
+      id ? (tasks.find((t) => t.id === id) ?? null) : null,
+    [id],
   );
+  return useLive(taskRows, { select });
 }
 
 /**
@@ -66,7 +71,7 @@ export function useTask(
 export function useTasksById(
   ids: readonly string[],
 ): ResourceResult<ReadonlyMap<string, TaskListItem>> {
-  const result = useResource(tasksResource);
+  const result = useLive(taskRows);
   return useMemo(() => {
     const wanted = new Set(ids);
     return mapResource(
@@ -77,10 +82,11 @@ export function useTasksById(
   }, [result, ids]);
 }
 
-// One TaskGraph per task-list snapshot, shared by every caller in a render pass.
-// live-state hands out a fresh array whenever the list changes and never mutates
-// one in place, so the array's identity IS the graph's cache key — and the entry
-// dies with the snapshot. Without this, a list of rows each showing a count
+// One TaskGraph per task-set snapshot, shared by every caller in a render pass.
+// A plain `useLive(taskRows)` read hands every observer the SAME cached array,
+// a fresh one whenever the set changes and never mutated in place, so the
+// array's identity IS the graph's cache key — and the entry dies with the
+// snapshot. Without this, a list of rows each showing a count
 // rebuilds the whole graph once per row.
 const GRAPH_BY_SNAPSHOT = new WeakMap<readonly TaskListItem[], TaskGraph>();
 
@@ -106,7 +112,7 @@ function graphFor(tasks: readonly TaskListItem[]): TaskGraph {
 export function useActiveDependentCount(
   id: string | null | undefined,
 ): ResourceResult<number> {
-  const result = useResource(tasksResource);
+  const result = useLive(taskRows);
   // No task ⇒ zero once the set is known: nothing can wait on it.
   return mapResource(result, (tasks) =>
     id ? graphFor(tasks).activeDependents(id).length : 0,

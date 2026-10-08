@@ -119,6 +119,11 @@ export function planGroupArm<
   const base = routedBase(spec.from, label);
   // One boundary cast — the `compileWindowQuery` precedent.
   const db: QueryDb = spec.db ?? (realDb as unknown as QueryDb);
+  // `JoinSpec` only: a rollup, children or closure join is a tsc error on
+  // `GroupsQuerySpec.joins`, and `compileJoins` refuses one a cast let through
+  // (C9 / D24 of research/2026-10-06-global-scoped-change-routing-p8-v3.md) —
+  // the `full` route minted per join below would name the rollup table, which
+  // no route may (A1), and a grouping has no host rows to aggregate children of.
   const joins = compileJoins(base, spec.joins ?? [], spec.hostPk, label);
   const open = spec.reads === undefined;
   const columnsOf = routeColumnsOf(
@@ -140,7 +145,7 @@ export function planGroupArm<
     },
     ...joins.joins.map((j): FullRoute => ({
       id: j.alias,
-      table: getTableName(j.spec.table),
+      table: getTableName(j.table),
       map: { kind: "full", reason: reason(j.alias) },
       columns: columnsOf(j.alias),
       // A keyed side reads only its selectors' rows: a write to another

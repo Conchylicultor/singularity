@@ -1,5 +1,5 @@
 import { and, getTableColumns, getTableName, sql, type SQL } from "drizzle-orm";
-import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import type { PgColumn } from "drizzle-orm/pg-core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   filterColumns,
@@ -18,13 +18,13 @@ import type { Resource } from "@plugins/framework/plugins/resource-runtime/core"
 import type { PointParams } from "@plugins/primitives/plugins/live-state/core";
 import {
   columnWireCodec,
-  type ColumnWire,
   type WireCodec,
 } from "@plugins/database/plugins/sql-column/server";
 import {
   BASE_RELATION,
   isExprField,
   type ColumnRef,
+  type AllJoinSpec,
   type ExprField,
   type JoinColumns,
   type JoinRef,
@@ -39,9 +39,7 @@ import {
   windowQueryResource,
   type CompiledGroups,
   type ReadColumn,
-  type EntitySource,
   type QueryDb,
-  type RoutedSource,
   type SelectMap,
   type WindowOrderKey,
   type WindowQueryResourceSpec,
@@ -52,6 +50,7 @@ import {
   LIVE_ROW_KEY_MAX_BYTES,
   LIVE_SCOPED_KEY,
   scopedLiveColumns,
+  type LiveAllCollection,
   type LiveCollection,
   type LiveColumnsDeclaration,
   type LiveColumnsOwner,
@@ -65,6 +64,19 @@ import {
   type ServedColumns,
   type ServedScopedColumns,
 } from "./serve-columns";
+import {
+  compileAllSpecs,
+  type AllCollectionSpecs,
+  type ServeAllCollectionOptions,
+} from "./serve-all";
+import {
+  isEntitySource,
+  type CollectionSource,
+  type ColumnNamesOf,
+  type ColumnsOf,
+  type TableOf,
+  type WireCheck,
+} from "./collection-source";
 
 // `serveCollection` — the server half of a `liveCollection`. One call binds the
 // declaration's row fields to the table's columns and compiles all THREE minted
@@ -77,54 +89,10 @@ import {
 // through `(j) => ColumnRef` overrides), so the runtime's `routeTableChange`
 // serves them and a write to a table a tuple does not read never reaches it.
 // Nothing here is a runtime path — only the specs are derived. A lookup-only collection (declared without a default window) mints
-// `:rows` alone, so only that point resource is compiled and served.
-
-/** A table, or an `infra/entities` Entity (read through its table). Never a view. */
-export type CollectionSource = RoutedSource;
-
-/** The table `from` reads. */
-type TableOf<T> = T extends EntitySource
-  ? T["table"]
-  : T extends PgTable
-    ? T
-    : never;
-
-/** The columns `from` exposes, by property name. */
-type ColumnsOf<T> = T extends EntitySource
-  ? T["wireColumns"]
-  : T extends PgTable
-    ? T["_"]["columns"]
-    : never;
-
-/** The column property names `from` exposes. */
-type ColumnNamesOf<T> = keyof ColumnsOf<T> & string;
-
-type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
-
-/**
- * Row fields bound by name to a column that declares a wire form (sql-column's
- * `withWire`) whose wire type the field is not — e.g. a `bytea` column's field
- * typed as bytes instead of its base64 `string`.
- */
-type WireMismatch<T, Row> = {
-  [K in keyof Row & ColumnNamesOf<T>]: ColumnWire<ColumnsOf<T>[K]> extends {
-    wire: infer W;
-  }
-    ? Same<Row[K], W> extends true
-      ? never
-      : K
-    : never;
-}[keyof Row & ColumnNamesOf<T>];
-
-/** A wire-type mismatch is a REQUIRED property of type `never`, naming the field: a tsc error. */
-type WireCheck<T, Row> = [WireMismatch<T, Row>] extends [never]
-  ? unknown
-  : {
-      [
-        K in WireMismatch<T, Row> &
-          string as `row field "${K}" must be its column's wire type (sql-column withWire)`
-      ]: never;
-    };
+// `:rows` alone, so only that point resource is compiled and served. A
+// collection declared `all` (the whole ordered set) is bound the same way and
+// compiled by query-resource's `compileAllCollection` (`./serve-all`): `key`
+// and `:rows`, never `:groups`.
 
 /**
  * A row field bound to a wire column of the base or of a declared join:
@@ -265,6 +233,21 @@ export interface ServedCollection<Row> {
   ];
 }
 
+/** A collection declared `all`, served: the whole ordered set (`key`) and its `:rows` sibling. */
+export interface ServedAllCollection<Row> {
+  /** The whole ordered set (`key`) — param-less, keyed, L2-persisted when preloaded. */
+  all: Resource<Row[], Record<string, never>>;
+  /** The point sibling (`${key}:rows`). */
+  rows: Resource<Row[], PointParams>;
+  /** Every minted key — `[key, key:rows]`. */
+  keys: [string, string];
+  /** Spread into the plugin's `contributions`: one `Resource.Declare` per minted resource. */
+  declare: [
+    ReturnType<typeof ResourceContribution.Declare>,
+    ReturnType<typeof ResourceContribution.Declare>,
+  ];
+}
+
 /** A lookup-only collection, served: its one minted resource, `${key}:rows`. */
 export interface ServedLookupCollection<Row> {
   /** The point resource (`${key}:rows`) — the only one a lookup-only collection mints. */
@@ -273,10 +256,6 @@ export interface ServedLookupCollection<Row> {
   keys: [string];
   /** Spread into the plugin's `contributions`: the one `Resource.Declare`. */
   declare: [ReturnType<typeof ResourceContribution.Declare>];
-}
-
-function isEntitySource(from: CollectionSource): from is EntitySource {
-  return "wireColumns" in from && "table" in from;
 }
 
 /**
@@ -310,6 +289,14 @@ export function compileCollection<
 export function compileCollection<
   Row,
   T extends CollectionSource,
+  const J extends readonly AllJoinSpec[] = readonly [],
+>(
+  collection: LiveAllCollection<Row>,
+  opts: ServeAllCollectionOptions<T, Row, J>,
+): AllCollectionSpecs<Row>;
+export function compileCollection<
+  Row,
+  T extends CollectionSource,
   const J extends readonly JoinSpec[] = readonly [],
 >(
   collection: LiveLookupCollection<Row>,
@@ -324,14 +311,38 @@ export function compileCollection<
   T extends CollectionSource,
   const J extends readonly JoinSpec[] = readonly [],
 >(
-  collection: LiveCollection<Row, F, S> | LiveLookupCollection<Row>,
-  opts: ServeCollectionOptions<T, Row, J, string>,
+  collection:
+    | LiveCollection<Row, F, S>
+    | LiveLookupCollection<Row>
+    | LiveAllCollection<Row>,
+  served:
+    | ServeCollectionOptions<T, Row, J, string>
+    | ServeAllCollectionOptions<T, Row, readonly AllJoinSpec[]>,
   contributed: readonly ServedColumns[] = [],
   scoped: readonly ServedScopedColumns[] = [],
-): CollectionSpecs | LookupCollectionSpecs {
+): CollectionSpecs | LookupCollectionSpecs | AllCollectionSpecs<Row> {
   const fail = (message: string): never => {
     throw new Error(`serveCollection("${collection.key}"): ${message}`);
   };
+  // First (C4): an `all` collection has no window either, so the lookup-only
+  // branch below would compile it as `:rows` alone. It is never contributed or
+  // scoped — what a boot-time compile folds in.
+  if (collection.all !== undefined) {
+    if (contributed.length > 0 || scoped.length > 0) {
+      fail(
+        "contributed or scoped columns were served for a collection declared `all` — its definition is fixed at module eval, never folded from contributions.",
+      );
+    }
+    return compileAllSpecs(
+      collection as LiveAllCollection<Row>,
+      served as ServeAllCollectionOptions<
+        CollectionSource,
+        Row,
+        readonly AllJoinSpec[]
+      >,
+    );
+  }
+  const opts = served as ServeCollectionOptions<T, Row, J, string>;
   // Typed away (`SingleTableCollection`); refused against a cast past it.
   if (((collection as { arms?: unknown }).arms ?? null) !== null) {
     fail(
@@ -554,13 +565,14 @@ export function compileCollection<
   // host with no joined row, whatever its own NOT NULL says — so its field
   // must accept null, or the first such host fails the row parse at load time.
   // A defaulted extension column reads its default instead (never NULL).
-  // An expression that does not declare `notNull` may read NULL: its field
-  // must accept null too (the type says so; this is the runtime backstop).
+  // An expression that does not declare `notNull` may read NULL — and so may
+  // an aggregate that declares it nullable or sits behind a LEFT join: its
+  // field must accept null too (the type says so; this is the runtime backstop).
   for (const [name, col] of bound) {
-    if (joins.isExpr(col)) {
+    if (joins.isComputed(col)) {
       if (joins.canBeNull(col) && !fieldSchema(name).safeParse(null).success) {
         fail(
-          `row field "${name}" is an expression that may read NULL (it declares no \`notNull: true\`) — make the field nullable, or declare notNull when its SQL cannot produce NULL.`,
+          `row field "${name}" is a computed read (an expression or an aggregate) that may read NULL — make the field nullable, or declare it not-null when its SQL cannot produce NULL (an expression's \`notNull: true\`).`,
         );
       }
       continue;
@@ -939,7 +951,9 @@ export function compileCollection<
  * `bytea`) is encoded in JS on every row, and its row field must be typed as
  * the wire type. Returns the compiled resources, their keys, and their
  * `Resource.Declare` contributions — all three for a full collection, `:rows`
- * alone for a lookup-only one:
+ * alone for a lookup-only one, the whole set (`key`) and `:rows` for one
+ * declared `all` (its joins may be grouped — children, closure — and its
+ * fields bind aggregates; see `./serve-all`):
  *
  * ```ts
  * export const eventSourcesServed = serveCollection(eventSources, { from: _eventSources });
@@ -959,6 +973,14 @@ export function serveCollection<
 export function serveCollection<
   Row,
   T extends CollectionSource,
+  const J extends readonly AllJoinSpec[] = readonly [],
+>(
+  collection: LiveAllCollection<Row>,
+  opts: ServeAllCollectionOptions<T, Row, J>,
+): ServedAllCollection<Row>;
+export function serveCollection<
+  Row,
+  T extends CollectionSource,
   const J extends readonly JoinSpec[] = readonly [],
 >(
   collection: LiveLookupCollection<Row>,
@@ -971,9 +993,43 @@ export function serveCollection<
   T extends CollectionSource,
   const J extends readonly JoinSpec[] = readonly [],
 >(
-  collection: SingleTableCollection<Row, F, S> | LiveLookupCollection<Row>,
-  opts: ServeCollectionOptions<T, Row, J, keyof F & string>,
-): ServedCollection<Row> | ServedLookupCollection<Row> {
+  collection:
+    | SingleTableCollection<Row, F, S>
+    | LiveLookupCollection<Row>
+    | LiveAllCollection<Row>,
+  served:
+    | ServeCollectionOptions<T, Row, J, keyof F & string>
+    | ServeAllCollectionOptions<T, Row, readonly AllJoinSpec[]>,
+):
+  | ServedCollection<Row>
+  | ServedLookupCollection<Row>
+  | ServedAllCollection<Row> {
+  // First (C4): a collection declared `all` has no window either, so the
+  // lookup-only branch below would serve it as `:rows` alone and never
+  // register its `key`. Bound eagerly — never deferred: it is never
+  // contributed or scoped (`compileAllSpecs` refuses a cast that says so).
+  if (collection.all !== undefined) {
+    const specs = compileAllSpecs(
+      collection,
+      served as ServeAllCollectionOptions<
+        CollectionSource,
+        Row,
+        readonly AllJoinSpec[]
+      >,
+    );
+    const all = defineResource(collection.all, specs.all);
+    const rows = defineResource(collection.rows, specs.rows);
+    return {
+      all,
+      rows,
+      keys: [all.key, rows.key],
+      declare: [
+        ResourceContribution.Declare(all),
+        ResourceContribution.Declare(rows),
+      ],
+    };
+  }
+  const opts = served as ServeCollectionOptions<T, Row, J, keyof F & string>;
   if (collection.window === undefined) {
     const specs = compileCollection(collection, opts);
     const rows = windowQueryResource(collection.rows, specs.rows);
@@ -1050,6 +1106,13 @@ function serveContributed<
   collection: SingleTableCollection<Row, F, S>,
   opts: ServeCollectionOptions<T, Row, J, keyof F & string>,
 ): ServedCollection<Row> {
+  // C4: typed away (`all?: never`); a cast that reached here would be
+  // compiled at boot as a window it does not have.
+  if ((collection as { all?: unknown }).all !== undefined) {
+    throw new Error(
+      `serveCollection("${collection.key}"): a collection declared \`all\` reached the contributed / scoped path — it is never contributed or scoped.`,
+    );
+  }
   if (collection.contributed) contributedKeys.add(collection.key);
   // Compiled once, at the first bind, from every contribution naming it.
   let specs: CollectionSpecs | undefined;

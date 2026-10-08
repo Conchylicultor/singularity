@@ -7,6 +7,13 @@ export {
   windowQueryResource,
 } from "./internal/compile-window";
 export { compileGroupsQuery } from "./internal/compile-groups";
+export { compileAllCollection } from "./internal/compile-alias";
+export type {
+  AllBind,
+  AllCollectionContracts,
+  AllCollectionSpec,
+  CompiledAllCollection,
+} from "./internal/compile-alias";
 export { compileUnionCollection } from "./internal/compile-union-window";
 export type {
   CompiledUnion,
@@ -36,5 +43,5 @@ export type {
 
 export default {
   description:
-    "Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, scope policy (an identityTable, or for a bounded window / point set and a grouping the routes the change router serves it by), and client keyOf for live-state resources.",
+    "Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, scope policy (an identityTable for the legacy unbounded form; the routes the change router serves it by for a bounded window / point set, a whole ordered set declared `all` — compileAllCollection, grouped CTEs over rollup / children / closure joins — and a grouping), and client keyOf for live-state resources.",
 } satisfies ServerPluginDefinition;

@@ -17,10 +17,10 @@
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
-    - `primitives/live-state` ×2
     - `conversations/conversation-view/action-bar.Conversation`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversationById`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
@@ -28,6 +28,7 @@
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/launch.LaunchControl`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (values): `attemptPane`

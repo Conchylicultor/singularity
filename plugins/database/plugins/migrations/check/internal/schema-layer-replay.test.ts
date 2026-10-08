@@ -49,8 +49,23 @@ test("the whole data/ directory plus the real derived layer applies from scratch
   });
   expect(views[0]?.n).toBe(inputs.views.length);
 
-  // A second boot over the result finds nothing to do.
+  // Every declared rollup was created and reconciled on the way.
+  expect(result.rollups.map((r) => r.table).sort()).toEqual(
+    inputs.derivedTables.map((r) => r.table).sort(),
+  );
+  expect(result.rollups.every((r) => r.definitionChanged)).toBe(true);
+
+  // A second boot over the result finds nothing to do: no migration, no
+  // rollup definition, and a reconcile that heals nothing.
   expect(await applySchemaLayer(t.db, inputs, { commit: true })).toEqual({
     pending: 0,
+    rollups: inputs.derivedTables
+      .map((r) => ({
+        table: r.table,
+        upserted: 0,
+        deleted: 0,
+        definitionChanged: false,
+      }))
+      .sort((a, b) => a.table.localeCompare(b.table)),
   });
 }, 300_000); // Importing every server barrel, then ~270 migrations.

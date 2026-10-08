@@ -14,11 +14,17 @@
 // This is a faithful reimplementation of TanStack Query v5's `replaceEqualDeep`
 // (deep structural sharing: for plain arrays/objects, recurse and preserve the
 // PREVIOUS reference when every element/key is referentially preserved;
-// otherwise return the new value) with ONE added branch at the top: two equal
-// `Date` instances collapse to the previous reference. It is therefore strictly
-// STRONGER dedup than the default (it only ever preserves a reference when the
-// values are deeply equal, including Date millis) and NEVER weaker — safe for
-// every resource, with or without a `select`.
+// otherwise return the new value) with TWO added branches: two equal `Date`
+// instances collapse to the previous reference, and an array element that is
+// NOT positionally equal but is, by reference, an element the previous array
+// held at another index is kept as that object (a keyed `order` delta moves
+// rows by reusing their cached objects; the positional default would re-mint
+// each moved row as a fresh copy, re-rendering every memoized row between the
+// old and new positions). It is therefore strictly STRONGER sharing than the
+// default (it only ever preserves a reference when the values are deeply
+// equal — including Date millis — or the reference is already one the previous
+// value held, and still prefers the positional match first) and NEVER weaker —
+// safe for every resource, with or without a `select`.
 //
 // Kept dependency-free on purpose: we do not import @tanstack/query-core
 // internals (`replaceEqualDeep` / `isPlainObject` are not part of its public
@@ -93,9 +99,14 @@ function replaceEqualDeepImpl(a: unknown, b: unknown, depth: number): unknown {
   const aSize = aItems.length;
   const bItems = array ? (b as unknown[]) : Object.keys(bObj);
   const bSize = bItems.length;
-  const copy: Record<PropertyKey, unknown> | unknown[] = array ? new Array(bSize) : {};
+  const copy: Record<PropertyKey, unknown> | unknown[] = array
+    ? new Array(bSize)
+    : {};
 
   let equalItems = 0;
+  // The second added branch (arrays only): the previous array's elements, by
+  // reference — built on the first element that is not positionally equal.
+  let prevMembers: Set<unknown> | undefined;
 
   for (let i = 0; i < bSize; i++) {
     const key = (array ? i : bItems[i]) as PropertyKey;
@@ -119,8 +130,23 @@ function replaceEqualDeepImpl(a: unknown, b: unknown, depth: number): unknown {
     }
 
     const v = replaceEqualDeepImpl(aItem, bItem, depth + 1);
+    if (v === aItem) {
+      (copy as Record<PropertyKey, unknown>)[key] = aItem;
+      equalItems++;
+      continue;
+    }
+    // An element the previous array already held, at ANOTHER index (a row a
+    // keyed `order` delta moved — the merge reuses the cached object): keep
+    // that object rather than re-minting a copy of it merged against whatever
+    // sat at this index before. Still a change to the array (not counted).
+    if (array) {
+      prevMembers ??= new Set(a as unknown[]);
+      if (prevMembers.has(bItem)) {
+        (copy as Record<PropertyKey, unknown>)[key] = bItem;
+        continue;
+      }
+    }
     (copy as Record<PropertyKey, unknown>)[key] = v;
-    if (v === aItem) equalItems++;
   }
 
   return aSize === bSize && equalItems === aSize ? a : copy;

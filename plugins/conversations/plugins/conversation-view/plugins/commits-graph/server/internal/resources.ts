@@ -6,7 +6,7 @@ import {
   unresolved,
 } from "@plugins/primitives/plugins/live-state/core";
 import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
-import { getAttempt } from "@plugins/tasks/plugins/tasks-core/server";
+import { getAttemptRow } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   probeHeadMain,
   readLandedShas,
@@ -15,8 +15,11 @@ import { commitsGraph } from "../../shared/resources";
 import { computeGraph, evictWorktree } from "./compute-graph";
 import { graphEtag } from "./etag";
 
+// The attempt's own row (the `attempts` table), never `attempts_v`: this
+// loader does git work, and the view's read-set would make every conversation
+// and push write recompute it (C36).
 async function worktreeFor(attemptId: string): Promise<string | null> {
-  const row = await getAttempt(attemptId);
+  const row = await getAttemptRow(attemptId);
   return row?.worktreePath ?? null;
 }
 

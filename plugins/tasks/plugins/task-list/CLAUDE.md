@@ -22,6 +22,7 @@
     - `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/data-view.DataView`
@@ -32,7 +33,6 @@
     - `primitives/launch.LaunchControl`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceView`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `primitives/slot-render.defineRenderSlot`

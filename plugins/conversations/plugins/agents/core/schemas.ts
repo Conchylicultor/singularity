@@ -34,11 +34,16 @@ export const AgentLaunchSchema = z.object({
 });
 export type AgentLaunch = z.infer<typeof AgentLaunchSchema>;
 
-const AgentLaunchConversationRefSchema = z.object({
+// The latest non-system conversation of a launch's task: what an agent's
+// Attempts list links to and colours its dot by.
+export const AgentLaunchConversationRefSchema = z.object({
   id: z.string(),
   title: z.string().nullable(),
   status: ConversationStatusSchema,
 });
+export type AgentLaunchConversationRef = z.infer<
+  typeof AgentLaunchConversationRefSchema
+>;
 
 export const AgentLaunchWithStatusSchema = AgentLaunchSchema.extend({
   latestConversationStatus: ConversationStatusSchema.nullable(),

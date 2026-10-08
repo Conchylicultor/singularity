@@ -1,17 +1,16 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { View } from "@plugins/database/plugins/derived-views/server";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
-import { attemptConvAggSpec, attemptPushAggSpec } from "./internal/rollup-spec";
+import { attemptConvAgg, attemptPushAgg } from "./internal/rollup-spec";
 import {
-  tasksResource,
-  taskDetailServed,
-  attemptsResource,
+  taskRowsServed,
+  taskDescriptionsServed,
+  attemptRowsServed,
   pushRowsServed,
-  pushesAttemptsCascade,
-  conversationsActiveResource,
-  conversationsSystemResource,
-  conversationsGoneResource,
+  conversationsActiveServed,
+  conversationsSystemServed,
+  conversationsGoneServed,
+  conversationsByIdServed,
   conversationsGoneStatsServed,
 } from "./internal/resources";
 import { attempts, conversations, taskBlocking, tasks } from "./internal/views";
@@ -39,18 +38,16 @@ export {
   conversationOwnerJoins,
   conversationOwnerColumns,
 } from "./internal/conversation-owner";
-// The derived `conversations_v` relation (carries worktreePath / taskId / taskTitle / active
-// on top of the base columns). Exposed for the legacy `rel()` edge of the agents
-// plugin's resources; routed collections read the base tables through
-// `conversationOwnerJoins` instead (a routed compile never reads a view).
-export { conversations as conversationsView } from "./internal/views";
 // The derived `tasks_v` relation. A task's `status` is COMPUTED there and exists
 // as no column of `tasks`, so a consumer that needs the status of a SET of tasks
 // in one query has nowhere else to read it — and a `tasks_v` read costs the same
 // whether it asks for one id or fifty, so per-id reads turn a page read into one
-// full-graph round trip per linked task. Bound to the same view the live
-// resources read. Today's consumer
-// is `page/annotations/todo/task-link`'s markdown provider.
+// full-graph round trip per linked task. Built on the same derivations as the
+// live `tasks` set (./internal/derived.ts), which reads the base tables instead.
+// Today's consumers are `page/annotations/todo/task-link`'s markdown provider
+// and `tasks/automations`' open-task lookup — neither a live loader (a live
+// reader of `tasks_v` would miss conversation and push writes: the view reads
+// them only through feed-exempt rollups).
 export { tasks as tasksView } from "./internal/views";
 
 // Zod schemas and TS types
@@ -76,13 +73,6 @@ export type {
 } from "./internal/schema";
 
 // Resources (all owned here)
-export {
-  tasksResource,
-  attemptsResource,
-  conversationsActiveResource,
-  conversationsSystemResource,
-  conversationsGoneResource,
-} from "./internal/resources";
 export type { AttemptWithConversations, ConversationSummary } from "../core";
 
 // Query functions — reads
@@ -101,6 +91,7 @@ export {
 export {
   listAttempts,
   getAttempt,
+  getAttemptRow,
   listAttemptsForTask,
 } from "./internal/queries/attempts";
 
@@ -111,8 +102,6 @@ export {
   listConversationIdsForAttempt,
   listActiveConversations,
   listRetainedConversations,
-  conversationCascadeSignatures,
-  listGoneConversations,
   getConversation,
   getConversationRuntime,
   getConversationClaudeSessionId,
@@ -124,7 +113,6 @@ export {
 // The projection's own ungated reads stay internal by construction — see
 // ./internal/push-ledger/raw-reads.ts.
 export {
-  listPushes,
   listPushesForAttempt,
   listPushesByPushId,
 } from "./internal/queries/pushes";
@@ -236,23 +224,23 @@ export default {
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
   contributions: [
-    Resource.Declare(tasksResource),
-    ...taskDetailServed.declare,
-    Resource.Declare(attemptsResource),
+    ...taskRowsServed.declare,
+    ...taskDescriptionsServed.declare,
+    ...attemptRowsServed.declare,
     ...pushRowsServed.declare,
-    Resource.Declare(pushesAttemptsCascade),
-    Resource.Declare(conversationsActiveResource),
-    Resource.Declare(conversationsSystemResource),
-    Resource.Declare(conversationsGoneResource),
+    ...conversationsActiveServed.declare,
+    ...conversationsSystemServed.declare,
+    ...conversationsGoneServed.declare,
+    ...conversationsByIdServed.declare,
     ...conversationsGoneStatsServed.declare,
-    DerivedTable(attemptConvAggSpec),
-    DerivedTable(attemptPushAggSpec),
+    DerivedTable(attemptConvAgg),
+    DerivedTable(attemptPushAgg),
     View({ view: attempts, identityTable: "attempts" }),
     View({ view: conversations, identityTable: "conversations" }),
     View({ view: taskBlocking, dependsOn: ["attempts_v"] }),
     View({
       view: tasks,
-      dependsOn: ["attempts_v", "task_blocking_v"],
+      dependsOn: ["task_blocking_v"],
       identityTable: "tasks",
     }),
   ],

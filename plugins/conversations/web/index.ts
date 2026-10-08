@@ -11,7 +11,6 @@ export {
   useHasActiveSiblingInWorktree,
   useActiveConversations,
   useConversationTitleBySlug,
-  GonePageSchema,
 } from "./use-conversations";
 export default {
   collapsed: true,

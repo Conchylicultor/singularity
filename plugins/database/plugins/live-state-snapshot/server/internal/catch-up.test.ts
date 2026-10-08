@@ -8,6 +8,7 @@ import {
 } from "bun:test";
 import { sql } from "drizzle-orm";
 import {
+  LIVE_STATE_CHANGELOG_HORIZON_TABLE,
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
@@ -19,13 +20,15 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { persistSnapshot } from "./persist";
-import { runCatchUp } from "./catch-up";
+import type { L2Expectation } from "./persist";
+import { probeCatchUp, replayCatchUp } from "./catch-up";
+import { pruneChangelog, readPruneHorizon } from "./changelog-horizon";
 
-// Real-DB invariant suite for the cold-boot catch-up driver: the xid-vs-floor
-// arithmetic, the `xid >= floor` + `ORDER BY seq` replay predicate, the id-preserving
-// replay (every op keeps `row.ids`, so a membership `D` stays scoped exactly as on
-// the live path; only a genuinely null-ids row degrades to FULL), and the
-// missing-history backstop. A recording `route` spy is injected so we observe
+// Real-DB invariant suite for the cold-boot catch-up driver: the probe's
+// xid-vs-floor arithmetic over USABLE rows only, the `xid >= floor` + `ORDER BY
+// seq` replay predicate, the id-preserving replay (every op keeps `row.ids`, so
+// a membership `D` stays scoped exactly as on the live path; only a genuinely
+// null-ids row degrades to FULL), and the missing-history backstop verdict. A recording `route` spy is injected so we observe
 // EXACTLY which changes replay (order, op, ids), without standing up the full
 // server-core cascade. Runs the real SQL against a throwaway database on the running
 // cluster (see the db-test-fixture primitive).
@@ -43,15 +46,37 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  seeded.length = 0;
   await t.db.execute(sql.raw(`DELETE FROM ${LIVE_STATE_SNAPSHOT_TABLE}`));
   await t.db.execute(sql.raw(`DELETE FROM ${LIVE_STATE_CHANGELOG_TABLE}`));
+  await t.db.execute(
+    sql.raw(
+      `UPDATE ${LIVE_STATE_CHANGELOG_HORIZON_TABLE} SET max_pruned_xid = NULL`,
+    ),
+  );
 });
 
-// Seed a snapshot row so `min(position)` yields the catch-up floor.
-async function seedFloor(position: string): Promise<void> {
-  await persistSnapshot(t.db, `floor-${position}`, "{}", {}, position, [
-    "seed",
-  ]);
+// The persisted keys the probe treats as usable (every `seedFloor` key).
+const seeded: string[] = [];
+const expectation = (): L2Expectation => ({
+  persisted: [...seeded],
+  definitions: {},
+});
+
+// Seed a usable snapshot row so `min(position)` yields the catch-up floor.
+async function seedFloor(position: string, key = `floor-${position}`) {
+  seeded.push(key);
+  await persistSnapshot(t.db, key, "{}", {}, position, {
+    mode: "replace",
+    definition: null,
+    guardTables: ["seed"],
+  });
+}
+
+// The boot's catch-up: probe, then replay from the probe's floor.
+async function runCatchUp(route: (c: FeedChange) => void): Promise<void> {
+  const probe = await probeCatchUp(t.db, expectation());
+  if (probe.kind === "replay") await replayCatchUp(t.db, probe.floor, route);
 }
 
 interface ChangelogSeed {
@@ -63,6 +88,8 @@ interface ChangelogSeed {
   /** A routed table's row-wise layout, as `live_state_notify_routed()` writes it. */
   keys?: unknown;
   unchanged?: string[] | null;
+  /** Written past the prune's 24 h ceiling (the prune deletes it whatever the floor). */
+  aged?: boolean;
 }
 
 async function insertChangelog(row: ChangelogSeed): Promise<void> {
@@ -84,9 +111,10 @@ async function insertChangelog(row: ChangelogSeed): Promise<void> {
     row.keys === undefined
       ? sql`NULL`
       : sql`${JSON.stringify(row.keys)}::jsonb`;
+  const atExpr = row.aged ? sql`now() - interval '25 hours'` : sql`now()`;
   await t.db.execute(sql`
-    INSERT INTO ${sql.raw(LIVE_STATE_CHANGELOG_TABLE)} (seq, xid, t, op, ids, keys, unchanged)
-    VALUES (${row.seq}, ${row.xid}::numeric, ${row.t}, ${row.op}, ${idsExpr}, ${keysExpr}, ${unchangedExpr})
+    INSERT INTO ${sql.raw(LIVE_STATE_CHANGELOG_TABLE)} (seq, xid, t, op, ids, keys, unchanged, at)
+    VALUES (${row.seq}, ${row.xid}::numeric, ${row.t}, ${row.op}, ${idsExpr}, ${keysExpr}, ${unchangedExpr}, ${atExpr})
   `);
 }
 
@@ -100,11 +128,12 @@ function recorder(): { routed: FeedChange[]; route: (c: FeedChange) => void } {
   };
 }
 
-describe("runCatchUp", () => {
-  test("no snapshots → early return, zero replays even with changelog rows", async () => {
+describe("probeCatchUp + replayCatchUp", () => {
+  test("no usable snapshot → `none`, zero replays even with changelog rows", async () => {
     await insertChangelog({ seq: 1, xid: "100", t: "ta", op: "U", ids: null });
+    expect(await probeCatchUp(t.db, expectation())).toEqual({ kind: "none" });
     const { routed, route } = recorder();
-    await runCatchUp(t.db, route);
+    await runCatchUp(route);
     expect(routed).toEqual([]);
   });
 
@@ -117,7 +146,7 @@ describe("runCatchUp", () => {
     await insertChangelog({ seq: 4, xid: "400", t: "td", op: "U", ids: null }); // included, genuinely null-ids
 
     const { routed, route } = recorder();
-    await runCatchUp(t.db, route);
+    await runCatchUp(route);
 
     expect(routed).toEqual([
       {
@@ -159,7 +188,7 @@ describe("runCatchUp", () => {
     await insertChangelog({ seq: 2, xid: "200", t: "at", op: "U", ids: null });
 
     const { routed, route } = recorder();
-    await runCatchUp(t.db, route);
+    await runCatchUp(route);
 
     expect(routed).toEqual([
       {
@@ -173,23 +202,70 @@ describe("runCatchUp", () => {
     ]);
   });
 
-  test("backstop: min(xid) > floor → one FULL per DISTINCT table, no per-row replay", async () => {
+  test("backstop: the prune deleted a row at or after the floor → the backstop verdict, nothing replayed", async () => {
     await seedFloor("100");
-    // Oldest retained xid (200) > floor (100): history pruned past a stale
-    // snapshot. Multiple rows across two distinct tables — assert distinct-table
-    // FULL, not per-row replay.
-    await insertChangelog({ seq: 1, xid: "200", t: "t1", op: "I", ids: ["a"] });
-    await insertChangelog({ seq: 2, xid: "300", t: "t1", op: "U", ids: ["b"] });
-    await insertChangelog({ seq: 3, xid: "400", t: "t2", op: "D", ids: ["c"] });
+    // The 24 h ceiling prunes the row at 150 — history at or after the floor
+    // (100) is gone from under a stale snapshot. The caller clears the rows and
+    // recomputes every persisted key — catch-up itself replays nothing (C20).
+    await insertChangelog({
+      seq: 1,
+      xid: "150",
+      t: "t1",
+      op: "I",
+      ids: ["a"],
+      aged: true,
+    });
+    await insertChangelog({ seq: 2, xid: "200", t: "t1", op: "I", ids: ["a"] });
+    await insertChangelog({ seq: 3, xid: "300", t: "t1", op: "U", ids: ["b"] });
+    await pruneChangelog(t.db);
 
+    expect(await probeCatchUp(t.db, expectation())).toEqual({
+      kind: "backstop",
+      floor: "100",
+      horizon: "150",
+    });
     const { routed, route } = recorder();
-    await runCatchUp(t.db, route);
+    await runCatchUp(route);
+    expect(routed).toEqual([]);
+  });
 
-    // Exactly one FULL (op:'U', ids:null) per distinct table — order of
-    // SELECT DISTINCT is not guaranteed, so compare as a set.
-    expect(routed).toHaveLength(2);
-    const bySet = new Set(routed.map((c) => `${c.table}:${c.op}:${c.ids}`));
-    expect(bySet).toEqual(new Set(["t1:U:null", "t2:U:null"]));
+  test("an ordinary prune below the floor is no backstop, though the oldest survivor sits above the floor", async () => {
+    // The changelog is sparse: no row has an xid exactly at the floor, so after
+    // the prune removes everything below it the oldest retained row (105) is
+    // above the floor (100) with nothing missing in between. The old rule
+    // (oldest retained > floor) cleared and recomputed every persisted key on
+    // every boot after a prune; the horizon (95) says nothing at or after the
+    // floor was deleted.
+    await seedFloor("100");
+    await insertChangelog({ seq: 1, xid: "90", t: "ta", op: "U", ids: ["a"] });
+    await insertChangelog({ seq: 2, xid: "95", t: "ta", op: "U", ids: ["b"] });
+    await insertChangelog({ seq: 3, xid: "105", t: "ta", op: "U", ids: ["c"] });
+    await pruneChangelog(t.db);
+    expect(await readPruneHorizon(t.db)).toBe("95");
+
+    expect(await probeCatchUp(t.db, expectation())).toEqual({
+      kind: "replay",
+      floor: "100",
+    });
+    const { routed, route } = recorder();
+    await runCatchUp(route);
+    expect(routed.map((c) => c.ids)).toEqual([["c"]]);
+  });
+
+  test("the floor is the oldest USABLE row's: an unusable row's position bounds nothing", async () => {
+    await seedFloor("300");
+    // A row for a key the runtime no longer persists, far older than the floor
+    // — it would otherwise drag the floor (and the backstop) down.
+    await persistSnapshot(t.db, "not-persisted", "{}", {}, "50", {
+      mode: "replace",
+      definition: null,
+      guardTables: ["seed"],
+    });
+    await insertChangelog({ seq: 1, xid: "100", t: "ta", op: "U", ids: null });
+    expect(await probeCatchUp(t.db, expectation())).toEqual({
+      kind: "replay",
+      floor: "300",
+    });
   });
 
   test("empty changelog since floor → already current, zero replays", async () => {
@@ -200,7 +276,7 @@ describe("runCatchUp", () => {
     await insertChangelog({ seq: 2, xid: "150", t: "tb", op: "U", ids: null });
 
     const { routed, route } = recorder();
-    await runCatchUp(t.db, route);
+    await runCatchUp(route);
 
     expect(routed).toEqual([]);
   });
@@ -236,7 +312,7 @@ describe("runCatchUp", () => {
     });
 
     const { routed, route } = recorder();
-    await runCatchUp(t.db, route);
+    await runCatchUp(route);
 
     expect(routed).toEqual([
       {
@@ -271,7 +347,7 @@ describe("runCatchUp", () => {
     });
 
     const { routed, route } = recorder();
-    await runCatchUp(t.db, route);
+    await runCatchUp(route);
 
     expect(routed).toEqual([
       {
@@ -283,5 +359,38 @@ describe("runCatchUp", () => {
         unchanged: null,
       },
     ]);
+  });
+});
+
+describe("the prune horizon", () => {
+  test("the prune records the highest xid it deleted, and never lowers it", async () => {
+    await seedFloor("100");
+    await insertChangelog({ seq: 1, xid: "80", t: "ta", op: "U", ids: null });
+    await pruneChangelog(t.db);
+    expect(await readPruneHorizon(t.db)).toBe("80");
+    // A prune deleting nothing, then one deleting a lower xid: unchanged.
+    await pruneChangelog(t.db);
+    expect(await readPruneHorizon(t.db)).toBe("80");
+    await insertChangelog({ seq: 2, xid: "70", t: "ta", op: "U", ids: null });
+    await pruneChangelog(t.db);
+    expect(await readPruneHorizon(t.db)).toBe("80");
+  });
+
+  test("a missing row is seeded with the most that could have been pruned", async () => {
+    const reseed = async () => {
+      await t.db.execute(
+        sql.raw(`DELETE FROM ${LIVE_STATE_CHANGELOG_HORIZON_TABLE}`),
+      );
+      await ensureSnapshotTable(t.db);
+      return readPruneHorizon(t.db);
+    };
+    // Rows retained: everything below the oldest may have been pruned.
+    await insertChangelog({ seq: 1, xid: "500", t: "ta", op: "U", ids: null });
+    expect(await reseed()).toBe("499");
+    // An empty changelog: everything so far may have been.
+    await t.db.execute(sql.raw(`DELETE FROM ${LIVE_STATE_CHANGELOG_TABLE}`));
+    const seeded = await reseed();
+    expect(seeded).not.toBeNull();
+    expect(BigInt(seeded!)).toBeGreaterThan(0n);
   });
 });

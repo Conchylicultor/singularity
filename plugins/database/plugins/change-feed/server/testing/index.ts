@@ -5,6 +5,11 @@ export { ensureChangelogTable } from "../internal/triggers";
 // reads the worktree's connection), routing through whatever `route` the suite
 // hands it — `routeChange` for the real runtime.
 export { createChangeFeedListener } from "../internal/listener";
+// `routeChange`'s routing into a runtime of the suite's own
+// (`createResourceRuntime`) instead of server-core's global one — so a suite
+// registering REAL declarations (the tree oracle) never collides with the keys
+// a barrel's module eval registered on the global registry.
+export { createChangeRouter } from "../internal/route-change";
 // The feed's triggers on a suite's own throwaway database (with the suite's
 // own exclusions — nothing is contributed in an un-booted process).
 export { rebuildTriggers } from "../internal/triggers";
@@ -23,3 +28,7 @@ export {
   installedLayouts,
   readInstalledTriggers,
 } from "../internal/route-layout";
+// A3, the boot assert itself: the installed triggers emit every column the
+// routes carry — for a suite proving a route kind's layout is checked (a
+// rollup's source routes, query-resource's C14 suite).
+export { assertRouteLayoutsInstalled } from "../internal/route-layout";

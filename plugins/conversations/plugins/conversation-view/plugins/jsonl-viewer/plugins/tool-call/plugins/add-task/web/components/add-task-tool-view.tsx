@@ -1,11 +1,9 @@
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useMemo } from "react";
-import {
-  foldResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
-import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { taskRows } from "@plugins/tasks/plugins/tasks-core/core";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import {
   DEFAULT_TASK_TRACK,
@@ -55,7 +53,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const autostart = input.autostart ?? result?.autostart ?? null;
   const track = TRACK_META[input.track ?? DEFAULT_TASK_TRACK];
 
-  const tasksResult = useResource(tasksResource);
+  const tasksResult = useLive(taskRows);
   const openPane = useOpenPane();
   // Loading shows the bare task id (known from the call, never revised); a
   // failed read keeps the task as last seen, else the same bare id.

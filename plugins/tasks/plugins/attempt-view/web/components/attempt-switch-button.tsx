@@ -1,8 +1,8 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { attemptsResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { attemptRows } from "@plugins/tasks/plugins/tasks-core/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { attemptPane } from "../panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -13,7 +13,7 @@ const splitscreenIcon = symbol("splitscreen");
 export function AttemptSwitchButton() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
-  const result = useResource(attemptsResource);
+  const result = useLive(attemptRows);
 
   const { isOpen, toggle } = attemptPane.useToggle(
     { attemptId: conversation?.attemptId ?? "" },

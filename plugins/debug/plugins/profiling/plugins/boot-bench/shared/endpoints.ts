@@ -2,10 +2,12 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 // One boot-snapshot key's accounting: where the value came from and the work it
-// cost. `persisted` workMs is the single batched read amortized ÷ N (directional,
-// not per-key truth); `loader` workMs is the real from-scratch load.
+// cost. `memory` is a persisted alias's kept in-memory snapshot (warm mode only —
+// cold mode bypasses it); `persisted` workMs is the single batched read amortized
+// ÷ N (directional, not per-key truth); `loader` workMs is the real from-scratch
+// load.
 const perKeySchema = z.object({
-  source: z.enum(["persisted", "loader"]),
+  source: z.enum(["memory", "persisted", "loader"]),
   workMs: z.number(),
 });
 

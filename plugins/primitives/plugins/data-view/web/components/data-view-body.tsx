@@ -19,7 +19,7 @@ import {
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
-import { resolveBodyState } from "../internal/body-state";
+import { fieldsReadByView, resolveBodyState } from "../internal/body-state";
 import { BodyFallback } from "./body-fallback";
 import {
   useFilterController,
@@ -541,8 +541,22 @@ function DataViewBodyInner<TRow>(
     ? { ...activeState, sort: [], filter: null, query: "", fold }
     : { ...activeState, fold };
   // What renders in place of the view, if anything: server error > failed
-  // read > loading > the view (see `resolveBodyState`).
-  const bodyState = resolveBodyState({ server: origin, readiness });
+  // read > failed field > loading > pending field > the view (see
+  // `resolveBodyState`).
+  // A field the view is laid out by (group / sort / filter / fold) whose own
+  // values are pending or failed holds the body too (see `resolveBodyState`).
+  // The fold passed is the one in EFFECT (`fold` above: suspended while a
+  // search is typed, absent in a view without fold lines), not the stored one.
+  const readFields = fieldsReadByView(
+    fields as FieldDef<unknown>[],
+    activeState,
+    fold,
+  );
+  const bodyState = resolveBodyState({
+    server: origin,
+    readiness,
+    readFields,
+  });
 
   // A sections surface renders this view as one section, and a section whose
   // config row says `hideWhenEmpty` is decided HERE, before the view mounts:

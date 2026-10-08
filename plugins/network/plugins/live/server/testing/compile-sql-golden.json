@@ -10743,5 +10743,3246 @@
         }
       }
     }
+  },
+  "all": {
+    "flat": {
+      "keyField": "id",
+      "definition": "fc6c95e67880bf1a2350fff0e0de91c953cfbcca504862f2ac2baaca7c00bebc",
+      "options": {
+        "scopedMembership": {
+          "orderOf": "$function",
+          "orderSignatureOf": "$function"
+        },
+        "debounceMs": 250
+      },
+      "routes": [
+        {
+          "route": {
+            "id": "base",
+            "table": "golden_all_tasks",
+            "map": {
+              "kind": "identity"
+            },
+            "columns": [
+              "id",
+              "title",
+              "dropped_at",
+              "rank",
+              "created_at"
+            ]
+          }
+        }
+      ],
+      "uses": {
+        "value": [
+          [
+            "base",
+            {
+              "role": "membership",
+              "moves": [
+                "created_at",
+                "dropped_at",
+                "rank"
+              ]
+            }
+          ]
+        ]
+      },
+      "full": {
+        "result": {
+          "value": [
+            {
+              "id": "r1",
+              "title": "T",
+              "rank": 1,
+              "createdAt": {
+                "$date": "2026-10-06T10:00:00.000Z"
+              }
+            },
+            {
+              "id": "r2",
+              "title": "T",
+              "rank": 1,
+              "createdAt": {
+                "$date": "2026-10-06T10:00:00.000Z"
+              }
+            }
+          ]
+        },
+        "queries": [
+          {
+            "sql": "SELECT \"golden_all_tasks\".\"id\" AS \"id\", \"golden_all_tasks\".\"title\" AS \"title\", \"golden_all_tasks\".\"rank\" AS \"rank\", \"golden_all_tasks\".\"created_at\" AS \"createdAt\" FROM \"golden_all_tasks\" WHERE \"golden_all_tasks\".\"dropped_at\" IS NULL AND \"golden_all_tasks\".\"rank\" > $1 ORDER BY \"golden_all_tasks\".\"rank\" ASC NULLS LAST, \"golden_all_tasks\".\"created_at\" DESC NULLS LAST, \"golden_all_tasks\".\"id\" ASC NULLS LAST",
+            "params": [
+              0
+            ]
+          }
+        ],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "scoped": {
+        "result": {
+          "value": [
+            {
+              "id": "r1",
+              "title": "T",
+              "rank": 1,
+              "createdAt": {
+                "$date": "2026-10-06T10:00:00.000Z"
+              }
+            },
+            {
+              "id": "r2",
+              "title": "T",
+              "rank": 1,
+              "createdAt": {
+                "$date": "2026-10-06T10:00:00.000Z"
+              }
+            }
+          ]
+        },
+        "queries": [
+          {
+            "sql": "SELECT \"golden_all_tasks\".\"id\" AS \"id\", \"golden_all_tasks\".\"title\" AS \"title\", \"golden_all_tasks\".\"rank\" AS \"rank\", \"golden_all_tasks\".\"created_at\" AS \"createdAt\" FROM \"golden_all_tasks\" WHERE (\"golden_all_tasks\".\"dropped_at\" IS NULL AND \"golden_all_tasks\".\"rank\" > $1 and \"golden_all_tasks\".\"id\" = ANY($2::text[]))",
+            "params": [
+              0,
+              [
+                "r1",
+                "r2"
+              ]
+            ]
+          }
+        ],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "orderIds": {
+        "result": {
+          "value": [
+            "r2",
+            "r1"
+          ]
+        },
+        "queries": [
+          {
+            "sql": "SELECT \"golden_all_tasks\".\"id\" AS __id FROM \"golden_all_tasks\" WHERE \"golden_all_tasks\".\"dropped_at\" IS NULL AND \"golden_all_tasks\".\"rank\" > $1 ORDER BY \"golden_all_tasks\".\"rank\" ASC NULLS LAST, \"golden_all_tasks\".\"created_at\" DESC NULLS LAST, \"golden_all_tasks\".\"id\" ASC NULLS LAST",
+            "params": [
+              0
+            ]
+          }
+        ],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "signatures": {
+        "result": {
+          "value": [
+            "1\u0000\"2026-10-06T10:00:00.000Z\"",
+            "1\u0000\"2026-10-06T10:00:00.000Z\""
+          ]
+        },
+        "queries": [],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "rows": {
+        "options": {
+          "membership": {
+            "kind": "point",
+            "idsOf": "$function"
+          }
+        },
+        "membership": "point",
+        "routes": [
+          {
+            "route": {
+              "id": "base",
+              "table": "golden_all_tasks",
+              "map": {
+                "kind": "identity"
+              },
+              "columns": [
+                "id",
+                "title",
+                "dropped_at",
+                "rank",
+                "created_at"
+              ]
+            }
+          }
+        ],
+        "tuples": {
+          "one": {
+            "params": {
+              "ids": "r1"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "created_at",
+                      "dropped_at",
+                      "rank"
+                    ]
+                  }
+                ]
+              ]
+            },
+            "ids": {
+              "value": [
+                "r1"
+              ]
+            },
+            "full": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "rank": 1,
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    }
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "rank": 1,
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT \"golden_all_tasks\".\"id\" AS \"id\", \"golden_all_tasks\".\"title\" AS \"title\", \"golden_all_tasks\".\"rank\" AS \"rank\", \"golden_all_tasks\".\"created_at\" AS \"createdAt\" FROM \"golden_all_tasks\" WHERE (\"golden_all_tasks\".\"dropped_at\" IS NULL AND \"golden_all_tasks\".\"rank\" > $1 and \"golden_all_tasks\".\"id\" = ANY($2::text[]))",
+                  "params": [
+                    0,
+                    [
+                      "r1"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "scoped": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "rank": 1,
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    }
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "rank": 1,
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT \"golden_all_tasks\".\"id\" AS \"id\", \"golden_all_tasks\".\"title\" AS \"title\", \"golden_all_tasks\".\"rank\" AS \"rank\", \"golden_all_tasks\".\"created_at\" AS \"createdAt\" FROM \"golden_all_tasks\" WHERE (\"golden_all_tasks\".\"dropped_at\" IS NULL AND \"golden_all_tasks\".\"rank\" > $1 and \"golden_all_tasks\".\"id\" = ANY($2::text[]))",
+                  "params": [
+                    0,
+                    [
+                      "p9",
+                      "p8"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "empty": {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          },
+          "two": {
+            "params": {
+              "ids": "r1,r2"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "created_at",
+                      "dropped_at",
+                      "rank"
+                    ]
+                  }
+                ]
+              ]
+            },
+            "ids": {
+              "value": [
+                "r1",
+                "r2"
+              ]
+            },
+            "full": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "rank": 1,
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    }
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "rank": 1,
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT \"golden_all_tasks\".\"id\" AS \"id\", \"golden_all_tasks\".\"title\" AS \"title\", \"golden_all_tasks\".\"rank\" AS \"rank\", \"golden_all_tasks\".\"created_at\" AS \"createdAt\" FROM \"golden_all_tasks\" WHERE (\"golden_all_tasks\".\"dropped_at\" IS NULL AND \"golden_all_tasks\".\"rank\" > $1 and \"golden_all_tasks\".\"id\" = ANY($2::text[]))",
+                  "params": [
+                    0,
+                    [
+                      "r1",
+                      "r2"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "scoped": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "rank": 1,
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    }
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "rank": 1,
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    }
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT \"golden_all_tasks\".\"id\" AS \"id\", \"golden_all_tasks\".\"title\" AS \"title\", \"golden_all_tasks\".\"rank\" AS \"rank\", \"golden_all_tasks\".\"created_at\" AS \"createdAt\" FROM \"golden_all_tasks\" WHERE (\"golden_all_tasks\".\"dropped_at\" IS NULL AND \"golden_all_tasks\".\"rank\" > $1 and \"golden_all_tasks\".\"id\" = ANY($2::text[]))",
+                  "params": [
+                    0,
+                    [
+                      "p9",
+                      "p8"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "empty": {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "tree": {
+      "keyField": "id",
+      "definition": "89746380a7d984c29d9ba9581b56d092231b5919b2024f2848b5b428a39ac213",
+      "options": {
+        "scopedMembership": {
+          "orderOf": "$function",
+          "orderSignatureOf": "$function"
+        }
+      },
+      "routes": [
+        {
+          "route": {
+            "id": "base",
+            "table": "golden_all_tasks",
+            "map": {
+              "kind": "identity"
+            },
+            "columns": [
+              "id",
+              "title",
+              "owner_id",
+              "held_at",
+              "created_at"
+            ]
+          }
+        },
+        {
+          "route": {
+            "id": "owner",
+            "table": "golden_all_owners",
+            "columns": [
+              "id",
+              "name"
+            ],
+            "map": {
+              "kind": "reverse",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"id\" from \"golden_all_tasks\" where \"golden_all_tasks\".\"owner_id\" = ANY($1::text[]) limit $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"id\" from \"golden_all_tasks\" where (\"golden_all_tasks\".\"owner_id\" = ANY($1::text[]) and \"golden_all_tasks\".\"id\" = ANY($2::text[])) limit $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"id\" from \"golden_all_tasks\" where \"golden_all_tasks\".\"owner_id\" = ANY($1::text[]) limit $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        },
+        {
+          "route": {
+            "id": "first[golden_all_pushes]",
+            "table": "golden_all_pushes",
+            "columns": [
+              "attempt_id",
+              "created_at",
+              "id"
+            ],
+            "map": {
+              "kind": "reverse",
+              "column": "attempt_id",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"id\" from \"golden_all_tasks\" where \"golden_all_tasks\".\"id\" IN (SELECT \"task_id\" FROM \"golden_all_attempts\" WHERE \"id\" = ANY($1::text[])) limit $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"id\" from \"golden_all_tasks\" where (\"golden_all_tasks\".\"id\" IN (SELECT \"task_id\" FROM \"golden_all_attempts\" WHERE \"id\" = ANY($1::text[])) and \"golden_all_tasks\".\"id\" = ANY($2::text[])) limit $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "select distinct \"id\" from \"golden_all_tasks\" where \"golden_all_tasks\".\"id\" IN (SELECT \"task_id\" FROM \"golden_all_attempts\" WHERE \"id\" = ANY($1::text[])) limit $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        },
+        {
+          "route": {
+            "id": "first[golden_all_attempts]",
+            "table": "golden_all_attempts",
+            "columns": [
+              "id",
+              "task_id"
+            ],
+            "map": {
+              "kind": "alias",
+              "column": "task_id"
+            }
+          }
+        },
+        {
+          "route": {
+            "id": "att",
+            "table": "golden_all_attempts",
+            "columns": [
+              "id",
+              "task_id",
+              "status",
+              "created_at"
+            ],
+            "map": {
+              "kind": "alias",
+              "column": "task_id"
+            }
+          }
+        },
+        {
+          "route": {
+            "id": "att__conv[golden_all_convs]",
+            "table": "golden_all_convs",
+            "columns": [
+              "attempt_id",
+              "id",
+              "status"
+            ],
+            "map": {
+              "kind": "reverse",
+              "column": "attempt_id",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT DISTINCT \"att\".\"task_id\" AS __h FROM \"golden_all_attempts\" \"att\" WHERE \"att\".\"id\" = ANY($1::text[]) LIMIT $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "h1",
+                  "h2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "SELECT DISTINCT \"att\".\"task_id\" AS __h FROM \"golden_all_attempts\" \"att\" WHERE (\"att\".\"id\" = ANY($1::text[]) and \"att\".\"task_id\" = ANY($2::text[])) LIMIT $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "SELECT DISTINCT \"att\".\"task_id\" AS __h FROM \"golden_all_attempts\" \"att\" WHERE \"att\".\"id\" = ANY($1::text[]) LIMIT $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        },
+        {
+          "route": {
+            "id": "deps",
+            "table": "golden_all_deps",
+            "columns": [
+              "task_id",
+              "depends_on",
+              "created_at"
+            ],
+            "map": {
+              "kind": "alias",
+              "column": "task_id"
+            }
+          }
+        },
+        {
+          "route": {
+            "id": "blocking",
+            "table": "golden_all_deps",
+            "columns": [
+              "task_id",
+              "depends_on"
+            ],
+            "map": {
+              "kind": "alias",
+              "column": "task_id"
+            }
+          }
+        },
+        {
+          "route": {
+            "id": "blocking:closure",
+            "table": "golden_all_deps",
+            "columns": [
+              "task_id",
+              "depends_on"
+            ],
+            "map": {
+              "kind": "reverse",
+              "column": "task_id",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "d1",
+                  "d2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "d1",
+                  "d2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking WHERE __d_blocking.__n = ANY($2::text[]) LIMIT $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        },
+        {
+          "route": {
+            "id": "blocking__anc:closure",
+            "table": "golden_all_tasks",
+            "columns": [
+              "id",
+              "dropped_at"
+            ],
+            "map": {
+              "kind": "reverse",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "d1",
+                  "d2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "d1",
+                  "d2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking WHERE __d_blocking.__n = ANY($2::text[]) LIMIT $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        },
+        {
+          "route": {
+            "id": "blocking__anc__push[golden_all_pushes]:closure",
+            "table": "golden_all_pushes",
+            "columns": [
+              "attempt_id",
+              "created_at",
+              "id"
+            ],
+            "map": {
+              "kind": "reverse",
+              "column": "attempt_id",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "d1",
+                  "d2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc\".\"id\" FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" IN (SELECT \"task_id\" FROM \"golden_all_attempts\" WHERE \"id\" = ANY($1::text[]))) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "d1",
+                  "d2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc\".\"id\" FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" IN (SELECT \"task_id\" FROM \"golden_all_attempts\" WHERE \"id\" = ANY($1::text[]))) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking WHERE __d_blocking.__n = ANY($2::text[]) LIMIT $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc\".\"id\" FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" IN (SELECT \"task_id\" FROM \"golden_all_attempts\" WHERE \"id\" = ANY($1::text[]))) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        },
+        {
+          "route": {
+            "id": "blocking__anc__push[golden_all_attempts]:closure",
+            "table": "golden_all_attempts",
+            "columns": [
+              "id",
+              "task_id"
+            ],
+            "map": {
+              "kind": "reverse",
+              "column": "task_id",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "d1",
+                  "d2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc\".\"id\" FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" = ANY($1::text[])) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "d1",
+                  "d2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc\".\"id\" FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" = ANY($1::text[])) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking WHERE __d_blocking.__n = ANY($2::text[]) LIMIT $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc\".\"id\" FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" = ANY($1::text[])) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        },
+        {
+          "route": {
+            "id": "blocking__anc__att:closure",
+            "table": "golden_all_attempts",
+            "columns": [
+              "id",
+              "task_id",
+              "status"
+            ],
+            "map": {
+              "kind": "reverse",
+              "column": "task_id",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "d1",
+                  "d2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "d1",
+                  "d2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking WHERE __d_blocking.__n = ANY($2::text[]) LIMIT $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        },
+        {
+          "route": {
+            "id": "blocking__anc__att__conv[golden_all_convs]:closure",
+            "table": "golden_all_convs",
+            "columns": [
+              "attempt_id",
+              "id",
+              "status"
+            ],
+            "map": {
+              "kind": "reverse",
+              "column": "attempt_id",
+              "resolve": "$function"
+            }
+          },
+          "resolve": [
+            {
+              "result": {
+                "value": [
+                  "d1",
+                  "d2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc__att\".\"task_id\" FROM \"golden_all_attempts\" \"blocking__anc__att\" WHERE \"blocking__anc__att\".\"id\" = ANY($1::text[])) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                  "params": [
+                    [
+                      "x1",
+                      "x2"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": [
+                  "d1",
+                  "d2"
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc__att\".\"task_id\" FROM \"golden_all_attempts\" \"blocking__anc__att\" WHERE \"blocking__anc__att\".\"id\" = ANY($1::text[])) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking WHERE __d_blocking.__n = ANY($2::text[]) LIMIT $3",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    [
+                      "h2",
+                      "h1"
+                    ],
+                    501
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": "over-cap"
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc__att\".\"task_id\" FROM \"golden_all_attempts\" \"blocking__anc__att\" WHERE \"blocking__anc__att\".\"id\" = ANY($1::text[])) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                  "params": [
+                    [
+                      "x1"
+                    ],
+                    2
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          ]
+        }
+      ],
+      "uses": {
+        "value": [
+          [
+            "base",
+            {
+              "role": "membership",
+              "moves": [
+                "created_at",
+                "owner_id"
+              ]
+            }
+          ],
+          [
+            "owner",
+            {
+              "role": "membership",
+              "moves": [
+                "id"
+              ]
+            }
+          ],
+          [
+            "first[golden_all_pushes]",
+            {
+              "role": "value"
+            }
+          ],
+          [
+            "first[golden_all_attempts]",
+            {
+              "role": "value"
+            }
+          ],
+          [
+            "att",
+            {
+              "role": "value"
+            }
+          ],
+          [
+            "att__conv[golden_all_convs]",
+            {
+              "role": "value"
+            }
+          ],
+          [
+            "deps",
+            {
+              "role": "value"
+            }
+          ],
+          [
+            "blocking",
+            {
+              "role": "value"
+            }
+          ],
+          [
+            "blocking:closure",
+            {
+              "role": "value"
+            }
+          ],
+          [
+            "blocking__anc:closure",
+            {
+              "role": "value"
+            }
+          ],
+          [
+            "blocking__anc__push[golden_all_pushes]:closure",
+            {
+              "role": "value"
+            }
+          ],
+          [
+            "blocking__anc__push[golden_all_attempts]:closure",
+            {
+              "role": "value"
+            }
+          ],
+          [
+            "blocking__anc__att:closure",
+            {
+              "role": "value"
+            }
+          ],
+          [
+            "blocking__anc__att__conv[golden_all_convs]:closure",
+            {
+              "role": "value"
+            }
+          ]
+        ]
+      },
+      "full": {
+        "result": {
+          "value": [
+            {
+              "id": "r1",
+              "title": "T",
+              "createdAt": {
+                "$date": "2026-10-06T10:00:00.000Z"
+              },
+              "ownerName": "o",
+              "firstPushAt": null,
+              "done": false,
+              "live": null,
+              "attempts": [],
+              "dependencies": [],
+              "blocked": false,
+              "status": "new"
+            },
+            {
+              "id": "r2",
+              "title": "T",
+              "createdAt": {
+                "$date": "2026-10-06T10:00:00.000Z"
+              },
+              "ownerName": "o",
+              "firstPushAt": null,
+              "done": false,
+              "live": null,
+              "attempts": [],
+              "dependencies": [],
+              "blocked": false,
+              "status": "new"
+            }
+          ]
+        },
+        "queries": [
+          {
+            "sql": "WITH RECURSIVE __c_att AS (SELECT \"att\".\"task_id\" AS __k, (bool_or(\"att\".\"status\" = 'completed')) AS \"done\", (bool_or(\"att__conv\".\"has_live\")) AS \"live\", json_agg(json_build_object('id', \"att\".\"id\", 'status', \"att\".\"status\", 'createdAt', to_char(\"att\".\"created_at\" AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"'), 'live', \"att__conv\".\"has_live\") ORDER BY \"att\".\"created_at\" DESC NULLS LAST, \"att\".\"id\" ASC) AS \"list\" FROM \"golden_all_attempts\" \"att\" LEFT JOIN \"attempt_conv_agg\" \"att__conv\" ON \"att__conv\".\"attempt_id\" = \"att\".\"id\" WHERE \"att\".\"status\" <> 'system' GROUP BY \"att\".\"task_id\"), __c_deps AS (SELECT \"deps\".\"task_id\" AS __k, (array_agg(\"deps\".\"depends_on\" ORDER BY \"deps\".\"created_at\")) AS \"ids\" FROM \"golden_all_deps\" \"deps\" GROUP BY \"deps\".\"task_id\"), __x_blocking AS (SELECT \"blocking\".\"task_id\" AS __n, \"blocking\".\"depends_on\" AS __a FROM \"golden_all_deps\" \"blocking\" UNION SELECT __x_blocking.__n, \"blocking\".\"depends_on\" FROM __x_blocking JOIN \"golden_all_deps\" \"blocking\" ON \"blocking\".\"task_id\" = __x_blocking.__a), __c_blocking__anc__att AS (SELECT \"blocking__anc__att\".\"task_id\" AS __k, (bool_or(\"blocking__anc__att\".\"status\" = 'completed' AND NOT COALESCE(\"blocking__anc__att__conv\".\"has_live\", false))) AS \"done\" FROM \"golden_all_attempts\" \"blocking__anc__att\" LEFT JOIN \"attempt_conv_agg\" \"blocking__anc__att__conv\" ON \"blocking__anc__att__conv\".\"attempt_id\" = \"blocking__anc__att\".\"id\" GROUP BY \"blocking__anc__att\".\"task_id\"), __g_blocking AS (SELECT __x_blocking.__n AS __k, (bool_or(\"blocking__anc\".\"dropped_at\" IS NULL AND \"blocking__anc__push\".\"first_push_at\" IS NULL AND NOT (COALESCE(__c_blocking__anc__att.\"done\", false)))) AS \"blocked\" FROM __x_blocking JOIN \"golden_all_tasks\" \"blocking__anc\" ON \"blocking__anc\".\"id\" = __x_blocking.__a LEFT JOIN \"task_latest_conversation\" \"blocking__anc__push\" ON \"blocking__anc__push\".\"task_id\" = \"blocking__anc\".\"id\" LEFT JOIN __c_blocking__anc__att ON __c_blocking__anc__att.__k = \"blocking__anc\".\"id\" GROUP BY __x_blocking.__n) SELECT \"golden_all_tasks\".\"id\" AS \"id\", \"golden_all_tasks\".\"title\" AS \"title\", \"golden_all_tasks\".\"created_at\" AS \"createdAt\", \"owner\".\"name\" AS \"ownerName\", \"first\".\"first_push_at\" AS \"firstPushAt\", (COALESCE(__c_att.\"done\", false)) AS \"done\", (__c_att.\"live\") AS \"live\", (COALESCE(__c_att.\"list\", '[]'::json)) AS \"attempts\", (COALESCE(__c_deps.\"ids\", ARRAY[]::text[])) AS \"dependencies\", (COALESCE(__g_blocking.\"blocked\", false)) AS \"blocked\", (CASE WHEN \"golden_all_tasks\".\"held_at\" IS NOT NULL THEN 'held' WHEN (COALESCE(__c_att.\"done\", false)) THEN 'done' WHEN (COALESCE(__g_blocking.\"blocked\", false)) THEN 'blocked' ELSE 'new' END) AS \"status\" FROM \"golden_all_tasks\" INNER JOIN \"golden_all_owners\" \"owner\" ON \"owner\".\"id\" = \"golden_all_tasks\".\"owner_id\" LEFT JOIN \"task_latest_conversation\" \"first\" ON \"first\".\"task_id\" = \"golden_all_tasks\".\"id\" LEFT JOIN __c_att ON __c_att.__k = \"golden_all_tasks\".\"id\" LEFT JOIN __c_deps ON __c_deps.__k = \"golden_all_tasks\".\"id\" LEFT JOIN __g_blocking ON __g_blocking.__k = \"golden_all_tasks\".\"id\" ORDER BY \"golden_all_tasks\".\"created_at\" ASC NULLS LAST, \"golden_all_tasks\".\"id\" ASC NULLS LAST",
+            "params": []
+          }
+        ],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "scoped": {
+        "result": {
+          "value": [
+            {
+              "id": "r1",
+              "title": "T",
+              "createdAt": {
+                "$date": "2026-10-06T10:00:00.000Z"
+              },
+              "ownerName": "o",
+              "firstPushAt": null,
+              "done": false,
+              "live": null,
+              "attempts": [],
+              "dependencies": [],
+              "blocked": false,
+              "status": "new"
+            },
+            {
+              "id": "r2",
+              "title": "T",
+              "createdAt": {
+                "$date": "2026-10-06T10:00:00.000Z"
+              },
+              "ownerName": "o",
+              "firstPushAt": null,
+              "done": false,
+              "live": null,
+              "attempts": [],
+              "dependencies": [],
+              "blocked": false,
+              "status": "new"
+            }
+          ]
+        },
+        "queries": [
+          {
+            "sql": "WITH RECURSIVE __c_att AS (SELECT \"att\".\"task_id\" AS __k, (bool_or(\"att\".\"status\" = 'completed')) AS \"done\", (bool_or(\"att__conv\".\"has_live\")) AS \"live\", json_agg(json_build_object('id', \"att\".\"id\", 'status', \"att\".\"status\", 'createdAt', to_char(\"att\".\"created_at\" AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"'), 'live', \"att__conv\".\"has_live\") ORDER BY \"att\".\"created_at\" DESC NULLS LAST, \"att\".\"id\" ASC) AS \"list\" FROM \"golden_all_attempts\" \"att\" LEFT JOIN \"attempt_conv_agg\" \"att__conv\" ON \"att__conv\".\"attempt_id\" = \"att\".\"id\" WHERE (\"att\".\"status\" <> 'system' and \"att\".\"task_id\" = ANY($1::text[])) GROUP BY \"att\".\"task_id\"), __c_deps AS (SELECT \"deps\".\"task_id\" AS __k, (array_agg(\"deps\".\"depends_on\" ORDER BY \"deps\".\"created_at\")) AS \"ids\" FROM \"golden_all_deps\" \"deps\" WHERE \"deps\".\"task_id\" = ANY($2::text[]) GROUP BY \"deps\".\"task_id\"), __x_blocking AS (SELECT \"blocking\".\"task_id\" AS __n, \"blocking\".\"depends_on\" AS __a FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"task_id\" = ANY($3::text[]) UNION SELECT __x_blocking.__n, __y.__a FROM __x_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"depends_on\" AS __a FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"task_id\" = __x_blocking.__a OFFSET 0) __y), __c_blocking__anc__att AS (SELECT \"blocking__anc__att\".\"task_id\" AS __k, (bool_or(\"blocking__anc__att\".\"status\" = 'completed' AND NOT COALESCE(\"blocking__anc__att__conv\".\"has_live\", false))) AS \"done\" FROM \"golden_all_attempts\" \"blocking__anc__att\" LEFT JOIN \"attempt_conv_agg\" \"blocking__anc__att__conv\" ON \"blocking__anc__att__conv\".\"attempt_id\" = \"blocking__anc__att\".\"id\" WHERE \"blocking__anc__att\".\"task_id\" = ANY(ARRAY(SELECT DISTINCT __x_blocking.__a FROM __x_blocking)) GROUP BY \"blocking__anc__att\".\"task_id\"), __g_blocking AS (SELECT __x_blocking.__n AS __k, (bool_or(\"blocking__anc\".\"dropped_at\" IS NULL AND \"blocking__anc__push\".\"first_push_at\" IS NULL AND NOT (COALESCE(__c_blocking__anc__att.\"done\", false)))) AS \"blocked\" FROM __x_blocking CROSS JOIN LATERAL (SELECT * FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" = __x_blocking.__a OFFSET 0) \"blocking__anc\" LEFT JOIN \"task_latest_conversation\" \"blocking__anc__push\" ON \"blocking__anc__push\".\"task_id\" = \"blocking__anc\".\"id\" LEFT JOIN __c_blocking__anc__att ON __c_blocking__anc__att.__k = \"blocking__anc\".\"id\" GROUP BY __x_blocking.__n) SELECT \"golden_all_tasks\".\"id\" AS \"id\", \"golden_all_tasks\".\"title\" AS \"title\", \"golden_all_tasks\".\"created_at\" AS \"createdAt\", \"owner\".\"name\" AS \"ownerName\", \"first\".\"first_push_at\" AS \"firstPushAt\", (COALESCE(__c_att.\"done\", false)) AS \"done\", (__c_att.\"live\") AS \"live\", (COALESCE(__c_att.\"list\", '[]'::json)) AS \"attempts\", (COALESCE(__c_deps.\"ids\", ARRAY[]::text[])) AS \"dependencies\", (COALESCE(__g_blocking.\"blocked\", false)) AS \"blocked\", (CASE WHEN \"golden_all_tasks\".\"held_at\" IS NOT NULL THEN 'held' WHEN (COALESCE(__c_att.\"done\", false)) THEN 'done' WHEN (COALESCE(__g_blocking.\"blocked\", false)) THEN 'blocked' ELSE 'new' END) AS \"status\" FROM \"golden_all_tasks\" INNER JOIN \"golden_all_owners\" \"owner\" ON \"owner\".\"id\" = \"golden_all_tasks\".\"owner_id\" LEFT JOIN \"task_latest_conversation\" \"first\" ON \"first\".\"task_id\" = \"golden_all_tasks\".\"id\" LEFT JOIN __c_att ON __c_att.__k = \"golden_all_tasks\".\"id\" LEFT JOIN __c_deps ON __c_deps.__k = \"golden_all_tasks\".\"id\" LEFT JOIN __g_blocking ON __g_blocking.__k = \"golden_all_tasks\".\"id\" WHERE \"golden_all_tasks\".\"id\" = ANY($4::text[])",
+            "params": [
+              [
+                "r1",
+                "r2"
+              ],
+              [
+                "r1",
+                "r2"
+              ],
+              [
+                "r1",
+                "r2"
+              ],
+              [
+                "r1",
+                "r2"
+              ]
+            ]
+          }
+        ],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "orderIds": {
+        "result": {
+          "value": [
+            "r2",
+            "r1"
+          ]
+        },
+        "queries": [
+          {
+            "sql": "SELECT \"golden_all_tasks\".\"id\" AS __id FROM \"golden_all_tasks\" INNER JOIN \"golden_all_owners\" \"owner\" ON \"owner\".\"id\" = \"golden_all_tasks\".\"owner_id\" ORDER BY \"golden_all_tasks\".\"created_at\" ASC NULLS LAST, \"golden_all_tasks\".\"id\" ASC NULLS LAST",
+            "params": []
+          }
+        ],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "signatures": {
+        "result": {
+          "value": [
+            "\"2026-10-06T10:00:00.000Z\"",
+            "\"2026-10-06T10:00:00.000Z\""
+          ]
+        },
+        "queries": [],
+        "resolved": {
+          "where": 0,
+          "orderBy": 0
+        }
+      },
+      "rows": {
+        "options": {
+          "membership": {
+            "kind": "point",
+            "idsOf": "$function"
+          }
+        },
+        "membership": "point",
+        "routes": [
+          {
+            "route": {
+              "id": "base",
+              "table": "golden_all_tasks",
+              "map": {
+                "kind": "identity"
+              },
+              "columns": [
+                "id",
+                "title",
+                "owner_id",
+                "held_at",
+                "created_at"
+              ]
+            }
+          },
+          {
+            "route": {
+              "id": "owner",
+              "table": "golden_all_owners",
+              "columns": [
+                "id",
+                "name"
+              ],
+              "map": {
+                "kind": "reverse",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_all_tasks\" where \"golden_all_tasks\".\"owner_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_all_tasks\" where (\"golden_all_tasks\".\"owner_id\" = ANY($1::text[]) and \"golden_all_tasks\".\"id\" = ANY($2::text[])) limit $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_all_tasks\" where \"golden_all_tasks\".\"owner_id\" = ANY($1::text[]) limit $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "first[golden_all_pushes]",
+              "table": "golden_all_pushes",
+              "columns": [
+                "attempt_id",
+                "created_at",
+                "id"
+              ],
+              "map": {
+                "kind": "reverse",
+                "column": "attempt_id",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_all_tasks\" where \"golden_all_tasks\".\"id\" IN (SELECT \"task_id\" FROM \"golden_all_attempts\" WHERE \"id\" = ANY($1::text[])) limit $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_all_tasks\" where (\"golden_all_tasks\".\"id\" IN (SELECT \"task_id\" FROM \"golden_all_attempts\" WHERE \"id\" = ANY($1::text[])) and \"golden_all_tasks\".\"id\" = ANY($2::text[])) limit $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "select distinct \"id\" from \"golden_all_tasks\" where \"golden_all_tasks\".\"id\" IN (SELECT \"task_id\" FROM \"golden_all_attempts\" WHERE \"id\" = ANY($1::text[])) limit $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "first[golden_all_attempts]",
+              "table": "golden_all_attempts",
+              "columns": [
+                "id",
+                "task_id"
+              ],
+              "map": {
+                "kind": "alias",
+                "column": "task_id"
+              }
+            }
+          },
+          {
+            "route": {
+              "id": "att",
+              "table": "golden_all_attempts",
+              "columns": [
+                "id",
+                "task_id",
+                "status",
+                "created_at"
+              ],
+              "map": {
+                "kind": "alias",
+                "column": "task_id"
+              }
+            }
+          },
+          {
+            "route": {
+              "id": "att__conv[golden_all_convs]",
+              "table": "golden_all_convs",
+              "columns": [
+                "attempt_id",
+                "id",
+                "status"
+              ],
+              "map": {
+                "kind": "reverse",
+                "column": "attempt_id",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "SELECT DISTINCT \"att\".\"task_id\" AS __h FROM \"golden_all_attempts\" \"att\" WHERE \"att\".\"id\" = ANY($1::text[]) LIMIT $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "h1",
+                    "h2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "SELECT DISTINCT \"att\".\"task_id\" AS __h FROM \"golden_all_attempts\" \"att\" WHERE (\"att\".\"id\" = ANY($1::text[]) and \"att\".\"task_id\" = ANY($2::text[])) LIMIT $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "SELECT DISTINCT \"att\".\"task_id\" AS __h FROM \"golden_all_attempts\" \"att\" WHERE \"att\".\"id\" = ANY($1::text[]) LIMIT $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "deps",
+              "table": "golden_all_deps",
+              "columns": [
+                "task_id",
+                "depends_on",
+                "created_at"
+              ],
+              "map": {
+                "kind": "alias",
+                "column": "task_id"
+              }
+            }
+          },
+          {
+            "route": {
+              "id": "blocking",
+              "table": "golden_all_deps",
+              "columns": [
+                "task_id",
+                "depends_on"
+              ],
+              "map": {
+                "kind": "alias",
+                "column": "task_id"
+              }
+            }
+          },
+          {
+            "route": {
+              "id": "blocking:closure",
+              "table": "golden_all_deps",
+              "columns": [
+                "task_id",
+                "depends_on"
+              ],
+              "map": {
+                "kind": "reverse",
+                "column": "task_id",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "d1",
+                    "d2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "d1",
+                    "d2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking WHERE __d_blocking.__n = ANY($2::text[]) LIMIT $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "blocking__anc:closure",
+              "table": "golden_all_tasks",
+              "columns": [
+                "id",
+                "dropped_at"
+              ],
+              "map": {
+                "kind": "reverse",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "d1",
+                    "d2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "d1",
+                    "d2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking WHERE __d_blocking.__n = ANY($2::text[]) LIMIT $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "blocking__anc__push[golden_all_pushes]:closure",
+              "table": "golden_all_pushes",
+              "columns": [
+                "attempt_id",
+                "created_at",
+                "id"
+              ],
+              "map": {
+                "kind": "reverse",
+                "column": "attempt_id",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "d1",
+                    "d2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc\".\"id\" FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" IN (SELECT \"task_id\" FROM \"golden_all_attempts\" WHERE \"id\" = ANY($1::text[]))) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "d1",
+                    "d2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc\".\"id\" FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" IN (SELECT \"task_id\" FROM \"golden_all_attempts\" WHERE \"id\" = ANY($1::text[]))) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking WHERE __d_blocking.__n = ANY($2::text[]) LIMIT $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc\".\"id\" FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" IN (SELECT \"task_id\" FROM \"golden_all_attempts\" WHERE \"id\" = ANY($1::text[]))) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "blocking__anc__push[golden_all_attempts]:closure",
+              "table": "golden_all_attempts",
+              "columns": [
+                "id",
+                "task_id"
+              ],
+              "map": {
+                "kind": "reverse",
+                "column": "task_id",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "d1",
+                    "d2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc\".\"id\" FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" = ANY($1::text[])) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "d1",
+                    "d2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc\".\"id\" FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" = ANY($1::text[])) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking WHERE __d_blocking.__n = ANY($2::text[]) LIMIT $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc\".\"id\" FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" = ANY($1::text[])) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "blocking__anc__att:closure",
+              "table": "golden_all_attempts",
+              "columns": [
+                "id",
+                "task_id",
+                "status"
+              ],
+              "map": {
+                "kind": "reverse",
+                "column": "task_id",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "d1",
+                    "d2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "d1",
+                    "d2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking WHERE __d_blocking.__n = ANY($2::text[]) LIMIT $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = ANY($1::text[]) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          },
+          {
+            "route": {
+              "id": "blocking__anc__att__conv[golden_all_convs]:closure",
+              "table": "golden_all_convs",
+              "columns": [
+                "attempt_id",
+                "id",
+                "status"
+              ],
+              "map": {
+                "kind": "reverse",
+                "column": "attempt_id",
+                "resolve": "$function"
+              }
+            },
+            "resolve": [
+              {
+                "result": {
+                  "value": [
+                    "d1",
+                    "d2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc__att\".\"task_id\" FROM \"golden_all_attempts\" \"blocking__anc__att\" WHERE \"blocking__anc__att\".\"id\" = ANY($1::text[])) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                    "params": [
+                      [
+                        "x1",
+                        "x2"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": [
+                    "d1",
+                    "d2"
+                  ]
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc__att\".\"task_id\" FROM \"golden_all_attempts\" \"blocking__anc__att\" WHERE \"blocking__anc__att\".\"id\" = ANY($1::text[])) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking WHERE __d_blocking.__n = ANY($2::text[]) LIMIT $3",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      [
+                        "h2",
+                        "h1"
+                      ],
+                      501
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": "over-cap"
+                },
+                "queries": [
+                  {
+                    "sql": "WITH RECURSIVE __d_blocking AS (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" IN (SELECT \"blocking__anc__att\".\"task_id\" FROM \"golden_all_attempts\" \"blocking__anc__att\" WHERE \"blocking__anc__att\".\"id\" = ANY($1::text[])) UNION SELECT __y.__n FROM __d_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"task_id\" AS __n FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"depends_on\" = __d_blocking.__n OFFSET 0) __y) SELECT __d_blocking.__n AS __n FROM __d_blocking LIMIT $2",
+                    "params": [
+                      [
+                        "x1"
+                      ],
+                      2
+                    ]
+                  }
+                ],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              },
+              {
+                "result": {
+                  "value": []
+                },
+                "queries": [],
+                "resolved": {
+                  "where": 0,
+                  "orderBy": 0
+                }
+              }
+            ]
+          }
+        ],
+        "tuples": {
+          "one": {
+            "params": {
+              "ids": "r1"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "created_at",
+                      "owner_id"
+                    ]
+                  }
+                ],
+                [
+                  "owner",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id"
+                    ]
+                  }
+                ],
+                [
+                  "first[golden_all_pushes]",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "first[golden_all_attempts]",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "att",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "att__conv[golden_all_convs]",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "deps",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking:closure",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking__anc:closure",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking__anc__push[golden_all_pushes]:closure",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking__anc__push[golden_all_attempts]:closure",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking__anc__att:closure",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking__anc__att__conv[golden_all_convs]:closure",
+                  {
+                    "role": "value"
+                  }
+                ]
+              ]
+            },
+            "ids": {
+              "value": [
+                "r1"
+              ]
+            },
+            "full": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    },
+                    "ownerName": "o",
+                    "firstPushAt": null,
+                    "done": false,
+                    "live": null,
+                    "attempts": [],
+                    "dependencies": [],
+                    "blocked": false,
+                    "status": "new"
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    },
+                    "ownerName": "o",
+                    "firstPushAt": null,
+                    "done": false,
+                    "live": null,
+                    "attempts": [],
+                    "dependencies": [],
+                    "blocked": false,
+                    "status": "new"
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __c_att AS (SELECT \"att\".\"task_id\" AS __k, (bool_or(\"att\".\"status\" = 'completed')) AS \"done\", (bool_or(\"att__conv\".\"has_live\")) AS \"live\", json_agg(json_build_object('id', \"att\".\"id\", 'status', \"att\".\"status\", 'createdAt', to_char(\"att\".\"created_at\" AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"'), 'live', \"att__conv\".\"has_live\") ORDER BY \"att\".\"created_at\" DESC NULLS LAST, \"att\".\"id\" ASC) AS \"list\" FROM \"golden_all_attempts\" \"att\" LEFT JOIN \"attempt_conv_agg\" \"att__conv\" ON \"att__conv\".\"attempt_id\" = \"att\".\"id\" WHERE (\"att\".\"status\" <> 'system' and \"att\".\"task_id\" = ANY($1::text[])) GROUP BY \"att\".\"task_id\"), __c_deps AS (SELECT \"deps\".\"task_id\" AS __k, (array_agg(\"deps\".\"depends_on\" ORDER BY \"deps\".\"created_at\")) AS \"ids\" FROM \"golden_all_deps\" \"deps\" WHERE \"deps\".\"task_id\" = ANY($2::text[]) GROUP BY \"deps\".\"task_id\"), __x_blocking AS (SELECT \"blocking\".\"task_id\" AS __n, \"blocking\".\"depends_on\" AS __a FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"task_id\" = ANY($3::text[]) UNION SELECT __x_blocking.__n, __y.__a FROM __x_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"depends_on\" AS __a FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"task_id\" = __x_blocking.__a OFFSET 0) __y), __c_blocking__anc__att AS (SELECT \"blocking__anc__att\".\"task_id\" AS __k, (bool_or(\"blocking__anc__att\".\"status\" = 'completed' AND NOT COALESCE(\"blocking__anc__att__conv\".\"has_live\", false))) AS \"done\" FROM \"golden_all_attempts\" \"blocking__anc__att\" LEFT JOIN \"attempt_conv_agg\" \"blocking__anc__att__conv\" ON \"blocking__anc__att__conv\".\"attempt_id\" = \"blocking__anc__att\".\"id\" WHERE \"blocking__anc__att\".\"task_id\" = ANY(ARRAY(SELECT DISTINCT __x_blocking.__a FROM __x_blocking)) GROUP BY \"blocking__anc__att\".\"task_id\"), __g_blocking AS (SELECT __x_blocking.__n AS __k, (bool_or(\"blocking__anc\".\"dropped_at\" IS NULL AND \"blocking__anc__push\".\"first_push_at\" IS NULL AND NOT (COALESCE(__c_blocking__anc__att.\"done\", false)))) AS \"blocked\" FROM __x_blocking CROSS JOIN LATERAL (SELECT * FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" = __x_blocking.__a OFFSET 0) \"blocking__anc\" LEFT JOIN \"task_latest_conversation\" \"blocking__anc__push\" ON \"blocking__anc__push\".\"task_id\" = \"blocking__anc\".\"id\" LEFT JOIN __c_blocking__anc__att ON __c_blocking__anc__att.__k = \"blocking__anc\".\"id\" GROUP BY __x_blocking.__n) SELECT \"golden_all_tasks\".\"id\" AS \"id\", \"golden_all_tasks\".\"title\" AS \"title\", \"golden_all_tasks\".\"created_at\" AS \"createdAt\", \"owner\".\"name\" AS \"ownerName\", \"first\".\"first_push_at\" AS \"firstPushAt\", (COALESCE(__c_att.\"done\", false)) AS \"done\", (__c_att.\"live\") AS \"live\", (COALESCE(__c_att.\"list\", '[]'::json)) AS \"attempts\", (COALESCE(__c_deps.\"ids\", ARRAY[]::text[])) AS \"dependencies\", (COALESCE(__g_blocking.\"blocked\", false)) AS \"blocked\", (CASE WHEN \"golden_all_tasks\".\"held_at\" IS NOT NULL THEN 'held' WHEN (COALESCE(__c_att.\"done\", false)) THEN 'done' WHEN (COALESCE(__g_blocking.\"blocked\", false)) THEN 'blocked' ELSE 'new' END) AS \"status\" FROM \"golden_all_tasks\" INNER JOIN \"golden_all_owners\" \"owner\" ON \"owner\".\"id\" = \"golden_all_tasks\".\"owner_id\" LEFT JOIN \"task_latest_conversation\" \"first\" ON \"first\".\"task_id\" = \"golden_all_tasks\".\"id\" LEFT JOIN __c_att ON __c_att.__k = \"golden_all_tasks\".\"id\" LEFT JOIN __c_deps ON __c_deps.__k = \"golden_all_tasks\".\"id\" LEFT JOIN __g_blocking ON __g_blocking.__k = \"golden_all_tasks\".\"id\" WHERE \"golden_all_tasks\".\"id\" = ANY($4::text[])",
+                  "params": [
+                    [
+                      "r1"
+                    ],
+                    [
+                      "r1"
+                    ],
+                    [
+                      "r1"
+                    ],
+                    [
+                      "r1"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "scoped": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    },
+                    "ownerName": "o",
+                    "firstPushAt": null,
+                    "done": false,
+                    "live": null,
+                    "attempts": [],
+                    "dependencies": [],
+                    "blocked": false,
+                    "status": "new"
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    },
+                    "ownerName": "o",
+                    "firstPushAt": null,
+                    "done": false,
+                    "live": null,
+                    "attempts": [],
+                    "dependencies": [],
+                    "blocked": false,
+                    "status": "new"
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __c_att AS (SELECT \"att\".\"task_id\" AS __k, (bool_or(\"att\".\"status\" = 'completed')) AS \"done\", (bool_or(\"att__conv\".\"has_live\")) AS \"live\", json_agg(json_build_object('id', \"att\".\"id\", 'status', \"att\".\"status\", 'createdAt', to_char(\"att\".\"created_at\" AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"'), 'live', \"att__conv\".\"has_live\") ORDER BY \"att\".\"created_at\" DESC NULLS LAST, \"att\".\"id\" ASC) AS \"list\" FROM \"golden_all_attempts\" \"att\" LEFT JOIN \"attempt_conv_agg\" \"att__conv\" ON \"att__conv\".\"attempt_id\" = \"att\".\"id\" WHERE (\"att\".\"status\" <> 'system' and \"att\".\"task_id\" = ANY($1::text[])) GROUP BY \"att\".\"task_id\"), __c_deps AS (SELECT \"deps\".\"task_id\" AS __k, (array_agg(\"deps\".\"depends_on\" ORDER BY \"deps\".\"created_at\")) AS \"ids\" FROM \"golden_all_deps\" \"deps\" WHERE \"deps\".\"task_id\" = ANY($2::text[]) GROUP BY \"deps\".\"task_id\"), __x_blocking AS (SELECT \"blocking\".\"task_id\" AS __n, \"blocking\".\"depends_on\" AS __a FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"task_id\" = ANY($3::text[]) UNION SELECT __x_blocking.__n, __y.__a FROM __x_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"depends_on\" AS __a FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"task_id\" = __x_blocking.__a OFFSET 0) __y), __c_blocking__anc__att AS (SELECT \"blocking__anc__att\".\"task_id\" AS __k, (bool_or(\"blocking__anc__att\".\"status\" = 'completed' AND NOT COALESCE(\"blocking__anc__att__conv\".\"has_live\", false))) AS \"done\" FROM \"golden_all_attempts\" \"blocking__anc__att\" LEFT JOIN \"attempt_conv_agg\" \"blocking__anc__att__conv\" ON \"blocking__anc__att__conv\".\"attempt_id\" = \"blocking__anc__att\".\"id\" WHERE \"blocking__anc__att\".\"task_id\" = ANY(ARRAY(SELECT DISTINCT __x_blocking.__a FROM __x_blocking)) GROUP BY \"blocking__anc__att\".\"task_id\"), __g_blocking AS (SELECT __x_blocking.__n AS __k, (bool_or(\"blocking__anc\".\"dropped_at\" IS NULL AND \"blocking__anc__push\".\"first_push_at\" IS NULL AND NOT (COALESCE(__c_blocking__anc__att.\"done\", false)))) AS \"blocked\" FROM __x_blocking CROSS JOIN LATERAL (SELECT * FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" = __x_blocking.__a OFFSET 0) \"blocking__anc\" LEFT JOIN \"task_latest_conversation\" \"blocking__anc__push\" ON \"blocking__anc__push\".\"task_id\" = \"blocking__anc\".\"id\" LEFT JOIN __c_blocking__anc__att ON __c_blocking__anc__att.__k = \"blocking__anc\".\"id\" GROUP BY __x_blocking.__n) SELECT \"golden_all_tasks\".\"id\" AS \"id\", \"golden_all_tasks\".\"title\" AS \"title\", \"golden_all_tasks\".\"created_at\" AS \"createdAt\", \"owner\".\"name\" AS \"ownerName\", \"first\".\"first_push_at\" AS \"firstPushAt\", (COALESCE(__c_att.\"done\", false)) AS \"done\", (__c_att.\"live\") AS \"live\", (COALESCE(__c_att.\"list\", '[]'::json)) AS \"attempts\", (COALESCE(__c_deps.\"ids\", ARRAY[]::text[])) AS \"dependencies\", (COALESCE(__g_blocking.\"blocked\", false)) AS \"blocked\", (CASE WHEN \"golden_all_tasks\".\"held_at\" IS NOT NULL THEN 'held' WHEN (COALESCE(__c_att.\"done\", false)) THEN 'done' WHEN (COALESCE(__g_blocking.\"blocked\", false)) THEN 'blocked' ELSE 'new' END) AS \"status\" FROM \"golden_all_tasks\" INNER JOIN \"golden_all_owners\" \"owner\" ON \"owner\".\"id\" = \"golden_all_tasks\".\"owner_id\" LEFT JOIN \"task_latest_conversation\" \"first\" ON \"first\".\"task_id\" = \"golden_all_tasks\".\"id\" LEFT JOIN __c_att ON __c_att.__k = \"golden_all_tasks\".\"id\" LEFT JOIN __c_deps ON __c_deps.__k = \"golden_all_tasks\".\"id\" LEFT JOIN __g_blocking ON __g_blocking.__k = \"golden_all_tasks\".\"id\" WHERE \"golden_all_tasks\".\"id\" = ANY($4::text[])",
+                  "params": [
+                    [
+                      "p9",
+                      "p8"
+                    ],
+                    [
+                      "p9",
+                      "p8"
+                    ],
+                    [
+                      "p9",
+                      "p8"
+                    ],
+                    [
+                      "p9",
+                      "p8"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "empty": {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          },
+          "two": {
+            "params": {
+              "ids": "r1,r2"
+            },
+            "uses": {
+              "value": [
+                [
+                  "base",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "created_at",
+                      "owner_id"
+                    ]
+                  }
+                ],
+                [
+                  "owner",
+                  {
+                    "role": "membership",
+                    "moves": [
+                      "id"
+                    ]
+                  }
+                ],
+                [
+                  "first[golden_all_pushes]",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "first[golden_all_attempts]",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "att",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "att__conv[golden_all_convs]",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "deps",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking:closure",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking__anc:closure",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking__anc__push[golden_all_pushes]:closure",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking__anc__push[golden_all_attempts]:closure",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking__anc__att:closure",
+                  {
+                    "role": "value"
+                  }
+                ],
+                [
+                  "blocking__anc__att__conv[golden_all_convs]:closure",
+                  {
+                    "role": "value"
+                  }
+                ]
+              ]
+            },
+            "ids": {
+              "value": [
+                "r1",
+                "r2"
+              ]
+            },
+            "full": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    },
+                    "ownerName": "o",
+                    "firstPushAt": null,
+                    "done": false,
+                    "live": null,
+                    "attempts": [],
+                    "dependencies": [],
+                    "blocked": false,
+                    "status": "new"
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    },
+                    "ownerName": "o",
+                    "firstPushAt": null,
+                    "done": false,
+                    "live": null,
+                    "attempts": [],
+                    "dependencies": [],
+                    "blocked": false,
+                    "status": "new"
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __c_att AS (SELECT \"att\".\"task_id\" AS __k, (bool_or(\"att\".\"status\" = 'completed')) AS \"done\", (bool_or(\"att__conv\".\"has_live\")) AS \"live\", json_agg(json_build_object('id', \"att\".\"id\", 'status', \"att\".\"status\", 'createdAt', to_char(\"att\".\"created_at\" AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"'), 'live', \"att__conv\".\"has_live\") ORDER BY \"att\".\"created_at\" DESC NULLS LAST, \"att\".\"id\" ASC) AS \"list\" FROM \"golden_all_attempts\" \"att\" LEFT JOIN \"attempt_conv_agg\" \"att__conv\" ON \"att__conv\".\"attempt_id\" = \"att\".\"id\" WHERE (\"att\".\"status\" <> 'system' and \"att\".\"task_id\" = ANY($1::text[])) GROUP BY \"att\".\"task_id\"), __c_deps AS (SELECT \"deps\".\"task_id\" AS __k, (array_agg(\"deps\".\"depends_on\" ORDER BY \"deps\".\"created_at\")) AS \"ids\" FROM \"golden_all_deps\" \"deps\" WHERE \"deps\".\"task_id\" = ANY($2::text[]) GROUP BY \"deps\".\"task_id\"), __x_blocking AS (SELECT \"blocking\".\"task_id\" AS __n, \"blocking\".\"depends_on\" AS __a FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"task_id\" = ANY($3::text[]) UNION SELECT __x_blocking.__n, __y.__a FROM __x_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"depends_on\" AS __a FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"task_id\" = __x_blocking.__a OFFSET 0) __y), __c_blocking__anc__att AS (SELECT \"blocking__anc__att\".\"task_id\" AS __k, (bool_or(\"blocking__anc__att\".\"status\" = 'completed' AND NOT COALESCE(\"blocking__anc__att__conv\".\"has_live\", false))) AS \"done\" FROM \"golden_all_attempts\" \"blocking__anc__att\" LEFT JOIN \"attempt_conv_agg\" \"blocking__anc__att__conv\" ON \"blocking__anc__att__conv\".\"attempt_id\" = \"blocking__anc__att\".\"id\" WHERE \"blocking__anc__att\".\"task_id\" = ANY(ARRAY(SELECT DISTINCT __x_blocking.__a FROM __x_blocking)) GROUP BY \"blocking__anc__att\".\"task_id\"), __g_blocking AS (SELECT __x_blocking.__n AS __k, (bool_or(\"blocking__anc\".\"dropped_at\" IS NULL AND \"blocking__anc__push\".\"first_push_at\" IS NULL AND NOT (COALESCE(__c_blocking__anc__att.\"done\", false)))) AS \"blocked\" FROM __x_blocking CROSS JOIN LATERAL (SELECT * FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" = __x_blocking.__a OFFSET 0) \"blocking__anc\" LEFT JOIN \"task_latest_conversation\" \"blocking__anc__push\" ON \"blocking__anc__push\".\"task_id\" = \"blocking__anc\".\"id\" LEFT JOIN __c_blocking__anc__att ON __c_blocking__anc__att.__k = \"blocking__anc\".\"id\" GROUP BY __x_blocking.__n) SELECT \"golden_all_tasks\".\"id\" AS \"id\", \"golden_all_tasks\".\"title\" AS \"title\", \"golden_all_tasks\".\"created_at\" AS \"createdAt\", \"owner\".\"name\" AS \"ownerName\", \"first\".\"first_push_at\" AS \"firstPushAt\", (COALESCE(__c_att.\"done\", false)) AS \"done\", (__c_att.\"live\") AS \"live\", (COALESCE(__c_att.\"list\", '[]'::json)) AS \"attempts\", (COALESCE(__c_deps.\"ids\", ARRAY[]::text[])) AS \"dependencies\", (COALESCE(__g_blocking.\"blocked\", false)) AS \"blocked\", (CASE WHEN \"golden_all_tasks\".\"held_at\" IS NOT NULL THEN 'held' WHEN (COALESCE(__c_att.\"done\", false)) THEN 'done' WHEN (COALESCE(__g_blocking.\"blocked\", false)) THEN 'blocked' ELSE 'new' END) AS \"status\" FROM \"golden_all_tasks\" INNER JOIN \"golden_all_owners\" \"owner\" ON \"owner\".\"id\" = \"golden_all_tasks\".\"owner_id\" LEFT JOIN \"task_latest_conversation\" \"first\" ON \"first\".\"task_id\" = \"golden_all_tasks\".\"id\" LEFT JOIN __c_att ON __c_att.__k = \"golden_all_tasks\".\"id\" LEFT JOIN __c_deps ON __c_deps.__k = \"golden_all_tasks\".\"id\" LEFT JOIN __g_blocking ON __g_blocking.__k = \"golden_all_tasks\".\"id\" WHERE \"golden_all_tasks\".\"id\" = ANY($4::text[])",
+                  "params": [
+                    [
+                      "r1",
+                      "r2"
+                    ],
+                    [
+                      "r1",
+                      "r2"
+                    ],
+                    [
+                      "r1",
+                      "r2"
+                    ],
+                    [
+                      "r1",
+                      "r2"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "scoped": {
+              "result": {
+                "value": [
+                  {
+                    "id": "r1",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    },
+                    "ownerName": "o",
+                    "firstPushAt": null,
+                    "done": false,
+                    "live": null,
+                    "attempts": [],
+                    "dependencies": [],
+                    "blocked": false,
+                    "status": "new"
+                  },
+                  {
+                    "id": "r2",
+                    "title": "T",
+                    "createdAt": {
+                      "$date": "2026-10-06T10:00:00.000Z"
+                    },
+                    "ownerName": "o",
+                    "firstPushAt": null,
+                    "done": false,
+                    "live": null,
+                    "attempts": [],
+                    "dependencies": [],
+                    "blocked": false,
+                    "status": "new"
+                  }
+                ]
+              },
+              "queries": [
+                {
+                  "sql": "WITH RECURSIVE __c_att AS (SELECT \"att\".\"task_id\" AS __k, (bool_or(\"att\".\"status\" = 'completed')) AS \"done\", (bool_or(\"att__conv\".\"has_live\")) AS \"live\", json_agg(json_build_object('id', \"att\".\"id\", 'status', \"att\".\"status\", 'createdAt', to_char(\"att\".\"created_at\" AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"'), 'live', \"att__conv\".\"has_live\") ORDER BY \"att\".\"created_at\" DESC NULLS LAST, \"att\".\"id\" ASC) AS \"list\" FROM \"golden_all_attempts\" \"att\" LEFT JOIN \"attempt_conv_agg\" \"att__conv\" ON \"att__conv\".\"attempt_id\" = \"att\".\"id\" WHERE (\"att\".\"status\" <> 'system' and \"att\".\"task_id\" = ANY($1::text[])) GROUP BY \"att\".\"task_id\"), __c_deps AS (SELECT \"deps\".\"task_id\" AS __k, (array_agg(\"deps\".\"depends_on\" ORDER BY \"deps\".\"created_at\")) AS \"ids\" FROM \"golden_all_deps\" \"deps\" WHERE \"deps\".\"task_id\" = ANY($2::text[]) GROUP BY \"deps\".\"task_id\"), __x_blocking AS (SELECT \"blocking\".\"task_id\" AS __n, \"blocking\".\"depends_on\" AS __a FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"task_id\" = ANY($3::text[]) UNION SELECT __x_blocking.__n, __y.__a FROM __x_blocking CROSS JOIN LATERAL (SELECT \"blocking\".\"depends_on\" AS __a FROM \"golden_all_deps\" \"blocking\" WHERE \"blocking\".\"task_id\" = __x_blocking.__a OFFSET 0) __y), __c_blocking__anc__att AS (SELECT \"blocking__anc__att\".\"task_id\" AS __k, (bool_or(\"blocking__anc__att\".\"status\" = 'completed' AND NOT COALESCE(\"blocking__anc__att__conv\".\"has_live\", false))) AS \"done\" FROM \"golden_all_attempts\" \"blocking__anc__att\" LEFT JOIN \"attempt_conv_agg\" \"blocking__anc__att__conv\" ON \"blocking__anc__att__conv\".\"attempt_id\" = \"blocking__anc__att\".\"id\" WHERE \"blocking__anc__att\".\"task_id\" = ANY(ARRAY(SELECT DISTINCT __x_blocking.__a FROM __x_blocking)) GROUP BY \"blocking__anc__att\".\"task_id\"), __g_blocking AS (SELECT __x_blocking.__n AS __k, (bool_or(\"blocking__anc\".\"dropped_at\" IS NULL AND \"blocking__anc__push\".\"first_push_at\" IS NULL AND NOT (COALESCE(__c_blocking__anc__att.\"done\", false)))) AS \"blocked\" FROM __x_blocking CROSS JOIN LATERAL (SELECT * FROM \"golden_all_tasks\" \"blocking__anc\" WHERE \"blocking__anc\".\"id\" = __x_blocking.__a OFFSET 0) \"blocking__anc\" LEFT JOIN \"task_latest_conversation\" \"blocking__anc__push\" ON \"blocking__anc__push\".\"task_id\" = \"blocking__anc\".\"id\" LEFT JOIN __c_blocking__anc__att ON __c_blocking__anc__att.__k = \"blocking__anc\".\"id\" GROUP BY __x_blocking.__n) SELECT \"golden_all_tasks\".\"id\" AS \"id\", \"golden_all_tasks\".\"title\" AS \"title\", \"golden_all_tasks\".\"created_at\" AS \"createdAt\", \"owner\".\"name\" AS \"ownerName\", \"first\".\"first_push_at\" AS \"firstPushAt\", (COALESCE(__c_att.\"done\", false)) AS \"done\", (__c_att.\"live\") AS \"live\", (COALESCE(__c_att.\"list\", '[]'::json)) AS \"attempts\", (COALESCE(__c_deps.\"ids\", ARRAY[]::text[])) AS \"dependencies\", (COALESCE(__g_blocking.\"blocked\", false)) AS \"blocked\", (CASE WHEN \"golden_all_tasks\".\"held_at\" IS NOT NULL THEN 'held' WHEN (COALESCE(__c_att.\"done\", false)) THEN 'done' WHEN (COALESCE(__g_blocking.\"blocked\", false)) THEN 'blocked' ELSE 'new' END) AS \"status\" FROM \"golden_all_tasks\" INNER JOIN \"golden_all_owners\" \"owner\" ON \"owner\".\"id\" = \"golden_all_tasks\".\"owner_id\" LEFT JOIN \"task_latest_conversation\" \"first\" ON \"first\".\"task_id\" = \"golden_all_tasks\".\"id\" LEFT JOIN __c_att ON __c_att.__k = \"golden_all_tasks\".\"id\" LEFT JOIN __c_deps ON __c_deps.__k = \"golden_all_tasks\".\"id\" LEFT JOIN __g_blocking ON __g_blocking.__k = \"golden_all_tasks\".\"id\" WHERE \"golden_all_tasks\".\"id\" = ANY($4::text[])",
+                  "params": [
+                    [
+                      "p9",
+                      "p8"
+                    ],
+                    [
+                      "p9",
+                      "p8"
+                    ],
+                    [
+                      "p9",
+                      "p8"
+                    ],
+                    [
+                      "p9",
+                      "p8"
+                    ]
+                  ]
+                }
+              ],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            },
+            "empty": {
+              "result": {
+                "value": []
+              },
+              "queries": [],
+              "resolved": {
+                "where": 0,
+                "orderBy": 0
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }

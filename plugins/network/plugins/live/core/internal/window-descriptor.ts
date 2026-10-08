@@ -10,19 +10,21 @@ import {
   type WindowSelector,
 } from "@plugins/primitives/plugins/live-state/core";
 import type {
+  AllQueryResourceContract,
   PointQueryResourceContract,
   WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
 
-// The two factories `liveCollection` mints its bounded resources with: the
-// window (`windowQueryResourceDescriptor`) and the `:rows` point sibling
-// (`pointQueryResourceDescriptor`). Internal to this plugin on purpose — the
+// The factories `liveCollection` mints its resources with: the window
+// (`windowQueryResourceDescriptor`), the `:rows` point sibling
+// (`pointQueryResourceDescriptor`) and the whole ordered set of a collection
+// declared `all` (`allResourceDescriptor`). Internal to this plugin on purpose — the
 // barrel exports `liveCollection`, and a collection is the one way to declare a
 // bounded resource. A second, lower-level spelling would be a way to mint a
 // window or point resource without the row schema, id and filterable columns
 // `serveCollection` binds to the table.
 //
-// Each returns a query-resource CONTRACT (`{Window,Point}QueryResourceContract`,
+// Each returns a query-resource CONTRACT (`{Window,Point,All}QueryResourceContract`,
 // declared in `query-resource/core`): the live-state descriptor (which carries
 // the selector codec both sides share) plus `queryPk`, so the server's
 // `windowQueryResource` — the compiler behind `serveCollection` — can assert the
@@ -189,4 +191,46 @@ export function pointQueryResourceDescriptor<Row>(
     validateParams,
   });
   return Object.assign(d, { point: { encode, decode }, queryPk: pkField });
+}
+
+/**
+ * Declare the whole ordered set of a collection declared `all` — the
+ * `AllQueryResourceContract`: ONE param-less keyed resource holding every row
+ * in `orderBy` order. No window codec and no `defaultParams` (boot hydrates the
+ * `{}` tuple, exactly the tuple `useLive(all)` subscribes to), no placeholder,
+ * and any param is a subscription this declaration never minted — the gate
+ * throws `ResourceContractError`, so the runtime refuses it as
+ * `contract-mismatch` (a `skew` verdict for a tab on an older bundle that sent
+ * params). It is NO signal against a param-less predecessor of the same key:
+ * that older tab subscribes `{}`, passes, and parses the new rows with its own
+ * schema — a key converted to `all` must keep the wire row identical or carry
+ * a contract the runtime compares on `{}` (P8 v3, C39 open item).
+ *
+ * Self-registers under `key` (C39), so boot-snapshot hydration resolves the
+ * key's snapshot against it before first paint.
+ */
+export function allResourceDescriptor<Row>(
+  key: string,
+  rowSchema: ZodParser<Row>,
+  pkField: keyof Row & string,
+  opts: {
+    all: AllQueryResourceContract<Row>["all"];
+    preload?: ResourcePreload;
+  },
+): AllQueryResourceContract<Row> {
+  const validateParams = (params: Record<string, string>): void => {
+    const names = Object.keys(params);
+    if (names.length > 0) {
+      throw new ResourceContractError(
+        key,
+        `allResourceDescriptor("${key}"): unknown param${names.length > 1 ? "s" : ""} ` +
+          `${names.map((n) => `"${n}"`).join(", ")} — the whole ordered set takes none`,
+      );
+    }
+  };
+  const d = keyedRows<Row, Record<string, never>>(key, rowSchema, pkField, {
+    ...(opts.preload === undefined ? {} : { preload: opts.preload }),
+    validateParams,
+  });
+  return Object.assign(d, { all: opts.all, queryPk: pkField });
 }

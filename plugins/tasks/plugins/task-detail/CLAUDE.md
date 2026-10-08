@@ -26,10 +26,10 @@
     - `Pane.Register` "tasks-root"
     - `Shell.Sidebar` "Tasks"
   - Uses:
+    - `network/live.useLive`
     - `primitives/app-shell.opensPane`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/live-state.foldResource`
-    - `primitives/live-state.useResource`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.resolveFrom`

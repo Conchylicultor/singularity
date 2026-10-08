@@ -59,8 +59,9 @@ build-time codegen scrapes the markers, the primitive registers one
 
 Pass the read backing `rows` as `readiness={result}` (any `useLive` /
 `useResource` / combined result — its `status` is all the DataView reads). The
-body's precedence is `server error > failed read > loading > the view`
-(`web/internal/body-state.ts`): `error` renders `errorState` (default
+body's precedence is `server error > failed read > failed field > loading >
+pending field > the view` (`web/internal/body-state.ts`; the field arms are
+"A field's own read" under Field extensions): `error` renders `errorState` (default
 `<ResourceErrorInline variant="block"/>` — the message with Retry, or Reload for
 an out-of-date tab), `loading` renders `loadingState` (the view's skeleton), and
 only `ready` reaches the view, so `emptyState` can only mean "ready, and zero
@@ -1518,6 +1519,19 @@ the rows: a contributed column (`network/live`'s `liveColumns`) is read off the
 row and bound as the field's `column`, so the server sorts and filters by it —
 Sonata's play-count field is `{ value: (s) => playbackColumns.read(s).playCount,
 column: playbackColumns.column("playCount") }`.
+
+**A field's own read: `pending` and `readError`, never a stand-in value.** A
+contributor whose values come from a read of its own states where that read
+is — never folds "not known yet" into a value. `pending: true` while it loads
+with nothing held: each cell draws the loading block, and a view that groups,
+sorts, filters or folds by the field (`fieldsReadByView` — the fold IN
+EFFECT, never the stored one a typed search or a fold-less view suspends) renders its loading
+state, because whatever `value` returns meanwhile would lay the rows out by a
+claim (an enum's `null` is its "None" bucket — every row filed under it).
+`readError` once it failed with nothing held: each cell draws the failure with
+Retry, and a view laid out by the field renders that failure in place of its
+rows (`field-error`, naming the field). A failure over held values keeps
+painting them. The task list's `category` field is the case that needed both.
 
 **Two registration entry points, one mechanism.** A field extension reaches the
 host through exactly one of two places — the difference is only the **registration

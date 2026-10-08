@@ -6,6 +6,7 @@ import type {
   useResolveCellEditor,
 } from "../index";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { EditableCell } from "./editable-cell";
 
 /**
@@ -56,6 +57,11 @@ export function FieldCell({
         subject={field.label}
       />
     );
+  }
+  // Not known yet: the loading block, never the value a pending field
+  // stands in with (which would read as unset).
+  if (field.pending === true) {
+    return <Loading variant="block" className="h-4 w-12" />;
   }
   const value = field.value?.(row);
   const values = field.values?.(row);

@@ -520,12 +520,14 @@ describe("compileWindowQuery — misuse guards (module-eval throws)", () => {
     ).toThrow(/mutually exclusive/);
   });
 
-  test("neither window nor point → use queryResource instead", () => {
+  test("neither window nor point → declare the collection with `all`", () => {
     expect(() =>
       compileWindowQuery(winDescriptor(), {
         ...base,
       } as WindowQueryResourceSpec<WindowParams>),
-    ).toThrow(/use queryResource/);
+    ).toThrow(
+      /declare the collection with `all` \(`liveCollection\(key, \{ all \}\)`\)/,
+    );
   });
 
   test("window without orderBy", () => {

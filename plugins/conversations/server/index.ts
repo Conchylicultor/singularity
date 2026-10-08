@@ -2,7 +2,6 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { CONVERSATIONS_CATEGORY_ID } from "../core/task-category";
 import { handleClose } from "./internal/handle-close";
 import { handleList } from "./internal/handle-list";
-import { handleListGone } from "./internal/handle-list-gone";
 import { handleCreate } from "./internal/handle-create";
 import { handleDelete } from "./internal/handle-delete";
 import { handleGet } from "./internal/handle-get";
@@ -11,7 +10,6 @@ import { handlePostTurn } from "./internal/handle-post-turn";
 import { handleStop } from "./internal/handle-stop";
 import {
   listConversations,
-  listGoneConversations,
   getConversation,
   createConversation,
   deleteConversation,
@@ -106,7 +104,6 @@ export default {
   loadBearing: true,
   httpRoutes: {
     [listConversations.route]: handleList,
-    [listGoneConversations.route]: handleListGone,
     [getConversation.route]: handleGet,
     [createConversation.route]: handleCreate,
     [deleteConversation.route]: handleDelete,

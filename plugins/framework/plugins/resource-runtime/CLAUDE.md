@@ -96,12 +96,16 @@ the client side and the keyed/scoped delta semantics.
 The two-arg keyed `defineResource` intersects `ScopePolicy`, so both are answered
 at the declaration site or the resource does not compile.
 
-1. **Which RESOURCE does a change belong to?** `identityTable`, or the explicit
+1. **Which RESOURCE does a change belong to?** A compiler-minted route plan
+   (`routes` — see *Scoped change routing*; every compiled collection, `all`
+   included), the legacy `identityTable`, or the explicit
    `recompute: { kind: "full", reason }` opt-out.
-2. **And which subscribed TUPLE of it owns the changed row?** Under
-   `identityTable`, exactly one of `membership` / `scopedMembership` (a bounded
-   window or point set) / `fanOut: { reason }` (every tuple genuinely must be
-   woken).
+2. **And which subscribed TUPLE of it owns the changed row?** Under `routes`,
+   exactly one of `membership` (a bounded window or point set) /
+   `scopedMembership` (the unbounded alias — its `orderSignatureOf` required).
+   Under `identityTable`, exactly one of `membership` / `scopedMembership` /
+   `fanOut: { reason }` (every tuple genuinely must be woken). A routed plan
+   names its tuples, so it has no `fanOut`.
 
 Question 2 used to have no spelling, so its answer was always "wake all of them":
 every subscribed tuple re-ran its own read, found the changed row was not its
@@ -130,8 +134,8 @@ the backstop for anything that still slips past.
 ## Bounded membership (`membership`) and the `scopedMembership` alias
 
 A keyed own-identity resource may declare a **membership selector** (only on the
-two-arg keyed form, which supplies the required `identityTable`; `createResource`
-throws otherwise). It makes an INSERT / DELETE / where-flip on the identity table
+two-arg keyed form, whose scope policy names the identity — routed `routes` or
+the legacy `identityTable`; `createResource` throws otherwise). It makes an INSERT / DELETE / where-flip on the identity table
 ship an incremental delta instead of a FULL recompute — the runtime refills only
 the changed rows and reconciles membership against the per-pk snapshot via
 `diffKeyedScopedMembership`. Absent ⇒ byte-identical to the pre-M5
@@ -155,9 +159,13 @@ record (see `research/2026-07-03-global-scoped-membership-m5.md` and
   to a tuple **iff the changed ids intersect its set** (empty intersection = no
   notify, no version bump); no ids query ever runs; entrants append (point sets
   are unordered); never fans out to the `{}` fallback tuple.
-- **`scopedMembership: { orderOf }`** — the legacy M5 alias ≡ an **unbounded
-  window** (`windowIdsOf = orderOf`, no LIMIT). Byte-identical to M5, including
-  the L2 persisted-reconstruction path. Mutually exclusive with `membership`.
+- **`scopedMembership: { orderOf, orderSignatureOf? }`** (`AliasMembership`) — the
+  M5 alias ≡ an **unbounded window** (`windowIdsOf = orderOf`, no LIMIT), the
+  only membership shape L2 persists. `orderSignatureOf` is the window's seam (see
+  *Order signature* below), optional on the `identityTable` arm and REQUIRED on
+  the routed arm (type, plus a throw for an untyped caller): a compiler always
+  knows its ORDER BY, so an in-place reorder of a routed alias can never go
+  stale. Mutually exclusive with `membership`.
 
 The window path (`drainMembershipScoped`, `drainEntry` branch 4) classifies each
 flush against the prior snapshot — *entered* (a refilled id not already a member)
@@ -169,13 +177,14 @@ flush against the prior snapshot — *entered* (a refilled id not already a memb
   tail row after a leaver) with one extra scoped refill. An entrant sorting past
   the tail diffs to empty → no frame, no version bump. A DELETE of an id outside
   the snapshot is a total no-op (a window is a prefix of the total order).
-- **Alias (unbounded)**: `orderOf` runs **only on an entry**; an exit-only change
-  derives its order from the prior snapshot (zero queries for a pure DELETE); no
-  backfill. Exactly M5.
+- **Alias (unbounded)**: `orderOf` runs **only on an entry or an order move**
+  (`entered || orderMoved` — a member whose order signature moved, for an alias
+  that declared one); an exit-only or in-place change derives its order from the
+  prior snapshot (zero queries for a pure DELETE); no backfill.
 - **Both**: a pure in-place change (all refilled ids already members, no order
   impact) never runs the ids query — one upsert, `order` omitted.
-- **Order signature** (`membership.window.orderSignatureOf?(row, params)`,
-  optional): a pure cheap encoding of exactly the fields THAT tuple's ORDER BY
+- **Order signature** (`membership.window.orderSignatureOf?(row, params)`, and
+  the alias's `scopedMembership.orderSignatureOf`): a pure cheap encoding of exactly the fields THAT tuple's ORDER BY
   reads (`params` is the tuple the row belongs to — every call site passes it, so
   a stored and a fresh signature of one tuple are cut alike). The runtime
   keeps a per-member signature map beside the per-pk snapshot (window-sized,
@@ -203,14 +212,13 @@ was supplied.
 `persisted` gate is `!externalSource && !membershipBounded(entry) &&
 shouldPersist(key)` — a bounded window or point entry is never L2-persisted
 (read off the definition, never by resource name), never keeps its snapshot
-across N→0, and uses the hash snapshot encoder. Only the **alias** keeps the M5
-persisted behavior: persisted (`preload`) scopedMembership entries
-reconstruct the FULL value from the post-diff snapshot (`JSON.parse` of each
-stored canonical-JSON entry → byte-identical jsonb to a FULL persist), persist it
-with a watermark captured **before** the refill/`orderOf` reads, and keep their
-snapshot across N→0 (they recompute on every change regardless of subscribers
-and need the diff base); branch 2/3 (`drainMembershipFull`) seeds/replaces the
-snapshot even with zero subs so the next incremental diff has a base. A DELETE
+across N→0, and uses the hash snapshot encoder. Only the **alias** is persisted
+incrementally: a persisted (`preload`) scopedMembership entry keeps its snapshot
+across N→0 (it recomputes on every change regardless of subscribers and needs
+the diff base), and a scoped drain that changed it arms a **floor persist** (see
+*L2 persists* below) rather than writing the row itself; branch 2/3
+(`drainMembershipFull`) seeds/replaces the snapshot even with zero subs so the
+next incremental diff has a base, and REPLACES the row. A DELETE
 cascades downstream FULL (a vanished row has no value for an `affectedMap` to
 translate); inserts/updates cascade scoped (backfilled tail ids do NOT join the
 cascade set — they did not change in the DB, they only entered this window's
@@ -218,14 +226,77 @@ view).
 
 At **boot**, the L2 layer restores each persisted alias's in-memory diff base from
 its durable value BEFORE catch-up: `live-state-snapshot`'s `onReady` reads the L2
-row and calls the runtime's `seedPersistedSnapshot(key, "{}", value)` (which seeds
-`entry.snapshots` + order sigs via the same `snapshotOf` primitive the FULL rebuild
-uses). So the first post-boot change — and every downtime change catch-up replays —
+row and calls the runtime's `seedPersistedSnapshot(key, "{}", value, base)` (which
+seeds `entry.snapshots` + order sigs via the same `snapshotOf` primitive the FULL
+rebuild uses, and — only on the branch that actually seeds — the snapshot's base
+floor, `base.position`). So the first post-boot change — and every downtime change catch-up replays —
 is a scoped refill, not the FULL O(collection) rebuild it used to pay because the
 diff base started empty. The seed is a no-op once a snapshot exists (a sub-ack that
 arrived first is never clobbered), and it targets only unbounded-window aliases
 (`unboundedWindowKeys`), the only shape whose durable value is byte-sufficient to
-reconstruct the base.
+reconstruct the base. It answers a `SeedOutcome` — `seeded`, `skipped` (no
+alias, or a snapshot already there), or **`invalid`** (A30): the value is
+`safeParse`d against the entry's payload schema (`z.array(row)`, the check
+every loader output passes) before anything is seeded, and one that does not
+parse — a row schema moved in a way the L2 definition does not fingerprint, an
+opaque transform's body — seeds nothing; the caller treats the row as missing
+(live-state-snapshot clears it and recomputes the key). The snapshot-present
+and alias checks run BEFORE the parse, so a late value over a fresher base is
+`skipped`, never `invalid`. `validatePersistedValue(key, value)` is the same
+parse on its own, seeding nothing (`valid` | `invalid` | `skipped` for a key
+that is no alias): live-state-snapshot runs it over every persisted alias row
+in `onReadyBlocking` and clears the rows that fail, before readiness flips —
+boot-snapshot's persisted fast path is open from readiness, before the seed.
+
+## L2 persists: replace and floor (`PersistMeta`)
+
+The `persistSnapshot` hook takes `{ mode, definition, guardTables }`, and per
+(key, pk) its calls are serialized (`persistChains`), never concurrent:
+
+- **`replace`** — every FULL recompute of a persisted entry (`drainMembershipFull`,
+  the legacy FULL branch): the value, floored by its flight's own watermark, with
+  the run's read-set as `guardTables` (written as `tables_read`). The row's
+  `position`, `position_at`, `tables_read` and definition are all replaced. A
+  replace cancels an armed floor window SYNCHRONOUSLY, before it enqueues (and
+  re-arms it if the write fails): the scoped changes it held committed before
+  this value's read began, and the FULL drain rebuilds the snapshot only after
+  the replace resolves — a window firing mid-write would chain a floor link that
+  writes the pre-replace snapshot and floor over the fresh row.
+- **`floor`** — a persisted alias's scoped drains. A drain whose snapshot changed
+  arms ONE trailing window (`persistWindowMs`, default 2 s, unref'd, fixed — a
+  steady stream still persists every window); on fire, the value is
+  reconstructed from the snapshot as it stands then (`valueOfSnapshot`,
+  `JSON.parse` of each retained canonical-JSON entry → byte-identical jsonb to a
+  FULL persist) and floored by the snapshot's **base floor**. L2 only ever LOWERS
+  the row's position to it (`LEAST`) and keeps `position_at` / `tables_read`; a
+  missing row is inserted with the floor and `guardTables` (the route tables, or
+  the read-set union — never empty, so A6 judges a first INSERT too).
+
+**The base floor** (`RegistryEntry.baseFloors`, per pk, unbounded-window aliases
+only) is the watermark of the FULL read the snapshot was last rebuilt from: set by
+`drainMembershipFull` (the flight watermark), the sub-ack seed (the `gatedRead`
+watermark) and `seedPersistedSnapshot` (the row's position) — and forgotten when
+that read's watermark is unknown, which skips floor persists until the next
+rebuild. A scoped drain that finds the snapshot re-seeded under it (a sub-ack
+landed while it read) writes `prev` + its refill and restores `prev`'s floor, never
+the sub-ack's newer one. A scoped drain never captures one: its refill reads only the requested
+ids, so a drain-time capture could pass over a commit at a lower xid that this
+tuple has not been routed yet, and catch-up would skip it forever.
+
+**The definition** (`RoutePlanInput.definition`, a compiler's fingerprint of its
+SQL, read off the entry's plan by `definitionOf` — never copied onto the entry,
+so a deferred entry bound later carries it too) rides every persist, and `persistedDefinitions()`
+— `persistedKeys()`'s twin — is the expected map every L2 read matches rows
+against (live-state-snapshot's usable-row predicate). A non-keyed `ReachPlan`
+carries none (`definition?: never`).
+
+`keptSnapshotValue(key)` hands the boot snapshot a persisted alias's current value
+from its kept snapshot (fresher than the trailing row); `dropPendingPersists()`
+drops the armed windows at shutdown (catch-up replays what they held). `_debug`
+shows a persisted key's `definition`, `lastReplaceAt`, `lastFloorAt` and
+`l2PositionAt`. Pinned by `runtime-scoped-membership.test.ts` §"L2 persisted floor
+persist", `runtime-catchup.test.ts` and `runtime-table-routing.test.ts` §"the
+plan's definition".
 
 ## Scoped change routing (`routes` + `routeTableChange`)
 
@@ -298,7 +369,9 @@ reaches each entry exactly once and resources move over one at a time. Design:
   against its route tables (A7).
 - **The drift guard (A8).** A routed entry is reached ONLY through its routes, so
   after each loader run the key's per-run capture (`lastReadSet`) must be a subset
-  of its route tables — a table outside them is one whose writes it never sees.
+  of its route tables — a table outside them is one whose writes it never sees —
+  or of its plan's `derivedReads` (A22): a rollup no route may name (A1), every
+  source of which `mintRoutePlan` asserts is a route table of the plan.
   A miss is reported once per table (`route drift for <key>`), or fails the load
   under `strictRoutes` (server-core sets it under a test runner). With no capture
   wired (central, the DB-free harness) the guard is off; routing never depends on
@@ -455,8 +528,9 @@ reports via `reportLoaderError` and the frame ships watermark-less (never blocke
 `runtime-watermark.test.ts` pins all of this.
 
 **That same capture is also the L2 persist floor** — one per flight, not one per
-stamp: the FULL drains hand `flightWatermark` straight to `persistSnapshot` rather
-than taking a second `captureWatermark()` of their own. *A floor may only describe
+stamp: the FULL drains hand `flightWatermark` straight to a `replace` persist (and
+to the snapshot's base floor) rather than taking a second `captureWatermark()` of
+their own. *A floor may only describe
 the read it accompanies.* A floor captured at the drain can be NEWER than the value
 it floors (a joined flight read earlier), and catch-up replays only
 `xid >= watermark` — so it would skip the very commit the value is missing, and
@@ -722,7 +796,7 @@ Each suite's `describe`/`test` names state what it pins; read them there.
   a joined sub-ack nor a drain outliving its span sets an older snapshot), `runtime-optional-params.test.ts` (one
   tuple per spelling of an absent optional param), `runtime-table-routing.test.ts`
   (the routed-entry matrix, the named routing scenarios, the `reach` arm and the
-  A5 / A8 guards). `runtime-window-membership.test.ts` runs every window / point
+  A5 / A8 / A22 guards). `runtime-window-membership.test.ts` runs every window / point
   case under both routers — declared `identityTable` and the identity route
   `compileWindowQuery` emits.
   Note `controllable()` resolves at RELEASE time, so it structurally cannot model
@@ -777,9 +851,11 @@ and those plugins' `CLAUDE.md`.
     - `packages/resource-protocol.SubErrorFrame`
     - `packages/semaphore.createSemaphore`
   - Exports (types):
+    - `AliasMembership`
     - `ChangeSource`
     - `DefineResourceInput`
     - `DependsOnEntry`
+    - `DerivedRead`
     - `ExternalResource`
     - `FullRoute`
     - `HostMap`
@@ -788,6 +864,9 @@ and those plugins' `CLAUDE.md`.
     - `KeyedMembershipInput`
     - `KeyedServerResourceOptions`
     - `NotifyCounts`
+    - `PersistedBase`
+    - `PersistedValueCheck`
+    - `PersistMeta`
     - `ReachPlan`
     - `Resource`
     - `ResourceContract`
@@ -801,6 +880,7 @@ and those plugins' `CLAUDE.md`.
     - `RoutePlan`
     - `ScopedResourceTable`
     - `ScopePolicy`
+    - `SeedOutcome`
     - `ServerResourceOptions`
     - `SnapEncoder`
     - `SnapEntry`

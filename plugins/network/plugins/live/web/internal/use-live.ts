@@ -7,6 +7,7 @@ import {
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import type {
+  LiveAllCollection,
   LiveCollection,
   LiveGroup,
   LiveGroupableColumn,
@@ -40,6 +41,18 @@ export type LiveListResult<Row> = PagedResourceResult<Row>;
 /** An explicit id set. Rows come back for the ids that exist; no filter applies. */
 export interface LiveIdsQuery {
   ids: readonly string[];
+}
+
+/**
+ * A derived slice of a collection declared `all` (`useLive(all, { select })`).
+ * The read re-renders only when the SELECTED value changes (structurally
+ * compared), so a reader of one fact about the set (a count, one row's field)
+ * is not re-rendered by a push that leaves that fact alone. Pass a stable
+ * function (`useCallback`, or one at module level): a new one each render is
+ * re-run each render.
+ */
+export interface LiveAllSelect<Row, S> {
+  select: (rows: Row[]) => S;
 }
 
 /**
@@ -168,6 +181,31 @@ export function useLive<
   collection: LiveCollection<Row, F, S>,
   query: LiveGroupQuery<F, G>,
 ): LiveListResult<LiveGroup<LiveGroupValue<Row, G>>>;
+/**
+ * - `useLive(all)` — a collection declared `all`: every row, in its declared
+ *   order, as `ResourceResult<Row[]>` (settled on its first render when the
+ *   boot snapshot hydrated it). Read straight off the cache with no row map
+ *   and no selector, so `data` IS the cached array — every observer shares it
+ *   and its row objects — keeps its identity until a push changes the set, and
+ *   a delta keeps the identity of every row it does not change, moved ones
+ *   included — consumers memoize on both.
+ * - `useLive(all, { select })` — a slice of it (`LiveAllSelect`), re-rendered
+ *   only when the slice changes. Gated: its first value always renders,
+ *   whatever the slice.
+ *
+ * An id set of an `all` collection is `useLive(all, { ids })` /
+ * `useLiveRow(all, id)`, through its `:rows` point sibling like any other.
+ * These overloads come AFTER the window and group ones (an `all` collection
+ * has neither, so it never matches them) so a window query's contextual type
+ * is still the first overload's.
+ */
+export function useLive<Row>(
+  collection: LiveAllCollection<Row>,
+): ResourceResult<Row[]>;
+export function useLive<Row, S>(
+  collection: LiveAllCollection<Row>,
+  options: LiveAllSelect<Row, S>,
+): ResourceResult<S>;
 export function useLive<Row>(
   collection: LiveRowsCollection<Row>,
   query: LiveIdsQuery,
@@ -196,11 +234,13 @@ export function useLive<Row, F, S extends string>(
   source:
     | LiveCollection<Row, F, S>
     | LiveRowsCollection<Row>
+    | LiveAllCollection<Row>
     | LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
   query?:
     | LiveQuery<F, S>
     | LiveGroupQuery<F>
     | LiveIdsQuery
+    | LiveAllSelect<Row, unknown>
     | Record<string, string>
     | null,
 ): LiveListResult<unknown> | ResourceResult<unknown> {
@@ -215,12 +255,40 @@ export function useLive<Row, F, S extends string>(
       query as Record<string, string> | null | undefined,
     );
   }
+  // A collection declared `all` reads its whole set — unless the query is an
+  // id set, which goes to `:rows` like any collection's. Which of the two a
+  // call site asks is fixed by its overload (an `{ ids }` literal or not).
+  const all = (source as { all?: LiveAllCollection<Row>["all"] }).all;
+  if (all !== undefined && !(query != null && "ids" in query)) {
+    const options = (query ?? undefined) as
+      LiveAllSelect<Row, unknown> | undefined;
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- see above: fixed per call site
+    return useAll(all, options);
+  }
   // eslint-disable-next-line react-hooks/rules-of-hooks -- see above: fixed per call site
   return useCollection(
     source,
     (query ?? undefined) as
       LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery | undefined,
   );
+}
+
+/**
+ * The whole ordered set, straight through `useResource` on its param-less
+ * tuple (`{}` — the one boot hydrates): no row map. Always a gated read, so its
+ * first value re-renders even when the slice equals what the caller saw
+ * before it landed, a push that changes nothing it reads re-renders nothing,
+ * and a tuple already cached starts narrowed (the derived latch), so a
+ * hydrated read renders once. A plain read hands React Query NO selector
+ * (`UseResourceGateOptions`), so its `data` IS the cached array — every
+ * observer shares it and its row objects, never a per-observer structurally
+ * shared copy. One unconditional call either way (rules of hooks).
+ */
+function useAll<Row>(
+  all: LiveAllCollection<Row>["all"],
+  options: LiveAllSelect<Row, unknown> | undefined,
+): ResourceResult<unknown> {
+  return useResource(all, undefined, { gate: true, select: options?.select });
 }
 
 function useCollection<Row, F, S extends string>(

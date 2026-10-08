@@ -80,8 +80,8 @@ export type Task = z.infer<typeof TaskSchema>;
 
 // List-view projection: the full task minus the heavy `description` text column
 // (~60% of the bulk `tasks` live-state payload). The list never renders
-// descriptions; the detail pane sources them from the per-id `task-detail`
-// resource. Keeping this a distinct type makes any list consumer that reaches
+// descriptions; the detail pane sources them from the per-id
+// `taskDescriptions` collection. Keeping this a distinct type makes any list consumer that reaches
 // for `description` fail to compile. See
 // research/2026-06-05-tasks-list-detail-payload-split.md.
 export const TaskListItemSchema = TaskSchema.omit({ description: true });

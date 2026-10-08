@@ -8,9 +8,9 @@
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
   - Exports (types):
     - `AutoStartModel`
     - `TaskPatch`

@@ -37,7 +37,7 @@ export interface ConversationRowProps extends ConversationRowChrome {
   /**
    * The conversation to name. Structural, like `ConversationItem`'s own prop —
    * a full `Conversation` row and the narrower `ConversationSummary` carried by
-   * `attemptsResource` both fit.
+   * the `attempts` set (`attemptRows`) both fit.
    */
   conv: ConversationItemConv;
 }
@@ -76,12 +76,12 @@ export function ConversationRow({ conv, ...chrome }: ConversationRowProps) {
 /**
  * The same row for a surface that holds only an id it has not resolved.
  *
- * `useConversationById` resolves a recent conversation live and an older one by
- * a one-shot fetch. It answers `null` both while that fetch is in flight and
- * when the conversation is genuinely gone, and those two are indistinguishable
- * from here — so the row shows the raw id rather than claiming either. It stays
- * clickable in that state on purpose: the common `null` is "still loading", and
- * going dead on it would make a live link dead for its first frame.
+ * `useConversationById` resolves any conversation live (its by-id read). It
+ * answers `null` both while that read loads and when the conversation is
+ * genuinely gone, and those two are indistinguishable from here — so the row
+ * shows the raw id rather than claiming either. It stays clickable in that
+ * state on purpose: the common `null` is "still loading", and going dead on it
+ * would make a live link dead for its first frame.
  */
 export function ConversationRowById({
   convId,

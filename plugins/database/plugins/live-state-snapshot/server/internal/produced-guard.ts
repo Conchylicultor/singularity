@@ -22,8 +22,10 @@ import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-vie
 //  - BOOT, stale rows (`sweepProducedSnapshots`): a persisted row whose
 //    `tables_read` names a produced table is deleted and reported once, never
 //    thrown on — it can predate the code that would stop writing it.
-//  - RUNTIME (`createProducedPersistGuard`): a persist whose captured read-set
-//    names a produced table is refused — every time, so the key never writes a
+//  - RUNTIME (`createProducedPersistGuard`): a persist whose guard tables
+//    (`PersistMeta.guardTables` — a replace's captured read-set, a floor
+//    persist's route tables or read-set union, never empty, so a floor
+//    persist's first INSERT is judged too) name a produced table is refused — every time, so the key never writes a
 //    row again in this process; the first refusal deletes its row and reports,
 //    once — which also breaks the loop report → recordReport → emit →
 //    recompute → refuse. The runtime's persist GATE (`shouldPersist`) is left

@@ -1,5 +1,5 @@
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  useResource,
   matchResource,
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
@@ -9,8 +9,8 @@ import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web"
 import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
 import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
 import {
-  attemptsResource,
-  tasksResource,
+  attemptRows,
+  taskRows,
   type AttemptWithConversations,
   type ConversationSummary,
 } from "@plugins/tasks/plugins/tasks-core/core";
@@ -45,8 +45,8 @@ export function AttemptChip({
 }) {
   const attemptId = content.trim();
   const result = useCombinedResources({
-    attempts: useResource(attemptsResource),
-    tasks: useResource(tasksResource),
+    attempts: useLive(attemptRows),
+    tasks: useLive(taskRows),
   });
   const openPane = useOpenPane();
   const opener = useConversationOpener();

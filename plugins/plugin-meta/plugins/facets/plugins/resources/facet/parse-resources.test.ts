@@ -111,6 +111,48 @@ describe("buildDescriptorIndex", () => {
     ]);
   });
 
+  it("indexes an `all` collection as its whole set and :rows — never :groups", () => {
+    const src = `
+      export const tasks = liveCollection("tasks", {
+        row: TaskSchema, id: "id",
+        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree" } },
+        preload: "boot",
+      });
+      export const windowed = liveCollection("windowed", {
+        row: z.object({ all: z.string() }), id: "id",
+        filterable: { all: liveText() }, sortable: ["all"],
+        default: { orderBy: [["all", "asc"]], limit: 10 }, maxLimit: 10,
+      });
+    `;
+    const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
+    expect(index.get("tasks")).toEqual([
+      { key: "tasks", keyed: true, membership: null },
+      { key: "tasks:rows", keyed: true, membership: "point" },
+    ]);
+    // An `all:` nested inside the spec (a row field, a filterable column) is
+    // not the spec's own: presence is read at the spec's depth.
+    expect(index.get("windowed")).toEqual([
+      { key: "windowed", keyed: true, membership: "window" },
+      { key: "windowed:rows", keyed: true, membership: "point" },
+      { key: "windowed:groups", keyed: false, membership: null },
+    ]);
+  });
+
+  it("refuses a collection whose spec sets both `default` and `all` (A28)", () => {
+    const src = `
+      export const both = liveCollection("both", {
+        row: S, id: "id", filterable: {}, sortable: ["n"],
+        default: { orderBy: [["n", "asc"]], limit: 10 }, maxLimit: 10,
+        all: { orderBy: [["n", "asc"]], unbounded: { reason: "r" } },
+      });
+    `;
+    expect(() =>
+      buildDescriptorIndex([file(src)], { ownerPlugin: false }),
+    ).toThrow(
+      /resources\.ts:2: one declaration mints the key suffix "" twice — its spec sets both `default` and `all`/,
+    );
+  });
+
   it("indexes a liveValue as one plain (non-keyed, unbounded-membership) key", () => {
     const src = `
       export const notificationsUnread = liveValue("notifications.unread", {

@@ -451,7 +451,11 @@ function LiveBody(props: {
     resolveGrouping,
     holdPaging: () => false,
   });
-  const state = resolveBodyState({ server: origin, readiness: undefined });
+  const state = resolveBodyState({
+    server: origin,
+    readiness: undefined,
+    readFields: [],
+  });
   return state.kind === "view" ? (
     <ul>
       {origin!.rows.map((r) => (

@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export { parsedText } from "./internal/parsed-text";
 export { parsedJson } from "./internal/parsed-json";
+export { columnSchema } from "./internal/column-schema";
 export type { SqlColumnDirection, SqlColumnFailure } from "./internal/errors";
 export { formatSqlColumnError } from "./internal/errors";
 export { withWire, columnWireCodec } from "./internal/wire";

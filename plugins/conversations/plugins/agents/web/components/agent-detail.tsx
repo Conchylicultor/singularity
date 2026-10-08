@@ -10,7 +10,6 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import {
   foldResource,
-  useResource,
   ResourceView,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -31,7 +30,7 @@ import {
 } from "@plugins/conversations/plugins/agents/core";
 import { ModelSelect } from "@plugins/conversations/plugins/model-provider/web";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
-import { agentLaunchesResource, agentRows } from "../../shared/resources";
+import { agentLaunchRows, agentRows } from "../../shared/resources";
 import type { Agent } from "../../shared/resources";
 import { AgentLaunches } from "./agent-launches";
 import { symbol, type SavedSymbolName } from "@plugins/ui/plugins/icons/core";
@@ -73,7 +72,7 @@ function AgentDetailInner({
   agentId: string;
   agent: Agent;
 }) {
-  const launchesQ = useResource(agentLaunchesResource);
+  const launchesQ = useLive(agentLaunchRows);
   const [model, setModel] = useState<ModelChoice | null>(agent.model);
   const [launching, setLaunching] = useState(false);
 

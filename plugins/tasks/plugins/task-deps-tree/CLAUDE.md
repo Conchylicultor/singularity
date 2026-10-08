@@ -43,10 +43,11 @@ now"), the opposite of the monotone one here.
   - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×7
     - `tasks/task-list` ×4
-    - `primitives/live-state` ×3
     - `primitives/css/ui-kit` ×2
+    - `primitives/live-state` ×2
     - `tasks/task-detail` ×2
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/icon-button.IconButton`

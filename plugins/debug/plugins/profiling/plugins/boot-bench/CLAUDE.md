@@ -20,6 +20,12 @@ four headline metrics PLUS the signals the contention root cause needs:
   only — no CPU spin (a spin would fabricate event-loop lag that pure gate contention
   never produces). Occupant bodies run inside `runWithoutProfiling` so they emit no
   spans into the measured profile.
+- **Per-key source.** Each boot-snapshot key reports `memory` (a persisted alias's
+  kept in-memory snapshot), `persisted` (a USABLE L2 row — live-state-snapshot's
+  predicate: a key the runtime persists now, under its current definition; a
+  bounded preloaded window never qualifies) or `loader`. Cold mode clears
+  L2 AND bypasses the memory path (`assembleBootSnapshot({ memory: false })`), so
+  every cold key is a real `loader` measurement.
 - **Persisted-read + bloat.** `bootSnapshot.persistedReadMs` (the single batched L2
   read) plus `snapshotBloat` (`snapshot-bloat.ts`: `live_state_snapshot` table bytes /
   dead+live tuples) — captured once per mode before any cold-clear DELETE churns the

@@ -11,7 +11,7 @@ import { attemptWorkSignature, evictAttemptWork, getAttemptWork } from "./work";
 // already implies a relevant ref moved — no need to inspect the refName.
 //
 // There is deliberately NO `recomputeOn` edge from the pushes ledger (the
-// `pushes` collection, or the `pushes.attempts-cascade` carrier). The landed
+// `pushes` collection). The landed
 // set is now git-measured, so a ref advance is the COMPLETE refresh signal; the
 // ledger only corroborates, and its own arrival moves the signature (see
 // `attemptWorkEtag`) so a push row landing without a ref advance still

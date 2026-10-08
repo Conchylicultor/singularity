@@ -51,6 +51,15 @@ through `pool.query` — before, it recorded none and its resource silently serv
 stale data. The patch is applied once per client, since pg reassigns `release`
 on every checkout but keeps the same `query`.
 
+What a capture records is read off the SQL text by `extractReadTablesFromSql`:
+every name a FROM / JOIN introduces — a double-quoted one as written, an
+unquoted one only when it names a real `public` relation. **`quotedRelationsIn(text)`**
+(server barrel, pure) is the quoted half alone, with no relation filter: what
+a raw-SQL compiler checks its rendered text against. A quoted CTE or subquery
+alias would land in every read-set the query is captured under, so a raw shape
+spells its own names unquoted (query-resource's A38) and the quoted relations
+of its text must be exactly the tables it routes.
+
 ## Query deadline (a call with no reply fails; its connection is abandoned)
 
 Every database call on **every backend connection** has a client-side deadline —
@@ -241,6 +250,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `database/connection.queryText`
     - `database/connection.withQueryDeadline`
     - `database/derived-tables.DerivedTable`
+    - `database/derived-tables.publishReconciledRollups`
     - `database/derived-updated-at.registeredDerivedUpdatedAt`
     - `database/derived-views.View`
     - `database/migrations.applySchemaLayer`
@@ -253,6 +263,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `dbLog`
     - `isTransientDbError`
     - `loadKnownRelations`
+    - `quotedRelationsIn`
 - Cross-plugin:
   - Imported by: 101 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×29
@@ -290,12 +301,12 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
   - **`client-tools`** — Postgres client tools (pg_dump, pg_restore) built from the same release as the embedded server: pgClientBin resolves the vendored binary, never the PATH.
   - **`connection`** — Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds…
   - **`db-test-fixture`** — Shared throwaway-database fixture for DB-backed test suites.
-  - **`derived-tables`** — Rebuilds trigger-maintained materialized rollup tables from source on every boot. A rollup is derived state (declared via the DerivedTable contribution), kept current incrementally by STATEMENT…
+  - **`derived-tables`** — Trigger-maintained materialized rollup tables as data: defineRollup generates a rollup's table, a maintain function and triggers per source (diffing the columns it reads, advisory-locked per key)…
   - **`derived-updated-at`** — Derived updatedAt: compiles a table's per-column touchedBy rules (declared in defineEntity's meta.updatedAt, or deriveUpdatedAt on a raw pgTable) into a BEFORE UPDATE trigger that sets updated_at =…
   - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
   - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
   - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the singularity DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
-  - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, with a bounded changelog catch-up that recomputes only the resources whose tables changed during…
+  - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a…
   - **`migrations`** — DDL lifecycle: migration runner and SQL files.
   - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
   - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.

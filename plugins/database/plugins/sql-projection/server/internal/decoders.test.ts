@@ -11,7 +11,7 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { pgTable, timestamp } from "drizzle-orm/pg-core";
-import { nullable, parsed } from "./decoders";
+import { decoderOrigin, nullable, parsed } from "./decoders";
 import { SqlProjectionError } from "./errors";
 
 /** A real drizzle COLUMN (not a builder), so `nullable` wraps a true decoder. */
@@ -119,5 +119,41 @@ describe("nullable", () => {
     expect(decode(null)).toBeNull();
     expect(decode("a")).toBe("a");
     expect(() => decode("c")).toThrow(SqlProjectionError);
+  });
+});
+
+describe("decoderOrigin", () => {
+  test("a column, a builtin, parsed and nullable read as data", () => {
+    expect(decoderOrigin(createdAt)).toEqual({
+      kind: "column",
+      column: createdAt,
+    });
+    expect(decoderOrigin(Boolean)).toEqual({
+      kind: "builtin",
+      name: "Boolean",
+    });
+    const schema = z.array(z.string());
+    const p = parsed(schema, "x.ids");
+    expect(decoderOrigin(p)).toEqual({
+      kind: "parsed",
+      schema,
+      label: "x.ids",
+    });
+    expect(decoderOrigin(nullable(p))).toEqual({ kind: "nullable", inner: p });
+  });
+
+  test("unwraps the object `.mapWith(fn)` stores", () => {
+    expect(decoderOrigin({ mapFromDriverValue: Number })).toEqual({
+      kind: "builtin",
+      name: "Number",
+    });
+  });
+
+  test("any other function is opaque", () => {
+    expect(decoderOrigin((v: unknown) => v)).toEqual({ kind: "opaque" });
+    function named(v: unknown): unknown {
+      return v;
+    }
+    expect(decoderOrigin(named)).toEqual({ kind: "opaque" });
   });
 });

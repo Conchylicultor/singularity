@@ -394,6 +394,17 @@ interface FieldDefBase<TRow> {
    */
   readError?: { error: Error; refetch?: () => Promise<void> };
   /**
+   * The field's values are NOT KNOWN YET — set by a field whose values come
+   * from a read of its own (a field extension) while that read is loading
+   * with nothing held. Every cell of the field renders the loading block, and
+   * a view that groups, sorts or filters by it renders its loading state:
+   * whatever `value` returns meanwhile (an enum's `null` is its "None"
+   * bucket) would be a claim about every row that then reverses. Absent once
+   * the values are known, or failed (`readError`, which a view laid out by
+   * the field renders in place of its rows).
+   */
+  pending?: boolean;
+  /**
    * Inline-edit write-back. Present → the table cell for this field becomes
    * editable (click-to-edit); absent → the cell stays read-only (the default for
    * every existing consumer). The host resolves a per-type editor via the

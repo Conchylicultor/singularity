@@ -9,7 +9,10 @@ import {
   type DeclaredView,
 } from "@plugins/database/plugins/derived-views/server";
 import { rebuildDerivedTables } from "@plugins/database/plugins/derived-tables/server";
-import type { DerivedRollupSpec } from "@plugins/database/plugins/derived-tables/core";
+import type {
+  Rollup,
+  RollupReconcile,
+} from "@plugins/database/plugins/derived-tables/core";
 import {
   installDerivedUpdatedAt,
   type DerivedUpdatedAtSpec,
@@ -308,7 +311,7 @@ export function planSchemaSteps(
 // contributions; the check gathers the same sets from main's server barrels.
 export interface SchemaLayerInputs {
   views: readonly DeclaredView[];
-  derivedTables: readonly DerivedRollupSpec[];
+  derivedTables: readonly Rollup[];
   updatedAtSpecs: readonly DerivedUpdatedAtSpec[];
 }
 
@@ -377,13 +380,23 @@ async function runSteps(tx: Tx, steps: readonly SchemaStep[]): Promise<void> {
 // The boot schema layer over an explicit migration list — `applySchemaLayer`
 // with the files already read. Exported (not from the barrel) so a DB test can
 // apply a synthetic history.
+// What one schema-layer run did: how many migration files it applied, and what
+// each rollup's reconcile healed (derived-tables). A committing caller
+// publishes `rollups` only after the transaction commits (C13): the dry run
+// computes them too, and rolls them back.
+export interface SchemaLayerResult {
+  pending: number;
+  rollups: RollupReconcile[];
+}
+
 export async function applySchemaLayerFrom(
   db: NodePgDatabase,
   migrations: Migration[],
   inputs: SchemaLayerInputs,
   { commit }: { commit: boolean },
-): Promise<{ pending: number }> {
+): Promise<SchemaLayerResult> {
   let pending = 0;
+  let rollups: RollupReconcile[] = [];
   try {
     await db.transaction(async (tx) => {
       if (!commit) {
@@ -410,7 +423,7 @@ export async function applySchemaLayerFrom(
       // rollup tables need the migrated columns; a view may read a rollup
       // table. Each skips its DDL when unchanged.
       await installDerivedUpdatedAt(tx, inputs.updatedAtSpecs);
-      await rebuildDerivedTables(tx, inputs.derivedTables);
+      rollups = await rebuildDerivedTables(tx, inputs.derivedTables);
       await rebuildDerivedViews(tx, inputs.views);
 
       if (!commit) throw ROLLBACK;
@@ -418,7 +431,7 @@ export async function applySchemaLayerFrom(
   } catch (e) {
     if (e !== ROLLBACK) throw e;
   }
-  return { pending };
+  return { pending, rollups };
 }
 
 // The boot schema layer, in ONE transaction:
@@ -441,7 +454,7 @@ export async function applySchemaLayer(
   db: NodePgDatabase,
   inputs: SchemaLayerInputs,
   { commit }: { commit: boolean },
-): Promise<{ pending: number }> {
+): Promise<SchemaLayerResult> {
   const run = () =>
     applySchemaLayerFrom(db, listMigrationFiles(MIGRATIONS_DIR), inputs, {
       commit,
@@ -499,5 +512,6 @@ export async function dryRunPendingMigrations(
     applied,
   );
   if (pendingFiles.length === 0) return { pending: 0 };
-  return applySchemaLayer(db, inputs, { commit: false });
+  const { pending } = await applySchemaLayer(db, inputs, { commit: false });
+  return { pending };
 }

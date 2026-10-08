@@ -1,5 +1,12 @@
 import { describe, it, expect } from "bun:test";
-import { min, median, p95, stat, aggregateMode, buildReport } from "./aggregate";
+import {
+  min,
+  median,
+  p95,
+  stat,
+  aggregateMode,
+  buildReport,
+} from "./aggregate";
 import type { BootBenchRunResponse, IterResult } from "../../shared/endpoints";
 
 describe("min", () => {
@@ -35,7 +42,10 @@ describe("p95", () => {
   });
   it("0..100 in steps of 10", () => {
     // 11 points, rank = 0.95 * 10 = 9.5 → between 90 and 100.
-    expect(p95([0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100])).toBeCloseTo(95, 10);
+    expect(p95([0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100])).toBeCloseTo(
+      95,
+      10,
+    );
   });
 });
 
@@ -49,7 +59,7 @@ describe("aggregateMode", () => {
   const iter = (
     total: number,
     workMs: number,
-    source: "persisted" | "loader",
+    source: "memory" | "persisted" | "loader",
     loaderMs: number,
     maxMs: number,
     extra: Partial<IterResult> = {},
@@ -109,7 +119,14 @@ describe("aggregateMode", () => {
             },
           ],
           db: [
-            { label: "SELECT pushes", count: 2, avgMs: 3, selfMs: 3, childMs: 0, maxMs: 5 },
+            {
+              label: "SELECT pushes",
+              count: 2,
+              avgMs: 3,
+              selfMs: 3,
+              childMs: 0,
+              maxMs: 5,
+            },
           ],
         },
       }),
@@ -156,8 +173,12 @@ describe("aggregateMode", () => {
 
   it("carries the load summary when iterations ran under a host-gate load", () => {
     const agg = aggregateMode([
-      iter(10, 2, "loader", 5, 100, { load: { concurrency: 4, peakGateWaitMs: 300 } }),
-      iter(20, 4, "loader", 7, 200, { load: { concurrency: 4, peakGateWaitMs: 500 } }),
+      iter(10, 2, "loader", 5, 100, {
+        load: { concurrency: 4, peakGateWaitMs: 300 },
+      }),
+      iter(20, 4, "loader", 7, 200, {
+        load: { concurrency: 4, peakGateWaitMs: 500 },
+      }),
     ]);
     expect(agg.load!.concurrency).toBe(4);
     expect(agg.load!.peakGateWaitMs.median).toBe(400);
@@ -184,7 +205,9 @@ describe("buildReport", () => {
             perKey: { "edited-files": { source: "persisted", workMs: 1 } },
             persistedReadMs: 9,
           },
-          firstSubscribe: { "edited-files": { onFirstSubscribeMs: 1, loaderMs: 2 } },
+          firstSubscribe: {
+            "edited-files": { onFirstSubscribeMs: 1, loaderMs: 2 },
+          },
           eventLoop: { maxMs: 5, p99Ms: 0, meanMs: 0 },
           runtimeProfile: { loaders: [], db: [] },
         },

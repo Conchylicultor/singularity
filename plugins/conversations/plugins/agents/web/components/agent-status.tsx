@@ -1,14 +1,12 @@
-import {
-  ResourceErrorInline,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { agentLaunchesResource } from "../../shared/resources";
+import { agentLaunchRows } from "../../shared/resources";
 
 export function AgentStatus({ agentId }: { agentId: string }) {
-  const launchesQ = useResource(agentLaunchesResource);
+  const launchesQ = useLive(agentLaunchRows);
 
   // No status while loading is correct — we don't know the latest status yet.
   if (launchesQ.status === "loading") {

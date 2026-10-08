@@ -14,8 +14,10 @@ plugin:
   factory's options. `Resource.Declare(resource)` derives the flag from the
   served resource, and the server reads the set generically
   (`preloadedKeys()`: `Resource.Declare.getContributions().filter(c => c.preload !== undefined)`),
-  never by name. This drives the snapshot endpoint and (in the
-  `live-state-snapshot` plugin) the L2 persisted-materialization set.
+  never by name. This drives the snapshot endpoint. The L2 persisted set is
+  the runtime's `persistedKeys()` — a preloaded key the runtime persists, never
+  a bounded or external one — read through live-state-snapshot's usable-row
+  predicate.
 - **Client (auto-derived — no second list)** — the boot task no longer maintains
   a parallel client registry. It iterates the **keys** the snapshot already ships
   and resolves each to its client `ResourceDescriptor` via the live-state
@@ -39,8 +41,26 @@ window listeners are not mounted yet during the boot window.)
 Two kinds of preload, told apart by the `Resource.Declare` payload alone:
 
 - **Default tuple** — a param-less resource, or a collection's default window
-  (`defaultParams`). Shipped in `resources[key]`, served from the L2 persisted
-  row when there is one, else loaded at the descriptor's `defaultParams`.
+  (`defaultParams`). Shipped in `resources[key]`, from the first of:
+  1. **memory** — a persisted alias (an unbounded-window `scopedMembership` key,
+     `unboundedWindowKeys()`) that holds its kept in-memory snapshot is served
+     from it (`keptSnapshotValue`): its L2 row trails it by up to one
+     floor-persist window, so the row is the OLDER value;
+  2. **persisted** — the L2 row, when there is a USABLE one: the read applies
+     live-state-snapshot's usable-row predicate (a key the runtime persists right
+     now, under its current definition, written by a current writer), so a
+     bounded preloaded window — or any key a previous boot left a row for — is
+     never served from L2;
+  3. **loader** — loaded at the descriptor's `defaultParams`.
+
+  `timings[key].source` names which (`memory` | `persisted` | `loader`).
+  A collection's whole ordered set (`liveCollection(key, { all })`) is one of
+  these: a param-less tuple (its descriptor has no `defaultParams`),
+  self-registered under `key` itself so the client resolves it — pinned with
+  the real registry and `hydrateResource` by `web/__tests__/boot-all.test.ts`
+  (C39 of `research/2026-10-06-global-scoped-change-routing-p8-v3.md`).
+  Boot-bench's cold mode bypasses the memory path (`assembleBootSnapshot({ memory:
+  false })`), so a cleared L2 really measures the loaders.
 - **Enumerated** — a parameterized `liveValue` declared `preload`, whose
   `serveValue` names its tuples (`preloadParams`); the Declare carries
   `preloadTuples`, which loads each through the resource's own `load` (the
@@ -57,9 +77,13 @@ entry never stops the others from hydrating).
 This plugin no longer runs a server-side warm-up. Cold boot is now a pure
 snapshot read: `live-state-snapshot` persists each boot-critical resource's value
 **and** its read-set durably, seeds the in-memory table→resource index from that
-read-set at boot, and runs a **bounded** changelog catch-up — so no boot-critical
-loader runs at boot unless its tables actually changed during downtime (or it has
-no usable persisted read-set yet). See
+read-set at boot, seeds each persisted alias (a collection declared `all`, any
+unbounded-window `scopedMembership` key) from its row, and runs a **bounded**
+changelog catch-up — so no boot-critical loader runs at boot unless its tables
+actually changed during downtime (and then an alias refills by scope), or it has
+no usable persisted row yet, or the backstop fires (history pruned past the
+oldest row, or a healed rollup: every persisted key recomputes; live-state-snapshot's
+CLAUDE.md, *Boot flow*). See
 [the L3 plan](../../../../research/2026-06-23-global-live-state-persisted-read-set-no-boot-recompute.md).
 
 How it works:
@@ -96,6 +120,7 @@ How it works:
   - Routes: `GET /api/resources/boot-snapshot`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
+  - Exports (types): `BootSnapshotSource`
   - Exports (values): `bootSnapshot`
 - Cross-plugin:
   - Imported by: `debug/profiling/boot-bench`

@@ -19,7 +19,7 @@ export const benchmarkBootTool = Mcp.tool({
   description: `Repeatable cold-cache benchmark of the boot burst + live-state loaders in a worktree's RUNNING backend (no restart). Forces a truly cold boot by DELETING the L2 persisted snapshot rows for the boot-critical keys immediately before each cold iteration, so the boot-snapshot endpoint must recompute from loaders.
 
 Measures, per iteration, all in the target process (so the event-loop histogram and the loaders share one process — no network noise in the measured window):
-- boot-snapshot total time, per-key { source: persisted|loader, workMs }, AND \`persistedReadMs\` (the single batched L2 read; persisted per-key workMs is that read amortized ÷ N — directional, not per-key truth).
+- boot-snapshot total time, per-key { source: memory|persisted|loader, workMs }, AND \`persistedReadMs\` (the single batched L2 read; persisted per-key workMs is that read amortized ÷ N — directional, not per-key truth).
 - edited-files first-subscribe latency (onFirstSubscribe + loader) for the conversation fixture.
 - commits-graph (.delta / .graph) first-subscribe latency for the attempt fixture.
 - event-loop lag (max) during the burst.
@@ -27,7 +27,7 @@ Measures, per iteration, all in the target process (so the event-loop histogram 
 
 Scope = live-server cold: it deliberately EXCLUDES server-boot work (catch-up, derived-table rebuild, pool warm), which is noisier. Run on an idle backend for clean cold numbers (a concurrent flushNotifies can re-persist rows mid-run).
 
-warm mode runs BEFORE any cold-clear (the snapshot is naturally warm on a running backend); cold per-key sources should be all "loader" and warm mostly "persisted" and faster. Discards the first \`warmup\` iterations of each set (GC settle). Returns per-mode { min, median, p95 } aggregates plus the resolved fixtures; the agent saves a baseline run and compares the after run itself.
+warm mode runs BEFORE any cold-clear (the snapshot is naturally warm on a running backend); cold per-key sources should be all "loader" (cold mode bypasses the in-memory alias path) and warm mostly "memory"/"persisted" and faster. Discards the first \`warmup\` iterations of each set (GC settle). Returns per-mode { min, median, p95 } aggregates plus the resolved fixtures; the agent saves a baseline run and compares the after run itself.
 
 BLOAT: \`snapshotBloat.{cold,warm}\` reports the \`live_state_snapshot\` table's { tableBytes, deadTuples, liveTuples }, captured ONCE per mode at the start of its set. The persisted-read cost only reproduces against REAL dead-tuple bloat — i.e. warm mode against an already-bloated DB (run with \`worktree: "singularity"\` to hit main). Cold-clearing DELETEs churn the very table being measured, so a fresh worktree shows misleadingly low bloat + low \`persistedReadMs\`; the bloat is captured before any cold delete so it reflects the pre-run state.
 

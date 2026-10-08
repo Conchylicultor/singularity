@@ -189,24 +189,64 @@ registerGateGauge("db-pool", () => {
 // costs one extra recompute and never a missed one — the direction this index
 // has always been allowed to err in.
 export function extractReadTablesFromSql(text: string): string[] {
+  const tables = new Set<string>();
+  for (const name of readClauseNames(text)) {
+    if (name.quoted) {
+      tables.add(name.text);
+      continue;
+    }
+    const relation = publicRelationName(name.text);
+    if (relation !== null && knownRelations?.has(relation))
+      tables.add(relation);
+  }
+  return Array.from(tables);
+}
+
+/**
+ * The relations a read-set captures from `text` whatever relation set is
+ * installed: every double-quoted name a read clause (FROM / JOIN) names,
+ * deduped, in order of first appearance — exactly the quoted branch of
+ * {@link extractReadTablesFromSql}, with no known-relations filter. Pure.
+ *
+ * What a compiler rendering raw SQL checks its text against: a quoted name is
+ * taken as written, so a CTE or subquery alias spelled quoted would land in
+ * every read-set the query is captured under (a phantom dependency the
+ * Read-set pane reports as a silent FULL). A raw shape therefore spells its
+ * own names unquoted, and the relations this returns for it must be exactly
+ * the tables it routes.
+ */
+export function quotedRelationsIn(text: string): string[] {
+  const out = new Set<string>();
+  for (const name of readClauseNames(text)) {
+    if (name.quoted) out.add(name.text);
+  }
+  return Array.from(out);
+}
+
+/**
+ * Every name a read clause (FROM / JOIN) introduces in `text`, in order: a
+ * double-quoted one as written, or an unquoted candidate (a function call —
+ * a candidate followed by `(` — already dropped). `DELETE FROM`'s write target
+ * and `IS DISTINCT FROM`'s operand are matched and dropped (see
+ * {@link extractReadTablesFromSql}).
+ */
+function* readClauseNames(
+  text: string,
+): Generator<{ quoted: boolean; text: string }> {
   const re =
     /\b(distinct\s+from|delete\s+from|from|join)\s+(?:only\s+)?(?:"([^"]+)"|([a-z_][\w$.]*))(\s*\()?/gi;
-  const tables = new Set<string>();
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     const keyword = m[1]!.toLowerCase().replace(/\s+/g, " ");
     if (keyword !== "from" && keyword !== "join") continue; // write target / operator
     const quoted = m[2];
     if (quoted !== undefined) {
-      tables.add(quoted);
+      yield { quoted: true, text: quoted };
       continue;
     }
     if (m[4] !== undefined) continue; // a call — `unnest(`, `lateral (`
-    const relation = publicRelationName(m[3]!);
-    if (relation !== null && knownRelations?.has(relation))
-      tables.add(relation);
+    yield { quoted: false, text: m[3]! };
   }
-  return Array.from(tables);
 }
 
 // Postgres folds an unquoted identifier to lower case, so a candidate is

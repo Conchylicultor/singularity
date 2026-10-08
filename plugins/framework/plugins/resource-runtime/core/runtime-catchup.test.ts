@@ -20,6 +20,7 @@
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
 import { createHarness, tick, makeClientView } from "./test-support";
+import type { PersistMeta } from "./runtime";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
@@ -114,13 +115,14 @@ describe("over-replay idempotence — a seeded scopedMembership entry", () => {
     const order = () => [...truth.keys()].sort();
     const members = () => order().map((id) => ({ id, n: truth.get(id)! }));
     const log: string[] = [];
-    const persisted: unknown[] = [];
+    const persisted: Array<{ value: unknown; wm: string; mode: string }> = [];
     const h = createHarness({
       readSet: () => ["row_table"],
       shouldPersist: (k) => k === "rows",
       captureWatermark: async () => "xmin",
-      persistSnapshot: async (_k, _pk, value) => {
-        persisted.push(value);
+      persistWindowMs: 0,
+      persistSnapshot: async (_k, _pk, value, wm, meta) => {
+        persisted.push({ value, wm, mode: meta.mode });
       },
     });
     h.runtime.defineResource(
@@ -158,7 +160,10 @@ describe("over-replay idempotence — a seeded scopedMembership entry", () => {
     // Cold-boot seed: restore the diff base from the durable L2 value, exactly as
     // live-state-snapshot's onReady does BEFORE catch-up. No subscriber — catch-up
     // runs before any client subscribes.
-    h.runtime.seedPersistedSnapshot("rows", "{}", members()); // base [a,b,c]
+    h.runtime.seedPersistedSnapshot("rows", "{}", members(), {
+      position: "100",
+      positionAt: null,
+    }); // base [a,b,c], floored at the row's position
 
     // Catch-up replays a straddling I/U/D sequence (truth mutated to match each row).
     truth.set("a", 2);
@@ -172,6 +177,7 @@ describe("over-replay idempotence — a seeded scopedMembership entry", () => {
     await tick();
     feed("U", ["a"]); // over-replay of an already-reflected change (empty diff)
     await tick();
+    await tick(); // the last armed floor window
 
     // The seed did its job: every replay stayed on the scoped/membership path — never
     // one FULL O(collection) rebuild. U + I + the over-replay U each refill one id;
@@ -184,7 +190,14 @@ describe("over-replay idempotence — a seeded scopedMembership entry", () => {
       { id: "c", n: 1 },
       { id: "d", n: 5 },
     ];
-    expect(persisted.at(-1)).toEqual(truthValue);
+    // Every persist was a FLOOR persist floored by the seeded row's position —
+    // the snapshot's base — never by a capture taken at a scoped drain (C19).
+    expect(persisted.length).toBeGreaterThan(0);
+    for (const p of persisted) {
+      expect(p.mode).toBe("floor");
+      expect(p.wm).toBe("100");
+    }
+    expect(persisted.at(-1)!.value).toEqual(truthValue);
 
     // A client subscribing now (post-catch-up) converges to the same server truth.
     await h.subscribe("rows");
@@ -235,7 +248,7 @@ describe("L2 persist-hook calling contract", () => {
       pk: string,
       value: unknown,
       wm: string,
-      tables: readonly string[],
+      meta: PersistMeta,
     ) => Promise<void>;
     loader?: (ctx?: {
       affectedIds: readonly string[];
@@ -249,6 +262,7 @@ describe("L2 persist-hook calling contract", () => {
       value: unknown;
       wm: string;
       tables: readonly string[];
+      mode: PersistMeta["mode"];
     }> = [];
     const h = createHarness({
       readSet: (k) => (k === "p" ? ["p_table"] : []),
@@ -262,9 +276,16 @@ describe("L2 persist-hook calling contract", () => {
         }),
       persistSnapshot:
         overrides.persistSnapshot ??
-        (async (key, pk, value, wm, tables) => {
+        (async (key, pk, value, wm, meta) => {
           log.push("persist");
-          persistArgs.push({ key, pk, value, wm, tables });
+          persistArgs.push({
+            key,
+            pk,
+            value,
+            wm,
+            tables: meta.guardTables,
+            mode: meta.mode,
+          });
         }),
     });
     h.runtime.defineResource(
@@ -314,6 +335,7 @@ describe("L2 persist-hook calling contract", () => {
     expect(persistArgs[0]!.wm).toBe("xmin-7"); // the captured watermark
     expect(persistArgs[0]!.tables).toEqual(["p_table"]); // fallback to opts.readSet (no lastReadSet)
     expect(persistArgs[0]!.pk).toBe(JSON.stringify({})); // param-less pk
+    expect(persistArgs[0]!.mode).toBe("replace"); // a FULL recompute replaces the row
 
     // Nothing shipped (no subscriber) — persistence is decoupled from delivery.
     expect(h.frames).toHaveLength(0);
@@ -330,8 +352,8 @@ describe("L2 persist-hook calling contract", () => {
       lastReadSet: (k) => (k === "p" ? ["p_table"] : undefined), // clean per-run
       shouldPersist: (k) => k === "p",
       captureWatermark: async () => "xmin-9",
-      persistSnapshot: async (_key, _pk, _value, _wm, tables) => {
-        persistArgs.push({ tables });
+      persistSnapshot: async (_key, _pk, _value, _wm, meta) => {
+        persistArgs.push({ tables: meta.guardTables });
       },
     });
     h.runtime.defineResource(

@@ -1,8 +1,6 @@
-import { type ReactElement } from "react";
-import {
-  foldResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useCallback, type ReactElement } from "react";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   PaneChrome,
@@ -13,9 +11,10 @@ import {
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { TasksListView } from "@plugins/tasks/plugins/task-list/web";
 import {
-  tasksResource,
+  taskRows,
   tasksRootRoute,
   taskDetailRoute,
+  type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTask } from "@plugins/tasks/web";
 import { TaskDetailFlushProvider } from "./context";
@@ -34,9 +33,13 @@ export const tasksRootPane = Pane.define({
 });
 
 function useResolveTask({ taskId }: { taskId: string }): ResolveResult {
-  return resolveFrom(useResource(tasksResource), (tasks) =>
-    tasks.some((t) => t.id === taskId),
+  // A `select` of the one fact the route needs, so the pane re-resolves when
+  // the task appears or goes — not on every push to the task set.
+  const select = useCallback(
+    (tasks: TaskListItem[]) => tasks.some((t) => t.id === taskId),
+    [taskId],
   );
+  return resolveFrom(useLive(taskRows, { select }), (exists) => exists);
 }
 
 /** The task's title from the global live-state resource, or undefined. */

@@ -1,10 +1,8 @@
 import { useCallback } from "react";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  useResource,
-  type ResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
-import {
-  attemptsResource,
+  attemptRows,
   type AttemptWithConversations,
   type ConversationSummary,
 } from "@plugins/tasks/plugins/tasks-core/core";
@@ -13,7 +11,7 @@ import {
  * This task's attempts, newest first.
  *
  * "The attempts of a task" was filtered and sorted out of the global attempts
- * resource in four places, and they did not agree on the direction. It reads
+ * set in four places, and they did not agree on the direction. It reads
  * newest-first because that is what an attempt list is for: the attempt being
  * worked right now belongs at the top.
  *
@@ -36,7 +34,7 @@ export function useTaskAttempts(
         .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)),
     [taskId],
   );
-  return useResource(attemptsResource, undefined, { select });
+  return useLive(attemptRows, { select });
 }
 
 /**
@@ -74,5 +72,5 @@ export function useTaskConversations(
     },
     [key],
   );
-  return useResource(attemptsResource, undefined, { select });
+  return useLive(attemptRows, { select });
 }

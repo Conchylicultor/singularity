@@ -1,7 +1,5 @@
-import {
-  useResource,
-  ResourceView,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -9,7 +7,7 @@ import {
   defineDataView,
 } from "@plugins/primitives/plugins/data-view/web";
 import {
-  tasksResource,
+  taskRows,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { Tasks } from "../slots";
@@ -29,7 +27,7 @@ export function TasksListView({
   /** Where a row goes: a link, so middle- / ⌘-click open it in a browser tab. */
   linkTo: (id: string) => LinkTarget;
 }) {
-  const result = useResource(tasksResource);
+  const result = useLive(taskRows);
   return (
     <ResourceView resource={result} fallback={<Loading variant="rows" />}>
       {(rows) => (

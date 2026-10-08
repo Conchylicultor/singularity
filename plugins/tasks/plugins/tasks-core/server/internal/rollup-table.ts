@@ -7,7 +7,8 @@ import {
 // Drizzle READ handles for the two trigger-maintained rollups backing
 // `attempts_v`: the per-attempt conversation aggregate and push aggregate.
 // `views.ts` LEFT JOINs these in place of the old inline `conv_agg` / `push_agg`
-// CTEs (see rollup-spec.ts for the maintenance DDL).
+// CTEs (see rollup-spec.ts for the declarations the maintenance SQL is generated
+// from — each handle is also the rollup table's DDL: `defineRollup` reads its columns).
 //
 // These live in a NON-glob file (NOT `tables.ts`/`schema.ts`) so the drizzle
 // codegen glob (`**/internal/{schema,tables}{,-*}.ts`) never sees them: the
@@ -28,6 +29,11 @@ export const _attemptConvAgg = pgTable(ATTEMPT_CONV_AGG_TABLE, {
   // See rollup-spec.ts for the full rationale.
   hasOpenConv: boolean("has_open_conv"),
   maxEndedAt: timestamp("max_ended_at", { withTimezone: true }),
+  // `status = 'waiting'`: some conversation of the attempt waits on the user.
+  // Feeds the task's `need_action` status (tasks_v and the `tasks` set both
+  // read it here, so neither reads `conversations` directly). NULL for an
+  // attempt with no conversation, like the two flags above.
+  hasWaitingConv: boolean("has_waiting_conv"),
 });
 
 export const _attemptPushAgg = pgTable(ATTEMPT_PUSH_AGG_TABLE, {

@@ -102,8 +102,7 @@ export function FloatingTemplateChips({
 }: PromptEditorActionProps) {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
-  // `useConversationById` already answers with the live row whenever a
-  // conversations list holds it (the fetched row only while none does).
+  // `useConversationById` answers with the live row (its by-id read).
   const live = conversation;
   const { templates, pinnedCount } = useConfig(promptTemplatesConfig);
 

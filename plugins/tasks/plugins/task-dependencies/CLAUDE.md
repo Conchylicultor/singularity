@@ -9,6 +9,7 @@
   - Contributes: `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
@@ -18,9 +19,9 @@
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.ResourceErrorInline`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
+    - `tasks/task-category.TaskCategoryMap`
     - `tasks/task-category.useTaskCategoryMap`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-detail.TaskDetailSlots`

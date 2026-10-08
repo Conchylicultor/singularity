@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { CodeMatch } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   allowlistIdentifiers,
+  callsRuntimeAssert,
   findOffenders,
   usesThrowawayTestDb,
 } from "./imperative-create-table-allowlisted";
@@ -99,6 +100,31 @@ describe("findOffenders", () => {
       ),
     ];
     expect(findOffenders(matches, ids)).toEqual([]);
+  });
+
+  test("passes a generated line that carries the runtime allowlist assert", () => {
+    // derived-tables' defineRollup renders the table name from a handle, so the
+    // line holds an expression: the assert call is its evidence instead.
+    const line = `const ddl = \`${CT} IF NOT EXISTS "public".\${quoteIdent(assertImperativePublicTable(table))} (\``;
+    expect(callsRuntimeAssert(line)).toBe(true);
+    expect(
+      findOffenders(
+        [
+          m(
+            "plugins/database/plugins/derived-tables/core/internal/define-rollup.ts",
+            1,
+            line,
+          ),
+        ],
+        ids,
+      ),
+    ).toEqual([]);
+  });
+
+  test("the assert's name alone (not a call) is no evidence", () => {
+    const line = `  ${CT} IF NOT EXISTS rogue_tbl -- see assertImperativePublicTable`;
+    expect(callsRuntimeAssert(line)).toBe(false);
+    expect(findOffenders([m("x.ts", 3, line)], ids)).toHaveLength(1);
   });
 
   test("flags a bare CREATE TABLE with a literal name", () => {

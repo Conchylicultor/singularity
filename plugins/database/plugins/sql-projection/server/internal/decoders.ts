@@ -72,6 +72,63 @@ export function toMapper(decoder: SqlDecoderLike): (value: unknown) => unknown {
 const nullableDecoders = new WeakSet<SqlDecoderLike>();
 
 /**
+ * What a decoder IS, as data — so a reader that must tell two decoders apart
+ * ACROSS PROCESSES (a persisted compile's definition) never keys on a
+ * function's identity or source:
+ *
+ * - `column` — a drizzle column, decoding as that column does everywhere;
+ * - `builtin` — one of the native coercions (`Number`, `String`, `Boolean`,
+ *   `BigInt`), recognised by identity with the global;
+ * - `parsed` — a {@link parsed} decoder: its schema and label;
+ * - `nullable` — a {@link nullable} decoder: the decoder it wraps;
+ * - `opaque` — any other function: nothing about it can be read as data.
+ */
+export type DecoderOrigin =
+  | { kind: "column"; column: Column }
+  | { kind: "builtin"; name: BuiltinDecoderName }
+  | { kind: "parsed"; schema: ZodParser<unknown>; label: string }
+  | { kind: "nullable"; inner: SqlDecoderLike }
+  | { kind: "opaque" };
+
+type BuiltinDecoderName = "Number" | "String" | "Boolean" | "BigInt";
+
+const BUILTIN_DECODERS: ReadonlyMap<unknown, BuiltinDecoderName> = new Map<
+  unknown,
+  BuiltinDecoderName
+>([
+  [Number, "Number"],
+  [String, "String"],
+  [Boolean, "Boolean"],
+  [BigInt, "BigInt"],
+]);
+
+/** The origins {@link parsed} and {@link nullable} record for what they make. */
+const decoderOrigins = new WeakMap<object, DecoderOrigin>();
+
+/**
+ * The {@link DecoderOrigin} of any decoder `.mapWith()` accepts — or of the
+ * `{ mapFromDriverValue }` object `.mapWith(fn)` stores, which is unwrapped to
+ * the function it holds.
+ */
+export function decoderOrigin(decoder: SqlDecoderLike): DecoderOrigin {
+  if (is(decoder, Column)) return { kind: "column", column: decoder };
+  if (typeof decoder !== "function") {
+    // Read as a property, not a method: only its identity is looked at.
+    const held = (decoder as { mapFromDriverValue: unknown })
+      .mapFromDriverValue;
+    return typeof held === "function"
+      ? decoderOrigin(held as SqlDecoder<unknown>)
+      : { kind: "opaque" };
+  }
+  const recorded = decoderOrigins.get(decoder);
+  if (recorded !== undefined) return recorded;
+  const builtin = BUILTIN_DECODERS.get(decoder);
+  return builtin === undefined
+    ? { kind: "opaque" }
+    : { kind: "builtin", name: builtin };
+}
+
+/**
  * `decoder`, and `NULL` is a legitimate value for this projection.
  *
  * ```ts
@@ -92,6 +149,7 @@ export function nullable<D extends SqlDecoderLike>(
       ? null
       : (map(value) as GetDecoderResult<D>);
   nullableDecoders.add(out);
+  decoderOrigins.set(out, { kind: "nullable", inner: decoder });
   return out;
 }
 
@@ -128,11 +186,17 @@ export function parsed<T extends NonNullable<unknown>>(
   schema: ZodParser<T>,
   label: string,
 ): SqlDecoder<T> {
-  return (value) => {
+  const decode: SqlDecoder<T> = (value) => {
     const outcome = schema.safeParse(value);
     if (outcome.success) return outcome.data;
     throw sqlProjectionError(outcome.error, value, label);
   };
+  decoderOrigins.set(decode, {
+    kind: "parsed",
+    schema: schema as ZodParser<unknown>,
+    label,
+  });
+  return decode;
 }
 
 function sqlProjectionError(

@@ -12,7 +12,6 @@ import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import type { ResourceParams } from "@plugins/framework/plugins/resource-runtime/core";
 import { recordingQueryDb, type RecordedQuery } from "../testing";
 import {
-  canonicalSqlType,
   compileUnionCollection,
   type UnionArmSpec,
   type UnionCollectionSpec,
@@ -300,11 +299,5 @@ describe("compileUnionCollection — A14", () => {
       }),
     ).toThrow(/the compiler projects those itself/);
     expect(() => spec([{ ...armA(), kind: "a.b" }])).toThrow();
-  });
-
-  test("type names fold their spellings", () => {
-    expect(canonicalSqlType("TIMESTAMPTZ")).toBe(TS);
-    expect(canonicalSqlType("int4")).toBe("integer");
-    expect(canonicalSqlType("float8[]")).toBe("double precision[]");
   });
 });

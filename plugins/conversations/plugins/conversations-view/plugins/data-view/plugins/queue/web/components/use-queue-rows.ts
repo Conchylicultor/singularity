@@ -1,14 +1,14 @@
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useMemo, useState } from "react";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import {
-  conversationsActiveResource,
-  conversationsGoneResource,
-  tasksResource,
+  conversationsActive,
+  conversationsGone,
+  taskRows,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   combineResources,
-  useResource,
   type ResourceReadiness,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
@@ -85,9 +85,10 @@ export function useQueueRows(): {
   /** The state of the reads behind `rows` — hand it to DataView's `readiness`. */
   readiness: ResourceReadiness;
 } {
-  const activeResult = useResource(conversationsActiveResource);
-  const goneResult = useResource(conversationsGoneResource);
-  const tasksResult = useResource(tasksResource);
+  const activeResult = useLive(conversationsActive);
+  // The default window: the newest ended conversations (the Done section).
+  const goneResult = useLive(conversationsGone);
+  const tasksResult = useLive(taskRows);
 
   // The live conversation id set the queue already tracks — `null` (not a fake
   // empty) while active is still pending, so a pending live set is never confused
@@ -118,7 +119,7 @@ export function useQueueRows(): {
   );
 
   // All-or-nothing gate over the four live resources, memoized on their STABLE
-  // result identities (each `useResource`/`useOptimisticResource` result is
+  // result identities (each `useLive`/`useOptimisticResource` result is
   // referentially stable when its data/status is unchanged). This stability is
   // load-bearing: the retain-last set-during-render below relies on `computed`
   // being a stable object between renders, so it fires only on genuine changes and

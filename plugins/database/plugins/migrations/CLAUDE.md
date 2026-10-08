@@ -375,6 +375,7 @@ only agreement that matters.
   - Exports (types):
     - `Migration`
     - `SchemaLayerInputs`
+    - `SchemaLayerResult`
     - `SchemaPlan`
     - `SchemaStep`
   - Exports (values):

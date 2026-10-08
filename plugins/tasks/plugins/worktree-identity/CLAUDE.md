@@ -21,8 +21,8 @@ attempt's task. The checkout comes from `namespaceParts`
 namespace would miss every composition served from an agent checkout
 (`sonata.att-…`).
 
-Both reads are `select`s over `attemptsResource` / `tasksResource`, which are
-boot-critical and already resident — no new resource. While either is still
+Both reads are `select`s — `useLive(attemptRows, { select })` and
+`useLive(taskRows, { select })` — which are boot-critical and already resident — no new resource. While either is still
 loading the lookup is `pending`, which renders exactly like "no task" (the
 namespace as title, no "Open task"), so nothing on screen claims an answer that
 later reverses.
@@ -44,10 +44,10 @@ outside `apps/…` it loads in the eager tier, so the row is there at first pain
   - Contributes: `HealthReport.Row` "worktree"
   - Uses:
     - `apps-core/tabs.navigate`
+    - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.foldResource`
-    - `primitives/live-state.useResource`
     - `shell/health-report.HealthReport`
 - Exemptions:
   - Exempts itself from: `live/no-legacy-resource-spelling` — `web/internal/use-worktree-identity.ts` (debt)

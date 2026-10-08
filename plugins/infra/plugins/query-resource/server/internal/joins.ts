@@ -19,9 +19,12 @@ import {
 import {
   alias as aliasTable,
   getTableConfig,
+  PgDialect,
   type PgColumn,
   type PgTable,
 } from "drizzle-orm/pg-core";
+import type { CompiledRollupSource } from "@plugins/database/plugins/derived-tables/core";
+import type { DerivedRead } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   BASE_RELATION,
   familyMember,
@@ -30,8 +33,10 @@ import {
   type JoinFamily,
   type JoinSpec,
   type KeyedSideJoin,
+  type RollupJoin,
 } from "@plugins/infra/plugins/query-resource/core";
-import { SQL_TYPE_RE } from "../../core/internal/expr";
+import { SQL_TYPE_RE, type ExprDecoder } from "../../core/internal/expr";
+import { anyOf, type InvalidIdPolicy } from "./raw-sql";
 import {
   tablePrimary,
   type RawHostMap,
@@ -56,7 +61,10 @@ import type { QueryDb, QueryStep, SelectMap } from "./spec";
 //   drift guard, A8, catches only what a load actually captured).
 //
 // Raw SQL text (`sql.raw`) carries no column objects and is invisible here; a
-// routed compile's SQL is built from drizzle columns.
+// routed compile's SQL is built from drizzle columns. The one exception is an
+// AGGREGATE (`JoinPlan.renderAggregate`): a grouped value a raw shape reads off
+// a CTE or a rollup by name, whose provenance — the relation columns it is
+// computed from — is declared when it is rendered, and read from there.
 
 /**
  * A column as a compiled query reads it: a column of the base or of a join's
@@ -80,10 +88,24 @@ export type ReadColumn = PgColumn | SQL;
  *   reads any number of columns (read off its SQL, `columnsIn`), so it has no
  *   one column — `columnOf` / `relationOf` throw on it — but a name, a declared
  *   nullability and an SQL type.
+ * - `aggregate` — a grouped value (`JoinPlan.renderAggregate`) whose SQL
+ *   names a CTE or rollup output, so it carries no relation column of its
+ *   own: its provenance is `reads`, the rendered columns it is computed from,
+ *   and `columnsIn` descends into them in place of its SQL. Like an
+ *   expression it reads no one column (`columnOf` / `relationOf` throw); its
+ *   `relation` is the join (or the base) it belongs to.
  */
 type ReadExpression =
   | { kind: "column"; col: PgColumn; nullable: boolean; sqlType: string }
-  | { kind: "expr"; name: string; nullable: boolean; sqlType: string };
+  | { kind: "expr"; name: string; nullable: boolean; sqlType: string }
+  | {
+      kind: "aggregate";
+      name: string;
+      relation: string;
+      reads: readonly ReadColumn[];
+      nullable: boolean;
+      sqlType: string;
+    };
 
 /**
  * Every read expression a plan rendered → what it is (`ReadExpression`), keyed
@@ -106,10 +128,37 @@ export interface MemberRead {
   sqlType: string;
 }
 
+/**
+ * A join a `JoinPlan` renders row-wise: a window join (`JoinSpec`), or — for
+ * the `all` compiler only (`compileAllJoins`) — a rollup, LEFT-joined on its
+ * key like an N:1 lookup but routed through its SOURCES (`joinRoutes`).
+ */
+export type PlannedJoin = JoinSpec | RollupJoin;
+
+/** The join kinds only a collection declared `all` reads (`AllJoinSpec` minus `JoinSpec`). */
+const ALL_ONLY_KINDS: ReadonlySet<string> = new Set([
+  "rollup",
+  "children",
+  "closure",
+]);
+
+/** The kinds a `JoinPlan` joins row-wise (`PlannedJoin`'s). */
+const PLANNED_KINDS: ReadonlySet<string> = new Set([
+  "extension",
+  "lookup",
+  "keyed-side",
+  "rollup",
+]);
+
 /** One declared join, rendered. */
 export interface CompiledJoin {
-  spec: JoinSpec;
+  spec: PlannedJoin;
   alias: string;
+  /**
+   * The joined table, unaliased: a window join's `table`, a rollup's
+   * `rollup.handle` (never declared beside the rollup — see `RollupJoin`).
+   */
+  table: PgTable;
   /** The joined table under its alias: what the SQL joins. */
   rendered: PgTable;
   /** INNER (a required lookup) — a missing joined row drops the host row. */
@@ -148,8 +197,12 @@ export interface JoinPlan {
    * one coalesces. Throws for an `ExprField`, which reads no one column.
    */
   columnOf(col: ReadColumn): PgColumn;
-  /** Whether a rendered read is an `ExprField` (see `renderExpr`). */
-  isExpr(col: ReadColumn): boolean;
+  /**
+   * Whether a rendered read stands for no one column — an `ExprField`
+   * (`renderExpr`) or an aggregate (`renderAggregate`) — so `columnOf` /
+   * `relationOf` would throw on it and its relations are `relationsIn`'s.
+   */
+  isComputed(col: ReadColumn): boolean;
   /** A read's name, for keys and messages: its column's DB name, or an expression's field name. */
   nameOf(col: ReadColumn): string;
   /** The family member's join alias a read is, or `undefined` (any other column, or an expression). */
@@ -173,13 +226,60 @@ export interface JoinPlan {
     opts: { name: string; baseColumns: Readonly<Record<string, PgColumn>> },
   ): SQL;
   /**
+   * Register an AGGREGATE: a grouped value whose SQL (`sql`) reads a CTE's or
+   * a rollup's output by name, which no column walk can see. Its provenance is
+   * declared instead — `reads`, the columns it is computed from, rendered
+   * through this plan — and every walk (`columnsIn`, so a tuple's routes and
+   * gates, and an expression over it) descends into `reads` in place of its
+   * SQL. Returns `(<sql>)`, decoded by `decoder`, registered by identity like
+   * an expression: `canBeNull` is `nullable` — or true through a LEFT join
+   * over `relation` (`outer`) — `sqlTypeOf` its `sqlType`, `nameOf` its
+   * `name`, and `isComputed` holds.
+   *
+   * Rendered once per plan per (`relation`, `name`), like `renderExpr` per
+   * field: a second call returns the SAME object (its identity is what memos
+   * of renderings key on), and throws if its SQL, `reads` (by identity),
+   * `nullable`, `sqlType` or `decoder` differ from the first's.
+   *
+   * Throws on an `sqlType` outside `SQL_TYPE_RE`, a `relation` that is neither
+   * the base nor a declared join, a relation `reads` names that is neither,
+   * and on `reads` that resolve to no relation column at all — a value no route
+   * could reach, so a change to what it aggregates would leave it silently
+   * stale (C7 of research/2026-10-06-global-scoped-change-routing-p8-v3.md).
+   */
+  renderAggregate(
+    sql: SQL,
+    opts: {
+      name: string;
+      relation: string;
+      reads: readonly ReadColumn[];
+      nullable: boolean;
+      sqlType: string;
+      decoder: ExprDecoder;
+    },
+  ): SQL;
+  /**
    * Whether a rendered column can read NULL: a nullable column, or one a LEFT
    * join (its own or an ancestor's) may leave NULL — never a defaulted
-   * extension column, which reads its default instead.
+   * extension column, which reads its default instead. An expression answers
+   * its declared nullability; an aggregate its declared one, or true when its
+   * `relation` sits behind a LEFT join — and throws, naming the aggregate,
+   * when that relation is not one this plan declares (an aggregate another
+   * plan registered).
    */
   canBeNull(col: ReadColumn): boolean;
-  /** Every (relation, column) a SQL fragment, a column, or a projection reads. */
-  columnsIn(fragment: unknown): RelationColumn[];
+  /**
+   * Every (relation, column) a SQL fragment, a column, or a projection reads.
+   * An aggregate is read through its declared `reads`; with `{ direct: true }`
+   * it is skipped instead — what the fragment reads OUTSIDE every aggregate.
+   */
+  columnsIn(fragment: unknown, opts?: { direct?: boolean }): RelationColumn[];
+  /**
+   * Whether a relation is a GROUPED one (the `all` compiler's children /
+   * closure internals — `compileAllJoins`' `grouped`): read only through the
+   * aggregates its grouped CTE computes, never joined row-wise.
+   */
+  isGrouped(relation: string): boolean;
   /** The relations a fragment reads (see `columnsIn`), the base included. */
   relationsIn(fragment: unknown): Set<string>;
   /** The joins among `seeds`, plus every join they hang off. */
@@ -190,6 +290,19 @@ export interface JoinPlan {
   apply<Row>(q: QueryStep<Row>, included: ReadonlySet<string>): QueryStep<Row>;
   /** Every (relation, column) the join conditions read. */
   readonly conditionColumns: readonly RelationColumn[];
+  /**
+   * The ids of the routes a declared join is reached by (`joinRoutes`) — what
+   * a tuple reading the join names in its `usesOf`: the alias itself for a
+   * window join; one `<alias>[<source>]` per source for a rollup, which no
+   * route may name (A1). Throws for an alias no declared join has.
+   */
+  routeIdsOf(alias: string): readonly string[];
+  /**
+   * The derived tables the joins read beside their route tables (a rollup's
+   * table, with the sources its routes name) — the plan's
+   * `RoutePlanInput.derivedReads`. Empty unless a rollup is joined.
+   */
+  readonly derivedReads: readonly DerivedRead[];
   /** The join families this plan may render members of. */
   readonly families: readonly JoinFamily[];
   /**
@@ -309,6 +422,14 @@ export function projectedField(
  * identity column (a keyed window / point), or undefined for a non-keyed
  * grouping — whose routes are all `full`, so no join maps to host ids.
  * Every misuse throws here, at module eval.
+ *
+ * A window, a `:rows` point read, a `:groups` grouping and a union arm read
+ * `JoinSpec` only (C9 / D24 / A24 of
+ * research/2026-10-06-global-scoped-change-routing-p8-v3.md). A rollup,
+ * children or closure join — `AllJoinSpec`'s own kinds — is a tsc error here,
+ * and refused at runtime for a caller a cast let through: a grouping would mint
+ * a `full` route naming the rollup table (A1 would refuse it at boot), and a
+ * children / closure join has no row-wise rendering at all.
  */
 export function compileJoins(
   base: RoutedBase,
@@ -316,6 +437,110 @@ export function compileJoins(
   hostPk: PgColumn | undefined,
   label: string,
   families: readonly JoinFamily[] = [],
+): JoinPlan {
+  for (const spec of specs as readonly { kind: string; alias: string }[]) {
+    if (ALL_ONLY_KINDS.has(spec.kind)) {
+      throw new Error(
+        `${label}: join "${spec.alias}" is a ${spec.kind} join, which only a collection declared \`all\` reads — a window, a :rows point read, a :groups grouping and a union arm take window joins (extension / lookup / keyed-side). Declare the collection with \`all\`, or read the table through a lookup (C9 / D24).`,
+      );
+    }
+  }
+  return compilePlan(base, specs, hostPk, label, families);
+}
+
+/**
+ * The `all` compiler's joins: the window kinds plus a top-level `rollup`
+ * (LEFT on the rollup's key, `on` a base column — its pk or any other — or an
+ * earlier join's, of the key's SQL type). A rollup's routes are its SOURCES'
+ * (`joinRoutes`), and its table is a derived read (`JoinPlan.derivedReads`).
+ * Keyed by `hostPk`, the collection's identity.
+ */
+export function compileAllJoins(
+  base: RoutedBase,
+  specs: readonly PlannedJoin[],
+  hostPk: PgColumn,
+  label: string,
+  grouped: ReadonlyMap<string, PgTable> = new Map(),
+): JoinPlan {
+  return compilePlan(base, specs, hostPk, label, [], grouped);
+}
+
+/**
+ * A35: a rollup source's `via` hop is read at statement time by the maintain
+ * function, and again after commit by the source route's reverse probe. A
+ * write that moves or removes a hop row (`UPDATE attempts SET task_id`, an RI
+ * cascade deleting it) re-keys rollup rows the hop alone cannot name
+ * afterwards. Only a source ON the hop table re-aggregates (and routes) the old
+ * and the new keys, and only when it sees every such write:
+ *
+ * - its `carry` is the hop's `key` (and it has no `via` of its own), so the old
+ *   and new keys are what it carries;
+ * - the hop's `match` is in its pk ∪ carry ∪ reads, so a re-match (`UPDATE …
+ *   SET attempt_id`) passes both the maintain function's diff and the route's
+ *   column gate;
+ * - its `ops` include `update` and `delete`, the two statements that re-key.
+ *
+ * `refuse` is called with the first thing a hop is missing, and must throw. Takes the compiled sources (not a `JoinSpec`) so every compile that
+ * reads a rollup — and, once every production rollup satisfies it,
+ * `defineRollup` itself — can run the one check.
+ */
+export function assertHopsCovered(
+  sources: readonly CompiledRollupSource[],
+  refuse: (problem: string) => never,
+): void {
+  for (const src of sources) {
+    const via = src.via;
+    if (via === undefined) continue;
+    const hop = sources.find((s) => s.table === via.table);
+    const add = `Add "${via.table}" as a source with \`carry: ${via.table}.${via.key}\``;
+    const head = `source "${src.table}" is resolved through the hop table "${via.table}"`;
+    if (hop === undefined) {
+      return refuse(
+        `${head}, which is not a source of the rollup — a write that moves or deletes a "${via.table}" row would re-key rollup rows no route reaches. ${add}`,
+      );
+    }
+    if (hop.carry !== via.key || hop.via !== undefined) {
+      refuse(
+        `${head}, whose source does not carry the hop key "${via.key}" directly — a write that moves a "${via.table}" row would re-aggregate neither its old nor its new key. Set its \`carry: ${via.table}.${via.key}\` with no \`via\``,
+      );
+    }
+    if (
+      !hop.pk.includes(via.match) &&
+      hop.carry !== via.match &&
+      !hop.reads.includes(via.match)
+    ) {
+      refuse(
+        `${head}, whose source neither keys on nor reads the hop match "${via.match}" — an UPDATE of "${via.table}.${via.match}" would pass the maintain function's diff and the route's column gate unseen. Add "${via.table}.${via.match}" to its \`reads\``,
+      );
+    }
+    const missing = (["update", "delete"] as const).filter(
+      (op) => !hop.ops.includes(op),
+    );
+    if (missing.length > 0) {
+      refuse(
+        `${head}, whose source fires on no ${missing.map((op) => `"${op}"`).join(" or ")} — a statement that re-keys a "${via.table}" row would get no trigger. Add ${missing.map((op) => `"${op}"`).join(" and ")} to its \`ops\` (or drop \`ops\` for all three)`,
+      );
+    }
+  }
+}
+
+/**
+ * `grouped`: the `all` compiler's GROUPED relations (`./grouped`) — each
+ * internal relation of a children or closure join (`<a>`, `<a>__<r>`,
+ * `<a>__anc`, …), by name, with the table it is that table aliased as. They
+ * are not joined row-wise: a column of one is read only inside an aggregate
+ * (whose provenance names it), so this plan resolves such a column to its
+ * relation, never walks it as a join, and reads none of them through a LEFT
+ * join of its own (the grouped CTE's `ifNone` is what a host with no group
+ * row reads).
+ */
+function compilePlan(
+  base: RoutedBase,
+  specs: readonly PlannedJoin[],
+  hostPk: PgColumn | undefined,
+  label: string,
+  families: readonly JoinFamily[],
+  grouped: ReadonlyMap<string, PgTable> = new Map(),
 ): JoinPlan {
   const fail = (message: string): never => {
     throw new Error(`${label}: ${message}`);
@@ -359,10 +584,10 @@ export function compileJoins(
         `ColumnRef names relation "${ref.from}", which is neither the base nor a join declared before it — declare the join (A4).`,
       );
     }
-    const key = keyOf(join.spec.table, ref.col);
+    const key = keyOf(join.table, ref.col);
     if (key === undefined) {
       return fail(
-        `column "${ref.col.name}" is not a column of join "${ref.from}" (table "${getTableName(join.spec.table)}") (A4).`,
+        `column "${ref.col.name}" is not a column of join "${ref.from}" (table "${getTableName(join.table)}") (A4).`,
       );
     }
     const col = renderRaw(join, key);
@@ -391,7 +616,7 @@ export function compileJoins(
     const known = readExpressions.get(col);
     if (known === undefined) {
       return fail(
-        "a SQL expression is not one of this compile's rendered columns — render a ColumnRef (or an ExprField) through the plan.",
+        "a SQL expression is not one of this compile's rendered columns — render a ColumnRef (or an ExprField, or an aggregate) through the plan.",
       );
     }
     return known;
@@ -405,11 +630,17 @@ export function compileJoins(
         `expression field "${known.name}" reads no single column — read its relations off its SQL (relationsIn), not one column.`,
       );
     }
+    if (known.kind === "aggregate") {
+      return fail(
+        `aggregate "${known.name}" (of relation "${known.relation}") reads no single column — read its relations off its declared reads (relationsIn), not one column.`,
+      );
+    }
     return known.col;
   }
 
-  const isExpr = (col: ReadColumn): boolean =>
-    is(col, SQL) && expressionOf(col).kind === "expr";
+  // An expression or an aggregate: a read that stands for no one column.
+  const isComputed = (col: ReadColumn): boolean =>
+    is(col, SQL) && expressionOf(col).kind !== "column";
 
   const primaryOf = (table: PgTable): PgColumn | null => tablePrimary(table);
 
@@ -427,10 +658,20 @@ export function compileJoins(
       );
     }
     if (byAlias.has(alias)) fail(`duplicate join alias "${alias}".`);
-    const rendered = aliasTable(spec.table, alias) as PgTable;
+    // Before anything reads the spec's table: a children / closure join (a
+    // cast let through) has none to alias.
+    const kind = (spec as { kind: string }).kind;
+    if (!PLANNED_KINDS.has(kind)) {
+      fail(
+        `join "${alias}" is a ${kind} join, which a JoinPlan does not join row-wise — ${ALL_ONLY_KINDS.has(kind) ? "a children or closure join is rendered as a grouped CTE by the `all` compiler" : "an unknown join kind"}.`,
+      );
+    }
+    const table = spec.kind === "rollup" ? spec.rollup.handle : spec.table;
+    const rendered = aliasTable(table, alias) as PgTable;
     const pending: CompiledJoin = {
       spec,
       alias,
+      table,
       rendered,
       inner: spec.kind === "lookup" && spec.required,
       parent: null,
@@ -441,10 +682,10 @@ export function compileJoins(
     // below).
     byAlias.set(alias, pending);
     const own = (col: PgColumn, role: string): PgColumn => {
-      const key = keyOf(spec.table, col);
+      const key = keyOf(table, col);
       if (key === undefined) {
         return fail(
-          `join "${alias}": its ${role} "${col.name}" is not a column of table "${getTableName(spec.table)}" (A4).`,
+          `join "${alias}": its ${role} "${col.name}" is not a column of table "${getTableName(table)}" (A4).`,
         );
       }
       return renderRaw(pending, key);
@@ -492,8 +733,59 @@ export function compileJoins(
       case "keyed-side":
         pending.on = keyedSideOn(spec, own);
         break;
+      case "rollup": {
+        // N:1 on the rollup's key, LEFT (a host with no rollup row reads its
+        // columns NULL). `on` is checked like a lookup's: the base or an
+        // EARLIER join, never the join itself.
+        if (spec.on.from !== BASE_RELATION && !byAlias.has(spec.on.from)) {
+          fail(
+            `rollup join "${alias}": its \`on\` names "${spec.on.from}", which is not the base or a join declared before it (A4).`,
+          );
+        }
+        if (spec.on.from === alias) {
+          fail(
+            `rollup join "${alias}": its \`on\` names the join itself (A4).`,
+          );
+        }
+        const keyColumn = (
+          Object.values(getTableColumns(table)) as PgColumn[]
+        ).find((c) => c.name === spec.rollup.key);
+        if (keyColumn === undefined) {
+          return fail(
+            `rollup join "${alias}": rollup "${spec.rollup.table}" has no key column "${spec.rollup.key}" on its handle.`,
+          );
+        }
+        const on = rawRender(spec.on);
+        // The probe that resolves a source's changed keys to hosts compares
+        // them against `on` in the key's type — a mismatch would also make
+        // the join itself an implicit cast.
+        if (on.getSQLType() !== keyColumn.getSQLType()) {
+          fail(
+            `rollup join "${alias}": its \`on\` "${on.name}" is ${on.getSQLType()}, but rollup "${spec.rollup.table}"'s key "${keyColumn.name}" is ${keyColumn.getSQLType()} — join on a column of the key's type (A4).`,
+          );
+        }
+        assertHopsCovered(spec.rollup.sources, (problem) =>
+          fail(
+            `rollup join "${alias}": rollup "${spec.rollup.table}"'s ${problem} (A35).`,
+          ),
+        );
+        pending.parent = spec.on.from === BASE_RELATION ? null : spec.on.from;
+        pending.on = eq(own(keyColumn, "key"), on);
+        break;
+      }
+      default:
+        // Unreachable: `PLANNED_KINDS` refused every other kind above.
+        return fail(`join "${alias}" has an unplanned kind "${kind}".`);
     }
     joins.push(pending);
+  }
+
+  for (const name of grouped.keys()) {
+    if (name === BASE_RELATION || name === baseName || byAlias.has(name)) {
+      fail(
+        `the grouped relation "${name}" collides with the base or a join alias — every relation the SQL reads is named once.`,
+      );
+    }
   }
 
   // The host key a keyed side stores is compared as the side column's type
@@ -586,6 +878,7 @@ export function compileJoins(
     const join: CompiledJoin = {
       spec,
       alias,
+      table: spec.table,
       rendered,
       inner: false,
       parent: null,
@@ -624,13 +917,17 @@ export function compileJoins(
     const name = getTableName(col.table);
     const isAlias = isJoinedColumn(col);
     if (!isAlias && name === baseName) return BASE_RELATION;
-    if (isAlias && joinOfAlias(name)) return name;
+    if (isAlias && (grouped.has(name) || joinOfAlias(name))) return name;
     return fail(
       `the query reads relation "${name}" (column "${col.name}"), which is neither the base table "${baseName}" nor a declared join — declare it as a join, so the table is routed.`,
     );
   };
 
-  const columnsIn = (fragment: unknown): RelationColumn[] => {
+  const columnsIn = (
+    fragment: unknown,
+    opts?: { direct?: boolean },
+  ): RelationColumn[] => {
+    const direct = opts?.direct === true;
     const out: RelationColumn[] = [];
     // Guarded against revisits: a leaf chunk's `getSQL()` wraps itself.
     const seen = new Set<object>();
@@ -649,6 +946,13 @@ export function compileJoins(
         return;
       }
       if (is(x, SQL)) {
+        // An aggregate's SQL names a CTE or a rollup output — read its
+        // declared provenance instead.
+        const known = readExpressions.get(x as SQL);
+        if (known?.kind === "aggregate") {
+          if (!direct) walk(known.reads);
+          return;
+        }
         for (const c of (x as SQL).queryChunks) walk(c);
         return;
       }
@@ -664,7 +968,7 @@ export function compileJoins(
       }
       if (is(x, Table)) {
         const name = getTableName(x as Table);
-        if (name !== baseName && !joinOfAlias(name)) {
+        if (name !== baseName && !grouped.has(name) && !joinOfAlias(name)) {
           fail(
             `the query reads table "${name}", which is neither the base table "${baseName}" nor a declared join — declare it as a join, so the table is routed.`,
           );
@@ -697,25 +1001,40 @@ export function compileJoins(
   const nameOf = (col: ReadColumn): string => {
     if (is(col, SQL)) {
       const known = expressionOf(col);
-      return known.kind === "expr" ? known.name : known.col.name;
+      return known.kind === "column" ? known.col.name : known.name;
     }
     return (col as PgColumn).name;
   };
 
   const memberOf = (col: ReadColumn): string | undefined => {
-    if (isExpr(col)) return undefined;
+    if (isComputed(col)) return undefined;
     const relation = relationOf(col);
     return familyOf(relation) === undefined ? undefined : relation;
   };
 
-  const relationKey = (col: ReadColumn): string =>
-    isExpr(col) ? `expr:${nameOf(col)}` : relationOf(col);
+  const relationKey = (col: ReadColumn): string => {
+    if (!is(col, SQL)) return relationOf(col);
+    const known = expressionOf(col);
+    return known.kind === "column"
+      ? relationOf(col)
+      : `${known.kind}:${known.name}`;
+  };
 
   // ── ExprField: rendered once per plan ─────────────────────────────────────
   // Whether a fragment is exactly ONE column read (through any wrapping that
   // adds nothing: blank text, a ref, a plain `sql\`${col}\``).
   const bareColumn = (x: unknown): boolean => {
     if (is(x, Column)) return true;
+    // A leaf chunk is never a column — and its `getSQL()` wraps itself, so
+    // following it would recurse forever (a tail call: no stack overflow).
+    if (
+      is(x, StringChunk) ||
+      is(x, Param) ||
+      is(x, Name) ||
+      is(x, Placeholder)
+    ) {
+      return false;
+    }
     if (is(x, SQL)) {
       if (readExpressions.get(x as SQL)?.kind === "column") return true;
       const chunks = (x as SQL).queryChunks.filter(
@@ -776,16 +1095,21 @@ export function compileJoins(
           ...field.serverOnly.map((c) => c.name),
         ]);
       }
-      const spec = specs.find((j) => j.alias === relation);
-      if (spec === undefined) return new Set();
+      const join = byAlias.get(relation);
+      if (join === undefined) return new Set();
+      // A rollup's handle carries no server-only column: all of it is wire.
+      const wire =
+        join.spec.kind === "rollup" ? undefined : join.spec.wireColumns;
       return new Set(
         Object.values(
-          spec.wireColumns ??
-            (getTableColumns(spec.table) as Record<string, PgColumn>),
+          wire ?? (getTableColumns(join.table) as Record<string, PgColumn>),
         ).map((c) => c.name),
       );
     };
     for (const [relation, column] of columnsIn(rendered)) {
+      // A grouped relation's column reaches the expression only through an
+      // aggregate (its declared provenance): never the wire itself.
+      if (grouped.has(relation)) continue;
       if (!wireOf(relation).has(column)) {
         fail(
           `${where} reads "${relation}"."${column}", which is not a wire column of that relation — a server-only base column is read only when declared in the expression's \`serverOnly\` (its value reaches the wire through the expression).`,
@@ -796,19 +1120,102 @@ export function compileJoins(
     return rendered;
   };
 
+  // ── Aggregates: provenance declared, not read off the SQL ────────────────
+  // The relation an aggregate belongs to must be one THIS plan declares — at
+  // registration, and again wherever a plan reads one another plan registered
+  // (the registry is module-level), so `outer` never walks an unknown alias.
+  const assertAggregateRelation = (name: string, relation: string): void => {
+    if (
+      relation !== BASE_RELATION &&
+      !grouped.has(relation) &&
+      joinOfAlias(relation) === undefined
+    ) {
+      fail(
+        `aggregate "${name}" belongs to relation "${relation}", which is neither the base nor a declared join.`,
+      );
+    }
+  };
+  // One rendering per (relation, name), like `renderExpr`'s per field: the
+  // result's identity is what memos of renderings key on (`arm-plan`'s
+  // expression ids, its order memo), so a second call — a per-params order
+  // resolving the same aggregate — must hand back the same object, never
+  // mint a fresh one. A re-registration that disagrees with the first is a
+  // bug, refused.
+  const renderedAggregates = new Map<
+    string,
+    {
+      rendered: SQL;
+      text: { sql: string; params: unknown[] };
+      opts: Parameters<JoinPlan["renderAggregate"]>[1];
+    }
+  >();
+  const renderAggregate: JoinPlan["renderAggregate"] = (fragment, opts) => {
+    const where = `aggregate "${opts.name}"`;
+    const cacheKey = `${opts.relation}\u0000${opts.name}`;
+    const text = new PgDialect().sqlToQuery(fragment);
+    const cached = renderedAggregates.get(cacheKey);
+    if (cached !== undefined) {
+      const was = cached.opts;
+      const same =
+        cached.text.sql === text.sql &&
+        cached.text.params.length === text.params.length &&
+        cached.text.params.every((v, i) => Object.is(v, text.params[i])) &&
+        was.reads.length === opts.reads.length &&
+        was.reads.every((r, i) => r === opts.reads[i]) &&
+        was.nullable === opts.nullable &&
+        was.sqlType === opts.sqlType &&
+        was.decoder === opts.decoder;
+      if (!same) {
+        fail(
+          `${where} (of relation "${opts.relation}") is re-registered with a different SQL, reads, nullability, sqlType or decoder — one name is one aggregate per plan; render it once and reuse the result.`,
+        );
+      }
+      return cached.rendered;
+    }
+    if (!SQL_TYPE_RE.test(opts.sqlType)) {
+      fail(
+        `${where} declares sqlType "${opts.sqlType}", which is not a Postgres type name (${SQL_TYPE_RE.source}) — it is interpolated raw into casts.`,
+      );
+    }
+    assertAggregateRelation(opts.name, opts.relation);
+    // Walked before registering: a read naming an undeclared relation throws
+    // here, and reads that name no column at all are refused.
+    if (columnsIn(opts.reads).length === 0) {
+      fail(
+        `${where} declares reads that resolve to no relation column — no route would reach it, so a change to what it aggregates would leave it silently stale. Declare the columns it is computed from, rendered through the plan.`,
+      );
+    }
+    const rendered = sql`(${fragment})`.mapWith(opts.decoder);
+    readExpressions.set(rendered, {
+      kind: "aggregate",
+      name: opts.name,
+      relation: opts.relation,
+      reads: [...opts.reads],
+      nullable: opts.nullable,
+      sqlType: opts.sqlType,
+    });
+    renderedAggregates.set(cacheKey, { rendered, text, opts: { ...opts } });
+    return rendered;
+  };
+
   const closure = (seeds: Iterable<string>): Set<string> => {
     const out = new Set<string>();
     for (const seed of seeds) {
       let at: string | null = seed === BASE_RELATION ? null : seed;
       while (at !== null && !out.has(at)) {
         out.add(at);
-        at = joinOfAlias(at)!.parent;
+        // A grouped relation hangs off nothing row-wise: its CTE is joined
+        // on the host's identity.
+        at = grouped.has(at) ? null : joinOfAlias(at)!.parent;
       }
     }
     return out;
   };
 
   const outer = (relation: string): boolean => {
+    // A grouped relation is read only through an aggregate, whose `ifNone`
+    // (or its declared nullability) is what a host with no group row reads.
+    if (grouped.has(relation)) return false;
     let at: string | null = relation === BASE_RELATION ? null : relation;
     while (at !== null) {
       const join = joinOfAlias(at)!;
@@ -823,6 +1230,30 @@ export function compileJoins(
   // (`closure`), since a missing ancestor row drops the host.
 
   const conditionColumns = joins.flatMap((j) => columnsIn(j.on));
+
+  const routeIdsOf = (alias: string): readonly string[] => {
+    const join =
+      byAlias.get(alias) ??
+      fail(`routeIdsOf: no declared join has the alias "${alias}".`);
+    return join.spec.kind === "rollup"
+      ? join.spec.rollup.sources.map((s) => rollupRouteId(alias, s.table))
+      : [alias];
+  };
+
+  // Each rollup's table once, whatever the number of joins reading it — the
+  // same rollup is moved by the same sources however it is joined.
+  const derived = new Map<string, DerivedRead>();
+  for (const j of joins) {
+    if (j.spec.kind !== "rollup") continue;
+    const { rollup } = j.spec;
+    if (!derived.has(rollup.table)) {
+      derived.set(rollup.table, {
+        table: rollup.table,
+        sources: rollup.sources.map((s) => s.table),
+      });
+    }
+  }
+  const derivedReads = [...derived.values()];
 
   return {
     baseName,
@@ -841,22 +1272,34 @@ export function compileJoins(
       return {
         [BASE_RELATION]: rendered(BASE_RELATION, base.table),
         ...Object.fromEntries(
-          specs.map((j) => [j.alias, rendered(j.alias, j.table)]),
+          joins.map((j) => [j.alias, rendered(j.alias, j.table)]),
         ),
       };
     },
     relationOf,
     columnOf,
-    isExpr,
+    isComputed,
     nameOf,
     memberOf,
     relationKey,
     renderExpr,
-    canBeNull: (col) =>
-      is(col, SQL)
-        ? expressionOf(col).nullable
-        : !(col as PgColumn).notNull || outer(relationOf(col)),
+    renderAggregate,
+    canBeNull: (col) => {
+      if (!is(col, SQL)) {
+        return !(col as PgColumn).notNull || outer(relationOf(col));
+      }
+      const known = expressionOf(col);
+      // An aggregate belongs to a relation: through a LEFT join (its own or
+      // an ancestor's) a host with no joined row reads it NULL, whatever it
+      // declares — the rule a column read follows.
+      if (known.kind !== "aggregate") return known.nullable;
+      // Registered by any plan (module-level): its relation must be this
+      // plan's before `outer` walks it.
+      assertAggregateRelation(known.name, known.relation);
+      return known.nullable || outer(known.relation);
+    },
     columnsIn,
+    isGrouped: (relation) => grouped.has(relation),
     relationsIn,
     closure,
     outer,
@@ -884,6 +1327,8 @@ export function compileJoins(
       return out;
     },
     conditionColumns,
+    routeIdsOf,
+    derivedReads,
     families,
     readMember(familyId, member, read) {
       const family =
@@ -917,21 +1362,12 @@ export function compileJoins(
 // declaration's columns are not the table's own objects): a table-level
 // declaration (`primaryKey({ columns })`), else the inline `.primaryKey()`
 // columns.
-function primaryColumns(table: PgTable): PgColumn[] {
+export function primaryColumns(table: PgTable): PgColumn[] {
   const declared = getTableConfig(table).primaryKeys[0];
   if (declared) return declared.columns;
   return Object.values(
     getTableColumns(table) as Record<string, PgColumn>,
   ).filter((c) => c.primary);
-}
-
-/**
- * `col = ANY($1::<type>[])` over text values: ONE array param whatever the
- * count, each value cast back to the column's own type — so Postgres compares
- * the key it stored and the column's index serves the probe.
- */
-function anyOf(col: PgColumn, values: readonly string[]): SQL {
-  return sql`${col} = ANY(${sql.param([...values])}::${sql.raw(col.getSQLType())}[])`;
 }
 
 /** What a keyed compile's join routes are resolved against: the host and the plan. */
@@ -942,6 +1378,42 @@ export interface JoinRouteHost {
   pk: PgColumn;
   plan: JoinPlan;
   db: QueryDb;
+}
+
+/**
+ * The hosts a reverse probe resolves to: `SELECT DISTINCT <host pk> FROM
+ * <base> [the joins of \`chain\`] WHERE <probe> [AND <host pk> =
+ * ANY($within)] LIMIT cap + 1`, `"over-cap"` past the cap. `within` is cast
+ * under `withinPolicy` (see `InvalidIdPolicy`).
+ */
+async function probeHosts(
+  host: JoinRouteHost,
+  chain: ReadonlySet<string>,
+  probe: SQL,
+  within: ReadonlySet<string> | null,
+  withinPolicy: InvalidIdPolicy,
+  cap: number,
+): Promise<readonly string[] | "over-cap"> {
+  const { plan, db, pk, base } = host;
+  const rows = await plan
+    .apply(
+      db.selectDistinct<{ id: unknown }>({ id: pk }).from(base.table),
+      chain,
+    )
+    .where(
+      within === null
+        ? probe
+        : and(probe, anyOf(pk, [...within], { invalid: withinPolicy }))!,
+    )
+    .limit(cap + 1);
+  return rows.length > cap ? "over-cap" : rows.map((r) => String(r.id));
+}
+
+/** The joins a probe through `on` reads: the relation `on` belongs to and its ancestors. */
+function chainOf(plan: JoinPlan, on: ColumnRef): Set<string> {
+  return on.from === BASE_RELATION
+    ? new Set<string>()
+    : plan.closure([on.from]);
 }
 
 /**
@@ -970,16 +1442,12 @@ function reverseMap(
   if (spec.kind !== "lookup") {
     throw new Error(`reverseMap: join "${join.alias}" is not a lookup`);
   }
-  const { plan, db, pk, base } = host;
+  const { plan } = host;
   const table = getTableName(spec.table);
-  // The joins the probe reads: the relation `on` belongs to and its ancestors.
-  const chain =
-    spec.on.from === BASE_RELATION
-      ? new Set<string>()
-      : plan.closure([spec.on.from]);
+  const chain = chainOf(plan, spec.on);
   for (const alias of chain) {
     const hop = plan.joins.find((j) => j.alias === alias)!;
-    if (getTableName(hop.spec.table) === table) {
+    if (getTableName(hop.table) === table) {
       return {
         kind: "full",
         reason: `pre-image needed: lookup "${join.alias}" is reached through "${alias}", a join over the changed table "${table}" itself — resolved after commit, the probe would read the rows that changed (A10)`,
@@ -997,26 +1465,35 @@ function reverseMap(
       if (changed.length === 0 || (within !== null && within.size === 0)) {
         return [];
       }
-      const probe = anyOf(on, changed);
-      const rows = await plan
-        .apply(
-          db.selectDistinct<{ id: unknown }>({ id: pk }).from(base.table),
-          chain,
-        )
-        .where(within === null ? probe : and(probe, anyOf(pk, [...within]))!)
-        .limit(cap + 1);
-      return rows.length > cap ? "over-cap" : rows.map((r) => String(r.id));
+      // `changed` is vouched for — a change's own keys, so a bad one is a
+      // broken invariant and throws. `within` is NOT always: for a point
+      // reader it is the client's own `:rows` id set (the runtime's
+      // `reverseWithin`; a union decodes it straight to raw arm ids), so a key
+      // the pk type cannot hold (`uuidarm:x`) fails this probe with an
+      // invalid-input error and every bounded reader of the entry goes FULL.
+      // `"absent"` is the right policy for `within` (it only bounds the
+      // answer); it changes the uuid arm's probe SQL in the union snapshot, so
+      // it lands as its own step with a regenerated, reviewed fixture — step
+      // 16b.1a of research/2026-10-06-global-scoped-change-routing-p8-v3.md.
+      return probeHosts(
+        host,
+        chain,
+        anyOf(on, changed, { invalid: "throws" }),
+        within,
+        "throws",
+        cap,
+      );
     },
   };
 }
 
-/** The route of one join, for a keyed (routed) compile — see `JoinSpec`. */
-export function joinRoute(
+/** The route of one window join, for a keyed (routed) compile — see `JoinSpec`. */
+function joinRoute(
   join: CompiledJoin,
+  spec: JoinSpec,
   host: JoinRouteHost,
   columns: readonly string[],
 ): RawRoute {
-  const spec = join.spec;
   const base = { id: join.alias, table: getTableName(spec.table), columns };
   switch (spec.kind) {
     case "extension":
@@ -1045,6 +1522,120 @@ export function joinRoute(
         ),
       };
   }
+}
+
+/**
+ * A rollup's route on one of its sources: `<alias>[<source table>]` — the
+ * rollup table itself is never routed (A1: it has no change-feed trigger).
+ */
+export function rollupRouteId(alias: string, sourceTable: string): string {
+  return `${alias}[${sourceTable}]`;
+}
+
+/**
+ * The route of one SOURCE of a rollup join (v2's route table, *rollup*): a
+ * write to the source re-aggregates the rollup rows its `carry` values name —
+ * through `via` when declared — so it reaches the hosts whose `on` reads one of
+ * those keys.
+ *
+ * - **Columns** (the `unchanged` gate): the source's pk, `carry` and `reads` —
+ *   exactly what its maintain function diffs, so a write the rollup ignores
+ *   (`waiting_for` on conversations) reaches no reader either.
+ * - **`on` = the host's own pk, no `via`:** the carried values ARE host ids,
+ *   so the map is an `alias` on `carry` (a source row I / U / D is a host U) —
+ *   on `change.ids` when `carry` is the source's single-column pk.
+ * - **Otherwise** a `reverse` map over the carried values, probed after commit
+ *   like a lookup's (`probeHosts`): `on = ANY($keys)`, the keys being the
+ *   values themselves or, with `via`, `SELECT key FROM via WHERE match =
+ *   ANY($values)`. The hop is read as the maintain function reads it, so the
+ *   probe resolves what the rollup re-aggregated: a write that moves or removes
+ *   the hop row resolves only its new keys in either, so the hop table must be
+ *   a source of its own whose `carry` is the hop's key — refused at compile
+ *   otherwise (A35, `compilePlan`). A hop or a chain join over the
+ *   CHANGED source table itself would read the post-image of the rows that
+ *   changed (A10): that route is `full`, with the reason.
+ *
+ * `within` is cast with `{ invalid: "absent" }`: it only bounds the answer, and
+ * for a point reader it is the client's own id set (16b.1a's policy).
+ */
+function rollupSourceRoute(
+  join: CompiledJoin,
+  spec: RollupJoin,
+  src: CompiledRollupSource,
+  host: JoinRouteHost,
+): RawRoute {
+  const { plan } = host;
+  const id = rollupRouteId(join.alias, src.table);
+  const columns = [...new Set([...src.pk, src.carry, ...src.reads])].sort();
+  const keyed =
+    src.pk.length === 1 && src.pk[0] === src.carry ? {} : { column: src.carry };
+  const route = { id, table: src.table, columns };
+  if (
+    src.via === undefined &&
+    spec.on.from === BASE_RELATION &&
+    spec.on.col === host.pk
+  ) {
+    return { ...route, map: { kind: "alias", ...keyed } };
+  }
+  const chain = chainOf(plan, spec.on);
+  const preImage = (through: string): RawRoute => ({
+    ...route,
+    map: {
+      kind: "full",
+      reason: `pre-image needed: rollup "${join.alias}"'s source "${src.table}" is resolved through ${through}, which reads the changed table "${src.table}" itself — resolved after commit, the probe would read the rows that changed (A10)`,
+    },
+  });
+  if (src.via?.table === src.table) return preImage(`its own via hop`);
+  for (const alias of chain) {
+    const hop = plan.joins.find((j) => j.alias === alias)!;
+    if (getTableName(hop.table) === src.table) {
+      return preImage(`the join "${alias}"`);
+    }
+  }
+  const via = src.via;
+  return {
+    ...route,
+    map: {
+      kind: "reverse",
+      ...keyed,
+      resolve: async (changed, within, cap) => {
+        if (changed.length === 0 || (within !== null && within.size === 0)) {
+          return [];
+        }
+        const on = plan.columnOf(plan.render(spec.on));
+        // The carried values are vouched for (a change's own keys): a bad one
+        // fails the cast. `on` has the key's type (asserted at compile), and
+        // so has a carry with no `via`; a `via` match has the carry's.
+        const keys =
+          via === undefined
+            ? anyOf(on, changed, { invalid: "throws" })
+            : sql`${on} IN (SELECT ${sql.identifier(via.key)} FROM ${sql.identifier(via.table)} WHERE ${sql.identifier(via.match)} = ANY(${sql.param([...changed])}::${sql.raw(src.carryType)}[]))`;
+        return probeHosts(host, chain, keys, within, "absent", cap);
+      },
+    },
+  };
+}
+
+/**
+ * The routes of one declared join (C8 of
+ * research/2026-10-06-global-scoped-change-routing-p8-v3.md): one route for a
+ * window join (id = its alias, `columns` = what the SQL reads of it —
+ * `columnsOf(alias)`), one per SOURCE for a rollup (`rollupSourceRoute`; its
+ * gate is the rollup's own declaration, not the reader's SQL). A tuple reading
+ * the join names every id `JoinPlan.routeIdsOf(alias)` lists, in this order.
+ */
+export function joinRoutes(
+  join: CompiledJoin,
+  host: JoinRouteHost,
+  columnsOf: (relation: string) => readonly string[],
+): RawRoute[] {
+  const spec = join.spec;
+  if (spec.kind === "rollup") {
+    return spec.rollup.sources.map((src) =>
+      rollupSourceRoute(join, spec, src, host),
+    );
+  }
+  return [joinRoute(join, spec, host, columnsOf(join.alias))];
 }
 
 /**
@@ -1093,7 +1684,7 @@ export function routeColumnsOf(
   const tableOf = (relation: string): PgTable =>
     relation === BASE_RELATION
       ? base.table
-      : plan.joins.find((j) => j.alias === relation)!.spec.table;
+      : plan.joins.find((j) => j.alias === relation)!.table;
   const byRelation = new Map<string, Set<string>>();
   for (const [relation, column] of [...reads, ...plan.conditionColumns]) {
     let set = byRelation.get(relation);

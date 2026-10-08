@@ -210,6 +210,8 @@ function routed(opts: FixtureOpts = {}) {
           windowIdsCalls++;
           return w.members(p).map((r) => r.id);
         },
+        // The world's ORDER BY is (n, id); the routed alias states it.
+        orderSignatureOf: (r) => String((r as Row).n),
       },
       loader,
     });
@@ -895,6 +897,43 @@ describe("targets", () => {
     await settle();
     expect(f.loads).toEqual([{ params: {}, ids: "FULL" }]);
     expect(persisted).toEqual(["win"]);
+  });
+
+  test("a persisted routed alias floor-persists with its route tables as the A6 guard tables (C21) and its plan's definition", async () => {
+    const persists: Array<{
+      mode: string;
+      guard: readonly string[];
+      definition: string | null;
+      wm: string;
+    }> = [];
+    const f = routed({
+      kind: "alias",
+      runtime: {
+        shouldPersist: () => true,
+        persistWindowMs: 0,
+        captureWatermark: async () => "7",
+        persistSnapshot: async (_key, _pk, _value, wm, meta) => {
+          persists.push({
+            mode: meta.mode,
+            guard: meta.guardTables,
+            definition: meta.definition,
+            wm,
+          });
+        },
+      },
+    });
+    seed(f);
+    f.change("hosts", "U", { ids: ["h1"] });
+    await settle(); // no snapshot yet: FULL → replace
+    f.w.hosts.get("h1")!.n = 0.5;
+    f.change("hosts", "U", { ids: ["h1"] });
+    await settle();
+    await settle(); // the trailing window
+    expect(persists.map((p) => p.mode)).toEqual(["replace", "floor"]);
+    // Never an empty list: a floor persist's first INSERT is guarded too.
+    expect(persists[1]!.guard).toEqual(["hosts", "hosts_ext", "sources"]);
+    expect(persists[1]!.wm).toBe("7"); // the replace's flight floor = the base
+    expect(f.h.runtime.persistedDefinitions()).toEqual({});
   });
 
   test("point membership: every route's ids are intersected with the tuple's set; a reverse resolves within it", async () => {
@@ -1801,6 +1840,142 @@ describe("A8 — a routed loader reading a table no route names", () => {
   });
 });
 
+// --- A22: derived reads (a rollup the SQL reads, routed through its sources) -
+
+describe("A22 — a derived read is accepted when its sources are routed", () => {
+  const hostsRoute = {
+    id: "hosts",
+    table: "hosts",
+    map: { kind: "identity" as const },
+    columns: [],
+  };
+  const sourceRoute = {
+    id: "agg[events]",
+    table: "events",
+    map: { kind: "alias" as const, column: "host_id" },
+    columns: ["host_id", "id"],
+  };
+  const usesOf = () =>
+    new Map([
+      ["hosts", { role: "membership" as const }],
+      ["agg[events]", { role: "value" as const }],
+    ]);
+
+  function withDerived(capture: string[]) {
+    const reports: string[] = [];
+    const h = createHarness({
+      reportError: (ctx) => reports.push(ctx),
+      lastReadSet: () => capture,
+      strictRoutes: true,
+    });
+    h.runtime.defineResource(
+      {
+        key: "win",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
+      {
+        routes: mintRoutePlan({
+          routes: [hostsRoute, sourceRoute],
+          usesOf,
+          derivedReads: [{ table: "events_agg", sources: ["events"] }],
+        }),
+        membership: { kind: "point", idsOf: (p) => [p.id ?? ""] },
+        loader: (p) => [{ id: p.id ?? "", n: 1, tag: null, label: null }],
+      },
+    );
+    return { h, reports };
+  }
+
+  test("a capture of the derived table passes the drift guard (A8) under strictRoutes", async () => {
+    const d = withDerived(["hosts", "events_agg"]);
+    await d.h.subscribe("win", { id: "a" });
+    expect(d.h.frames.map((f) => f.kind)).toEqual(["sub-ack"]);
+    expect(d.reports).toEqual([]);
+  });
+
+  test("a table that is neither a route nor a derived read still fails", async () => {
+    const d = withDerived(["hosts", "events_agg", "other_agg"]);
+    await d.h.subscribe("win", { id: "a" });
+    expect(d.h.frames.map((f) => f.kind)).toEqual(["sub-error"]);
+  });
+
+  test("the derived table's sources lay out their triggers like any route; the derived table none", () => {
+    const d = withDerived([]);
+    expect(
+      d.h.runtime.routedTableRequirements().map((r) => [r.table, r.carry]),
+    ).toEqual([
+      ["events", ["host_id"]],
+      ["hosts", []],
+    ]);
+  });
+
+  test("mintRoutePlan refuses a derived read a route names (A1)", () => {
+    expect(() =>
+      mintRoutePlan({
+        routes: [hostsRoute, sourceRoute],
+        usesOf,
+        derivedReads: [{ table: "events", sources: ["hosts"] }],
+      }),
+    ).toThrow(/"events" is both a derived read and a route table .*\(A1\)/);
+  });
+
+  test("mintRoutePlan refuses a derived read whose source no route names (A22)", () => {
+    expect(() =>
+      mintRoutePlan({
+        routes: [hostsRoute],
+        usesOf,
+        derivedReads: [{ table: "events_agg", sources: ["events"] }],
+      }),
+    ).toThrow(
+      /derived read "events_agg" is moved by "events", which no route of the plan names .*\(A22\)/,
+    );
+  });
+
+  test("mintRoutePlan refuses a derived read with no source, or listed twice", () => {
+    expect(() =>
+      mintRoutePlan({
+        routes: [hostsRoute],
+        usesOf,
+        derivedReads: [{ table: "events_agg", sources: [] }],
+      }),
+    ).toThrow(/names no source/);
+    expect(() =>
+      mintRoutePlan({
+        routes: [hostsRoute, sourceRoute],
+        usesOf,
+        derivedReads: [
+          { table: "events_agg", sources: ["events"] },
+          { table: "events_agg", sources: ["events"] },
+        ],
+      }),
+    ).toThrow(/listed twice/);
+  });
+
+  test("an empty list mints no field; a reach plan cannot carry one (tsc)", () => {
+    const plan = mintRoutePlan({
+      routes: [hostsRoute],
+      usesOf,
+      derivedReads: [],
+    });
+    expect("derivedReads" in plan).toBe(false);
+    mintReachPlan({
+      routes: [
+        {
+          id: "base",
+          table: "hosts",
+          map: { kind: "full", reason: "r" },
+          columns: [],
+        },
+      ],
+      usesOf: () => new Map(),
+      // @ts-expect-error — a grouping joins no rollup (C9 / D24).
+      derivedReads: [{ table: "events_agg", sources: ["hosts"] }],
+    });
+  });
+});
+
 // --- recomputeOn: a routed entry's non-table input --------------------------
 
 describe("recomputeOn — a routed entry's compiled vocabulary moved", () => {
@@ -1986,5 +2161,139 @@ describe("change source", () => {
     expect(
       deltas(f.pushesOf(W3)).every((x) => (x.ackTx ?? []).length === 0),
     ).toBe(true);
+  });
+});
+
+// --- The L2 definition (A18) ---------------------------------------------------
+
+describe("the plan's definition (A18)", () => {
+  function aliasWith(definition: string | undefined, persist: boolean) {
+    const persists: Array<string | null> = [];
+    const h = createHarness({
+      shouldPersist: () => persist,
+      captureWatermark: async () => "3",
+      persistSnapshot: async (_k, _pk, _v, _w, meta) => {
+        persists.push(meta.definition);
+      },
+    });
+    h.runtime.defineResource(
+      {
+        key: "defd",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
+      {
+        routes: mintRoutePlan({
+          routes: [
+            {
+              id: "hosts",
+              table: "hosts",
+              map: { kind: "identity" },
+              columns: ["id", "n"],
+            },
+          ],
+          usesOf: () => new Map([["hosts", { role: "membership" as const }]]),
+          ...(definition !== undefined ? { definition } : {}),
+        }),
+        scopedMembership: {
+          orderOf: async () => [],
+          orderSignatureOf: (r) => String((r as Row).n),
+        },
+        loader: () => [],
+      },
+    );
+    return { h, persists };
+  }
+
+  test("a persisted routed entry's definition is listed and written by every persist", async () => {
+    const { h, persists } = aliasWith("sql-fingerprint-1", true);
+    expect(h.runtime.persistedDefinitions()).toEqual({
+      defd: "sql-fingerprint-1",
+    });
+    h.runtime.recomputeResource("defd");
+    await settle();
+    expect(persists).toEqual(["sql-fingerprint-1"]);
+  });
+
+  test("a DEFERRED routed entry carries its plan's definition once bound", async () => {
+    const persists: Array<string | null> = [];
+    const h = createHarness({
+      shouldPersist: () => true,
+      captureWatermark: async () => "3",
+      persistSnapshot: async (_k, _pk, _v, _w, meta) => {
+        persists.push(meta.definition);
+      },
+    });
+    h.runtime.defineDeferredResource(
+      {
+        key: "deferred-defd",
+        schema: rowsSchema,
+        keyed: { keyOf },
+        validateParams: () => {},
+      },
+      () => ({
+        routes: mintRoutePlan({
+          routes: [
+            {
+              id: "hosts",
+              table: "hosts",
+              map: { kind: "identity" },
+              columns: ["id", "n"],
+            },
+          ],
+          usesOf: () => new Map([["hosts", { role: "membership" as const }]]),
+          definition: "sql-fingerprint-deferred",
+        }),
+        scopedMembership: {
+          orderOf: async () => [],
+          orderSignatureOf: (r) => String((r as Row).n),
+        },
+        loader: () => [],
+      }),
+    );
+    h.runtime.bindDeferredResources();
+    expect(h.runtime.persistedDefinitions()).toEqual({
+      "deferred-defd": "sql-fingerprint-deferred",
+    });
+    h.runtime.recomputeResource("deferred-defd");
+    await settle();
+    expect(persists).toEqual(["sql-fingerprint-deferred"]);
+  });
+
+  test("an entry that is not persisted lists no definition", () => {
+    const { h } = aliasWith("sql-fingerprint-1", false);
+    expect(h.runtime.persistedDefinitions()).toEqual({});
+  });
+
+  test("a routed alias without orderSignatureOf throws (an untyped caller)", () => {
+    const h = createHarness();
+    expect(() =>
+      h.runtime.defineResource(
+        {
+          key: "nosig",
+          schema: rowsSchema,
+          keyed: { keyOf },
+          validateParams: () => {},
+        },
+        // The routed alias arm requires orderSignatureOf (tsc) — cast past it,
+        // as an untyped caller would.
+        {
+          routes: mintRoutePlan({
+            routes: [
+              {
+                id: "hosts",
+                table: "hosts",
+                map: { kind: "identity" },
+                columns: ["id"],
+              },
+            ],
+            usesOf: () => new Map(),
+          }),
+          scopedMembership: { orderOf: async () => [] },
+          loader: () => [],
+        } as never,
+      ),
+    ).toThrow(/requires orderSignatureOf/);
   });
 });

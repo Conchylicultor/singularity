@@ -10,7 +10,7 @@ export type ConversationChipProps = {
   /**
    * The conversation to name. Structural, like `ConversationItem`'s own prop —
    * a full `Conversation` row and the narrower `ConversationSummary` carried by
-   * `attemptsResource` both fit.
+   * the `attempts` set (`attemptRows`) both fit.
    */
   conv: ConversationItemConv;
 };

@@ -1,6 +1,7 @@
 import {
   createContext,
   createElement,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -12,6 +13,7 @@ import {
 import {
   QueryClient,
   QueryClientProvider,
+  hashKey,
   skipToken,
   useQueries,
   useQuery,
@@ -303,12 +305,33 @@ export interface UseResourceOptions<T, S> {
    * `select` read. Without it, the flip is silent (no re-render) when the
    * selected slice is identical across the initialData→first-real-data
    * boundary — harmless for point lookups, fatal for a gate (it can wedge as
-   * pending forever). With `gate: true`, the subscription stays un-scoped
-   * (full notifications) until the first authoritative value arrives — at most
-   * a couple of pushes — then narrows to the select-scoped subscription, so
-   * the steady-state re-render behavior is identical to plain `select`.
+   * pending forever). With `gate: true`, notifications stay un-scoped until
+   * the tuple's query holds a value, then narrow to the select-scoped ones,
+   * so the steady-state re-render behavior is identical to plain `select`.
+   * The latch is derived from the cache, so a tuple already cached (a boot
+   * hydration) is narrowed from its first render — one render, not two.
    */
   gate?: boolean;
+}
+
+/**
+ * A gated read whose selector is OPTIONAL (`UseResourceOptions.gate`). Without
+ * one, the read is the whole value with no `select` handed to React Query, so
+ * `data` IS the cached value — every observer of the tuple holds the same
+ * object (and, for an array, the same row objects), never a per-observer
+ * structurally-shared copy — while its notifications still narrow to
+ * data/error once the tuple holds a value: a push that leaves the cached value
+ * unchanged re-renders nothing, and the first value always renders.
+ *
+ * Its read is typed `ResourceResult<T | S>`: a selector that MAY be absent
+ * (`select: cond ? f : undefined`) may hand back the whole `T`, so the type
+ * never promises the slice. A selector that is always there is
+ * `UseResourceOptions` (`{ select, gate: true }` → `ResourceResult<S>`); with
+ * none at all, `S` defaults to `T`.
+ */
+export interface UseResourceGateOptions<T, S> {
+  gate: true;
+  select?: ((data: T) => S) | undefined;
 }
 
 /**
@@ -427,6 +450,55 @@ function reportTupleSettled(
   });
 }
 
+/** The subscription of a read with nothing to wait for: no cache listener. */
+const NO_CACHE_SUBSCRIPTION = (): (() => void) => () => {};
+
+/**
+ * Does the tuple's query hold a value — has its `dataUpdatedAt` left epoch 0
+ * (the placeholder, and an absent query, sit at 0)? The `gate` latch, derived
+ * from the query cache through `useSyncExternalStore` (an external store read
+ * in render, so the React Compiler cannot memoize it stale): it flips with the
+ * cache write that lands the value — re-rendering the read once, which is the
+ * flip the gate exists to guarantee — and starts true for a tuple the cache
+ * already holds (boot-hydrated, or another observer's), so such a read renders
+ * select-scoped from its first render.
+ *
+ * The cache listener exists ONLY while the latch is open: `QueryCache.notify`
+ * runs every listener on every cache event of any query (and each observer of
+ * a pushed tuple emits one), so a listener per settled gated read would make
+ * a push cost O(observers × gated reads). A read whose tuple already holds a
+ * value adds none, and an open read's listener removes itself with the event
+ * that lands the value. After that the read relies on its own observer: a
+ * reset that changes `data` re-renders the narrowed observer (and re-reads the
+ * snapshot), and the widened observer it then becomes re-renders on the next
+ * `dataUpdatedAt` change.
+ */
+function useTupleHasValue(
+  queryClient: QueryClient,
+  queryKey: unknown[],
+  enabled: boolean,
+): boolean {
+  const cache = queryClient.getQueryCache();
+  const queryHash = hashKey(queryKey);
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const holdsValue = (): boolean =>
+        (cache.get(queryHash)?.state.dataUpdatedAt ?? 0) !== 0;
+      if (!enabled || holdsValue()) return NO_CACHE_SUBSCRIPTION();
+      const unsubscribe = cache.subscribe((event) => {
+        if (event.query.queryHash !== queryHash) return;
+        if (holdsValue()) unsubscribe();
+        onChange();
+      });
+      return unsubscribe;
+    },
+    [cache, queryHash, enabled],
+  );
+  const snapshot = (): boolean =>
+    enabled && (cache.get(queryHash)?.state.dataUpdatedAt ?? 0) !== 0;
+  return useSyncExternalStore(subscribe, snapshot, snapshot);
+}
+
 /** A skipped read (`params === null`) has nothing to refetch. */
 const SKIPPED_REFETCH = (): Promise<void> => Promise.resolve();
 /** The second query-key element of a skipped read — never a params object. */
@@ -454,10 +526,19 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   params: P | undefined | null,
   options: UseResourceOptions<T, S>,
 ): ResourceResult<S>;
+export function useResource<
+  T,
+  S = T,
+  P extends ResourceParams = ResourceParams,
+>(
+  resource: ResourceDescriptor<T, P>,
+  params: P | undefined | null,
+  options: UseResourceGateOptions<T, S>,
+): ResourceResult<T | S>;
 export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   resource: ResourceDescriptor<T, P>,
   params?: P | null,
-  options?: UseResourceOptions<T, S>,
+  options?: UseResourceOptions<T, S> | UseResourceGateOptions<T, S>,
 ): ResourceResult<T | S> {
   const notifications = useContext(NotificationsContext);
   if (!notifications) {
@@ -490,17 +571,27 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     return () => notifications.unobserve(key, p, origin);
   }, [notifications, key, origin, schema, keyOf, skipped, p]);
 
-  // `gate`: keep the subscription un-scoped until this (key, params) has
-  // settled once, so the pending→settled flip is guaranteed to re-render (a
-  // select-scoped sub flips silently when the slice is identical across the
-  // boundary). Keyed by query key so a param change re-gates.
   // A skipped read's key is per resource key (never shared across descriptors,
   // whose options differ) and can never collide with a params tuple.
   const queryKey = skipped ? [key, SKIPPED_KEY] : queryKeyFor(key, p);
   const keyStr = JSON.stringify(queryKey);
-  const [settledKey, setSettledKey] = useState<string | null>(null);
-  const selectActive =
-    !skipped && select !== undefined && (!gate || settledKey === keyStr);
+  // `gate`: keep the notifications un-scoped until THIS tuple holds a value,
+  // so the pending→settled flip is guaranteed to re-render (a select-scoped
+  // observer flips silently when the slice is identical across the
+  // boundary). The latch is DERIVED from the query cache
+  // (`useTupleHasValue`), never held as state: a read whose tuple is already
+  // cached — boot-hydrated, or another observer's — narrows on its FIRST
+  // render, a params change re-gates exactly when the new tuple has no value
+  // yet, and no settle effect costs a render. Only the notifications are
+  // gated: the selector is applied on every render, so the slice is always
+  // the query's own (a selector switched off and on again would let React
+  // Query hand back the slice it memoized for the PREVIOUS tuple). A gated
+  // read with NO selector narrows the same way and hands back the cached
+  // value itself (`UseResourceGateOptions`).
+  const queryClient = useQueryClient();
+  const gating = !skipped && gate;
+  const tupleHasValue = useTupleHasValue(queryClient, queryKey, gating);
+  const narrowed = gate ? tupleHasValue : select !== undefined;
 
   // A skipped read sits on a per-key skip key with `skipToken`, so no refetch
   // path (a manual one, `refetchQueries`, the on-demand `enabled` default) can
@@ -514,27 +605,26 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     ...(tuple?.enabled ? { enabled: tuple.enabled } : {}),
     structuralSharing: dateAwareReplaceEqualDeep,
     ...(tuple?.gcTime !== undefined ? { gcTime: tuple.gcTime } : {}),
-    // With a selector, narrow re-renders to the selected slice: structural
-    // sharing keeps a deeply-equal slice's reference, and limiting
+    // With a selector (or a settled gate), narrow re-renders to the selected
+    // slice (the value): structural sharing keeps a deeply-equal one's
+    // reference, and limiting
     // notifyOnChangeProps to data/error stops the per-push `dataUpdatedAt`
     // bump (which fires on every push) from forcing a re-render. We still read
     // `q.dataUpdatedAt` below for `pending` — reading a prop does not re-enable
     // it once notifyOnChangeProps is an explicit list.
-    ...(selectActive
-      ? { select, notifyOnChangeProps: ["data", "error"] as const }
-      : {}),
+    ...(select !== undefined ? { select } : {}),
+    ...(narrowed ? { notifyOnChangeProps: ["data", "error"] as const } : {}),
   });
 
   // `hasValue` — a real value has landed at least once (`dataUpdatedAt` leaves
-  // epoch 0 only on a successful load). `settled` narrows it to "a trustworthy
-  // value now": loaded AND not errored. The internal branches below key off
-  // `hasValue`, not `settled`, so an error does not re-select `initialData`,
-  // re-prime, or re-time the mount→settle metric. A skipped read has neither.
+  // epoch 0 only on a successful load). The internal branches below key off
+  // it, not on "loaded and not errored", so an error does not re-select
+  // `initialData`, re-prime, or re-time the mount→settle metric. A skipped
+  // read has none.
   const hasValue = !skipped && q.dataUpdatedAt !== 0;
   // The one typed failure (memoized per raw error, so every observer of the
   // query shares one `ResourceError` identity).
   const error = skipped || q.error === null ? null : toResourceError(q.error);
-  const settled = hasValue && error === null;
 
   // Cold-start accelerator: if this resource mounts before the live-state
   // transport has EVER been ready (a cold deep-link — the notifications socket is
@@ -553,11 +643,6 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     primedKeyRef.current = keyStr;
     void notifications.primeFromHttp(key, p, origin);
   }, [hasValue, skipped, keyStr, notifications, key, origin, p]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- gate first-settle transition: a one-way latch deliberately held as state for a (key,params) pair; the unsettled→settled flip MUST cause a re-render so the notifyOnChangeProps select-narrowing takes effect next render — a ref would silently skip that re-render and break the gate; there is no external store to subscribe to and it cannot be derived in render
-    if (gate && settled && settledKey !== keyStr) setSettledKey(keyStr);
-  }, [gate, settled, settledKey, keyStr]);
 
   // Count this read as "still waiting for data" from mount until its first value
   // lands (the cleanup runs on the `hasValue` flip, on unmount, and on a key
@@ -579,16 +664,9 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     }
   }, [hasValue, notifications, key, p]);
 
-  // Gate transition render (settled, but the select-scoped sub not applied
-  // yet): apply the selector manually so callers always see the slice type.
-  // Keyed on `hasValue`, not `settled`: a transient error unsettles the read
-  // while `q.data` still holds the last authoritative value, and re-selecting
-  // `initialData` there would blank the slice.
-  const data = (
-    select !== undefined && !selectActive && hasValue
-      ? select(q.data as T)
-      : q.data
-  ) as T | S;
+  // The query applies the selector itself (above), so `q.data` is already the
+  // slice when one is passed.
+  const data = q.data as T | S;
   const refetchQuery = useEventCallback(() => q.refetch());
 
   // The result identity recomputes only on data/error (which decide the

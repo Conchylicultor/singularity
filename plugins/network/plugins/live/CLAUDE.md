@@ -35,14 +35,25 @@ useLive(eventSources, { where: or({ column: "status", op: "eq", operand: "error"
 useLive(eventSources, { groupBy: "status", where: { enabled: true } }); // values + counts
 useLive(eventSources, { ids: visibleIds });                           // point set
 useLiveRow(eventSources, sourceId);                                   // one row (a null id: not found)
+
+// the whole ordered set, for a set its readers need entire (see `all` below)
+export const graphNodes = liveCollection("graph.nodes", {
+  row: GraphNodeSchema,
+  id: "id",
+  all: { orderBy: [["createdAt", "asc"]], unbounded: { reason: "the graph view lays out every node" } },
+  preload: "boot",
+});
+useLive(graphNodes);                                                  // every row, in order
+useLive(graphNodes, { select: countNodes });                          // a slice of it (a stable selector)
 ```
 
 - **Declare.** The key is a positional string literal (the build scanners read it).
   One declaration mints three resources — `key` (window), `key:rows` (point) and
   `key:groups` (grouping) — and all three show in the docs. Bounded by
-  construction: `default.limit` and `maxLimit` are required, a grouping returns
-  at most the filter language's `LIST_MAX` (100) groups, and there is no
-  unbounded spelling. `row` is a zod object schema: its keys are what the server
+  construction: `default.limit` and `maxLimit` are required, and a grouping returns
+  at most the filter language's `LIST_MAX` (100) groups. The one unbounded
+  spelling is a separate form, `all` (below), which must state its
+  `unbounded: { reason }`. `row` is a zod object schema: its keys are what the server
   projects. `filterable` maps row fields to the filter language's DOMAIN
   constructors (`liveText(Schema)`, `liveNumber()`, `liveBoolean()`,
   `liveInstant()`, `liveStringArray()`); the domain must fit the row field's
@@ -64,11 +75,49 @@ useLiveRow(eventSources, sourceId);                                   // one row
   change to row R reaches only the tuples whose id set holds R. Prefer it to a
   param'd value over a one-row table (`oneRow` routing was rejected — see
   `research/2026-09-26-global-live-values-migration-contract.md` §10).
-- **Preload.** `preload: "boot"` (or `"boot-and-keep"`) is forwarded as is to
-  the WINDOW descriptor: the boot snapshot hydrates its default tuple
-  (`defaultParams`) before first paint and the owning plugin is pinned to the
-  eager tier; `"boot-and-keep"` also keeps the window's cache resident. `:rows`
-  and `:groups` are never preloaded — the server cannot know a tab's id sets or
+- **The whole ordered set — `all`.** Declared with `all: { orderBy,
+  unbounded: { reason } }` and no window field —
+  `liveCollection(key, { row, id, all, preload? })` — a collection holds EVERY
+  row, in `orderBy` (row fields; the id breaks ties), for a set small enough to
+  hold whole whose readers need all of it (the task tree, a graph). It mints
+  `key` — one param-less keyed resource (`AllQueryResourceContract`, minted by
+  the internal `allResourceDescriptor`: no window codec, no `defaultParams`, no
+  placeholder; any param is `contract-mismatch`; self-registered under `key`, so
+  boot hydration resolves it) — and `key:rows`; no `:groups`. **The params gate
+  is no skew signal for a param-less predecessor:** an older bundle that
+  subscribed the same key with `{}` (the legacy `tasks`, `task-categories`) passes
+  it, gets the new rows and parses them with ITS schema — a parse error, not a
+  `skew` verdict, unless the two wire rows are identical. Each step converting
+  such a key (P8 v3 steps 18–22) must prove the rows byte-compatible or give the
+  runtime a contract signal it compares on a `{}` subscription (see the plan's
+  *As landed → 16b.3*, C39 open item). `preload` reaches
+  `key`. Every window and union field is `never` beside it (T13; `all?: never`
+  on the other forms), and a stray one, an empty reason or order, an order field
+  that is not a row field (or is named twice) throws. It is
+  `LiveAllCollection<Row>` — with the lookup-only collection, one
+  `LiveNoWindowCollection<Row, Al>` whose `all` is `undefined` for a lookup — so
+  `useLiveRow` / `useLive(c, { ids })` take it and `serveCollection`'s
+  lookup arm does not (tsc, and a throw against a cast). It is served by
+  `serveCollection`'s `all` arm (*Serve* below) and read by `useLive(all[, {
+  select }])` (*Read* below); the join kinds it reads are query-resource's
+  `AllJoinSpec`.
+  - **C39 — the old-bundle check.** `server/testing`'s
+    `subscribeAsOldDescriptor({ key, schema }, { params?, build? })` answers
+    what a tab still running a bundle that declared a key with a param-less
+    legacy descriptor gets from the entry serving it now: `refused` (the
+    sub-error's `reason` and resource-protocol `verdict`), `parsed` (the
+    sub-ack's value under the OLD schema) or `parse-failed`. A key converted
+    to `all` under the same name passes the gate with `{}` and is parsed with
+    the old schema — so a converting step proves `parsed` with its old row
+    schema, or renames the key (`unknown-key`, `skew`). Its synthetic cases are
+    in `server/internal/serve-collection-all-oracle.test.ts`.
+- **Preload.** `preload: "boot"` (or `"boot-and-keep"`) pins the owning plugin
+  to the eager tier and hydrates one tuple before first paint. A window
+  collection forwards it as is to the WINDOW descriptor, and the boot snapshot
+  hydrates the default window (`defaultParams`). An `all` collection forwards it
+  to `key`, which has no `defaultParams`: the boot snapshot hydrates its one
+  param-less tuple `{}`. `"boot-and-keep"` also keeps that preloaded tuple's
+  cache resident. `:rows` and `:groups` are never preloaded — the server cannot know a tab's id sets or
   grouping queries at boot. Default `"none"`. The scanners read the flag through the resource
   vocabulary (`tooling/resource-vocabulary`: each factory names the field it
   spells its preload with, and each mint whether the flag reaches it).
@@ -162,6 +211,43 @@ useLiveRow(eventSources, sourceId);                                   // one row
     minted keys — for anything that must know every reader of the table) and
     `declare`. `compileCollection` is the same derivation without registering
     (for tests), and also returns the derived `select`.
+  - **The `all` arm** (`server/internal/serve-all.ts`; P8 v3 step 16b.6, C4).
+    `serveCollection(c, { from, joins?, columns?, where?, throttleMs? })` over a
+    collection declared `all` is checked FIRST — before the lookup-only branch,
+    which would otherwise serve it as `:rows` alone — and compiled by
+    query-resource's `compileAllCollection`: it registers the whole ordered set
+    (`key`, a routed `scopedMembership` alias: an insert is one refill and one
+    `orderOf`, a delete or where-flip an exit, an order-field move one
+    `orderOf`, any other write a one-row refill, and a persisted one keeps its
+    `{}` snapshot current with nobody subscribed) and `:rows`, returning
+    `ServedAllCollection` (`all`, `rows`, `keys: [key, key:rows]`, a two-entry
+    `declare`). Bound eagerly, never deferred. Fields bind like a window's —
+    by property name, or in `columns` over `j` (`AllJoinRefs`): a column ref,
+    an AGGREGATE of a children / closure join (`(j) => j.att.done`, its value
+    type the field's, `| null` unless declared not-null — tsc) or an `expr`
+    over either. A `jsonAgg` aggregate (its ref's form phantom is `json`) may
+    instead hold the field's JSON FORM (a `Date` as its ISO string,
+    recursively): it hands its elements back as the JSON the driver parsed,
+    never decoded — byte for byte what the wire makes of the decoded value —
+    and the client parses the field with the row schema either way
+    (`attempts`' `conversations`, P8 v3 step 20). A scalar `aggregate` (form
+    `decoded`) must hold exactly the field's type — its text form of a
+    `timestamptz` is Postgres's, not ISO (tsc). `joins` takes `AllJoinSpec` (the window kinds, rollups,
+    `childrenJoin`, `closureJoin`); `where` is static, over the base's and the
+    row-wise joins' raw columns (`AllWhereColumns`), never an aggregate;
+    `throttleMs` is the set's flush throttle (the runtime's `debounceMs`, C18).
+    Refused at module eval: a cast that makes it `contributed`, `columnScope`d
+    or a union (and contributed / scoped sets handed to `compileCollection`),
+    a field that may read NULL on a non-null field, a ref `j` never offered,
+    and a wire-encoded value (sql-column `withWire`, an `expr`'s `wire`) — an
+    `all` set is L2-persisted and its definition cannot read an encoder's
+    code. `compileCollection` takes it too (`AllCollectionSpecs`, nothing
+    registered). Tests: `serve-collection-all.test.ts` (both keys registered,
+    A28's runtime half — what each form registers is exactly what it minted —,
+    every refusal, the types) and `serve-collection-all-oracle.test.ts` (the
+    real feed, L2 hooks on: entrant, exit, where-flip, order move, value-only
+    and child writes, each with its exact loads and `orderOf` calls; the idle
+    `{}` snapshot and its floor persist; the C39 harness).
   - Hand-written loaders are out of scope for now — keep those on
     `windowQueryResource` / `defineResource`.
 - **Read — `useLive(c, query?)`.** The query's SHAPE picks the resource; there is
@@ -190,6 +276,24 @@ useLiveRow(eventSources, sourceId);                                   // one row
     grouped column out of it.
   - An `{ ids }` query reads the point sibling: `ResourceResult<Row[]>`, no
     paging fields.
+  - **A collection declared `all`** — `useLive(all)` → `ResourceResult<Row[]>`,
+    every row in the declared order; `useLive(all, { select })` →
+    `ResourceResult<S>` (`LiveAllSelect`). Both read straight through
+    `useResource` on the param-less tuple (the one boot hydrates) with no row
+    map. A plain read hands React Query no selector, so its `data` IS the
+    cached array: every observer shares it and its row objects (a per-snapshot
+    memo such as a `WeakMap` keyed on the array hits across observers), it
+    keeps its identity until a push changes the set, and a delta keeps every
+    row it does not change — a row an `order` delta moves included (live-state's
+    structural sharing keeps a reference the previous array held). Both are
+    one gated read (`gate: true`, with or without a `select`), so a push that
+    changes nothing they read re-renders nothing: the first value renders
+    whatever the slice, a `select` re-renders only when its slice changes, and
+    the derived latch makes a boot-hydrated read, plain or selected, render
+    once (live-state CLAUDE.md, *Slice selectors*). Pass a stable selector. The
+    overloads sit after the window and group ones; an id read of the set is
+    `useLive(all, { ids })` / `useLiveRow(all, id)` on `:rows`. Pinned by
+    `web/__tests__/use-live-all.test.tsx`.
   - Every query is identified by its canonical encoding, so inline object
     literals are fine. A list result (and its `loadMore`) keeps its identity
     until its rows, state or limit change, so a consumer may memoize on it.
@@ -449,7 +553,13 @@ true, filterable, sortable, default, maxLimit })`. Its id is the union row key
     collection. The DB oracle is `server/internal/serve-union-oracle.test.ts`
     (real triggers: arm-`where` flips, `pid` writes loading nothing, a lookup
     rename under and over the reverse cap, retention and cascade deletes,
-    raw ids containing `:`).
+    raw ids containing `:`). The byte pin is
+    `server/internal/compile-union-golden.test.ts`. It checks every shape's
+    SQL, routes and folded rows for a fixed four-arm union against
+    `server/testing/compile-union-golden.json`. Regenerate the fixture from
+    the code before a refactor, with
+    `./singularity run plugins/network/plugins/live/server/testing/gen-compile-union-golden.ts`
+    (query-resource's CLAUDE.md, *Bounded membership*).
 
 ## Values — `liveValue` / `serveValue` / `useLive(value)`
 
@@ -463,9 +573,9 @@ export const notificationsUnread = liveValue("notifications.unread", {
   schema: NotificationsUnreadSchema,     // z.object({ errors, warnings })
   preload: "boot",                       // "none" (default) | "boot" | "boot-and-keep"
 });
-export const taskDetail = liveValue("task-detail", {
-  schema: TaskDetailSchema,
-  params: ["id"],                        // → P = { id: string }
+export const pluginChanges = liveValue("review.plugin-changes", {
+  schema: PluginChangesSchema,
+  params: ["conversationId"],            // → P = { conversationId: string }
   // load: "on-demand",                  — opt out of push (slow loader; tabs refetch over HTTP)
 });
 export const configValues = liveValue("config-v2.values", {
@@ -490,8 +600,8 @@ export const configValuesServed = serveValue(configValues, {
 
 // web/ — read
 useLive(notificationsUnread);            // ResourceResult<T>
-useLive(taskDetail, { id });             // params required iff declared
-useLive(taskDetail, id === null ? null : { id });  // no subject yet: skipped, pending
+useLive(pluginChanges, { conversationId });  // params required iff declared
+useLive(pluginChanges, id === null ? null : { conversationId: id });  // no subject yet: skipped, pending
 ```
 
 - **Declare.** The key is a positional string literal (the scanners read it).
@@ -673,7 +783,10 @@ for a new reader of the two page resources.
 ## Internals
 
 - `core/` (browser-safe): `liveCollection(key, { row, id, filterable, sortable, default, maxLimit, preload? })`
-  (or `{ row, id }` alone — lookup-only, minting `` `${key}:rows` `` only)
+  (or `{ row, id }` alone — lookup-only, minting `` `${key}:rows` `` only; or
+  `{ row, id, all, preload? }` — the whole ordered set, minting `key` through
+  the internal `allResourceDescriptor` (`core/internal/window-descriptor.ts`) and
+  `` `${key}:rows` ``, no `:groups`)
   mints three resources from one declaration — `key` (window membership),
   `` `${key}:rows` `` (point membership) and `` `${key}:groups` `` (a plain push
   value; one wire schema for every column's values — any scalar or NULL — with
@@ -712,6 +825,9 @@ for a new reader of the two page resources.
   window stays byte-identical `{ limit: "100" }`.
 - Groups: `{ groupBy: string; limit: string; where?: string }` — `where` is the
   same encoding, present only when not the absent filter.
+- `all`: `{}` — the set has no query, so it has one tuple; any param is a
+  `contract-mismatch` (`ResourceContractError`). An `all` collection's `:rows`
+  takes the point params like any other.
 - Decode is STRICT for both: the filter through `decodeFilter` (throws unless
   exactly canonical), the rest by re-encoding — so one logical query can never
   name two subscriptions.
@@ -720,7 +836,7 @@ for a new reader of the two page resources.
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means, and useLiveScroll (a scroll collection read as live segments — bounded windows tiling the order by server-minted row-key cuts, grown, split, merged and collapsed so the rendered rows stay a gap-free prefix). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means, and useLiveScroll (a scroll collection read as live segments — bounded windows tiling the order by server-minted row-key cuts, grown, split, merged and collapsed so the rendered rows stay a gap-free prefix). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Uses:
     - `primitives/live-state.PagedResourceResult`
@@ -731,6 +847,7 @@ for a new reader of the two page resources.
     - `primitives/live-state.useResources`
     - `primitives/log-channels.clientLog`
   - Exports (types):
+    - `LiveAllSelect`
     - `LiveIdsQuery`
     - `LiveListResult`
     - `LiveRowResult`
@@ -743,11 +860,13 @@ for a new reader of the two page resources.
     - `useLiveRow`
     - `useLiveScroll`
 - Server:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/query-resource` ×17
-    - `database/sql-column` ×3
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/query-resource` ×20
+    - `database/sql-column` ×2
     - `network/live/filter.filterSql`
   - Exports (types):
+    - `AllCollectionSpecs`
+    - `AllWhereColumns`
     - `CollectionSource`
     - `CollectionSpecs`
     - `ColumnOverride`
@@ -756,7 +875,9 @@ for a new reader of the two page resources.
     - `LiveValueSource`
     - `LookupCollectionSpecs`
     - `ScopedMemberRead`
+    - `ServeAllCollectionOptions`
     - `ServeCollectionOptions`
+    - `ServedAllCollection`
     - `ServedCollection`
     - `ServedColumns`
     - `ServedExternalValue`
@@ -796,6 +917,9 @@ for a new reader of the two page resources.
     - `primitives/live-state.WindowSelector`
   - Exports (types):
     - `ContributedColumns`
+    - `LiveAllCollection`
+    - `LiveAllOrder`
+    - `LiveAllSpec`
     - `LiveArmColumnsHandle`
     - `LiveArms`
     - `LiveArmsCollection`
@@ -826,6 +950,8 @@ for a new reader of the two page resources.
     - `LiveGroupValue`
     - `LiveLookupCollection`
     - `LiveLookupSpec`
+    - `LiveNoWindowCollection`
+    - `LiveNoWindowSpec`
     - `LiveOrderBy`
     - `LiveParamValueSpec`
     - `LivePreload`
@@ -864,18 +990,18 @@ for a new reader of the two page resources.
     - `liveValue`
     - `scopedLiveColumns`
 - Cross-plugin:
-  - Imported by: 143 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 161 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×48
-    - `conversations` ×28
-    - `tasks` ×11
+    - `conversations` ×33
+    - `tasks` ×21
     - `infra` ×9
     - `debug` ×8
     - `build` ×6
     - `page` ×6
+    - `active-data` ×5
     - `primitives` ×5
     - `auth` ×3
     - `review` ×3
-    - `active-data` ×2
     - `config_v2` ×2
     - `release` ×2
     - `backup/runs-arm`
@@ -938,6 +1064,8 @@ for a new reader of the two page resources.
   - Server: `@plugins/network/plugins/live/server/testing`
     - `compileCollection` — Derive the specs for a collection — three, or just `rows` for a lookup-only one.
     - `compileUnion` — Derive a union collection's three server halves.
+    - `subscribeAsOldDescriptor` — Subscribe `old.key` on the server runtime as an old bundle's tab would — its own socket, `params` (default `{}`: a legacy param-less descriptor sent nothing), its `build` graph when given — and answer what that tab gets: the first `sub-ack` or `sub-error` for the tuple, the ack's value parsed with the OLD schema.
+    - Types: `OldDescriptor`, `OldSubscription`
 - Sub-plugins:
   - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql…
 

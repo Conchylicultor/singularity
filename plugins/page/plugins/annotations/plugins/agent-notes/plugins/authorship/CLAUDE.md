@@ -71,9 +71,9 @@ too: a chip that NAMES someone cannot stand in "nobody" for "unknown".
 `@plugins/page/`). Transient chrome, not a DataView — a handful of rows off a
 `size-5` glyph with no search/sort/filter to earn.
 
-`useConversationById` returns `null` both while its fetch for an older
-conversation is in flight and when the conversation is genuinely gone, and those
-are **indistinguishable** from here. So an unresolved row falls back to the raw
+`useConversationById` returns `null` both while its by-id read loads and when
+the conversation is genuinely gone, and those are **indistinguishable** from
+here (`useConversation` tells them apart, if a surface ever needs to). So an unresolved row falls back to the raw
 id and stays clickable rather than claiming "deleted" for what is usually one
 frame of loading. Consequence: clicking a truly-deleted conversation opens a pane
 that spins forever — `ConversationView` has no not-found state, a pre-existing

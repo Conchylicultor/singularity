@@ -11,3 +11,7 @@ export {
   markResourceContractMismatch,
   resetResourceContractMismatches,
 } from "../resource-contract-store";
+// The keyed-delta merge the client applies to a `delta` frame, for a test that
+// drives a delta onto a cached tuple without a socket (`setQueryData` of its
+// result is exactly the client's write).
+export { mergeKeyedDelta } from "../keyed-delta-merge";

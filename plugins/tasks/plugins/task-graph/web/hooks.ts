@@ -1,10 +1,8 @@
 import { useMemo } from "react";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  foldResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
-import {
-  tasksResource,
+  taskRows,
   TaskGraph as TaskGraphValue,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
@@ -22,7 +20,7 @@ export interface TaskClosure {
  * something else entirely (it decides whether the section is painted at all).
  */
 export function useTaskClosure(taskId: string): TaskClosure | null {
-  const result = useResource(tasksResource);
+  const result = useLive(taskRows);
   return useMemo((): TaskClosure | null => {
     return foldResource(result, {
       loading: () => null,

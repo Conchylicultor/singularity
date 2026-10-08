@@ -263,6 +263,17 @@ Design: `research/2026-08-25-database-decoded-columns.md` (the column tier),
 `research/2026-08-26-database-decoded-jsonb-hand-written-columns.md` (the
 hand-written jsonb columns, where the rule closes).
 
+## Reading a column's schema back — `columnSchema`
+
+`columnSchema(col)` answers which schema a built `parsedText` / `parsedJson`
+column decodes through (`undefined` for any other column — drizzle's own
+decoder, the common case). Recorded the way `withWire` records its codec: the
+factory shadows `build` on the one builder it returns, so `.notNull()` /
+`.default()` chain as before. Its reader is query-resource's persisted-compile
+definition (A18): a change to the schema moves what a read of the column
+produces with its name and SQL type unmoved, so the definition folds the
+schema's description in.
+
 ## A column type's wire form — `withWire`
 
 A decoder answers "what does this column hold"; `withWire` answers a different
@@ -295,11 +306,11 @@ export const bytea = (name: string) =>
 
 - Description: Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
 - Cross-plugin:
-  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×5
+    - `infra` ×4
     - `conversations` ×3
     - `fields` ×3
-    - `infra` ×3
     - `debug` ×2
     - `backup`
     - `network/live`
@@ -310,10 +321,8 @@ export const bytea = (name: string) =>
     - `search/engine`
     - `shell/notifications`
     - `ui/theme-engine/saved-themes`
-- Exemptions:
-  - Exempts itself from: `sql-column/no-asserted-column-type` — `.` (sanctioned)
-  - Exempted by: `database/sql-column` (0 debt)
 - Server:
+  - DB schema: `plugins/database/plugins/sql-column/server/internal/column-schema.ts`
   - Exports (types):
     - `ColumnWire`
     - `SqlColumnDirection`
@@ -322,11 +331,15 @@ export const bytea = (name: string) =>
     - `WireCodec`
     - `WithWire`
   - Exports (values):
+    - `columnSchema`
     - `columnWireCodec`
     - `formatSqlColumnError`
     - `parsedJson`
     - `parsedText`
     - `withWire`
+- Exemptions:
+  - Exempts itself from: `sql-column/no-asserted-column-type` — `.` (sanctioned)
+  - Exempted by: `database/sql-column` (0 debt)
 - Test helpers:
   - Server: `@plugins/database/plugins/sql-column/server/testing`
     - `SqlColumnError` — A column value that disagrees with the schema the column decodes through.

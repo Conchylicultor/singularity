@@ -1,11 +1,4 @@
-import {
-  and,
-  Column,
-  is,
-  sql,
-  type DriverValueDecoder,
-  type SQL,
-} from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db as realDb } from "@plugins/database/server";
@@ -44,6 +37,14 @@ import {
   type GroupArmPlan,
 } from "./compile-groups";
 import { compileJoins, type JoinPlan, type ReadColumn } from "./joins";
+import {
+  allOf,
+  anyOf,
+  canonicalSqlType,
+  decoderOfRead,
+  fromSql,
+  nullOf,
+} from "./raw-sql";
 import {
   compiledReachPlan,
   compiledUnionRoutePlan,
@@ -194,35 +195,6 @@ export interface CompiledUnion<
   groups: CompiledGroups<{ value: unknown; count: number }, GP>;
 }
 
-// ── SQL types ───────────────────────────────────────────────────────────────
-
-/** Postgres's spellings of one type, folded to one (what `getSQLType()` and a cast may each say). */
-const TYPE_ALIASES: Readonly<Record<string, string>> = {
-  timestamptz: "timestamp with time zone",
-  timestamp: "timestamp without time zone",
-  int: "integer",
-  int4: "integer",
-  int8: "bigint",
-  int2: "smallint",
-  float8: "double precision",
-  float4: "real",
-  bool: "boolean",
-  varchar: "character varying",
-};
-
-/** A type name, canonical: lower case, single spaces, aliases folded. */
-export function canonicalSqlType(sqlType: string): string {
-  const t = sqlType.trim().toLowerCase().replace(/\s+/g, " ");
-  const array = t.endsWith("[]");
-  const base = array ? t.slice(0, -2) : t;
-  return (TYPE_ALIASES[base] ?? base) + (array ? "[]" : "");
-}
-
-/** `NULL::<type>` — the projection an arm without the column carries. */
-function nullOf(sqlType: string): SQL {
-  return sql.raw(`NULL::${sqlType}`);
-}
-
 // ── Arms ────────────────────────────────────────────────────────────────────
 
 interface OuterColumn {
@@ -271,54 +243,6 @@ function perParams<P extends object, T>(
     }
     return v as T;
   };
-}
-
-/** The decoder a rendered read carries: a column's own, or its expression's `.mapWith()`. */
-function decoderOfRead(read: ReadColumn): SqlDecoderLike {
-  if (is(read, Column)) return read as PgColumn;
-  // drizzle keeps `.mapWith()`'s decoder on the SQL object (a runtime field
-  // its typings do not declare); an unmapped expression's is the identity.
-  return (read as unknown as { decoder: DriverValueDecoder<unknown, unknown> })
-    .decoder;
-}
-
-/** `FROM <base> [joins]` — the joins a tuple includes, in declaration order. */
-function fromSql(arm: Arm, included: ReadonlySet<string>): SQL {
-  const parts: SQL[] = [sql`${arm.base.table}`];
-  for (const j of arm.plan.joins) {
-    if (!included.has(j.alias)) continue;
-    parts.push(
-      sql`${sql.raw(j.inner ? "INNER JOIN" : "LEFT JOIN")} ${j.spec.table} ${sql.identifier(j.alias)} ON ${j.on}`,
-    );
-  }
-  for (const alias of included) {
-    if (!arm.plan.joins.some((j) => j.alias === alias)) {
-      throw new Error(
-        `union arm "${arm.kind}": the tuple includes relation "${alias}", which no join declares (a union arm takes no join families).`,
-      );
-    }
-  }
-  return sql.join(parts, sql` `);
-}
-
-/**
- * `pk = ANY(<ids>)` — one array param, compared in the column's own type so
- * the pk index serves it. A raw id is text from a `kind:raw` key nothing
- * vouched for, so for a non-text pk (uuid, integer, …) an id that is not
- * valid input for that type is dropped in SQL (`pg_input_is_valid`) rather
- * than cast — a bad id is ABSENT, exactly like an unknown kind, never an
- * invalid-input error that fails the whole load.
- */
-function idsIn(pk: PgColumn, ids: readonly string[]): SQL {
-  const type = pk.getSQLType();
-  const param = sql`${sql.param([...ids])}::text[]`;
-  if (canonicalSqlType(type) === "text") return sql`${pk} = ANY(${param})`;
-  return sql`${pk} = ANY(ARRAY(SELECT x::${sql.raw(type)} FROM unnest(${param}) AS x WHERE pg_input_is_valid(x, ${type})))`;
-}
-
-function allOf(parts: readonly (SQL | undefined)[]): SQL | undefined {
-  const present = parts.filter((p): p is SQL => p !== undefined);
-  return present.length === 0 ? undefined : and(...present);
 }
 
 /**
@@ -643,7 +567,9 @@ export function compileUnionCollection<
     const where = allOf([
       t.where,
       cutWhere(arm, params),
-      "ids" in opts ? idsIn(arm.pk, opts.ids) : undefined,
+      "ids" in opts
+        ? anyOf(arm.pk, opts.ids, { invalid: "absent" })
+        : undefined,
     ]);
     const parts: SQL[] = [
       sql`SELECT ${sql.join(
@@ -652,7 +578,7 @@ export function compileUnionCollection<
         ),
         sql`, `,
       )}`,
-      sql`FROM ${fromSql(arm, t.included)}`,
+      sql`FROM ${fromSql(arm.base, arm.plan, t.included, `union arm "${arm.kind}"`)}`,
     ];
     if (where) parts.push(sql`WHERE ${where}`);
     if ("limit" in opts) {
@@ -812,13 +738,13 @@ export function compileUnionCollection<
     if (grouped.size === 0) return [];
     const selects = [...grouped].map(([arm, raw]) => {
       const t = arm.point.tuple(params);
-      const where = allOf([t.where, idsIn(arm.pk, raw)]);
+      const where = allOf([t.where, anyOf(arm.pk, raw, { invalid: "absent" })]);
       return sql`(SELECT ${sql.join(
         allColumns.map(
           (c) => sql`${arm.valueOf(c)} AS ${sql.identifier(c.alias)}`,
         ),
         sql`, `,
-      )} FROM ${fromSql(arm, t.included)} WHERE ${where})`;
+      )} FROM ${fromSql(arm.base, arm.plan, t.included, `union arm "${arm.kind}"`)} WHERE ${where})`;
     });
     const query = sql`SELECT u.* FROM (${sql.join(selects, sql` UNION ALL `)}) AS u`;
     const rows = await executeRows(db, {
@@ -862,7 +788,7 @@ export function compileUnionCollection<
         const t = arm.groups.tuple(params);
         const parts: SQL[] = [
           sql`SELECT ${arm.valueOf(col)} AS "value", count(*)::integer AS "count"`,
-          sql`FROM ${fromSql(arm, t.included)}`,
+          sql`FROM ${fromSql(arm.base, arm.plan, t.included, `union arm "${arm.kind}"`)}`,
         ];
         if (t.q.where) parts.push(sql`WHERE ${t.q.where}`);
         parts.push(sql`GROUP BY 1`);

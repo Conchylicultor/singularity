@@ -19,7 +19,7 @@
  * because it cannot read `tasks_v.status` without a cycle) — so both are asserted
  * here off one seeded graph.
  *
- * Headless: no server boot, no plugin registry. The view + rollup DDL is compiled
+ * Headless: no server boot, no plugin registry. The view + rollup DDL is installed
  * straight from the exported declarations, so the SQL under test is byte-identical
  * to what `rebuildDerivedViews` / `rebuildDerivedTables` install at boot.
  *
@@ -43,7 +43,8 @@ import {
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import { compileCreateView } from "@plugins/database/plugins/derived-views/core";
-import { attemptConvAggSpec, attemptPushAggSpec } from "./rollup-spec";
+import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
+import { attemptConvAgg, attemptPushAgg } from "./rollup-spec";
 import { eq } from "drizzle-orm";
 import { attempts, taskBlocking, tasks } from "./views";
 
@@ -75,12 +76,7 @@ beforeAll(async () => {
 
   // attempts_v LEFT JOINs the two trigger-maintained rollups; without them the
   // view compiles but every attempt reads as 'pending'.
-  for (const spec of [attemptConvAggSpec, attemptPushAggSpec]) {
-    await t.db.execute(sql.raw(spec.createDdl));
-    await t.db.execute(sql.raw(spec.functionDdl));
-    await t.db.execute(sql.raw(spec.triggerDdl));
-    await t.db.execute(sql.raw(spec.reconcileDdl));
-  }
+  await installRollups(t.db, [attemptConvAgg, attemptPushAgg]);
 
   // Dependency order: attempts_v → task_blocking_v → tasks_v.
   for (const [name, view] of [
@@ -355,6 +351,22 @@ describe("tasks_v — a running agent on a blocked task reports in_progress_bloc
     await seedConversation(attemptId, "waiting");
 
     expect((await taskStatus(dependent)).status).toBe("in_progress_blocked");
+  });
+
+  test("an unblocked task with a waiting agent is `need_action`, and back to `in_progress` once it works again", async () => {
+    // `need_action` is read off the rollup's `has_waiting_conv`, not
+    // `conversations.status` directly: the INSERT arm of the rollup trigger
+    // sets it, and the UPDATE arm must clear it.
+    const task = await seedTask();
+    const attemptId = await seedAttempt(task);
+    const convId = await seedConversation(attemptId, "waiting");
+
+    expect((await taskStatus(task)).status).toBe("need_action");
+
+    await t.db.execute(
+      sql`UPDATE conversations SET status = 'working' WHERE id = ${convId}`,
+    );
+    expect((await taskStatus(task)).status).toBe("in_progress");
   });
 
   test("resolving the prerequisite hands the running task back to in_progress", async () => {

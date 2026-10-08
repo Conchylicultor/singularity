@@ -8,6 +8,7 @@ import {
 import {
   mintReachPlan,
   mintRoutePlan,
+  type DerivedRead,
   type FullRoute,
   type HostMap,
   type ReachPlan,
@@ -129,12 +130,29 @@ export type RawHostMap =
 /** A route whose maps name raw host ids (see {@link RawHostMap}). */
 export type RawRoute = Omit<Route, "map"> & { map: RawHostMap };
 
-/** Mint a keyed compile's plan over its raw routes (one key space: the base table's own ids). */
+/**
+ * Mint a keyed compile's plan over its raw routes (one key space: the base
+ * table's own ids), with the derived tables (rollups) its SQL reads beside
+ * them — `routedReads`' `derivedReads`, minted only when non-empty, and
+ * checked by `mintRoutePlan` (A1, A22).
+ */
 export function compiledRoutePlan<P extends ResourceParams>(
   routes: readonly RawRoute[],
   usesOf: (params: P) => ReadonlyMap<string, TupleUse>,
+  derivedReads: readonly DerivedRead[] = [],
+  /**
+   * The L2 definition (A18) of a persisted compile — the `all` compiler's
+   * fingerprint (`./fingerprint`). Absent for every bounded compile, which is
+   * never persisted.
+   */
+  definition?: string,
 ): RoutePlan<P> {
-  return mintRoutePlan({ routes, usesOf });
+  return mintRoutePlan({
+    routes,
+    usesOf,
+    ...(derivedReads.length > 0 ? { derivedReads } : {}),
+    ...(definition !== undefined ? { definition } : {}),
+  });
 }
 
 /** One arm of a union compile, as its routes are minted: its kind and its raw routes. */

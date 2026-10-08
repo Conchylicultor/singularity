@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import {
+  dropPendingPersists,
   persistedKeys,
   recomputeResource,
   scopedResourceTables,
@@ -11,12 +12,11 @@ import { db } from "@plugins/database/server";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { initSnapshotSubsystem } from "./internal/boot-init";
-import {
-  readPersistedReadSets,
-  readPersistedSnapshots,
-  preloadedKeys,
-} from "./internal/persist";
-import { runCatchUp } from "./internal/catch-up";
+import { runBootCatchUp } from "./internal/boot-catch-up";
+import { healedRollups } from "./internal/healed-rollups";
+import { l2Expectation } from "./internal/expectation";
+import { liveStateCompactJob } from "./internal/compact";
+import { snapshotLog as log } from "./internal/log-sink";
 import { assertNoPersistedProducedReader } from "./internal/produced-guard";
 import { liveStateChangelogPruneJob } from "./internal/prune";
 import { openProducedPersistReports } from "./internal/produced-reports";
@@ -48,7 +48,7 @@ export type { ReadSetShrinkEvent } from "./internal/read-set-shrink-hook";
 
 export default {
   description:
-    "L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, with a bounded changelog catch-up that recomputes only the resources whose tables changed during downtime.",
+    "L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Two persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.",
   loadBearing: false,
   contributions: [
     // The snapshot is a cold-boot ACCELERATOR, not a correctness prerequisite —
@@ -71,7 +71,7 @@ export default {
         "Cold-boot accelerator computed from tables the fork empties; an inherited value would disagree with the rows behind it on first paint.",
     }),
   ],
-  register: [liveStateChangelogPruneJob],
+  register: [liveStateChangelogPruneJob, liveStateCompactJob],
   // Create the snapshot table and INJECT the persist hooks into the resource
   // runtime here — before the ready barrier flips and before any flush could try
   // to persist. The `onReadyBlocking` phase is graph-driven by `dependsOn`, and
@@ -87,10 +87,16 @@ export default {
   // handled EXPLICITLY inside `initSnapshotSubsystem` (catch + log + continue) — it
   // never throws, so a snapshot-table failure can't abort boot. See boot-init.ts.
   async onReadyBlocking() {
+    // A20: the boot schema layer — and with it every rollup's reconcile — has
+    // committed before L2 reads anything (`database` is a dependsOn edge, so
+    // its onReadyBlocking ran first); `healedRollups()` throws otherwise, a
+    // boot-order bug. A heal clears every persisted row here, before
+    // readiness flips.
+    const healed = healedRollups();
     // The tables an in-process change producer feeds (contributions are
     // collected before this barrier): volatile, so never L2-persisted (A6).
     const produced = producedTableNames();
-    await initSnapshotSubsystem(db, produced);
+    await initSnapshotSubsystem(db, produced, healed);
     // A6 (boot, static evidence): a key the runtime persists whose routes or
     // identity table name a produced table blocks boot. Outside the graceful
     // degradation above on purpose — it is a declaration bug, not a snapshot
@@ -103,46 +109,38 @@ export default {
     );
   },
   // Boot init + bounded catch-up, after the barrier (alongside change-feed's
-  // listener, which also starts in onReady).
+  // listener, which also starts in onReady) — `runBootCatchUp` holds the order
+  // (usable read, probe, backstop-first, then recompute / seed / replay).
   async onReady() {
-    // Force a FULL recompute of each boot-critical resource that has NO usable
-    // persisted read-set yet (first boot, newly-added resource, or the one-time
-    // migration of pre-existing snapshot rows): catch-up can't bound such a
-    // resource (no read-set to route by, possibly no snapshot floor). The
-    // recompute persists both its value AND its read-set for the next boot. On a
-    // steady-state deploy `needsInit` is empty → no forced recomputes. Boot-
-    // critical keys are read GENERICALLY from `Resource.Declare` (never by name).
-    const usable = await readPersistedReadSets(db);
-    const aliasKeys = new Set(unboundedWindowKeys());
-    const seedKeys: string[] = [];
-    for (const key of preloadedKeys()) {
-      if (!usable.get(key)?.length) {
-        recomputeResource(key);
-        continue;
-      }
-      if (aliasKeys.has(key)) seedKeys.push(key);
-    }
-
-    // Restore each persisted alias's in-memory diff base from its durable L2 value
-    // BEFORE catch-up, so the first post-boot change (and every downtime change the
-    // catch-up replays) is a scoped refill instead of a FULL O(collection) rebuild.
-    // All L2 rows are param-less ("{}"); jsonb comes back already parsed.
-    if (seedKeys.length > 0) {
-      const values = await readPersistedSnapshots(db, seedKeys);
-      for (const [key, value] of values)
-        seedPersistedSnapshot(key, "{}", value);
-    }
-
-    // ORDERING INVARIANT (gap-free boot): `runCatchUp()` MUST run AFTER the
+    const exp = l2Expectation();
+    // A degraded init installed no hooks, so nothing is persisted — and there
+    // is nothing to seed or catch up (catch-up exists for persisted values).
+    if (exp.persisted.length === 0) return;
+    // ORDERING INVARIANT (gap-free boot): the replay MUST run AFTER the
     // change-feed listener's LISTEN is established, so any commit landing after
-    // catch-up's `SELECT` produces a NOTIFY on the live path (double-handling is
+    // its `SELECT` produces a NOTIFY on the live path (double-handling is
     // harmless — catch-up is an idempotent recompute+diff). This holds
     // structurally: live-state-snapshot statically imports change-feed
     // (`routeChange`, table constants) → a dependsOn edge → its `onReady` fires
-    // after change-feed's `onReady` (which calls `startListener()`). Do NOT remove
-    // that import edge without re-establishing the ordering another way. See the
-    // plan's "Ordering invariant" section.
-    await runCatchUp(db);
+    // after change-feed's `onReady` (which calls `startListener()`). Do NOT
+    // remove that import edge without re-establishing the ordering another way.
+    await runBootCatchUp(db, exp, {
+      healedRollups: healedRollups(),
+      aliasKeys: unboundedWindowKeys(),
+      recompute: recomputeResource,
+      seed: (key, value, base) => seedPersistedSnapshot(key, "{}", value, base),
+    });
+  },
+  // Drop the armed trailing floor persists: their changes are in the
+  // changelog and each row's floor still predates them, so the next boot's
+  // catch-up replays them. Writing them here would race the pool's teardown.
+  onShutdown() {
+    const dropped = dropPendingPersists();
+    if (dropped > 0) {
+      log.publish(
+        `[live-state-snapshot] shutdown: dropped ${dropped} pending floor persist(s) — catch-up replays them`,
+      );
+    }
   },
   // The A6 reports (boot sweep, runtime refusal) are held until every plugin's
   // `onReady` ran: the reports plugin installs server-core's error reporter in

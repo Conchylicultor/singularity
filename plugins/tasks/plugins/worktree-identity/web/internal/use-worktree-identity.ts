@@ -1,12 +1,10 @@
 import { useCallback, useMemo } from "react";
-import {
-  foldResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  attemptsResource,
-  tasksResource,
+  attemptRows,
+  taskRows,
   type AttemptWithConversations,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
@@ -32,10 +30,11 @@ export function useWorktreePlace(): WorktreePlace {
  * The task this page's checkout is working on: the attempt whose worktree path
  * ends in the checkout, then that attempt's task.
  *
- * Both reads are `select`s over resources that are already resident (boot
+ * Both reads are `select`s over sets that are already resident (boot
  * critical), so this re-renders when THIS checkout's link changes, not on every
- * push to the global lists. `gate` keeps the pending → settled flip reliable,
- * since `pending` is an answer of its own here.
+ * push to the global lists. Each is a gated read (`useLive(all, { select })`),
+ * which keeps the pending → settled flip reliable, since `pending` is an
+ * answer of its own here.
  */
 export function useLinkedTask(place: WorktreePlace): LinkedTask {
   const checkout = place.kind === "worktree" ? place.checkout : null;
@@ -45,10 +44,8 @@ export function useLinkedTask(place: WorktreePlace): LinkedTask {
       checkout === null ? null : linkedTaskIdOf(attempts, checkout),
     [checkout],
   );
-  const attempt = useResource(attemptsResource, undefined, {
-    select: selectTaskId,
-    gate: true,
-  });
+  // `useLive(all, { select })` is a gated read already.
+  const attempt = useLive(attemptRows, { select: selectTaskId });
 
   // The title lookup keys off the attempt's task id once it is known; until
   // then (or when the attempts read failed) it looks nothing up, and the answer
@@ -59,16 +56,13 @@ export function useLinkedTask(place: WorktreePlace): LinkedTask {
     ready: (id) => id,
   });
   const selectTitle = useCallback(
-    (tasks: readonly TaskListItem[]) =>
+    (tasks: TaskListItem[]) =>
       taskId === null
         ? null
         : (tasks.find((t) => t.id === taskId)?.title ?? null),
     [taskId],
   );
-  const task = useResource(tasksResource, undefined, {
-    select: selectTitle,
-    gate: true,
-  });
+  const task = useLive(taskRows, { select: selectTitle });
 
   if (checkout === null) return { kind: "none" };
   if (attempt.status === "loading") return { kind: "pending" };

@@ -96,8 +96,7 @@ already on from one nobody has touched.
   its attempts, its conversations, its dependencies) and is no column of the base
   table. `readTaskStatus` answers for one id at a time, which would turn a page
   read into one round trip per linked card; the view is exported from
-  `tasks-core/server` as `tasksView` so this can be one joined query, the same
-  call `conversationsView` already makes.
+  `tasks-core/server` as `tasksView` so this can be one joined query.
 - **Empty in, empty out.** A page with no TODO cards runs no query at all, rather
   than one that could only ever return nothing.
 - **They are READ-ONLY**, and `claimTag` discards them on the way back in. A pure
@@ -202,6 +201,7 @@ card, not a collection.
     - `infra/endpoints.fetchEndpoint`
     - `network/live.LiveRowResult`
     - `network/live.mapRow`
+    - `network/live.useLive`
     - `network/live.useLiveRow`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
@@ -213,7 +213,6 @@ card, not a collection.
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `tasks/task-status.StatusBadge`
     - `tasks/tasks-core.useTaskConversations`

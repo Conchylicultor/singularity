@@ -11,7 +11,9 @@ self-heal, this plugin emits a cheap, non-fatal Debug → Reports signal a human
 confirms. See `research/2026-07-08-global-read-set-shrink-guard.md`.
 
 `persistSnapshot` (in `database/live-state-snapshot`) detects the shed in its own
-upsert (a data-modifying CTE returns the pre-upsert read-set) and emits on the
+`replace` upsert (a data-modifying CTE returns the pre-upsert read-set) — a `floor`
+persist (a persisted alias's trailing window) never writes `tables_read`, so it
+never sheds — and emits on the
 `onReadSetShrink` seam — kept as a seam so DB-infra never imports reports/debug. An
 in-process accumulator (`server/internal/accumulator.ts`), subscribed to that seam
 in this plugin's `onReady`, buffers each shed synchronously (pure memory). A

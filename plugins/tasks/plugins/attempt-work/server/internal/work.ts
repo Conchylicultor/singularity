@@ -19,7 +19,7 @@ import {
   type Resolvable,
 } from "@plugins/primitives/plugins/live-state/core";
 import {
-  getAttempt,
+  getAttemptRow,
   listConversationIdsForAttempt,
   listPushesForAttempt,
 } from "@plugins/tasks/plugins/tasks-core/server";
@@ -56,8 +56,12 @@ interface WorkContext {
 // cascade), so the landed grep has nothing to filter on — the standing is
 // genuinely unmeasurable rather than "nothing landed", and both the signature and
 // the value say so.
+//
+// Every read is a TABLE's (`attempts`, `conversations`, `pushes`), never a
+// view's: this is a live loader doing git work, and a view's read-set would
+// make every task or conversation write recompute it (C36).
 async function readContext(attemptId: string): Promise<WorkContext | null> {
-  const attempt = await getAttempt(attemptId);
+  const attempt = await getAttemptRow(attemptId);
   if (!attempt) return null;
   const [mainRepoRoot, convIds, pushes] = await Promise.all([
     ensureMainWorktreeRoot(),

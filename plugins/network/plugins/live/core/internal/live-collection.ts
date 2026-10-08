@@ -6,6 +6,7 @@ import {
   type ResourcePreload,
 } from "@plugins/primitives/plugins/live-state/core";
 import type {
+  AllQueryResourceContract,
   PointQueryResourceContract,
   WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
@@ -26,6 +27,7 @@ import {
   type LiveOrderBy,
   type LiveReservedColumn,
   type LiveQuery,
+  type LiveSortDirection,
   type LiveWindowBounds,
   type LiveWindowParams,
 } from "./query";
@@ -39,6 +41,7 @@ import {
   type WithContributedColumns,
 } from "./live-columns";
 import {
+  allResourceDescriptor,
   pointQueryResourceDescriptor,
   windowQueryResourceDescriptor,
 } from "./window-descriptor";
@@ -195,6 +198,8 @@ export interface LiveCollection<
   // `NoInfer`: a method parameter would otherwise widen `S` to every
   // filterable name wherever a collection is passed to a generic function.
   column(name: NoInfer<(keyof F & string) | S>): LiveColumnRef;
+  /** A whole ordered set is the `all` overload's ({@link LiveAllCollection}). */
+  all?: never;
 }
 
 /**
@@ -248,15 +253,45 @@ export type LiveArmsCollection<
 };
 
 /**
- * A lookup-only collection: declared without a default window, so it mints
- * `${key}:rows` alone. Rows are read by id (`useLiveRow`, `useLive(c, { ids })`);
- * a list read has no order to list in, so it is a tsc error (the `window` /
- * `groups` a list read needs are absent, and typed `never`).
+ * What a declaration with no window mints (see {@link LiveNoWindowSpec}): the
+ * `:rows` point sibling, and — declared `all` (`Al` set) — the whole ordered
+ * set under `key`. A list read of either has no window to read, so it is a
+ * tsc error (the `window` / `groups` it needs are absent, typed `never`).
+ *
+ * `all` is a property whose type follows `Al` (`undefined` for a lookup-only
+ * collection), never a conditional over the whole type: the resource
+ * vocabulary infers `liveCollection`'s return type, and a top-level conditional
+ * would hide the collection from it.
  */
-export interface LiveLookupCollection<Row> extends LiveRowsCollection<Row> {
+export interface LiveNoWindowCollection<
+  Row,
+  Al,
+> extends LiveRowsCollection<Row> {
+  /** `key` — every row, in `all.all.orderBy` order (the id breaks ties); `undefined` when lookup-only. */
+  all: [Al] extends [undefined] ? undefined : AllQueryResourceContract<Row>;
   window?: never;
   groups?: never;
 }
+
+/**
+ * A lookup-only collection: declared without a default window, so it mints
+ * `${key}:rows` alone. Rows are read by id (`useLiveRow`, `useLive(c, { ids })`).
+ */
+export type LiveLookupCollection<Row> = LiveNoWindowCollection<Row, undefined>;
+
+/**
+ * A collection declared `all` (`liveCollection(key, { all })`): `key` holds
+ * EVERY row, in the declared order, as one param-less keyed resource — for a
+ * set small enough to hold whole (`all.unbounded.reason` says why) whose
+ * readers need all of it (a tree, a graph). Mints `key` and `${key}:rows` —
+ * no `:groups` (a grouping is a window over the set; this set has none) and
+ * no window. Serving it as a lookup-only collection is a tsc error (`all` is
+ * `undefined` there).
+ */
+export type LiveAllCollection<Row> = LiveNoWindowCollection<
+  Row,
+  LiveAllOrder<Row>
+>;
 
 export interface LiveCollectionSpec<Row, F, S extends string> {
   row: LiveRowSchema<Row>;
@@ -297,6 +332,8 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
   columnScope?: string;
   /** A union collection is the `arms` overload's ({@link LiveArmsSpec}). */
   arms?: never;
+  /** A whole ordered set is the `all` overload's ({@link LiveAllSpec}). */
+  all?: never;
 }
 
 /**
@@ -324,25 +361,59 @@ export interface LiveArmsSpec<
 }
 
 /**
- * A lookup-only declaration: a row schema and its id, nothing to list by. Every
- * window field is `never` — `filterable` too, since no list read or grouping
- * would ever read it — and so is `preload`: an id set has no default tuple the
- * server could load before a tab names one.
+ * The `all` of a whole-ordered-set declaration: the total order every row is
+ * held in, and why the set may be held whole.
  */
-export interface LiveLookupSpec<Row> {
+export interface LiveAllOrder<Row> {
+  /** Row fields with their direction; non-empty, each field once. The id breaks ties. */
+  orderBy: LiveOrderBy<keyof NoInfer<Row> & string>;
+  /** Why the whole set is held: it has no other bound. Non-empty. */
+  unbounded: { reason: string };
+}
+
+/**
+ * A declaration with no window: a row schema and its id, nothing to list by,
+ * plus — for the whole set — `all` (`Al`). Every window and union field is
+ * `never` (`filterable` too: no list read or grouping would ever read it).
+ *
+ * - **Lookup-only** (`Al` = `undefined`, no `all`): `preload` is `never` too —
+ *   an id set has no default tuple the server could load before a tab names
+ *   one. Mints `${key}:rows` alone.
+ * - **The whole ordered set** (`all` set, T13): `preload` reaches `key` (boot
+ *   hydrates it, and a DB-backed one is L2-persisted). Mints `key` and
+ *   `${key}:rows`.
+ *
+ * One overload for both, so `liveCollection` keeps three: past three failed
+ * candidates TypeScript reports only the last one's errors, which would move
+ * every misdeclared spec's error off the field at fault.
+ */
+export interface LiveNoWindowSpec<
+  Row,
+  Al extends LiveAllOrder<Row> | undefined,
+> {
   row: LiveRowSchema<Row>;
-  /** The row field that identifies a row — the point sibling's id set. */
+  /** The row field that identifies a row — the point sibling's id set (and the whole set's tiebreaker). */
   id: keyof Row & string;
+  all?: Al;
+  /** Only the whole set preloads. Default `"none"`. */
+  preload?: [Al] extends [undefined] ? never : LivePreload;
   filterable?: never;
   sortable?: never;
   default?: never;
   maxLimit?: never;
-  preload?: never;
   scroll?: never;
   contributed?: never;
   columnScope?: never;
   arms?: never;
 }
+
+/** A lookup-only declaration (see {@link LiveNoWindowSpec}). */
+export type LiveLookupSpec<Row> = LiveNoWindowSpec<Row, undefined>;
+
+/** A whole-ordered-set declaration (see {@link LiveNoWindowSpec}). */
+export type LiveAllSpec<Row> = LiveNoWindowSpec<Row, LiveAllOrder<Row>> & {
+  all: LiveAllOrder<Row>;
+};
 
 /**
  * Declare a live collection: one declaration minting three resources — `key`
@@ -357,6 +428,10 @@ export interface LiveLookupSpec<Row> {
  *
  * Declared with `arms` (and so `scroll: true`), it is a UNION collection over
  * several tables: see {@link LiveArmsSpec}.
+ *
+ * Declared with `all` (and no window field), it holds every row, in one
+ * declared order: it mints `key` (the whole ordered set, param-less) and
+ * `${key}:rows` — see {@link LiveAllSpec}.
  *
  * `key` stays a positional string literal: the build scanners read it statically.
  */
@@ -393,17 +468,28 @@ export function liveCollection<
     };
   },
 ): LiveCollectionOf<Row, F, S, Sc, Co>;
-export function liveCollection<Row>(
+export function liveCollection<
+  Row,
+  const Al extends LiveAllOrder<Row> | undefined = undefined,
+>(
   key: string,
-  spec: LiveLookupSpec<Row>,
-): LiveLookupCollection<Row>;
+  spec: LiveNoWindowSpec<Row, Al>,
+): LiveNoWindowCollection<Row, Al>;
 export function liveCollection<Row, F, S extends string>(
   key: string,
   spec:
     | LiveCollectionSpec<Row, F, S>
     | LiveLookupSpec<Row>
-    | LiveArmsSpec<Row, F, S, string>,
-): LiveCollection<Row, F, S> | LiveLookupCollection<Row> {
+    | LiveArmsSpec<Row, F, S, string>
+    | LiveAllSpec<Row>,
+):
+  | LiveCollection<Row, F, S>
+  | LiveLookupCollection<Row>
+  | LiveAllCollection<Row> {
+  // First: every other branch reads `default`, which an `all` spec lacks, so
+  // an `all` spec reaching them would be minted as lookup-only (C16).
+  if (spec.all !== undefined)
+    return allCollection(key, spec as LiveAllSpec<Row>);
   if (spec.arms !== undefined) {
     // An untyped caller could pass what the overload forbids (T12): a union's
     // column vocabulary is its arms' static handles, and it is always a scroll.
@@ -451,9 +537,92 @@ export function liveCollection<Row, F, S extends string>(
           `lookup-only collection has no window to list, sort, cap or preload.`,
       );
     }
-    return rowsPart(key, spec);
+    return { ...rowsPart(key, spec), all: undefined };
   }
   return fullCollection(key, spec as LiveCollectionSpec<Row, F, S>);
+}
+
+/** The spec fields an `all` declaration never takes: every window and union field. */
+const NOT_ALL_FIELDS: readonly string[] = [
+  "default",
+  "arms",
+  "filterable",
+  "sortable",
+  "maxLimit",
+  "scroll",
+  "contributed",
+  "columnScope",
+];
+
+const SORT_DIRECTIONS: readonly LiveSortDirection[] = ["asc", "desc"];
+
+/**
+ * The `all` overload: `key` (every row, in `all.orderBy` order) and `:rows`.
+ * Throws on what the overload forbids for an untyped caller — a window or
+ * union field beside `all` — and on what no type states: an empty reason, an
+ * empty `orderBy`, an order field that is not a row field (or named twice),
+ * a direction that is neither `asc` nor `desc`.
+ */
+function allCollection<Row>(
+  key: string,
+  spec: LiveAllSpec<Row>,
+): LiveAllCollection<Row> {
+  const fail = (message: string): never => {
+    throw new Error(`liveCollection("${key}"): ${message}`);
+  };
+  const stray = NOT_ALL_FIELDS.filter(
+    (f) => (spec as unknown as Record<string, unknown>)[f] !== undefined,
+  );
+  if (stray.length > 0) {
+    fail(
+      `${stray.join(", ")} beside \`all\` — the whole ordered set has no window, ` +
+        "grouping, union arms, or contributed or scoped columns.",
+    );
+  }
+  // Read as untyped: the checks below are for a caller the types did not reach.
+  const all = spec.all as {
+    orderBy?: unknown;
+    unbounded?: { reason?: unknown };
+  };
+  const reason = all.unbounded?.reason;
+  if (typeof reason !== "string" || reason.trim().length === 0) {
+    throw new Error(
+      `liveCollection("${key}"): \`all.unbounded.reason\` is empty — the whole set has no other bound, so say why it stays small.`,
+    );
+  }
+  if (!Array.isArray(all.orderBy) || all.orderBy.length === 0) {
+    fail("`all.orderBy` is empty — the set is held in one declared order.");
+  }
+  const orderBy = spec.all.orderBy;
+  const seen = new Set<string>();
+  for (const [field, dir] of orderBy) {
+    if (!Object.hasOwn(spec.row.shape, field)) {
+      fail(
+        `\`all.orderBy\` names "${field}", which is not a field of the row schema`,
+      );
+    }
+    if (!SORT_DIRECTIONS.includes(dir)) {
+      fail(
+        `\`all.orderBy\` sorts "${field}" ${JSON.stringify(dir)} — neither "asc" nor "desc"`,
+      );
+    }
+    if (seen.has(field)) fail(`\`all.orderBy\` names "${field}" twice`);
+    seen.add(field);
+  }
+  // Minted before `:rows`, as a window is (descriptor registration order).
+  // `"none"` is the absence of the descriptor field.
+  const descriptor = allResourceDescriptor(key, spec.row, spec.id, {
+    all: {
+      orderBy: Object.freeze(
+        orderBy.map(([f, d]) => Object.freeze([f, d] as const)),
+      ),
+      unbounded: Object.freeze({ reason }),
+    },
+    ...(spec.preload === undefined || spec.preload === "none"
+      ? {}
+      : { preload: spec.preload }),
+  });
+  return { ...rowsPart(key, spec), all: descriptor };
 }
 
 /** The spec fields that only mean something beside `default`. */

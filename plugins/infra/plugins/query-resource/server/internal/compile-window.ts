@@ -29,10 +29,11 @@ import type { ReadColumn } from "./joins";
 import { compiledRoutePlan, routedBase } from "./routes";
 import type { QueryDb, WindowOrderKey, WindowQueryResourceSpec } from "./spec";
 
-// The bounded-membership (window / point) compiler — the `queryResource`
-// sibling for the bounded working-set contract
-// (research/2026-07-18-global-bounded-working-set-resource-contract.md). One
-// declaration derives, per kind:
+// The bounded-membership (window / point) compiler for the bounded working-set
+// contract (research/2026-07-18-global-bounded-working-set-resource-contract.md);
+// its whole-set sibling is the `all` compiler (`./compile-alias`, a collection
+// declared `liveCollection(key, { all })`), which replaces the legacy
+// unbounded `queryResource`. One declaration derives, per kind:
 //
 // - **window**: the windowed FULL loader (`where → ORDER BY (declared keys +
 //   pk tiebreaker, NULLS LAST) → LIMIT`, the limit decoded from the params via
@@ -64,8 +65,11 @@ import type { QueryDb, WindowOrderKey, WindowQueryResourceSpec } from "./spec";
 //
 // The compile is two halves: `planArm` (`./arm-plan`) plans one relation set —
 // its joins, projection, routes, per-tuple reads, order and the SQL each shape
-// renders — and `assembleWindow` / `assemblePoint` turn arms into the loaders,
-// the membership and the scope policy. A single-table spec is the 1-arm case.
+// renders — and `assembleWindow` / `assemblePoint` turn that one arm into the
+// loaders, the membership and the scope policy. Only this compiler assembles
+// here: the union (`./compile-union-window`) and the `all` compiler
+// (`./compile-alias`) share the arm's ROUTED half (`routedReads`) and render
+// and assemble their own raw SQL.
 
 /**
  * The compiled server half of a bounded resource, ready for `defineResource`.
@@ -144,29 +148,20 @@ function scopePolicyOf<Row, P extends ResourceParams>(
 }
 
 /**
- * The window half over its arms: the order signature (cut from the
- * signature-field list every arm must project alike), the windowed FULL
- * loader, the scoped refill, `windowIdsOf`, the membership and the scope
- * policy. One arm: the union window (`./compile-union-window`) reuses the arm's
- * routed half (`routedReads`) and renders its own positional SQL.
+ * The window half over its one arm (the 1-tuple type: no multi-arm caller can
+ * be written, so no cross-arm signature check exists): the order signature, the
+ * windowed FULL loader, the scoped refill, `windowIdsOf`, the membership and
+ * the scope policy. The union window (`./compile-union-window`) and the `all`
+ * compiler (`./compile-alias`) share only the arm's routed half
+ * (`routedReads`) and render their own SQL.
  */
 export function assembleWindow<Row, P extends ResourceParams>(
   arms: readonly [WindowArmPlan<Row, P>],
   outer: WindowOuter<P>,
 ): CompiledWindowQuery<Row, P> {
   const [arm] = arms;
-  // The signature-field list: each signature column's projected field, the
-  // same in every arm (a union's arms alias their fields positionally).
+  // Each signature column's projected field, in `signatureColumns` order.
   const fields = arm.order.signatureFields;
-  for (const other of arms) {
-    const theirs = other.order.signatureFields;
-    guard(
-      theirs.length === fields.length &&
-        theirs.every((f, i) => f === fields[i]),
-      outer.key,
-      `arm ${other.label} projects the signature columns as [${theirs.join(", ")}], not [${fields.join(", ")}] — every arm must sign the order by the same fields.`,
-    );
-  }
   const encoded = encoder<Row>(outer.encodeRow);
 
   // Order signature: the canonical join of the row's wire values of the columns
@@ -307,7 +302,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
   guard(
     spec.window || spec.point,
     key,
-    "declare `window: { maxLimit }` or `point: { by }` — for an unbounded scan use queryResource(...) instead.",
+    "declare `window: { maxLimit }` or `point: { by }` — for a whole ordered set, declare the collection with `all` (`liveCollection(key, { all })`), which `compileAllCollection` compiles.",
   );
 
   // One boundary cast — same as `compileQuery` (the entities plugin precedent).
@@ -512,8 +507,8 @@ export function deferredWindowQueryResource<Row>(
 /**
  * Compile a bounded spec and register the keyed resource against the shared
  * contract. Asserts the contract's `queryPk` equals the derived keyField — a
- * LOUD throw at module evaluation (boot crash) on drift, exactly like
- * `queryResource`.
+ * LOUD throw at module evaluation (boot crash) on drift. (A whole ordered set
+ * is not a bounded spec: declare it `liveCollection(key, { all })`.)
  */
 export function windowQueryResource<
   Row,

@@ -228,6 +228,34 @@ describe("preloadedKeysIn", () => {
     expect(preloadedKeysIn(src, "c.ts", NOT_OWNER)).toEqual(["notifications"]);
   });
 
+  test("an `all` collection's preload marks its key once — never :rows", () => {
+    const src = `
+      export const tasks = liveCollection("tasks", {
+        row: S, id: "id",
+        all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree" } },
+        preload: "boot",
+      });
+    `;
+    expect(preloadedKeysIn(src, "t.ts", NOT_OWNER)).toEqual(["tasks"]);
+  });
+
+  test("throws on a collection whose spec sets both `default` and `all` (A28)", () => {
+    const src = `export const c = liveCollection("c", { row: S, id: "id", default: { orderBy: [["n", "asc"]], limit: 1 }, all: { orderBy: [["n", "asc"]], unbounded: { reason: "r" } }, preload: "boot" });`;
+    expect(() => preloadedKeysIn(src, "c.ts", NOT_OWNER)).toThrow(
+      /c\.ts:1: one declaration mints the key suffix "" twice/,
+    );
+  });
+
+  test("throws on a collection whose spec is not inline — its `preload:` is hidden too", () => {
+    const src = `
+      const spec = { row: S, id: "id", all: { orderBy: [["n", "asc"]], unbounded: { reason: "r" } }, preload: "boot" };
+      export const c = liveCollection("c", spec);
+    `;
+    expect(() => preloadedKeysIn(src, "c.ts", NOT_OWNER)).toThrow(
+      /c\.ts:3: the spec \(`spec`\) is not an inline object literal/,
+    );
+  });
+
   test('a liveValue\'s preload marks its one key; "none" and a parameterized value do not', () => {
     const src = `
       export const unread = liveValue("notifications.unread", {

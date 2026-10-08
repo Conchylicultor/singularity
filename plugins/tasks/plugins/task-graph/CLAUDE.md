@@ -21,6 +21,7 @@ disagreeing is the design, not drift.
   - Contributes: `TaskDetailSlots.Section` "Graph" → `TaskGraph`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/rigid.rigidClass`
@@ -32,7 +33,6 @@ disagreeing is the design, not drift.
     - `primitives/graph-canvas.GraphCanvasGroup`
     - `primitives/graph-canvas.GraphCanvasNode`
     - `primitives/live-state.foldResource`
-    - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`
     - `tasks.patchTask`

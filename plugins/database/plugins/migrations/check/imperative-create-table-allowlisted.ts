@@ -60,6 +60,28 @@ export function usesThrowawayTestDb(path: string, src: string): boolean {
   return TEST_FILE_RE.test(path) && TEST_DB_FIXTURE_IMPORT_RE.test(src);
 }
 
+// A CREATE TABLE line that GENERATES its table name from data (derived-tables'
+// `defineRollup` renders a rollup's table from its drizzle read handle) cannot
+// spell the name's constant — the line holds an expression, not an identifier.
+// It is coupled to the allowlist by EVIDENCE instead: the line itself calls
+// `assertImperativePublicTable(…)` (derived-views/core), which throws unless the
+// name is an IMPERATIVE_PUBLIC_TABLES value. The token is read off the barrel
+// below, so a rename of that function cannot leave this exemption dangling.
+//
+// Line-level on purpose, like the constant rule: another CREATE TABLE in the
+// same file that neither names a constant nor calls the assert is still an
+// offender.
+export const RUNTIME_ASSERT_FN = "assertImperativePublicTable";
+
+/**
+ * PURE helper (exported for unit testing): does this CREATE TABLE line carry the
+ * runtime allowlist assert (`assertImperativePublicTable(`) in place of a
+ * constant?
+ */
+export function callsRuntimeAssert(lineText: string): boolean {
+  return new RegExp(`\\b${RUNTIME_ASSERT_FN}\\s*\\(`).test(lineText);
+}
+
 // Matches `CREATE TABLE` and `CREATE UNLOGGED TABLE` (unlogged tables persist in
 // pg_stat_user_tables, so they are orphan-able and must be allowlisted too).
 // TEMP/TEMPORARY are deliberately NOT matched: they are session-scoped and never
@@ -126,6 +148,7 @@ export function findOffenders(
   const ids = [...allowlistIds];
   return matches
     .filter((m) => !exemptPaths.has(m.path))
+    .filter((m) => !callsRuntimeAssert(m.text))
     .filter((m) => !ids.some((id) => new RegExp(`\\b${id}\\b`).test(m.text)))
     .filter((m) => !skips(m.path))
     .map((m) => `${m.path}:${m.line}:${m.text.trim()}`);
@@ -149,6 +172,16 @@ const check: Check = {
       IMPERATIVE_PUBLIC_TABLES,
       derivedViewsCore,
     );
+    // The runtime-assert evidence names a barrel function; prove it is there.
+    if (
+      typeof (derivedViewsCore as Record<string, unknown>)[
+        RUNTIME_ASSERT_FN
+      ] !== "function"
+    ) {
+      throw new Error(
+        `${RUNTIME_ASSERT_FN} is not a function export of @plugins/database/plugins/derived-views/core — the runtime-assert exemption of this check names it.`,
+      );
+    }
 
     // maskStrings:false is load-bearing: the DDL lives INSIDE a template string,
     // so we must keep string interiors visible to see `CREATE TABLE` and the

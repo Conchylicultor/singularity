@@ -1,18 +1,19 @@
 /**
- * Real-DB suite for the `attempt_conv_agg` rollup DDL — the four phases
- * `rebuildDerivedTables` executes on EVERY backend boot. A syntax error or a
- * shape change that silently fails to apply wedges every worktree's boot, so
- * this exercises the actual SQL against a throwaway database (db-test-fixture)
- * rather than asserting on strings.
+ * Real-DB suite for the `attempt_conv_agg` rollup — the generated DDL and
+ * reconcile `rebuildDerivedTables` runs on EVERY backend boot (through
+ * `installRollups`, the same path). A syntax error or a shape change that
+ * silently fails to apply wedges every worktree's boot, so this exercises the
+ * actual SQL against a throwaway database (db-test-fixture) rather than
+ * asserting on strings.
  *
  * What it pins:
  *   - the two liveness notions are genuinely different (`gone` is live=false but
  *     open=true — the distinction the worktree reaper depends on);
- *   - the boot rebuild is idempotent (it runs unconditionally on every boot);
- *   - the ALTER path upgrades a PRE-EXISTING rollup table. `CREATE TABLE IF NOT
- *     EXISTS` is a no-op against an existing table, so without the ALTER the new
- *     column would never reach any DB that already had the rollup — i.e. every
- *     real one.
+ *   - the boot rebuild is idempotent, and a clean reconcile heals nothing;
+ *   - a PRE-EXISTING rollup table of an older shape is rebuilt to the declared
+ *     one and refilled from source. `CREATE TABLE IF NOT EXISTS` is a no-op
+ *     against an existing table, so without the shape check a new column would
+ *     never reach any DB that already had the rollup — i.e. every real one.
  *
  * Run: `bun test plugins/tasks/plugins/tasks-core`
  * (requires the running embedded cluster — `./singularity build` first).
@@ -31,7 +32,9 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import { attemptConvAggSpec } from "./rollup-spec";
+import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
+import type { RollupReconcile } from "@plugins/database/plugins/derived-tables/core";
+import { attemptConvAgg } from "./rollup-spec";
 
 let t: TestDb;
 
@@ -47,11 +50,10 @@ const CREATE_CONVERSATIONS = sql`
   )
 `;
 
-async function runSpec(): Promise<void> {
-  await t.db.execute(sql.raw(attemptConvAggSpec.createDdl));
-  await t.db.execute(sql.raw(attemptConvAggSpec.functionDdl));
-  await t.db.execute(sql.raw(attemptConvAggSpec.triggerDdl));
-  await t.db.execute(sql.raw(attemptConvAggSpec.reconcileDdl));
+async function runSpec(): Promise<RollupReconcile> {
+  const [result] = await installRollups(t.db, [attemptConvAgg]);
+  if (result === undefined) throw new Error("installRollups returned no row");
+  return result;
 }
 
 async function addConversation(
@@ -168,10 +170,15 @@ describe("attempt_conv_agg — the two liveness notions", () => {
     expect(await rollupFor("att-1")).toBeUndefined();
   });
 
-  test("the boot rebuild is idempotent", async () => {
+  test("the boot rebuild is idempotent and a clean reconcile heals nothing", async () => {
     await addConversation("c1", "att-1", "gone");
     await runSpec();
-    await runSpec();
+    expect(await runSpec()).toEqual({
+      table: "attempt_conv_agg",
+      upserted: 0,
+      deleted: 0,
+      definitionChanged: false,
+    });
     expect(await rollupFor("att-1")).toEqual({
       has_conv: true,
       has_live_conv: false,
@@ -182,10 +189,11 @@ describe("attempt_conv_agg — the two liveness notions", () => {
 
 describe("attempt_conv_agg — upgrading a pre-existing rollup table", () => {
   // `CREATE TABLE IF NOT EXISTS` cannot add a column, so a DB that already has
-  // the rollup (every real one) only gets `has_open_conv` via the ALTER. Without
+  // the rollup (every real one) only gets `has_open_conv` because the install
+  // compares the live shape to the declared one and rebuilds a mismatch. Without
   // it the reaper would read NULL and treat every attempt as un-retained — worse
   // than the bug being fixed.
-  test("the ALTER adds and backfills the column on an old-shape table", async () => {
+  test("an old-shape table is rebuilt with the column and refilled", async () => {
     await t.db.execute(sql`
       CREATE TABLE attempt_conv_agg (
         attempt_id    text PRIMARY KEY,
@@ -199,7 +207,10 @@ describe("attempt_conv_agg — upgrading a pre-existing rollup table", () => {
     );
     await addConversation("c1", "att-1", "gone");
 
-    await runSpec();
+    expect(await runSpec()).toMatchObject({
+      upserted: 1,
+      definitionChanged: true,
+    });
 
     // Column exists AND the boot reconcile filled it from source in the same pass.
     expect(await rollupFor("att-1")).toEqual({

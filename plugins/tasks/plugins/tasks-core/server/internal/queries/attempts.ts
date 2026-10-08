@@ -1,5 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { _attempts } from "../tables";
 import { attempts } from "../views";
 import type { Attempt } from "../schema";
 import type { DbExecutor } from "../status-batch";
@@ -13,6 +14,25 @@ export async function getAttempt(id: string): Promise<Attempt | null> {
     .select()
     .from(attempts)
     .where(eq(attempts.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * One attempt's own row — the `attempts` TABLE (id, task, worktree path,
+ * timestamps), none of `attempts_v`'s derived status. For a live loader that
+ * needs only those facts (commits-graph's worktree, attempt-work's worktree
+ * and lifetime): its captured read-set is then `attempts` alone, where
+ * `attempts_v` would add the rollups' sources — every conversation and push
+ * write would recompute it (C36).
+ */
+export async function getAttemptRow(
+  id: string,
+): Promise<typeof _attempts.$inferSelect | null> {
+  const [row] = await db
+    .select()
+    .from(_attempts)
+    .where(eq(_attempts.id, id))
     .limit(1);
   return row ?? null;
 }

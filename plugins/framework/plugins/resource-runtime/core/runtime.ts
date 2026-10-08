@@ -211,6 +211,21 @@ export type KeyedMembership<P extends ResourceParams = ResourceParams> =
   | { kind: "point"; idsOf: (params: P) => readonly string[] };
 
 /**
+ * The `scopedMembership` alias — an UNBOUNDED window: `orderOf` is the whole
+ * ordered id list (the window loader with no LIMIT). `orderSignatureOf` is the
+ * same seam as `KeyedMembership`'s window arm: when present, a refilled member
+ * whose ORDER BY projection moved re-derives the order (`orderOf`) instead of
+ * keeping its stale position — so an alias over a mutable sort column (a rank, a
+ * createdAt resurface) stays ordered. Optional on the legacy `identityTable`
+ * arm; REQUIRED on the routed arm (`ScopePolicy`), where the compiler always
+ * knows its ORDER BY and so an in-place reorder can never go stale.
+ */
+export interface AliasMembership<P extends ResourceParams = ResourceParams> {
+  orderOf: (params: P) => Promise<string[]>;
+  orderSignatureOf?: (row: unknown, params: P) => string;
+}
+
+/**
  * The runtime-internal normalized membership record: the public `membership`
  * field plus the `scopedMembership` alias fold into this one shape, so every
  * consumer (routing, drain, encoder, persistence gate) branches on it alone.
@@ -222,7 +237,10 @@ type MembershipRecord =
       kind: "window";
       windowIdsOf: (params: ResourceParams) => Promise<string[]>;
       bounded: boolean;
-      /** Order-signature seam — see `KeyedMembership`. Never set on the alias. */
+      /**
+       * Order-signature seam — see `KeyedMembership`. On the alias too
+       * (`AliasMembership`), where it makes an order move re-run `orderOf`.
+       */
       orderSignatureOf?: (row: unknown, params: ResourceParams) => string;
     }
   | { kind: "point"; idsOf: (params: ResourceParams) => readonly string[] };
@@ -323,7 +341,7 @@ export interface ResourceDefinition<
    * the mutable-`where` rule (a where-flip is detected as an exit/entry). See
    * research/2026-07-03-global-scoped-membership-m5.md.
    */
-  scopedMembership?: { orderOf: (params: P) => Promise<string[]> };
+  scopedMembership?: AliasMembership<P>;
   /**
    * Bounded-membership selector (window / point) — see `KeyedMembership`. The
    * generalization of `scopedMembership` (which remains as the unbounded-window
@@ -530,7 +548,7 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
     }
   | {
       identityTable: string;
-      scopedMembership: { orderOf: (params: P) => Promise<string[]> };
+      scopedMembership: AliasMembership<P>;
       membership?: never;
       fanOut?: never;
       recompute?: never;
@@ -549,7 +567,9 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
     }
   | {
       routes: RoutePlan<P>;
-      scopedMembership: { orderOf: (params: P) => Promise<string[]> };
+      scopedMembership: AliasMembership<P> & {
+        orderSignatureOf: (row: unknown, params: P) => string;
+      };
       recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
       identityTable?: never;
       membership?: never;
@@ -1007,6 +1027,13 @@ interface RoutingRecord {
   /** Each route's declared `match` columns, by route id. */
   matchOf: Map<string, readonly string[]>;
   /**
+   * The derived tables (rollups) the plan reads beside its route tables
+   * (`RoutePlanInput.derivedReads`) — each reached through its sources' routes,
+   * which `mintRoutePlan` asserted are all the plan's own (A22), so the drift
+   * guard accepts them in a capture.
+   */
+  derived: ReadonlySet<string>;
+  /**
    * A8: the tables a loader run read that no route names, each reported once
    * (see `checkRouteDrift`).
    */
@@ -1158,6 +1185,19 @@ interface RegistryEntry {
   draining: Set<string>;
   /** Present ⇒ a routed entry (see `ResourceDefinition.routes`). */
   routing?: RoutingRecord;
+  /**
+   * Per-pk L2 base floor of a persisted unbounded-window alias: the commit
+   * watermark of the FULL read the in-memory snapshot was last rebuilt from
+   * (the FULL drain's flight watermark, the sub-ack seed's, or the L2 row's
+   * position at the boot seed). The snapshot reflects every commit below it,
+   * and every routed commit at or above it either reached the snapshot or is
+   * still in flight — so it, never a drain-time capture, is the catch-up floor
+   * a floor persist may write: a scoped refill reads only the requested ids,
+   * so a capture taken at the drain could pass over an unrouted commit below
+   * it. Absent ⇒ unknown (a capture failed): no floor persist until the next
+   * FULL rebuild sets one. Lifecycle identical to `snapshots`.
+   */
+  baseFloors?: Map<string, string>;
   /** Upstream keys this entry listens to (for cycle detection). */
   upstreamKeys: string[];
   /**
@@ -1497,28 +1537,60 @@ export interface ResourceRuntimeOptions {
    *    a second one at the drain could floor a joined (older) value with a newer
    *    position, and catch-up would skip the commit it is missing. See
    *    research/2026-08-08-global-live-state-flight-freshness.md.
-   * `drainMembershipScoped` is the one other caller, and it does NOT break the
-   * rule: its refills are `ctx` loads, which bypass the single-flight entirely
-   * and so can never be served someone else's older read. With nothing to adopt
-   * there is no flight watermark to inherit, so it captures its own — before the
-   * refill, which is exactly the read that floor describes.
+   * A scoped drain never captures one: its refills read only the requested
+   * ids, so no capture taken there describes the whole value. A persisted
+   * alias's floor persists use the snapshot's BASE floor instead — the
+   * watermark of the FULL read the snapshot was rebuilt from (C19).
    * Absent (central) ⇒ frames ship tokenless and nothing is persisted.
    */
   captureWatermark?: () => Promise<string>;
   /**
-   * Persist a freshly-recomputed FULL value to `live_state_snapshot` under
-   * (key, paramsKey) with its captured watermark. Called only on loader SUCCESS
-   * (never on the failure/continue path), so the snapshot is never torn. server:
-   * `INSERT … ON CONFLICT (resource_key, params_key) DO UPDATE`. Only invoked
-   * when `shouldPersist(key)` is true.
+   * Persist a value to `live_state_snapshot` under (key, paramsKey) with its
+   * catch-up floor. Called only for a value that is whole (never on a loader's
+   * failure path), and only when `shouldPersist(key)` is true; per (key,
+   * paramsKey) the calls are serialized, never concurrent. `meta.mode`:
+   *
+   *  - `replace` — a FULL recompute's value, floored by the watermark its own
+   *    flight captured: the row's position, `position_at`, `tables_read`
+   *    (`meta.guardTables`, the run's read-set) and definition are all
+   *    replaced;
+   *  - `floor` — a persisted alias's value reconstructed from its in-memory
+   *    snapshot after scoped refills (a trailing window, `persistWindowMs`),
+   *    floored by the snapshot's BASE floor (`RegistryEntry.baseFloors`): the
+   *    row's position only ever LOWERS to it (`LEAST`), and `position_at` /
+   *    `tables_read` are kept; a missing row is inserted with the floor and
+   *    `meta.guardTables` (the entry's route tables, or its read-set union).
+   *
+   * Both write `meta.definition` (A18). `meta.guardTables` is what the A6
+   * produced-table guard judges in either mode. server:
+   * `INSERT … ON CONFLICT (resource_key, params_key) DO UPDATE`.
    */
   persistSnapshot?: (
     key: string,
     paramsKey: string,
     value: unknown,
     watermark: string,
-    tablesRead: readonly string[],
+    meta: PersistMeta,
   ) => Promise<void>;
+  /**
+   * The trailing window (ms) a persisted alias's scoped changes coalesce in
+   * before ONE floor persist of its reconstructed value (see `persistSnapshot`).
+   * Default 2000. A test passes 0.
+   */
+  persistWindowMs?: number;
+}
+
+/** How one L2 persist writes its row — see `ResourceRuntimeOptions.persistSnapshot`. */
+export interface PersistMeta {
+  mode: "replace" | "floor";
+  /** The entry's L2 definition (its routed plan's `definition`), NULL when it has none. */
+  definition: string | null;
+  /**
+   * The tables the A6 guard judges: in `replace` mode the run's read-set
+   * (written as `tables_read`); in `floor` mode the entry's route tables or
+   * read-set union (written only when the row is inserted).
+   */
+  guardTables: readonly string[];
 }
 
 /** One table a resource's scoped delivery depends on (see `scopedResourceTables`). */
@@ -1802,15 +1874,77 @@ export interface ResourceRuntime {
    * the first post-boot change is a scoped refill instead of a FULL O(collection)
    * rebuild. No-op unless the key is a registered unbounded-window alias with NO
    * snapshot yet for `paramsKey` — so it never clobbers a fresher sub-ack seed and
-   * a wrong/unknown key is harmless. Mirrors the FULL rebuild's seeding via the same
-   * `snapshotOf` primitive (byte-identical `retainSnapEncoder` entries).
+   * a wrong/unknown key is harmless (`skipped`). Mirrors the FULL rebuild's seeding
+   * via the same `snapshotOf` primitive (byte-identical `retainSnapEncoder` entries).
+   *
+   * A30: the value is `safeParse`d against the entry's payload schema
+   * (`z.array(row)`) first. A value that does not parse — a row schema changed
+   * in a way the L2 definition does not fingerprint (an opaque transform body)
+   * — seeds nothing and answers `invalid`: the caller treats the row as
+   * missing (clear it, recompute the key), never as a diff base.
    */
   seedPersistedSnapshot: (
     key: string,
     paramsKey: string,
     value: unknown,
-  ) => void;
+    base: PersistedBase,
+  ) => SeedOutcome;
+  /**
+   * A30's parse on its own, seeding nothing: does this L2 value parse as the
+   * payload of the registered unbounded-window alias `key`? `skipped` when
+   * `key` is no such alias. `live-state-snapshot` runs it over every persisted
+   * alias row in `onReadyBlocking` and clears the rows that fail, so the boot
+   * snapshot's persisted fast path — open from readiness, before `onReady`'s
+   * seed — never serves a value the entry's schema rejects.
+   */
+  validatePersistedValue: (key: string, value: unknown) => PersistedValueCheck;
+  /**
+   * The L2 definition (A18) of every persisted key that has one —
+   * `persistedKeys()`'s twin. A row is usable only when its `definition`
+   * equals this map's entry for its key (absent ⇒ NULL), so every L2 read
+   * path (boot snapshot, boot seed, the usable check, catch-up's floor) passes
+   * it as the expected map.
+   */
+  persistedDefinitions: () => Record<string, string>;
+  /**
+   * The current value of a persisted alias's param-less tuple, reconstructed
+   * from its in-memory snapshot — fresher than its L2 row, which a floor
+   * persist trails by up to `persistWindowMs`. Undefined when the key is not
+   * a persisted alias or holds no snapshot yet (the boot snapshot then reads
+   * L2, then the loader).
+   */
+  keptSnapshotValue: (key: string) => unknown[] | undefined;
+  /**
+   * Drop every armed floor window without writing it (shutdown): its changes
+   * are in the changelog, and the row's floor still predates them, so the next
+   * boot's catch-up replays them. Returns how many were dropped.
+   */
+  dropPendingPersists: () => number;
 }
+
+/** The L2 row a boot seed restores: its catch-up floor and when a replace last set it. */
+export interface PersistedBase {
+  /** The row's `position` — the seeded snapshot's base floor. */
+  position: string;
+  /** The row's `position_at` (epoch ms), or null when no replace ever wrote it. */
+  positionAt: number | null;
+}
+
+/**
+ * What `seedPersistedSnapshot` did with an L2 value: seeded the diff base;
+ * skipped it (not a registered unbounded-window alias, or the tuple already
+ * holds a fresher snapshot); or refused it because the value does not parse
+ * as the entry's payload (A30) — the caller treats that row as missing.
+ */
+export type SeedOutcome =
+  { kind: "seeded" } | { kind: "skipped" } | { kind: "invalid"; error: string };
+
+/**
+ * What `validatePersistedValue` found: the value parses as the alias's
+ * payload; it does not (A30); or `key` is no registered unbounded-window alias.
+ */
+export type PersistedValueCheck =
+  { kind: "valid" } | { kind: "skipped" } | { kind: "invalid"; error: string };
 
 const HEARTBEAT_MS = 20_000;
 
@@ -2262,14 +2396,20 @@ export function createResourceRuntime(
   // table its loader reads that no route names is a table whose writes it never
   // sees: a stale value nothing would reveal. After each loader run, the key's
   // per-run capture (the read-set sink's, flushed when the wrapped load settles)
-  // must be a subset of its route tables. A miss is reported once per table —
-  // or thrown, under `strictRoutes` (tests). With no capture wired (central, the
-  // DB-free harness) the guard is off; routing never depends on it.
+  // must be a subset of its route tables — plus its derived reads (A22): a
+  // rollup no route may name (A1), whose every source the plan routes
+  // (`mintRoutePlan` asserted it), so a write moving its rows reaches the entry.
+  // A miss is reported once per table — or thrown, under `strictRoutes`
+  // (tests). With no capture wired (central, the DB-free harness) the guard is
+  // off; routing never depends on it.
   function checkRouteDrift(entry: RegistryEntry): (value: unknown) => unknown {
     return (value) => {
       const routing = entry.routing!;
       const unrouted = (opts.lastReadSet!(entry.key) ?? []).filter(
-        (table) => !routing.byTable.has(table) && !routing.drifted.has(table),
+        (table) =>
+          !routing.byTable.has(table) &&
+          !routing.derived.has(table) &&
+          !routing.drifted.has(table),
       );
       if (unrouted.length === 0) return value;
       const err = new Error(
@@ -2873,6 +3013,7 @@ export function createResourceRuntime(
       byTable,
       routeIds,
       matchOf,
+      derived: new Set((plan.derivedReads ?? []).map((d) => d.table)),
       drifted: new Set(),
       uses: new Map(),
     };
@@ -3023,6 +3164,18 @@ export function createResourceRuntime(
       membershipField,
       externalSource,
     );
+    // The routed alias's ORDER BY is the compiler's, so it always states the
+    // signature of it (type: required on the routed `ScopePolicy` arm); an
+    // untyped caller without one would leave an in-place reorder stale.
+    if (
+      def.routes &&
+      def.scopedMembership &&
+      def.scopedMembership.orderSignatureOf === undefined
+    ) {
+      throw new Error(
+        `defineResource: a routed scopedMembership requires orderSignatureOf for key "${def.key}" — without it an UPDATE moving an ORDER BY column never reorders the alias`,
+      );
+    }
     // Normalize both public forms into the one internal record every consumer
     // branches on. The alias is the ONLY unbounded window (`bounded: false`) —
     // it keeps L2 persistence and the retain snapshot encoder; a declared
@@ -3051,6 +3204,8 @@ export function createResourceRuntime(
               params: ResourceParams,
             ) => Promise<string[]>,
             bounded: false,
+            orderSignatureOf: def.scopedMembership.orderSignatureOf as
+              ((row: unknown, params: ResourceParams) => string) | undefined,
           }
         : undefined;
     // The `authorize` seam is enforced on the WS subscribe path ONLY —
@@ -3696,6 +3851,201 @@ export function createResourceRuntime(
     return keepsIdleSnapshot(entry) ? "kept" : entry.spans.get(pk);
   }
 
+  // ── L2 persists ─────────────────────────────────────────────────────────
+  //
+  // Two modes (`PersistMeta`): a FULL recompute REPLACES the row with its value
+  // and its flight's watermark; a persisted alias's scoped refills are written
+  // as a FLOOR persist — its value reconstructed from the in-memory snapshot,
+  // floored by the snapshot's base floor — once per trailing window, so a burst
+  // of row changes costs one write. Per (entry, pk) the writes are serialized
+  // (`persistChains`), so a floor persist can never land under a replace that
+  // was issued before it.
+
+  // The serialized persist chain per (entry key, pk), and the armed trailing
+  // floor windows. A chain link never rejects (each run reports its own
+  // failure), so the chain survives one.
+  const persistChains = new Map<string, Promise<void>>();
+  const armedFloors = new Map<string, ReturnType<typeof setTimeout>>();
+  const persistWindowMs = opts.persistWindowMs ?? 2000;
+  // Per-key L2 bookkeeping for the `_debug` payload: when this process last
+  // replaced / floor-wrote the row, and the row's `position_at` as last known
+  // (seeded from L2 at boot, moved by every replace).
+  const persistStats = new Map<
+    string,
+    { lastReplaceAt?: number; lastFloorAt?: number; l2PositionAt?: number }
+  >();
+  const persistSlot = (key: string, pk: string): string => `${key}\u0000${pk}`;
+  const statsOf = (key: string) => {
+    let st = persistStats.get(key);
+    if (!st) {
+      st = {};
+      persistStats.set(key, st);
+    }
+    return st;
+  };
+
+  function enqueuePersist(
+    entry: RegistryEntry,
+    pk: string,
+    run: () => Promise<void>,
+  ): Promise<void> {
+    const slot = persistSlot(entry.key, pk);
+    const next = (persistChains.get(slot) ?? Promise.resolve())
+      .then(run)
+      .catch((err: unknown) => {
+        reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
+      });
+    persistChains.set(slot, next);
+    void next.then(() => {
+      if (persistChains.get(slot) === next) persistChains.delete(slot);
+    });
+    return next;
+  }
+
+  // The L2 definition (A18) of an entry — its routed plan's fingerprint of
+  // its compiled SQL (`RoutePlanInput.definition`), read off the plan rather
+  // than copied onto the entry, so every path that builds or binds an entry
+  // (`createResource`, `bindDeferredResources`) carries it by construction.
+  // Every persist writes it and every L2 read requires it
+  // (`persistedDefinitions()`), so a row a different definition wrote is never
+  // served or seeded. Null ⇒ the row's definition is NULL.
+  function definitionOf(entry: RegistryEntry): string | null {
+    return entry.routing?.plan.definition ?? null;
+  }
+
+  // Record (or forget) the base floor of the snapshot just rebuilt from a FULL
+  // read — see `RegistryEntry.baseFloors`. Only a persisted alias floor-persists,
+  // so only an unbounded window keeps one. An undefined watermark (the capture
+  // threw) FORGETS the old floor: the new base's floor is unknown, and no floor
+  // persist may run until the next FULL rebuild records one.
+  function setBaseFloor(
+    entry: RegistryEntry,
+    pk: string,
+    watermark: string | undefined,
+  ): void {
+    if (!isUnboundedWindow(entry)) return;
+    if (watermark === undefined) entry.baseFloors?.delete(pk);
+    else (entry.baseFloors ??= new Map()).set(pk, watermark);
+  }
+
+  // A FULL recompute's persist: REPLACE the row (value, its flight's watermark,
+  // the run's read-set, the definition). It cancels an armed floor window
+  // SYNCHRONOUSLY, before it enqueues: the window's scoped changes committed
+  // before this value's read began, so the value already holds them — and the
+  // caller rebuilds the snapshot (and its base floor) only AFTER this resolves,
+  // so a window left to fire while the write is in flight would chain a floor
+  // link behind it that reads the PRE-replace snapshot and floor and writes
+  // them over the fresh row. A floor link already enqueued runs ahead of the
+  // replace on the chain, which is harmless. Failure is reported and re-arms a
+  // window it cancelled (the row still holds the older value).
+  async function persistReplace(
+    entry: RegistryEntry,
+    pk: string,
+    value: unknown,
+    watermark: string,
+    tablesRead: readonly string[],
+  ): Promise<void> {
+    const persist = opts.persistSnapshot;
+    if (!persist) return;
+    const slot = persistSlot(entry.key, pk);
+    const armed = armedFloors.get(slot);
+    if (armed !== undefined) {
+      clearTimeout(armed);
+      armedFloors.delete(slot);
+    }
+    await enqueuePersist(entry, pk, async () => {
+      try {
+        await persist(entry.key, pk, value, watermark, {
+          mode: "replace",
+          definition: definitionOf(entry),
+          guardTables: tablesRead,
+        });
+      } catch (err) {
+        reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
+        if (armed !== undefined) armFloorPersist(entry, pk);
+        return;
+      }
+      const st = statsOf(entry.key);
+      st.lastReplaceAt = Date.now();
+      st.l2PositionAt = st.lastReplaceAt;
+    });
+  }
+
+  // Arm the trailing floor window of a persisted alias's (entry, pk) — a scoped
+  // drain changed its snapshot. No-op while one is armed (the window is fixed,
+  // so a steady stream still persists every `persistWindowMs`). Unref'd: a
+  // pending window never holds the process open, and `dropPendingPersists`
+  // drops it on shutdown (catch-up replays what it held).
+  function armFloorPersist(entry: RegistryEntry, pk: string): void {
+    if (!opts.persistSnapshot) return;
+    const slot = persistSlot(entry.key, pk);
+    if (armedFloors.has(slot)) return;
+    const timer = setTimeout(() => {
+      armedFloors.delete(slot);
+      void enqueuePersist(entry, pk, () => runFloorPersist(entry, pk));
+    }, persistWindowMs);
+    (timer as { unref?: () => void }).unref?.();
+    armedFloors.set(slot, timer);
+  }
+
+  // The tables a floor persist's A6 guard judges, and a first INSERT records:
+  // a routed entry's route tables (its reads, by construction), else the
+  // key's read-set union.
+  function floorGuardTables(entry: RegistryEntry): string[] {
+    if (entry.routing) {
+      return [...new Set(entry.routing.plan.routes.map((r) => r.table))].sort();
+    }
+    return opts.readSet?.(entry.key) ?? [];
+  }
+
+  // One floor persist, run on the chain: the value is reconstructed from the
+  // snapshot as it stands NOW (a replace queued ahead of it has already
+  // rebuilt it), floored by its base floor. Nothing to write without a
+  // snapshot, without a known floor, or once the key stopped persisting.
+  async function runFloorPersist(
+    entry: RegistryEntry,
+    pk: string,
+  ): Promise<void> {
+    const persist = opts.persistSnapshot;
+    const snapshot = entry.snapshots?.get(pk);
+    const floor = entry.baseFloors?.get(pk);
+    if (!persist || !snapshot || floor === undefined || !isPersisted(entry)) {
+      return;
+    }
+    try {
+      await persist(entry.key, pk, valueOfSnapshot(entry, snapshot), floor, {
+        mode: "floor",
+        definition: definitionOf(entry),
+        guardTables: floorGuardTables(entry),
+      });
+      statsOf(entry.key).lastFloorAt = Date.now();
+    } catch (err) {
+      reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
+    }
+  }
+
+  // Reconstruct the FULL value of an alias tuple from its snapshot (ordered id
+  // list + canonical-JSON entries). `JSON.parse` of the stored entry round-trips
+  // to the identical row object a FULL loader would produce, so the jsonb is
+  // byte-identical to a FULL persist. The ONE consumer that reads snapshot
+  // bytes back — `snapEncoderFor` guarantees an unbounded-window alias retains
+  // strings, and the guard makes a future violation loud instead of a silent
+  // corrupt value.
+  function valueOfSnapshot(
+    entry: RegistryEntry,
+    snapshot: Map<string, SnapEntry>,
+  ): unknown[] {
+    return [...snapshot.values()].map((snap) => {
+      if (typeof snap !== "string") {
+        throw new Error(
+          `[resources] scopedMembership entry "${entry.key}" holds a hashed snapshot — ` +
+            "persist reconstruction needs canonical-JSON entries (snapEncoderFor invariant broken)",
+        );
+      }
+      return JSON.parse(snap) as unknown;
+    });
+  }
+
   // The snapshot entry representation for THIS resource, decided statically
   // from the definition so it can never flip between seeding and consumption:
   //
@@ -4130,19 +4480,14 @@ export function createResourceRuntime(
       // Persisted entries are forced FULL, so `flightWatermark` is present
       // whenever the hook is bound; a throwing capture leaves it undefined and
       // the persist is skipped this cycle (the row keeps its prior floor).
-      if (persisted && flightWatermark !== undefined && opts.persistSnapshot) {
-        const tablesRead = persistReadSet(entry.key);
-        try {
-          await opts.persistSnapshot(
-            entry.key,
-            pk,
-            value,
-            flightWatermark,
-            tablesRead,
-          );
-        } catch (err) {
-          reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
-        }
+      if (persisted && flightWatermark !== undefined) {
+        await persistReplace(
+          entry,
+          pk,
+          value,
+          flightWatermark,
+          persistReadSet(entry.key),
+        );
       }
     }
 
@@ -4210,8 +4555,12 @@ export function createResourceRuntime(
       diffKeyed(entry, pk, value);
     }
     // The order-signature map's lifecycle mirrors the snapshot's: whenever the
-    // FULL value replaced the snapshot above, reseed the sigs from it too.
-    if (owns && valueComputed) reseedOrderSigs(entry, params, value);
+    // FULL value replaced the snapshot above, reseed the sigs from it too —
+    // and the snapshot's base floor is now this value's flight watermark.
+    if (owns && valueComputed) {
+      reseedOrderSigs(entry, params, value);
+      setBaseFloor(entry, pk, flightWatermark);
+    }
 
     // A FULL recompute cascades FULL (clears edge signatures inside the helper).
     await cascadeDownstream(
@@ -4231,9 +4580,10 @@ export function createResourceRuntime(
   // for a pure DELETE), derives the authoritative order per kind (see the
   // classification block below), reconciles membership via
   // `diffKeyedScopedMembership`, ships an incremental delta (with `order` iff
-  // membership changed), and — for a persisted (alias) entry — reconstructs the
-  // FULL value from the post-diff snapshot and persists it (byte-identical
-  // jsonb to a FULL persist). Any loader/windowIdsOf failure falls back to the
+  // membership changed), and — for a persisted (alias) entry whose snapshot
+  // moved — arms the trailing floor persist, which reconstructs the FULL value
+  // from the snapshot (byte-identical jsonb to a FULL persist) and floors it by
+  // the snapshot's base floor. Any loader/windowIdsOf failure falls back to the
   // FULL path so torn membership is never shipped — bounded for window/point
   // entries by construction, since their loader IS the windowed/point read.
   async function drainMembershipScoped(
@@ -4252,19 +4602,10 @@ export function createResourceRuntime(
 
     const snapshots = (entry.snapshots ??= new Map());
     const prev = snapshots.get(pk)!; // caller only routes here when a snapshot exists
+    // The base floor of `prev` — set in the same synchronous step as every
+    // snapshot rebuild, so it describes exactly the base this drain diffs from.
+    const prevBase = entry.baseFloors?.get(pk);
     const owner = snapshotOwner(entry, pk);
-
-    // Persisted: capture the watermark BEFORE any read, so a write invisible to the
-    // refill/orderOf snapshot has xid >= this floor and is replayed by catch-up.
-    let watermark: string | undefined;
-    if (persisted && opts.captureWatermark) {
-      try {
-        watermark = await opts.captureWatermark();
-      } catch (err) {
-        reportLoaderError(`watermark capture failed for ${entry.key}`, err);
-        watermark = undefined;
-      }
-    }
 
     // Refill only the requested (op-I ∪ op-U) ids — a pure DELETE runs NO loader.
     let refillRows: unknown[] = [];
@@ -4432,14 +4773,16 @@ export function createResourceRuntime(
         }
       }
     } else {
-      // Unbounded window (the `scopedMembership` alias) — byte-identical M5:
-      // `windowIdsOf` (the orderOf query) runs ONLY when a row ENTERED (an
-      // entrant needs authoritative placement); an exit-only change derives its
-      // order from the prior snapshot inside the diff, so no query runs. No
-      // backfill: an unbounded order lists no id outside prev ∪ refill (a
-      // concurrent-insert straggler is dropped by the diff and healed by its
-      // own feed event — the recorded M5 semantics).
-      if (entered) {
+      // Unbounded window (the `scopedMembership` alias) — M5: `windowIdsOf`
+      // (the orderOf query) runs ONLY when a row ENTERED (an entrant needs
+      // authoritative placement) or, for an alias that declared
+      // `orderSignatureOf`, when a member's order signature MOVED (its position
+      // may have changed — the same seam as a bounded window's); an exit-only
+      // or in-place change derives its order from the prior snapshot inside the
+      // diff, so no query runs. No backfill: an unbounded order lists no id
+      // outside prev ∪ refill (a concurrent-insert straggler is dropped by the
+      // diff and healed by its own feed event — the recorded M5 semantics).
+      if (entered || orderMoved) {
         try {
           orderedIds = await (opts.wrapOrigin
             ? opts.wrapOrigin("push", entry.key, () =>
@@ -4484,7 +4827,16 @@ export function createResourceRuntime(
       await cascade();
       return;
     }
+    // A sub-ack may have re-seeded the snapshot (and raised its base floor to
+    // its own read's watermark) while this drain read: its `versions ===
+    // baseVersion` test holds until this drain bumps the version below. The
+    // snapshot written here is still `prev` + this refill, so its floor is
+    // `prev`'s — keeping the sub-ack's would claim a newer base than the value
+    // has, and a floor persist into a missing row (or under another writer's
+    // higher position) would then skip the commits in between on catch-up.
+    const rebasedUnder = snapshots.get(pk) !== prev;
     snapshots.set(pk, nextSnapshot);
+    if (rebasedUnder) setBaseFloor(entry, pk, prevBase);
 
     // Maintain the order-signature map in lockstep with the snapshot: refilled
     // rows take their fresh signature, carried-over members keep the stored one,
@@ -4500,31 +4852,6 @@ export function createResourceRuntime(
       (entry.orderSigs ??= new Map()).set(pk, nextSigs);
     }
 
-    // Persisted: reconstruct the FULL value from the post-diff snapshot (ordered
-    // id list + canonical-JSON entries) and persist it. `JSON.parse` of the
-    // stored entry round-trips to the identical row object a FULL loader would
-    // persist, so the jsonb is byte-identical to a FULL persist. This is the ONE
-    // consumer that reads snapshot bytes back — `snapEncoderFor` guarantees a
-    // scopedMembership entry's snapshot retains strings, and the guard makes a
-    // future violation loud instead of a silent corrupt persist.
-    if (persisted && watermark !== undefined && opts.persistSnapshot) {
-      const full = [...nextSnapshot.values()].map((snap) => {
-        if (typeof snap !== "string") {
-          throw new Error(
-            `[resources] scopedMembership entry "${entry.key}" holds a hashed snapshot — ` +
-              "persist reconstruction needs canonical-JSON entries (snapEncoderFor invariant broken)",
-          );
-        }
-        return JSON.parse(snap);
-      });
-      const tablesRead = persistReadSet(entry.key);
-      try {
-        await opts.persistSnapshot(entry.key, pk, full, watermark, tablesRead);
-      } catch (err) {
-        reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
-      }
-    }
-
     // Ship the delta + bump the version only on a real change. `order` present
     // counts as a change on its own: the diff only returns it when the rebuilt
     // snapshot's membership/order actually differs from the prior one (e.g. a
@@ -4533,6 +4860,12 @@ export function createResourceRuntime(
     // frame or its array drifts from the mutated server snapshot.
     const changed =
       upserts.length > 0 || deletes.length > 0 || order !== undefined;
+    // Persisted: the snapshot moved, so arm the trailing floor window — ONE
+    // floor persist of the value reconstructed from the snapshot, floored by
+    // its base floor (never a capture taken here: the refill read only the
+    // requested ids, so a drain-time watermark could pass over a commit this
+    // tuple has not been routed yet). An unchanged snapshot owes L2 nothing.
+    if (persisted && changed) armFloorPersist(entry, pk);
     const subs = subscribersFor(entry.key, pk);
     if (changed) {
       const version = (entry.versions.get(pk) ?? 0) + 1;
@@ -4936,27 +5269,18 @@ export function createResourceRuntime(
         // capture leaves it undefined and the persist is skipped this cycle (the
         // row keeps its prior, older floor) while subscribers are still served.
         // Persist failure is reported but does not block the send/cascade.
-        if (
-          persisted &&
-          flightWatermark !== undefined &&
-          opts.persistSnapshot
-        ) {
+        if (persisted && flightWatermark !== undefined) {
           // The loader has already run (via `getResourceValue` above), so its
           // per-run read-set is captured — `persistReadSet` returns the tables THIS
           // run read (replace, self-healing), persisted alongside the value so the
           // next cold boot routes catch-up by the current set without a loader run.
-          const tablesRead = persistReadSet(entry.key);
-          try {
-            await opts.persistSnapshot(
-              entry.key,
-              pk,
-              value,
-              flightWatermark,
-              tablesRead,
-            );
-          } catch (err) {
-            reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
-          }
+          await persistReplace(
+            entry,
+            pk,
+            value,
+            flightWatermark,
+            persistReadSet(entry.key),
+          );
         }
       }
 
@@ -5598,6 +5922,9 @@ export function createResourceRuntime(
       if (!snapshots.has(pk) || (entry.versions.get(pk) ?? 0) === baseVersion) {
         snapshots.set(pk, snapshotOf(entry, value));
         reseedOrderSigs(entry, params, value); // lifecycle mirrors the snapshot seed
+        // The new base's floor is the flight's own watermark (C19): the value
+        // this snapshot now holds reflects every commit below it.
+        setBaseFloor(entry, pk, watermark);
       }
     }
     // Stamp the etag the FLIGHT carried, not `freshEtag`. Three cases:
@@ -5908,6 +6235,7 @@ export function createResourceRuntime(
       if (!keepsIdleSnapshot(entry)) {
         entry.snapshots?.delete(pk);
         entry.orderSigs?.delete(pk); // lifecycle mirrors the snapshot eviction
+        entry.baseFloors?.delete(pk);
       }
       if (entry.onLastUnsubscribe) {
         try {
@@ -6126,6 +6454,10 @@ export function createResourceRuntime(
       staleFlightSupersedes: number;
       subTabs: Record<string, number>;
       externalSource: boolean;
+      definition?: string | null;
+      lastReplaceAt?: number | null;
+      lastFloorAt?: number | null;
+      l2PositionAt?: number | null;
     }> = [];
     for (const entry of registry.values()) {
       let subscribers = 0;
@@ -6223,6 +6555,17 @@ export function createResourceRuntime(
         // `no-db-backed-notify` check reads this to forbid a DB-reading loader on
         // an external resource.
         externalSource: entry.externalSource ?? false,
+        // L2 bookkeeping, for a persisted key only: its definition (A18), when
+        // this process last replaced / floor-wrote its row, and the row's
+        // `position_at` as last known (epoch ms; null = never in this process).
+        ...(isPersisted(entry)
+          ? {
+              definition: definitionOf(entry),
+              lastReplaceAt: persistStats.get(entry.key)?.lastReplaceAt ?? null,
+              lastFloorAt: persistStats.get(entry.key)?.lastFloorAt ?? null,
+              l2PositionAt: persistStats.get(entry.key)?.l2PositionAt ?? null,
+            }
+          : {}),
       });
     }
     return new Response(
@@ -6794,13 +7137,78 @@ export function createResourceRuntime(
     key: string,
     paramsKey: string,
     value: unknown,
-  ): void {
+    base: PersistedBase,
+  ): SeedOutcome {
     const entry = registry.get(key);
-    if (!entry || !isUnboundedWindow(entry)) return;
-    if (entry.snapshots?.get(paramsKey) !== undefined) return;
+    if (!entry || !isUnboundedWindow(entry)) return { kind: "skipped" };
+    if (entry.snapshots?.get(paramsKey) !== undefined) {
+      return { kind: "skipped" };
+    }
+    // A30: a persisted value is only a diff base if it is a value this entry
+    // could have produced. The raw (JSON) value is what is seeded, as before:
+    // the parse only gates it.
+    const check = checkPersistedPayload(entry, value);
+    if (check.kind === "invalid") return check;
     (entry.snapshots ??= new Map()).set(paramsKey, snapshotOf(entry, value));
     // A params key is the tuple's canonical JSON (`paramsKey`).
     reseedOrderSigs(entry, JSON.parse(paramsKey) as ResourceParams, value);
+    // ONLY on the branch that actually seeded: the row's position is the floor
+    // of exactly this value (C19). A skipped seed leaves the fresher base's.
+    setBaseFloor(entry, paramsKey, base.position);
+    if (base.positionAt !== null) statsOf(key).l2PositionAt = base.positionAt;
+    return { kind: "seeded" };
+  }
+
+  // A30's gate: its payload schema is the same check every loader output
+  // passes (`timedLoad`).
+  function checkPersistedPayload(
+    entry: RegistryEntry,
+    value: unknown,
+  ): PersistedValueCheck {
+    const parsed = entry.schema.safeParse(value);
+    return parsed.success
+      ? { kind: "valid" }
+      : { kind: "invalid", error: parsed.error.message };
+  }
+
+  // A30 without the seed (see the interface).
+  function validatePersistedValue(
+    key: string,
+    value: unknown,
+  ): PersistedValueCheck {
+    const entry = registry.get(key);
+    if (!entry || !isUnboundedWindow(entry)) return { kind: "skipped" };
+    return checkPersistedPayload(entry, value);
+  }
+
+  // The definition of every persisted key that has one (see the interface).
+  function persistedDefinitions(): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const entry of registry.values()) {
+      const definition = definitionOf(entry);
+      if (isPersisted(entry) && definition !== null) {
+        out[entry.key] = definition;
+      }
+    }
+    return out;
+  }
+
+  // The kept alias value at `{}` (see the interface). Only a persisted alias
+  // keeps its snapshot current with nobody subscribed, so only it is served.
+  function keptSnapshotValue(key: string): unknown[] | undefined {
+    const entry = registry.get(key);
+    if (!entry || !isUnboundedWindow(entry) || !isPersisted(entry)) {
+      return undefined;
+    }
+    const snapshot = entry.snapshots?.get(EMPTY_PK);
+    return snapshot ? valueOfSnapshot(entry, snapshot) : undefined;
+  }
+
+  function dropPendingPersists(): number {
+    const dropped = armedFloors.size;
+    for (const timer of armedFloors.values()) clearTimeout(timer);
+    armedFloors.clear();
+    return dropped;
   }
 
   return {
@@ -6825,6 +7233,10 @@ export function createResourceRuntime(
     unboundedWindowKeys,
     preloadedKeys,
     seedPersistedSnapshot,
+    validatePersistedValue,
+    persistedDefinitions,
+    keptSnapshotValue,
+    dropPendingPersists,
     readGateStats: () => readLoadGate.stats(),
   };
 }

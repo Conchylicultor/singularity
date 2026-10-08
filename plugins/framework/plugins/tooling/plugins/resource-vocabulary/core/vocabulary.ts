@@ -88,8 +88,12 @@ export interface MintedResource {
   /**
    * Minted only when the call's spec sets this field — absent means always.
    * A `liveCollection` declared without `default` is lookup-only: it mints
-   * `k:rows` alone, so its window and groups carry `requires: "default"`. A
-   * scanner reads the field's PRESENCE from source text, like `preload:`.
+   * `k:rows` alone, so its window and groups carry `requires: "default"`; one
+   * declared `all` mints `k` as the whole ordered set (`requires: "all"`) and
+   * `k:rows`. A scanner reads the field's PRESENCE from source text at the
+   * spec's own depth, through {@link mintsOf} — never by hand — which also
+   * refuses two kept mints of one key (a spec setting both `default` and
+   * `all`).
    */
   requires?: string;
 }
@@ -168,8 +172,9 @@ type DescriptorFactoryNames<M> = {
 
 /**
  * A collection declaration: one call minting a `:rows` point descriptor and —
- * unless it is lookup-only — a window and a `:groups` sibling
- * (`liveCollection`). Matched on `rows`, the one descriptor every form mints,
+ * unless it is lookup-only — a window and a `:groups` sibling, or (declared
+ * `all`) the whole ordered set (`liveCollection`). Matched on `rows`, the one
+ * descriptor every form mints,
  * structurally for the same reason as {@link MintedDescriptor}.
  */
 interface MintedCollection {
@@ -238,6 +243,14 @@ export const resourceDescriptorFactories = {
         membership: "window",
         preloadable: true,
         requires: "default",
+      },
+      // The whole ordered set (`all`): the same key, unbounded by declaration.
+      {
+        suffix: "",
+        keyed: true,
+        membership: null,
+        preloadable: true,
+        requires: "all",
       },
       { suffix: ":rows", keyed: true, membership: "point", preloadable: false },
       {

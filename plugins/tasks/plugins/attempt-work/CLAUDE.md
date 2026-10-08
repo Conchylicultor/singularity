@@ -139,7 +139,7 @@ Everything that could make the standing merely *unknown* is kept out of that arm
     - `primitives/commit-list.runGit`
     - `primitives/commit-list.tryRunGit`
     - `primitives/commit-list.WorktreeGoneError`
-    - `tasks/tasks-core.getAttempt`
+    - `tasks/tasks-core.getAttemptRow`
     - `tasks/tasks-core.listConversationIdsForAttempt`
     - `tasks/tasks-core.listPushesForAttempt`
   - Exports (values):

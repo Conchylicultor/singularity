@@ -1,3 +1,4 @@
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useId, useRef, useState } from "react";
 import { z } from "zod";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -10,12 +11,11 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   foldResource,
   ResourceErrorInline,
-  useResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ConversationRow } from "@plugins/conversations/plugins/conversation-ui/plugins/row/web";
-import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { taskRows } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTaskAttempts } from "@plugins/tasks/plugins/tasks-core/web";
 import { createTask as createTaskEndpoint } from "@plugins/tasks/core";
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
@@ -238,7 +238,7 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
 function TaskChip({ taskId }: { taskId: string }) {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
-  const tasksResult = useResource(tasksResource);
+  const tasksResult = useLive(taskRows);
   const openPane = useOpenPane();
   if (!conversation) return null;
   if (tasksResult.status === "loading") return null;

@@ -31,14 +31,13 @@
     - `conversationPane.Actions` ← `conversations.conversation-view.track`
     - `conversationPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "conversation"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×4
-    - `infra/endpoints` ×2
-    - `primitives/live-state` ×2
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×5
     - `conversations/conversation-view/action-bar.ActionBarView`
     - `conversations/conversation-view/jsonl-viewer.JsonlPane`
     - `conversations/hibernation.markConversationViewed`
     - `conversations.useConversationById`
+    - `network/live.useLiveRow`
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`

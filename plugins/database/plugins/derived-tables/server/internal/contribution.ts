@@ -1,17 +1,16 @@
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
-import type { DerivedRollupSpec } from "@plugins/database/plugins/derived-tables/core";
+import type { Rollup } from "@plugins/database/plugins/derived-tables/core";
 
-// A plugin declares each of its trigger-maintained materialized rollups here, in
-// its server plugin definition's `contributions: [...]` — exactly the same
-// pattern as the `View` contribution in derived-views. The framework collects
-// all contributions at boot (before any onReadyBlocking runs), so
-// rebuildDerivedTables sees every rollup regardless of module import order, and
-// feedExemptTables() is complete when the change-feed snapshots its table set —
+// A plugin declares each of its trigger-maintained rollups here, in its server
+// plugin definition's `contributions: [...]` — the same pattern as the `View`
+// contribution in derived-views. The framework collects all contributions at
+// boot (before any onReadyBlocking runs), so the schema layer sees every rollup
+// regardless of module import order, and `feedExemptTables()` /
+// `rollupSources()` are complete when the change-feed snapshots its table set —
 // there is no "rollup registered in a module nothing imported" footgun.
 //
-// The contributed value is an opaque-SQL `DerivedRollupSpec` (table + create /
-// function / trigger / reconcile DDL strings). The generic layer never inspects
-// the rollup's shape; it only orchestrates the four DDL phases.
-export const DerivedTable = defineServerContribution<DerivedRollupSpec>("derived-table", {
-  docLabel: (s) => s.table,
+// The contributed value is a `Rollup`, which only `defineRollup` mints: every
+// piece of its SQL is generated from the declaration.
+export const DerivedTable = defineServerContribution<Rollup>("derived-table", {
+  docLabel: (r) => r.table,
 });

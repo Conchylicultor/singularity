@@ -160,7 +160,7 @@ describe("applySchemaLayer", () => {
           commit: true,
         },
       ),
-    ).toEqual({ pending: 0 });
+    ).toEqual({ pending: 0, rollups: [] });
     expect(await viewRows(t)).toHaveLength(2);
   });
 

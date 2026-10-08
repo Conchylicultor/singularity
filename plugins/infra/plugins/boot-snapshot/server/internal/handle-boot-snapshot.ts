@@ -1,11 +1,14 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import {
+  keptSnapshotValue,
   loadResourceByKey,
   reportServerError,
+  unboundedWindowKeys,
 } from "@plugins/framework/plugins/server-core/core";
 import { readPersistedSnapshots } from "@plugins/database/plugins/live-state-snapshot/server";
 import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
 import { bootSnapshot } from "../../core";
+import type { BootSnapshotSource } from "../../core";
 import { enumeratedPreloads, preloadedKeys } from "./boot-keys";
 
 type Params = Record<string, string>;
@@ -27,11 +30,18 @@ function reportOmitted(key: string, what: string, err: unknown): void {
 // Serves every preloaded resource in one request so the client hydrates them
 // all before first paint.
 //
-// L2 fast path: read the persisted `live_state_snapshot` values in ONE query
-// (low-ms, no loaders on the hot request path) and serve those directly. Only
-// keys with NO persisted row (first-ever boot, or a newly-added resource before
-// its first recompute) fall back to a from-scratch `loadResourceByKey` — the
-// original behavior. A failed fallback loader is OMITTED (not fatal) so one broken
+// Memory path first: a persisted alias (an unbounded-window `scopedMembership`
+// key) keeps its whole value current in memory, while its L2 row trails it by
+// up to one floor-persist window — so its kept snapshot is served when it holds
+// one (`keptSnapshotValue`), never the older row.
+//
+// L2 fast path next: read the persisted `live_state_snapshot` values in ONE
+// query (low-ms, no loaders on the hot request path) and serve those directly.
+// The read serves only USABLE rows (live-state-snapshot's predicate: a key the
+// runtime persists right now, under its current definition), so a bounded
+// preloaded key never reaches it. Only keys with neither (first-ever boot, a
+// newly-added resource before its first recompute, a bounded window) fall back
+// to a from-scratch `loadResourceByKey` — the original behavior. A failed fallback loader is OMITTED (not fatal) so one broken
 // resource never bricks the snapshot; that key falls back to its normal WS
 // sub-ack. See
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.4.
@@ -41,16 +51,38 @@ function reportOmitted(key: string, what: string, err: unknown): void {
 // the loader alone, no flight and no commit watermark, sequential per key),
 // shipped under `tuples[key]`. A tuple whose loader fails is omitted and
 // reported; the rest of the key still ships.
-export async function assembleBootSnapshot(): Promise<{
+export async function assembleBootSnapshot(
+  opts: {
+    /**
+     * Serve persisted aliases from memory (default true). Boot-bench's cold
+     * mode turns it off, so a cleared L2 really measures the loaders.
+     */
+    memory?: boolean;
+  } = {},
+): Promise<{
   resources: Record<string, unknown>;
   tuples: Record<string, { params: Params; value: unknown }[]>;
-  timings: Record<string, { source: "persisted" | "loader"; workMs: number }>;
+  timings: Record<string, { source: BootSnapshotSource; workMs: number }>;
   /** Wall time of the single batched persisted-snapshot read (the L2 fast path). */
   persistedReadMs: number;
 }> {
   const enumerated = enumeratedPreloads();
   const enumeratedKeys = new Set(enumerated.map((e) => e.key));
-  const keys = preloadedKeys().filter((k) => !enumeratedKeys.has(k));
+  const preloaded = preloadedKeys().filter((k) => !enumeratedKeys.has(k));
+  // The memory path: each persisted alias that holds a kept snapshot.
+  const fromMemory = new Map<string, { value: unknown; workMs: number }>();
+  if (opts.memory ?? true) {
+    const aliases = new Set(unboundedWindowKeys());
+    for (const k of preloaded) {
+      if (!aliases.has(k)) continue;
+      const s = performance.now();
+      const value = keptSnapshotValue(k);
+      if (value !== undefined) {
+        fromMemory.set(k, { value, workMs: performance.now() - s });
+      }
+    }
+  }
+  const keys = preloaded.filter((k) => !fromMemory.has(k));
   const enumeratedLoads = Promise.all(
     enumerated.map(async ({ key, preloadTuples }) => {
       const s = performance.now();
@@ -105,8 +137,12 @@ export async function assembleBootSnapshot(): Promise<{
   const resources: Record<string, unknown> = {};
   const timings: Record<
     string,
-    { source: "persisted" | "loader"; workMs: number }
+    { source: BootSnapshotSource; workMs: number }
   > = {};
+  for (const [k, { value, workMs }] of fromMemory) {
+    resources[k] = value;
+    timings[k] = { source: "memory", workMs };
+  }
 
   // The persisted keys all share the single batched read, so there's no per-key
   // server work to attribute — amortize that one read across them for a directional

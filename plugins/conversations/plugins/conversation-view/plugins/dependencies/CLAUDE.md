@@ -9,14 +9,15 @@
   - Contributes: `Conversation.PromptBar` "Deps" → `DependenciesButton`
   - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×3
-    - `primitives/live-state` ×3
     - `infra/endpoints` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/text` ×2
+    - `primitives/live-state` ×2
     - `primitives/search` ×2
     - `conversations/conversation-ui/item.ConversationItem`
     - `conversations/conversation-view.Conversation`
     - `conversations.useActiveConversations`
+    - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/rigid.rigidClass`

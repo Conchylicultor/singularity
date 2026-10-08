@@ -1,8 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  ResourceErrorInline,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   PaneChrome,
   PaneInstanceContext,
@@ -23,7 +21,7 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import {
-  attemptsResource,
+  attemptRows,
   type AttemptWithConversations,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -160,7 +158,7 @@ function taskAttemptsOf(
  */
 export function AttemptsTitle() {
   const { attemptId } = attemptPane.useParams();
-  const result = useResource(attemptsResource);
+  const result = useLive(attemptRows);
   switch (result.status) {
     case "loading":
     case "error":
@@ -182,7 +180,7 @@ export function AttemptsTitle() {
 
 export function AttemptPane() {
   const { attemptId } = attemptPane.useParams();
-  const result = useResource(attemptsResource);
+  const result = useLive(attemptRows);
   const openPane = useOpenPane();
   // ONE read of "the conversation column this pane opened". It used to be two —
   // the first conversation pane in the chain for the highlight, the last one for

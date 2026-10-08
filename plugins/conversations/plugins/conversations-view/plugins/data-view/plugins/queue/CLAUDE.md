@@ -26,11 +26,11 @@
     - `conversations/conversations-view/queue.ReorderVars`
     - `conversations/conversations-view/queue.TaskGroup`
     - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/data-view.defineItemActions`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.combineResources`
     - `primitives/live-state.ResourceReadiness`
-    - `primitives/live-state.useResource`
     - `primitives/optimistic-mutation.useOptimisticResource`
 - Exemptions:
   - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/use-queue-rows.ts` (debt)

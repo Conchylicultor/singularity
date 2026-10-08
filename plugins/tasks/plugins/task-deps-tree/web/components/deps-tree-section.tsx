@@ -1,7 +1,7 @@
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useCallback, useMemo } from "react";
 import {
   foldResource,
-  useResource,
   ResourceView,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -10,7 +10,7 @@ import {
   defineDataView,
 } from "@plugins/primitives/plugins/data-view/web";
 import {
-  tasksResource,
+  taskRows,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
@@ -31,7 +31,7 @@ const DEPS_TREE_VIEW = defineDataView("task-deps-tree");
  * edges — see the note on the same gate below.
  */
 export function useHasDepsCluster({ taskId }: { taskId: string }): boolean {
-  const result = useResource(tasksResource);
+  const result = useLive(taskRows);
   // Still loading ⇒ keep the card painted (the body shows its own Loading), so
   // it does not pop in a frame after the pane. `false` here would collapse
   // "unknown yet" into "definitely a lone task". Failed ⇒ painted too: the
@@ -44,7 +44,7 @@ export function useHasDepsCluster({ taskId }: { taskId: string }): boolean {
 }
 
 export function DepsTreeSection({ taskId }: { taskId: string }) {
-  const result = useResource(tasksResource);
+  const result = useLive(taskRows);
   return (
     <ResourceView resource={result}>
       {(allTasks) => (

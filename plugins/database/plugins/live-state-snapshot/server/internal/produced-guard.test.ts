@@ -89,7 +89,11 @@ describe("A6 stale rows (real DB)", () => {
       ["over-reports", ["reports", "tasks"]],
       ["over-tasks", ["tasks"]],
     ] as const) {
-      await persistSnapshot(t.db, key, "{}", { v: key }, "1", tables);
+      await persistSnapshot(t.db, key, "{}", { v: key }, "1", {
+        mode: "replace",
+        definition: null,
+        guardTables: tables,
+      });
     }
   });
 

@@ -1,7 +1,6 @@
 import {
   ResourceErrorInline,
   useCombinedResources,
-  useResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { statusDotPaintClass } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -13,10 +12,10 @@ import {
   CONV_STATUS_DOT,
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { agentLaunchesResource, agentRows } from "../../shared/resources";
+import { agentLaunchRows, agentRows } from "../../shared/resources";
 
 export function AgentAvatarRow({ conv }: { conv: ConversationItemConv }) {
-  const launchesResult = useResource(agentLaunchesResource);
+  const launchesResult = useLive(agentLaunchRows);
   const agentsResult = useLive(agentRows);
   const combined = useCombinedResources({
     launches: launchesResult,

@@ -10,13 +10,13 @@
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/live-state.foldResource`
-    - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-status.StatusIcon`

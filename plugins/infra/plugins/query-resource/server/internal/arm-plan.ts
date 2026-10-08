@@ -1,6 +1,7 @@
 import { and, inArray, is, sql, SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type {
+  DerivedRead,
   ResourceParams,
   RoutedRecomputeOn,
   TupleUse,
@@ -20,7 +21,7 @@ import { resolveIdentity, wireFieldFor } from "./identity";
 import {
   compileJoins,
   familyRoute,
-  joinRoute,
+  joinRoutes,
   projectedField,
   routeColumnsOf,
   sameColumn,
@@ -41,10 +42,11 @@ import type {
 // One ARM of a bounded compile: a base table, its joins, its projection and its
 // per-tuple SQL — everything about one relation set that the window / point
 // assembler (`./compile-window`) turns into loaders, membership and a scope
-// policy. The single-table compiler is the 1-arm case; a union window (P6) and
-// a persisted alias (P8) are the same assembler over N arms, or in mode `all`
-// (research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md, step 9). The
-// contract below is pinned once so those compilers consume it unchanged.
+// policy. The single-table compiler is the 1-arm case. What other compilers
+// share is the ROUTED half (`routedReads`): a union window (P6) routes each arm
+// through it and renders its own positional SQL, and so does the persisted
+// `all` collection (P8, `./compile-alias`) — its shapes are raw SQL, never an
+// `ArmMode` (C2 of research/2026-10-06-global-scoped-change-routing-p8-v3.md).
 //
 // An arm RENDERS and never executes: each `…Query` returns the drizzle step the
 // assembler awaits, so the assembler owns what a load costs and when it runs.
@@ -92,7 +94,7 @@ export interface ArmOrder<P> {
   cutWhere(params: P): SQL | undefined;
   /**
    * The projected field of each signature column, in `signatureColumns`
-   * order — what the assembler's signature-field list is built from.
+   * order — where the assembler reads a `column` signature part's field.
    */
   signatureFields: readonly string[];
   /** The parts of the tuple's order signature (the pk tiebreaker excluded: immutable). */
@@ -206,16 +208,39 @@ const familyPart = (i: number): string => `__family_${i}`;
 const VALUE: TupleUse = { role: "value" };
 
 /**
+ * A rollup read as membership: every column of a source route may move the
+ * tuple. Its `moves` cannot be cut from the reader's SQL — that reads ROLLUP
+ * columns, while the routes sit on the rollup's sources — so it is absent
+ * ("every column"); each source route's own `columns` gate still skips a
+ * write the rollup does not read.
+ */
+const MEMBERSHIP_ANY: TupleUse = { role: "membership" };
+
+/**
+ * The routed half of a relation set (`routedReads`): its routes, each tuple's
+ * reads, and the derived tables (rollups) its SQL reads beside the route
+ * tables — what a plan mints as `RoutePlanInput.derivedReads` (empty unless a
+ * rollup is joined, which only the `all` compiler does).
+ */
+export interface RoutedReads<P extends ResourceParams> {
+  routes: RawRoute[];
+  tuple: (params: P) => TupleReads;
+  derivedReads: readonly DerivedRead[];
+}
+
+/**
  * The routed half of an arm (exported for the union compiler, which renders
  * its own positional SQL but routes each arm exactly as a single-table arm is
- * routed — `./compile-union-window`): the routes (the base's `identity`, one per
- * declared join) and each tuple's reads, derived from the SQL fragments the
+ * routed — `./compile-union-window`): the routes (the base's `identity`, then
+ * each declared join's — `joinRoutes`: one for a window join, one per source
+ * for a rollup) and each tuple's reads, derived from the SQL fragments the
  * renders produce — never declared beside them. A tuple includes a join when
  * its SQL references it (projected, a required lookup, or named by its `where`
  * / order) or a join hangs off it; the join is read as `membership` when it can
  * move the tuple's membership or order (required, or referenced — through a
  * later join in its chain too — by the `where` / order), else as `value` (a
- * LEFT join that is only projected).
+ * LEFT join that is only projected). A tuple reading a join names every route
+ * the join is reached by (`JoinPlan.routeIdsOf`), in that role.
  */
 export function routedReads<P extends ResourceParams>(opts: {
   label: string;
@@ -236,7 +261,7 @@ export function routedReads<P extends ResourceParams>(opts: {
   orderOf: (params: P) => readonly WindowOrderKey[];
   /** What a lookup's reverse route probes the hosts with. */
   db: QueryDb;
-}): { routes: RawRoute[]; tuple: (params: P) => TupleReads } {
+}): RoutedReads<P> {
   const { joins, where, projection } = opts;
   if (
     joins
@@ -260,7 +285,7 @@ export function routedReads<P extends ResourceParams>(opts: {
   const host = { base: opts.base, pk: opts.pk, plan: joins, db: opts.db };
   const routes = [
     baseIdentityRoute(opts.base, opts.pk, columnsOf(BASE_RELATION)),
-    ...joins.joins.map((j) => joinRoute(j, host, columnsOf(j.alias))),
+    ...joins.joins.flatMap((j) => joinRoutes(j, host, columnsOf)),
     // One route per family, whatever its members: which members a tuple
     // reads is its `match`, not a route of its own.
     ...joins.families.map((f) => familyRoute(f)),
@@ -316,12 +341,14 @@ export function routedReads<P extends ResourceParams>(opts: {
       [BASE_RELATION, membershipUse(BASE_RELATION)],
     ]);
     for (const j of joins.joins) {
-      if (included.has(j.alias)) {
-        uses.set(
-          j.alias,
-          membership.has(j.alias) ? membershipUse(j.alias) : VALUE,
-        );
-      }
+      if (!included.has(j.alias)) continue;
+      const use = !membership.has(j.alias)
+        ? VALUE
+        : j.spec.kind === "rollup"
+          ? MEMBERSHIP_ANY
+          : membershipUse(j.alias);
+      // One id for a window join (its alias); one per source for a rollup.
+      for (const id of joins.routeIdsOf(j.alias)) uses.set(id, use);
     }
     // A family's members are joined only where a `where` / order names them,
     // so a tuple reads its family as membership, matching those members.
@@ -344,7 +371,7 @@ export function routedReads<P extends ResourceParams>(opts: {
     return { where: w, included, uses };
   };
 
-  return { routes, tuple };
+  return { routes, tuple, derivedReads: joins.derivedReads };
 }
 
 /**
@@ -472,11 +499,12 @@ export function planArm<Row, P extends ResourceParams>(
   // side-table write that moves it then moves the signature, so the runtime
   // re-derives the window rather than leave the order stale.
   const signatureFields = signatureColumns.map((col) => {
-    // A select-all projects only the source's columns; an expression (which
-    // reads no one column) is projected only by an explicit `select`.
+    // A select-all projects only the source's columns; an expression or an
+    // aggregate (which reads no one column) is projected only by an explicit
+    // `select`.
     const field = selectMap
       ? projectedField(selectMap, col)
-      : joins.isExpr(col)
+      : joins.isComputed(col)
         ? undefined
         : wireFieldFor(undefined, columns, joins.columnOf(col));
     guard(

@@ -3,9 +3,16 @@ import {
   routeTableChange,
   type TableChange,
 } from "@plugins/framework/plugins/server-core/core";
+import type { ResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
 import { relationIdentityBase } from "@plugins/database/plugins/derived-views/server";
 import type { DbChange } from "./parse-payload";
 import { dependentViews } from "./view-deps";
+
+/** The two routers a change is delivered to (see `routeChange`). */
+type ResourceRuntimeRouters = Pick<
+  ResourceRuntime,
+  "routeTableChange" | "applyDbChange"
+>;
 
 /** A change from the Postgres feed: a NOTIFY, a catch-up row, a reconnect sweep. */
 export type FeedChange = TableChange & { source: "feed" };
@@ -88,39 +95,58 @@ function tableChangeOf(change: RoutedChange): TableChange {
 // per-tuple read-sets, host-id maps), `applyDbChange` every other one through the
 // read-set inversion, which skips routed keys. Both carry the change's `source`.
 // See research/2026-09-29-global-scoped-change-routing.md.
-export function routeChange(routed: RoutedChange): void {
-  const change = tableChangeOf(routed);
-  // `xid` (the source transaction — mutation-ack attribution) forwards on BOTH
-  // applies: even a view-fanout FULL recompute reads post-commit, so the ackTx
-  // claim survives the scope degrade. The change's wall clock forwards on both
-  // applies too: a view-backed list is late by the same amount as the table
-  // that fed it.
-  const attribution = {
-    source: change.source,
-    ...(change.xid !== undefined ? { xid: change.xid } : {}),
-    ...(change.changedAt !== undefined ? { changedAt: change.changedAt } : {}),
-  };
-  // A routed table's trigger carries its key layout and, for a gated UPDATE,
-  // the unchanged columns; every other table's leaves both null (unknown).
-  routeTableChange(change);
-  applyDbChange({
-    table: change.table,
-    op: change.op,
-    ids: change.ids,
-    origin: change.table,
-    identityBase: change.table,
-    ...attribution,
-  });
-  for (const view of dependentViews(change.table)) {
-    const identityBase = relationIdentityBase(view);
-    const forwardScoped = identityBase === change.table;
+export const routeChange: (routed: RoutedChange) => void = createChangeRouter({
+  routeTableChange,
+  applyDbChange,
+});
+
+/**
+ * The routing above, into ANY runtime's two routers — `routeChange` is it
+ * bound to server-core's process-global runtime. A suite that registers real
+ * declarations on a runtime of its own (`createResourceRuntime`: the tree
+ * oracle) routes its feed through this, so it never registers a key on the
+ * global registry a barrel's module eval already registered it on.
+ */
+export function createChangeRouter(
+  runtime: ResourceRuntimeRouters,
+): (routed: RoutedChange) => void {
+  const { routeTableChange, applyDbChange } = runtime;
+  return (routed) => {
+    const change = tableChangeOf(routed);
+    // `xid` (the source transaction — mutation-ack attribution) forwards on BOTH
+    // applies: even a view-fanout FULL recompute reads post-commit, so the ackTx
+    // claim survives the scope degrade. The change's wall clock forwards on both
+    // applies too: a view-backed list is late by the same amount as the table
+    // that fed it.
+    const attribution = {
+      source: change.source,
+      ...(change.xid !== undefined ? { xid: change.xid } : {}),
+      ...(change.changedAt !== undefined
+        ? { changedAt: change.changedAt }
+        : {}),
+    };
+    // A routed table's trigger carries its key layout and, for a gated UPDATE,
+    // the unchanged columns; every other table's leaves both null (unknown).
+    routeTableChange(change);
     applyDbChange({
-      table: view,
-      op: forwardScoped ? change.op : "U",
-      ids: forwardScoped ? change.ids : null,
+      table: change.table,
+      op: change.op,
+      ids: change.ids,
       origin: change.table,
-      identityBase,
+      identityBase: change.table,
       ...attribution,
     });
-  }
+    for (const view of dependentViews(change.table)) {
+      const identityBase = relationIdentityBase(view);
+      const forwardScoped = identityBase === change.table;
+      applyDbChange({
+        table: view,
+        op: forwardScoped ? change.op : "U",
+        ids: forwardScoped ? change.ids : null,
+        origin: change.table,
+        identityBase,
+        ...attribution,
+      });
+    }
+  };
 }

@@ -7,7 +7,8 @@
 
 import { describe, expect, test } from "bun:test";
 import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
-import { resolveBodyState } from "./body-state";
+import type { FieldDef, FilterNode } from "../../core";
+import { fieldsReadByView, resolveBodyState } from "./body-state";
 
 const refetch = () => Promise.resolve();
 const failure = new ResourceError("loader-failed", "boom", null);
@@ -15,6 +16,7 @@ const failure = new ResourceError("loader-failed", "boom", null);
 describe("resolveBodyState", () => {
   test("a failed read renders the error state, not the view", () => {
     const state = resolveBodyState({
+      readFields: [],
       server: null,
       readiness: { status: "error", error: failure, refetch },
     });
@@ -27,12 +29,14 @@ describe("resolveBodyState", () => {
   test("readiness loading → loading; ready → the view", () => {
     expect(
       resolveBodyState({
+        readFields: [],
         server: null,
         readiness: { status: "loading" },
       }).kind,
     ).toBe("loading");
     expect(
       resolveBodyState({
+        readFields: [],
         server: null,
         readiness: { status: "ready" },
       }).kind,
@@ -40,21 +44,24 @@ describe("resolveBodyState", () => {
   });
 
   test("without readiness, the rows are the view", () => {
-    expect(resolveBodyState({ server: null, readiness: undefined }).kind).toBe(
-      "view",
-    );
+    expect(
+      resolveBodyState({ server: null, readiness: undefined, readFields: [] })
+        .kind,
+    ).toBe("view");
   });
 
   test("a live origin keeps its own error and loading", () => {
     const err = new Error("sql");
     expect(
       resolveBodyState({
+        readFields: [],
         server: { loading: false, error: err, readError: null },
         readiness: { status: "loading" },
       }),
     ).toEqual({ kind: "server-error", error: err });
     expect(
       resolveBodyState({
+        readFields: [],
         server: { loading: true, error: null, readError: null },
         readiness: undefined,
       }).kind,
@@ -65,6 +72,7 @@ describe("resolveBodyState", () => {
     const readError = { status: "error" as const, error: failure, refetch };
     expect(
       resolveBodyState({
+        readFields: [],
         server: { loading: false, error: null, readError },
         readiness: undefined,
       }),
@@ -73,9 +81,161 @@ describe("resolveBodyState", () => {
     const err = new Error("filter");
     expect(
       resolveBodyState({
+        readFields: [],
         server: { loading: false, error: err, readError },
         readiness: undefined,
       }).kind,
     ).toBe("server-error");
+  });
+});
+
+describe("a field the view is laid out by", () => {
+  const known: FieldDef<unknown> = { id: "status", label: "Status" };
+  const pending: FieldDef<unknown> = {
+    id: "category",
+    label: "Category",
+    type: "enum",
+    pending: true,
+  };
+  const failed: FieldDef<unknown> = {
+    id: "category",
+    label: "Category",
+    type: "enum",
+    readError: { error: new Error("set failed"), refetch },
+  };
+
+  test("pending → the body is loading, never the view (its rows would all bucket as unset)", () => {
+    expect(
+      resolveBodyState({
+        server: null,
+        readiness: { status: "ready" },
+        readFields: [known, pending],
+      }).kind,
+    ).toBe("loading");
+    expect(
+      resolveBodyState({
+        server: { loading: false, error: null, readError: null },
+        readiness: undefined,
+        readFields: [pending],
+      }).kind,
+    ).toBe("loading");
+  });
+
+  test("failed with nothing held → that failure, naming the field", () => {
+    const state = resolveBodyState({
+      server: null,
+      readiness: { status: "ready" },
+      readFields: [pending, failed],
+    });
+    expect(state).toEqual({
+      kind: "field-error",
+      field: "Category",
+      error: failed.readError!.error,
+      refetch,
+    });
+  });
+
+  test("the rows' own failed read outranks a field's", () => {
+    expect(
+      resolveBodyState({
+        server: null,
+        readiness: { status: "error", error: failure, refetch },
+        readFields: [failed],
+      }).kind,
+    ).toBe("error");
+  });
+
+  test("fieldsReadByView: the group-by, sort, filter and fold fields — nothing else", () => {
+    const fields: FieldDef<unknown>[] = [
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
+      { id: "c", label: "C" },
+      { id: "d", label: "D" },
+      { id: "unread", label: "Unread" },
+    ];
+    const rule = (fieldId: string): FilterNode => ({
+      kind: "rule",
+      id: `r-${fieldId}`,
+      fieldId,
+      operatorId: "eq",
+    });
+    const read = fieldsReadByView(
+      fields,
+      {
+        groupBy: { fieldId: "a", groupingId: "value" },
+        sort: [{ fieldId: "b", direction: "asc" }],
+        filter: {
+          kind: "group",
+          id: "g",
+          conjunction: "and",
+          children: [
+            {
+              kind: "group",
+              id: "g2",
+              conjunction: "or",
+              children: [rule("c")],
+            },
+            rule("missing"),
+          ],
+        },
+      },
+      {
+        keep: {
+          kind: "group",
+          id: "k",
+          conjunction: "and",
+          children: [rule("d")],
+        },
+      },
+    );
+    expect(read.map((f) => f.id)).toEqual(["a", "b", "c", "d"]);
+    expect(
+      fieldsReadByView(fields, { sort: [], filter: null }, undefined),
+    ).toEqual([]);
+  });
+
+  test("a fold not in effect (suspended by a search, or a view without fold lines) does not hold the body on its field", () => {
+    // The stored view state folds by the pending field; the fold in effect is
+    // `undefined` — nothing lays the rows out by it, so the body is the view.
+    const fields: FieldDef<unknown>[] = [known, pending];
+    const readFields = fieldsReadByView(
+      fields,
+      {
+        groupBy: { fieldId: "status", groupingId: "value" },
+        sort: [],
+        filter: null,
+      },
+      undefined,
+    );
+    expect(readFields.map((f) => f.id)).toEqual(["status"]);
+    expect(
+      resolveBodyState({
+        server: null,
+        readiness: { status: "ready" },
+        readFields,
+      }).kind,
+    ).toBe("view");
+    // …while the same fold IN effect holds it.
+    const folded = fieldsReadByView(
+      fields,
+      { sort: [], filter: null },
+      {
+        keep: {
+          kind: "group",
+          id: "k",
+          conjunction: "and",
+          children: [
+            { kind: "rule", id: "r", fieldId: "category", operatorId: "eq" },
+          ],
+        },
+      },
+    );
+    expect(
+      resolveBodyState({
+        server: null,
+        readiness: { status: "ready" },
+        readFields: folded,
+      }).kind,
+    ).toBe("loading");
   });
 });

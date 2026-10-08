@@ -1,12 +1,10 @@
-import {
-  useResource,
-  matchResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
-import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { taskRows } from "@plugins/tasks/plugins/tasks-core/core";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 
 export function TaskLinkChip({
@@ -16,7 +14,7 @@ export function TaskLinkChip({
   attrs: Record<string, string>;
 }) {
   const taskId = content.trim();
-  const result = useResource(tasksResource);
+  const result = useLive(taskRows);
   const openPane = useOpenPane();
 
   if (!taskId) return null;

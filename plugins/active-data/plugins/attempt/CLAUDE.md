@@ -30,11 +30,11 @@ The id pattern matches attempt ids derived from the worktree basename
   - Contributes: `InlineChip.Tag` "attempt" → `AttemptChip`
   - Uses:
     - `conversations/conversation-view.useConversationOpener`
+    - `network/live.useLive`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useCombinedResources`
-    - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
     - `primitives/text-editor/inline-chip.inlineChip`
     - `primitives/text-editor/inline-chip.InlineChip`

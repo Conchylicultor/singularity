@@ -1,7 +1,5 @@
-import {
-  ResourceErrorInline,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -18,7 +16,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
-  agentLaunchesResource,
+  agentLaunchRows,
   type AgentLaunchWithStatus,
 } from "../../shared/resources";
 
@@ -75,7 +73,7 @@ const FIELDS: FieldDef<AgentLaunchWithStatus>[] = [
 ];
 
 export function AgentLaunches({ agentId }: { agentId: string }) {
-  const launchesQ = useResource(agentLaunchesResource);
+  const launchesQ = useLive(agentLaunchRows);
   const openPane = useOpenPane();
   const convEntry = conversationPane.useRouteEntry();
   const activeConvId = convEntry?.params.convId;

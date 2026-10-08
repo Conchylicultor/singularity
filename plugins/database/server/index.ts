@@ -11,7 +11,10 @@ import {
 } from "@plugins/database/plugins/connection/server";
 import { applySchemaLayer } from "@plugins/database/plugins/migrations/server";
 import { View } from "@plugins/database/plugins/derived-views/server";
-import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
+import {
+  DerivedTable,
+  publishReconciledRollups,
+} from "@plugins/database/plugins/derived-tables/server";
 import { registeredDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 
 export {
@@ -20,6 +23,7 @@ export {
   awaitDbReady,
   isTransientDbError,
   loadKnownRelations,
+  quotedRelationsIn,
 } from "./internal/client";
 export { currentTxId, type DbExecutor } from "./internal/current-tx-id";
 
@@ -54,7 +58,7 @@ export default {
     // hot-swap, so the layer widens the query deadline for its own queries. The
     // wrap lives here, at the call site: the layer takes `db` as a parameter
     // precisely so it never imports this barrel (that would cycle).
-    await withQueryDeadline(
+    const layer = await withQueryDeadline(
       { ms: BOOT_DDL_QUERY_DEADLINE_MS, reason: "boot: schema layer" },
       () =>
         applySchemaLayer(
@@ -67,6 +71,10 @@ export default {
           { commit: true },
         ),
     );
+    // What each rollup's reconcile healed, published only now that the layer
+    // has COMMITTED (C13) — `reconciledRollups()` readers (live-state-snapshot's
+    // A20 boot check) run after this barrier, so they see this boot's answer.
+    publishReconciledRollups(layer.rollups);
     // Last, because every relation a loader can read now exists. This is the
     // snapshot that tells an unquoted table name in a loader's raw SQL apart
     // from a CTE name or a subquery alias, so its read-set records the tables it

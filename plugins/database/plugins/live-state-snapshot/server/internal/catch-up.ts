@@ -14,7 +14,10 @@ import {
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
+import { isPrunedPast, readPruneHorizon } from "./changelog-horizon";
 import { snapshotLog as log } from "./log-sink";
+import { usableRowSql } from "./persist";
+import type { L2Expectation } from "./persist";
 
 // The changelog columns the catch-up reads (see CHANGELOG_TABLE_DDL in
 // change-feed's triggers.ts). `xid` is a `numeric` — which pg hands back as a
@@ -39,12 +42,9 @@ const ChangelogRowSchema = z.object({
 });
 type ChangelogRow = z.infer<typeof ChangelogRowSchema>;
 
-// `min(...)` over an empty table is NULL, so both watermark reads are nullable.
-// Both are bare aggregates with no GROUP BY ⇒ exactly one row, hence `executeOne`.
+// `min(...)` over an empty table is NULL, so the floor read is nullable. A bare
+// aggregate with no GROUP BY ⇒ exactly one row, hence `executeOne`.
 const MinPositionRowSchema = z.object({ min_position: z.string().nullable() });
-const MinXidRowSchema = z.object({ min_xid: z.string().nullable() });
-
-const ChangedTableRowSchema = z.object({ t: z.string() });
 
 // Replay one changelog row through the EXACT same cascade the live listener uses
 // (change-feed's exported `routeChange`). Catch-up ≡ "replay the missed changelog
@@ -89,81 +89,84 @@ function replayChange(
   });
 }
 
-// Bounded cold-boot catch-up: replay only the changelog rows committed at or after
-// the OLDEST persisted snapshot watermark (the conservative floor — every snapshot
-// already incorporates everything strictly older). Usually empty after a short
-// deploy. Each replayed row flows through the recompute cascade → push to
-// subscribers → re-persist with a fresh watermark, advancing the floor.
-//
-// Backstop (§3.5 step 5): if the oldest snapshot's floor predates the oldest
-// RETAINED changelog row (a snapshot older than the prune horizon), the missing
-// history means catch-up can't prove that resource current — so the universe of
-// changed tables is FULL-recomputed unconditionally and logged loudly. The
-// listener's connect-time fullSweep covers currently-subscribed resources as
-// additional defense-in-depth.
-//
-// Catch-up is the bounded boot driver. It routes every replayed row through
-// `routeChange → applyDbChange`, which inverts the IN-MEMORY read-set index
-// (`table → resource`). That index is seeded at boot from the persisted
-// `tables_read` column (live-state-snapshot's `onReadyBlocking`), so catch-up
-// works at a cold boot with NO loader having run — previously it depended on the
-// warm/fullSweep path having populated the index first. It also relies on the
-// post-LISTEN ordering documented at the call site in `server/index.ts`: this runs
-// after change-feed's listener has its LISTEN up, so a commit landing after the
-// `SELECT` below is delivered on the live path (no gap).
-export async function runCatchUp(
+/**
+ * What the boot catch-up will do, decided BEFORE anything is seeded (C20):
+ *
+ * - `none` — no usable persisted row: nothing to replay (every persisted key is
+ *   recomputed instead);
+ * - `backstop` — the prune deleted a changelog row at or after the oldest
+ *   usable row's floor (`horizon` ≥ `floor`): the missing history means no row
+ *   can be proven current, so the caller clears the rows and recomputes every
+ *   persisted key, seeding nothing;
+ * - `replay` — replay every changelog row at or after `floor`.
+ */
+export type CatchUpProbe =
+  | { kind: "none" }
+  | { kind: "backstop"; floor: string; horizon: string }
+  | { kind: "replay"; floor: string };
+
+/** The lower of two catch-up positions (xid8 as numeric text). */
+export function minPosition(a: string, b: string): string {
+  return BigInt(a) <= BigInt(b) ? a : b;
+}
+
+// The floor is the OLDEST USABLE persisted row's position (the conservative
+// floor — every usable row already incorporates everything strictly older than
+// its own). A row the usable-row predicate refuses is recomputed, never
+// served or seeded, so its position bounds nothing.
+export async function probeCatchUp(
   db: NodePgDatabase,
+  exp: L2Expectation,
+): Promise<CatchUpProbe> {
+  const floorRow = await executeOne(db, {
+    query: drizzleSql`
+      SELECT min(position)::text AS min_position
+      FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
+      WHERE params_key = '{}' AND ${usableRowSql(exp)}
+    `,
+    row: MinPositionRowSchema,
+    label: "probeCatchUp/snapshot-floor",
+  });
+  const floor = floorRow.min_position;
+  if (floor === null) return { kind: "none" };
+
+  // The prune horizon: if the prune deleted a row at or after our floor,
+  // history was pruned out from under a stale snapshot. (Not the oldest
+  // RETAINED xid: the changelog is sparse, so the oldest survivor of an
+  // ordinary prune sits above the floor with nothing missing in between.)
+  const horizon = await readPruneHorizon(db);
+  if (horizon !== null && isPrunedPast(floor, horizon)) {
+    return { kind: "backstop", floor, horizon };
+  }
+  return { kind: "replay", floor };
+}
+
+// Bounded cold-boot catch-up: replay only the changelog rows committed at or
+// after the probe's floor. Usually empty after a short deploy. Each replayed row
+// flows through the recompute cascade → push to subscribers → re-persist,
+// advancing the floor.
+//
+// It routes every replayed row through `routeChange` (routed entries through
+// their routes, legacy ones through `applyDbChange`, which inverts the IN-MEMORY
+// read-set index seeded at boot from the persisted `tables_read` column — so
+// catch-up works at a cold boot with NO loader having run). It also relies on
+// the post-LISTEN ordering documented at the call site in `server/index.ts`:
+// this runs after change-feed's listener has its LISTEN up, so a commit landing
+// after the `SELECT` below is delivered on the live path (no gap).
+export async function replayCatchUp(
+  db: NodePgDatabase,
+  floor: string,
   route: (change: FeedChange) => void = routeChange,
 ): Promise<void> {
-  const floorRow = await executeOne(db, {
-    query: drizzleSql.raw(
-      `SELECT min(position)::text AS min_position FROM ${LIVE_STATE_SNAPSHOT_TABLE}`,
-    ),
-    row: MinPositionRowSchema,
-    label: "runCatchUp/snapshot-floor",
-  });
-  const minPosition = floorRow.min_position;
-  if (minPosition === null) {
-    // No persisted snapshots yet (first-ever boot) — nothing to catch up. The
-    // boot-snapshot endpoint falls back to from-scratch loads, which persist.
-    return;
-  }
-
-  // Oldest retained changelog row. If our floor is older than it, history was
-  // pruned out from under a stale snapshot → FULL backstop below.
-  const oldestRow = await executeOne(db, {
-    query: drizzleSql.raw(
-      `SELECT min(xid)::text AS min_xid FROM ${LIVE_STATE_CHANGELOG_TABLE}`,
-    ),
-    row: MinXidRowSchema,
-    label: "runCatchUp/oldest-retained",
-  });
-  const oldestRetained = oldestRow.min_xid;
-
-  // Compare as BigInt (xid8 stored as numeric; values are non-negative integers).
-  const floor = BigInt(minPosition);
-  if (oldestRetained !== null && BigInt(oldestRetained) > floor) {
-    // Missing-history backstop: the changelog no longer retains rows back to our
-    // oldest snapshot floor (server was down longer than the prune cap). We cannot
-    // bound which resources changed, so FULL-recompute the universe of changed
-    // tables (applyDbChange fans each out to every reading resource).
-    log.publish(
-      `[live-state-snapshot] WARNING: oldest retained changelog xid ${oldestRetained} > snapshot floor ${minPosition} — history pruned past a stale snapshot; forcing FULL recompute of all changed tables`,
-      "stderr",
-    );
-    await fullRecomputeChangedTables(db, route);
-    return;
-  }
-
   const rows = await executeRows(db, {
     query: drizzleSql`
       SELECT xid::text AS xid, t, op, ids, keys, unchanged
       FROM ${drizzleSql.raw(LIVE_STATE_CHANGELOG_TABLE)}
-      WHERE xid >= ${minPosition}::numeric
+      WHERE xid >= ${floor}::numeric
       ORDER BY seq
     `,
     row: ChangelogRowSchema,
-    label: "runCatchUp/changelog-replay",
+    label: "replayCatchUp/changelog-replay",
   });
 
   if (rows.length === 0) {
@@ -174,30 +177,7 @@ export async function runCatchUp(
   }
 
   log.publish(
-    `[live-state-snapshot] catch-up: replaying ${rows.length} changelog row(s) since floor xid ${minPosition}`,
+    `[live-state-snapshot] catch-up: replaying ${rows.length} changelog row(s) since floor xid ${floor}`,
   );
   for (const row of rows) replayChange(row, route);
-}
-
-// FULL backstop: route a null-ids FULL change for every DISTINCT table seen in the
-// retained changelog (the universe of tables that have changed). `applyDbChange`
-// fans each out to every reading resource, so persisted resources whose tables
-// changed get a FULL recompute. The rare, loud missing-history path.
-async function fullRecomputeChangedTables(
-  db: NodePgDatabase,
-  route: (change: FeedChange) => void,
-): Promise<void> {
-  const changed = await executeRows(db, {
-    query: drizzleSql.raw(
-      `SELECT DISTINCT t FROM ${LIVE_STATE_CHANGELOG_TABLE}`,
-    ),
-    row: ChangedTableRowSchema,
-    label: "fullRecomputeChangedTables",
-  });
-  for (const { t } of changed) {
-    replayChange(
-      { xid: "0", t, op: "U", ids: null, keys: null, unchanged: null },
-      route,
-    );
-  }
 }

@@ -6,14 +6,14 @@ import {
   parsed,
 } from "@plugins/database/plugins/sql-projection/server";
 import { AttemptStatusSchema, TaskStatusSchema } from "../../core";
-import {
-  _attempts,
-  _conversations,
-  _taskDependencies,
-  _tasks,
-  pushes,
-} from "./tables";
+import { _attempts, _conversations, _taskDependencies, _tasks } from "./tables";
 import { _attemptConvAgg, _attemptPushAgg } from "./rollup-table";
+import {
+  attemptDerived,
+  depIsBlocking,
+  taskAttemptAggregates,
+  taskDerived,
+} from "./derived";
 
 // Derived (plain, non-materialized) views. These live in `views.ts` — NOT
 // `schema.ts`/`tables.ts` — so the drizzle codegen glob never sees them: they
@@ -26,136 +26,101 @@ import { _attemptConvAgg, _attemptPushAgg } from "./rollup-table";
 // The view objects stay valid `pgView` relations so the rest of tasks-core can
 // keep querying them with `db.select().from(...)`.
 //
-// attempts_v is the single definition of each attempt's derived status / active.
-// tasks_v reads attempts_v (declared `dependsOn: ["attempts_v"]` in
-// server/index.ts; the boot rebuild creates/drops them in dependency order) so
-// attempt status is defined exactly once rather than re-derived from the base
-// tables in both views. This view-on-view coupling used to be un-migratable
-// under drizzle-kit (it dropped views in snapshot, not dependency, order); that
-// constraint is gone now that plain views are derived code.
+// The derivations themselves — an attempt's status / active / retained /
+// finished_at, a task's per-attempt aggregates and status / active /
+// finished_at, the blocking rule — live in `./derived.ts`, written once and
+// interpolated here AND by the `tasks` live collection (`./task-rows.ts`),
+// which reads the same base tables and rollups without these views. The
+// all-parity suite pins the two equal row for row.
 //
-// The two per-attempt aggregates are now read from trigger-maintained rollup
-// tables (attempt_conv_agg / attempt_push_agg — see rollup-spec.ts) instead of
-// the two inline CTEs that grouped over ALL conversations + ALL pushes. attempts_v
-// is preloaded (persisted), and the live-state runtime forces a persisted
-// resource to ALWAYS FULL-recompute (no scoping), so the view re-ran on every
-// fire — the full grouped scans ballooned to 8-10s under contention. The rollups
-// hold the SAME aggregated columns the CTEs produced, kept current incrementally
-// by STATEMENT triggers on the source tables, so the FULL recompute collapses to a
-// flat LEFT JOIN over two tiny pre-rolled tables. The status / active / finished_at
-// logic below is UNCHANGED — a missing rollup row reads as NULL via the LEFT JOIN,
+// The per-attempt aggregates are read from trigger-maintained rollup tables
+// (attempt_conv_agg / attempt_push_agg — see rollup-spec.ts) instead of inline
+// CTEs grouping ALL conversations + ALL pushes: a flat LEFT JOIN over two small
+// pre-rolled tables. A missing rollup row reads as NULL via the LEFT JOIN,
 // exactly as a missing CTE group did (preserving the pending / closed / active
-// semantics for attempts with no conversations / pushes). tasks_v aggregates over
-// attempts_v and inherits the same cheap join. See
-// plugins/database/plugins/derived-tables/CLAUDE.md and the agent-launches rollup.
+// semantics for attempts with no conversations / pushes). tasks_v groups the
+// same rollups per task, so neither view reads `conversations` or `pushes`.
+// See plugins/database/plugins/derived-tables/CLAUDE.md.
+
+// One attempt's two rollup rows, as `attempts_v` and `tasks_v` LEFT JOIN them.
+const rollupFacts = {
+  hasConv: _attemptConvAgg.hasConv,
+  hasLiveConv: _attemptConvAgg.hasLiveConv,
+  hasOpenConv: _attemptConvAgg.hasOpenConv,
+  maxEndedAt: _attemptConvAgg.maxEndedAt,
+  hasPush: _attemptPushAgg.hasPush,
+  minPushAt: _attemptPushAgg.minPushAt,
+};
+
 export const attempts = pgView("attempts_v").as((qb) => {
+  // The CASEs are `attemptDerived` (./derived.ts) — the one definition the
+  // `tasks` collection reads too. What each arm reads, and why:
+  //
+  // I6 — EVERY ARM NAMES A FACT THE ROW PROVES. A `pushes` row may only
+  // ever PROMOTE an attempt to a landed claim (`pushed` / `completed`); its
+  // absence may never select a claim of its own. With no landed evidence the
+  // status reports how the SESSION ended — which the conversation rollup does
+  // prove — and says nothing about what did or did not land.
+  //
+  // The last arm used to be `ELSE 'abandoned'`, the one verdict in the whole
+  // derivation reached from missing evidence. `has_push IS NULL` means at
+  // least four different things — never pushed / finished with nothing to
+  // push / landed on a commit carrying no attributable trailer (`--from-main`,
+  // a hand-merge) / the ledger has not caught up — and it picked the most
+  // damning. 1014 attempts read "Abandoned"; 128 of them sat on a task that
+  // was neither dropped nor held.
+  //
+  // It also swallowed a case that has nothing to do with pushes at all:
+  // hibernation writes `gone` on an idle pane, `gone` is not live but IS open
+  // (and is exactly the status `resumeConversation` requires), so a live,
+  // resumable attempt that had not pushed yet fell through to `abandoned`.
+  // `has_open_conv` is what tells the two apart (`dormant`).
+  //
+  // Ordering: `dormant` sits BELOW the landed arms on purpose. It exists to
+  // stop ABSENCE reading as abandonment, not to outrank a true claim — when
+  // there is evidence, the evidence wins.
+  //
+  // Consequence, and the reason this is the view-layer twin of attempt-work's
+  // I3: `attempts_v.status` can no longer contradict `standingOf`. The only
+  // landed-claiming arm is backed by the very rows `standingOf` ORs into
+  // "landed", and no arm claims "nothing landed" at all. See
+  // research/2026-08-20-tasks-attempt-status-positive-evidence.md.
+  //
+  // `active` — PROGRESS: "an agent is expected to be running on this
+  // attempt". Reads has_live_conv (`status NOT IN ('gone','done')`), so a
+  // conversation whose process vanished reads inactive — the right answer for
+  // the task list's in_progress / need_action / blocked badges. NOT A
+  // RETENTION SIGNAL: never gate a destructive action on it — a `gone`
+  // conversation is dormant, not finished.
+  //
+  // `retained` — RETENTION: "the user has not finished with this attempt, so
+  // its worktree and fork DB are still theirs". Reads has_open_conv
+  // (`status <> 'done'`), matching `isActiveStatus()` and
+  // `conversations_v.active`. An attempt with no conversation yet is retained.
+  // THIS is the guard every destructive consumer must read (worktree-cleanup's
+  // reaper does). Gating deletion on `active` instead is what deleted the
+  // checkouts of 22 live conversations.
+  //
+  // `finishedAt` — EXACTLY the two statuses that are over carry a finish
+  // instant: `completed` (first arm) and `closed` (second). `has_conv` on the
+  // first arm keeps `pending` out; `NOT has_open_conv` on the second keeps
+  // `dormant` out. views.test.ts asserts the equivalence over the whole status
+  // truth table.
+  const a = attemptDerived(rollupFacts);
   return qb
     .select({
       ...getTableColumns(_attempts),
-      // I6 — EVERY ARM NAMES A FACT THE ROW PROVES. A `pushes` row may only
-      // ever PROMOTE an attempt to a landed claim (`pushed` / `completed`); its
-      // absence may never select a claim of its own. With no landed evidence the
-      // status reports how the SESSION ended — which the conversation rollup does
-      // prove — and says nothing about what did or did not land.
-      //
-      // This arm used to be `ELSE 'abandoned'`, the one verdict in the whole
-      // derivation reached from missing evidence. `has_push IS NULL` means at
-      // least four different things — never pushed / finished with nothing to
-      // push / landed on a commit carrying no attributable trailer (`--from-main`,
-      // a hand-merge) / the ledger has not caught up — and it picked the most
-      // damning. 1014 attempts read "Abandoned"; 128 of them sat on a task that
-      // was neither dropped nor held.
-      //
-      // It also swallowed a case that has nothing to do with pushes at all:
-      // hibernation writes `gone` on an idle pane, `gone` is not live but IS open
-      // (and is exactly the status `resumeConversation` requires), so a live,
-      // resumable attempt that had not pushed yet fell through to `abandoned`.
-      // `has_open_conv` — already materialised by the rollup — is what tells the
-      // two apart, and the CASE simply never read it.
-      //
-      // Ordering: `dormant` sits BELOW the landed arms on purpose. It exists to
-      // stop ABSENCE reading as abandonment, not to outrank a true claim — when
-      // there is evidence, the evidence wins.
-      //
-      // Consequence, and the reason this is the view-layer twin of attempt-work's
-      // I3: `attempts_v.status` can no longer contradict `standingOf`. The only
-      // landed-claiming arm is backed by the very rows `standingOf` ORs into
-      // "landed", and no arm claims "nothing landed" at all. See
-      // research/2026-08-20-tasks-attempt-status-positive-evidence.md.
-      status: sql`
-        CASE
-          WHEN ${_attemptConvAgg.hasConv} IS NULL                              THEN 'pending'
-          WHEN ${_attemptConvAgg.hasLiveConv} AND ${_attemptPushAgg.hasPush} IS NULL    THEN 'in_progress'
-          WHEN ${_attemptConvAgg.hasLiveConv} AND ${_attemptPushAgg.hasPush}           THEN 'pushed'
-          WHEN ${_attemptPushAgg.hasPush}                                       THEN 'completed'
-          -- No live conversation, but one is still open (a gone conversation):
-          -- the process is not running and the attempt is RESUMABLE.
-          WHEN ${_attemptConvAgg.hasOpenConv}                                   THEN 'dormant'
-          -- Every conversation was explicitly closed: the session is over.
-          ELSE                                                               'closed'
-        END
-      `
+      status: a.status
         .mapWith(parsed(AttemptStatusSchema, "attempts_v.status"))
         .as("status"),
-      // PROGRESS: "an agent is expected to be running on this attempt". Reads the
-      // has_live_conv rollup (`status NOT IN ('gone','done')`), so a conversation
-      // whose process vanished reads inactive — which is the right answer for the
-      // task list's in_progress / need_action / blocked badges (tasks_v.hasActive
-      // below is the only other consumer).
-      //
-      // NOT A RETENTION SIGNAL. Never gate a destructive action on this: a `gone`
-      // conversation is dormant, not finished — `gone` is exactly the status
-      // `resumeConversation` requires in order to resume. Use `retained` instead.
-      active:
-        sql`(${_attemptConvAgg.hasConv} IS NULL OR ${_attemptConvAgg.hasLiveConv})`
-          .mapWith(Boolean)
-          .as("active"),
-      // RETENTION: "the user has not finished with this attempt, so its worktree
-      // and fork DB are still theirs". Reads the has_open_conv rollup
-      // (`status <> 'done'`), matching `isActiveStatus()` and
-      // `conversations_v.active` — `done` is the only terminal status, written
-      // solely by an explicit close (exit_clean / the UI Exit actions).
-      //
-      // An attempt with NO conversations yet (hasConv IS NULL — a spawn that has
-      // not landed) is retained, mirroring `active`: there is nothing to prove it
-      // is finished, so it is protected.
-      //
-      // THIS is the guard every destructive consumer must read (worktree-cleanup's
-      // reaper does). Gating deletion on `active` instead is what deleted the
-      // checkouts of 22 live conversations: hibernation kills an idle pane to
-      // reclaim resources, the status poller wrote `gone`, and the worktrees became
-      // collectable while the conversations were still resumable.
-      retained:
-        sql`(${_attemptConvAgg.hasConv} IS NULL OR ${_attemptConvAgg.hasOpenConv})`
-          .mapWith(Boolean)
-          .as("retained"),
-      // EXACTLY the two statuses that are over carry a finish instant:
-      // `completed` (first arm) and `closed` (second). Both qualifiers below exist
-      // to hold that equivalence, and views.test.ts asserts it over the whole
-      // status truth table rather than arm by arm:
-      //
-      //  - `has_conv` on the first arm keeps `pending` out. An attempt with a push
-      //    row but no conversation row cannot arise from the ledger (it attributes
-      //    a commit THROUGH a conversation), but the arm read as true for it, so
-      //    the row claimed both "nothing has run" and a finish time.
-      //  - `NOT has_open_conv` on the second keeps `dormant` out. A hibernated
-      //    attempt is resumable, not finished, and stamping it would make every
-      //    consumer reading this as "when did this end" wrong about a live one.
-      finishedAt: sql`
-        CASE
-          WHEN ${_attemptConvAgg.hasConv} AND ${_attemptPushAgg.hasPush}
-            AND NOT COALESCE(${_attemptConvAgg.hasLiveConv}, false)                    THEN ${_attemptPushAgg.minPushAt}
-          WHEN ${_attemptConvAgg.hasConv} AND NOT COALESCE(${_attemptConvAgg.hasOpenConv}, false)
-            AND ${_attemptPushAgg.hasPush} IS NULL                                          THEN ${_attemptConvAgg.maxEndedAt}
-          ELSE                                                                           NULL
-        END
-      `
-        // Both non-NULL arms are `timestamptz`, so one column's decoder covers
-        // the CASE. It has to be SOMEONE's: a raw projection carries drizzle's
-        // no-op decoder, and drizzle's pg driver hands timestamps back as their
-        // RAW STRING — the `Date` mapping lives on the column type. Declaring
-        // `Date | null` without one is how this column spent its life holding a
-        // string. See plugins/database/plugins/sql-projection/CLAUDE.md.
+      active: a.active.mapWith(Boolean).as("active"),
+      retained: a.retained.mapWith(Boolean).as("retained"),
+      // Both non-NULL arms are `timestamptz`, so one column's decoder covers
+      // the CASE. It has to be SOMEONE's: a raw projection carries drizzle's
+      // no-op decoder, and drizzle's pg driver hands timestamps back as their
+      // RAW STRING — the `Date` mapping lives on the column type. See
+      // plugins/database/plugins/sql-projection/CLAUDE.md.
+      finishedAt: a.finishedAt
         .mapWith(nullable(_attemptPushAgg.minPushAt))
         .as("finished_at"),
     })
@@ -164,48 +129,21 @@ export const attempts = pgView("attempts_v").as((qb) => {
     .leftJoin(_attemptPushAgg, eq(_attemptPushAgg.attemptId, _attempts.id));
 });
 
-// THE definition of "dependency `dep` is still blocking whatever depends on it".
-//
-// There are two blocking queries and they must never disagree: the transitive
-// closure below (task_blocking_v, which drives the auto-start gate and the
-// `blocked` badge) and the deliberately single-hop direct frontier in
-// queries/tasks.ts (listBlockingDepIds, which feeds queue ranking). They differ
-// in SHAPE — recursive walk vs direct edges — never in RULE, so the rule lives
-// here once and both interpolate it. Parameterized by column expressions because
-// the two call sites name the task table differently (a `dep` CTE alias vs the
-// bare `tasks` relation).
-//
-// It re-derives "settled" from raw columns rather than reading `tasks_v.status`
-// (tasks_v depends on this view — reading it would be circular), so it must stay
-// in agreement with `isSettled` (core/task-graph.ts) and the tasks_v status CASE:
-//   settled ⇔ status ∈ {done, dropped}
-//   dropped ⇔ dropped_at IS NOT NULL
-//   done    ⇔ has a completed attempt AND NOT held  ← hold outranks `done`
-//
-// That last clause is why `held_at` appears here at all. Without it, a task that
-// had pushed and was then held kept the completed-attempt exemption, stopped
-// blocking, and auto-launched its armed dependents — the "Hold & close marked the
-// task done and started the next one" bug.
-function depIsBlocking(dep: { droppedAt: SQL; heldAt: SQL; id: SQL }): SQL {
-  return sql`
-    ${dep.droppedAt} IS NULL
-    AND (
-      ${dep.heldAt} IS NOT NULL
-      OR NOT EXISTS (
+// "Some attempt of task `taskId` is completed", for the views' blocking rule —
+// read off `attempts_v`, whose status is `attemptDerived`'s.
+const hasCompletedAttempt = (taskId: SQL): SQL => sql`EXISTS (
         SELECT 1 FROM ${attempts} att
-         WHERE att.task_id = ${dep.id} AND att.status = 'completed'
-      )
-    )
-  `;
-}
+         WHERE att.task_id = ${taskId} AND att.status = 'completed'
+      )`;
 
-// The single-hop frontier (queries/tasks.ts) interpolates the same rule against
-// the bare `tasks` relation joined to the dependency edge it is walking.
+// The single-hop frontier (queries/tasks.ts) interpolates the blocking rule
+// (`depIsBlocking`, ./derived.ts) against the bare `tasks` relation joined to
+// the dependency edge it is walking.
 export const directDepIsBlocking = (dependsOnTaskId: SQL): SQL =>
   depIsBlocking({
-    droppedAt: sql`${_tasks.droppedAt}`,
-    heldAt: sql`${_tasks.heldAt}`,
-    id: dependsOnTaskId,
+    droppedAt: _tasks.droppedAt,
+    heldAt: _tasks.heldAt,
+    hasCompleted: hasCompletedAttempt(dependsOnTaskId),
   });
 
 // Transitive dependency-blocking, computed once as a shared derived view so the
@@ -227,7 +165,8 @@ export const directDepIsBlocking = (dependsOnTaskId: SQL): SQL =>
 // This recursive CTE is the SQL embodiment of `isSettled` / `TaskGraph.
 // activeBlockers` (core/task-graph.ts): it walks *through* settled ancestors and
 // blocks on ANY non-settled one — the same rule, in both directions. The
-// per-ancestor test is `depIsBlocking` above, the shared definition.
+// per-ancestor test is `depIsBlocking` (./derived.ts), the shared definition the
+// `tasks` collection's blocking closure reads too.
 export const taskBlocking = pgView("task_blocking_v", {
   taskId: text("task_id").notNull(),
   hasBlockingDep: boolean("has_blocking_dep").notNull(),
@@ -245,7 +184,7 @@ export const taskBlocking = pgView("task_blocking_v", {
            bool_or(${depIsBlocking({
              droppedAt: sql`dep.dropped_at`,
              heldAt: sql`dep.held_at`,
-             id: sql`dep.id`,
+             hasCompleted: hasCompletedAttempt(sql`dep.id`),
            })}) AS has_blocking_dep
       FROM ancestors a
       JOIN ${_tasks} dep ON dep.id = a.ancestor_id
@@ -253,54 +192,37 @@ export const taskBlocking = pgView("task_blocking_v", {
   `,
 );
 
-// Per-task facts, same set-at-a-time approach: grouped scans hash-joined to
-// tasks. `task_attempt_agg` aggregates each attempt's status/active straight off
-// attempts_v (the single definition — no re-derivation here); transitive
-// dependency-blocking is read from the shared task_blocking_v view.
+// Per-task facts, set-at-a-time: grouped scans hash-joined to tasks.
+// `task_attempt_agg` aggregates each task's attempts — their rollup rows,
+// through `taskAttemptAggregates` (./derived.ts), the same aggregates the
+// `tasks` collection's children join reads — and transitive
+// dependency-blocking is read from the shared task_blocking_v view. The status
+// / active / finished_at CASEs are `taskDerived`.
+//
+// It reads NO `conversations` and NO `pushes` (P8 v3 step 19): "waiting" is
+// the conversation rollup's `has_waiting_conv` and the first push is the push
+// rollup's `min_push_at`, so `view_table_usage` lists only `tasks`,
+// `attempts`, the two rollups, `task_blocking_v` and `task_dependencies`.
 export const tasks = pgView("tasks_v").as((qb) => {
+  const agg = taskAttemptAggregates({
+    ...rollupFacts,
+    hasWaitingConv: _attemptConvAgg.hasWaitingConv,
+  });
   const attemptAgg = qb.$with("task_attempt_agg").as(
     qb
       .select({
-        taskId: attempts.taskId,
-        hasAttempt: sql`true`.mapWith(Boolean).as("has_attempt"),
-        hasCompleted: sql`bool_or(${attempts.status} = 'completed')`
-          .mapWith(Boolean)
-          .as("has_completed"),
-        // Deliberately the PROGRESS notion (attempts_v.active), not `retained`:
-        // this drives the in_progress / need_action / blocked badges, which must
-        // report whether an agent is actually running — a task whose agent died
-        // is not "in progress". `retained` is the retention notion and belongs
-        // only to destructive consumers. See attempts_v above.
-        hasActive: sql`bool_or(${attempts.active})`
-          .mapWith(Boolean)
-          .as("has_active"),
-      })
-      .from(attempts)
-      .groupBy(attempts.taskId),
-  );
-
-  const waiting = qb.$with("task_waiting").as(
-    qb
-      .select({
         taskId: _attempts.taskId,
-        hasWaiting: sql`true`.mapWith(Boolean).as("has_waiting"),
+        hasAttempt: agg.hasAttempt.mapWith(Boolean).as("has_attempt"),
+        hasCompleted: agg.hasCompleted.mapWith(Boolean).as("has_completed"),
+        hasActive: agg.hasActive.mapWith(Boolean).as("has_active"),
+        hasWaiting: agg.hasWaiting.mapWith(Boolean).as("has_waiting"),
+        minPushAt: agg.minPushAt
+          .mapWith(nullable(_attemptPushAgg.minPushAt))
+          .as("min_push_at"),
       })
-      .from(_conversations)
-      .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
-      .where(sql`${_conversations.status} = 'waiting'`)
-      .groupBy(_attempts.taskId),
-  );
-
-  const completedPush = qb.$with("task_completed_push").as(
-    qb
-      .select({
-        taskId: _attempts.taskId,
-        minCompletedPushAt: sql`min(${pushes.createdAt})`
-          .mapWith(nullable(pushes.createdAt))
-          .as("min_completed_push_at"),
-      })
-      .from(pushes)
-      .innerJoin(_attempts, eq(_attempts.id, pushes.attemptId))
+      .from(_attempts)
+      .leftJoin(_attemptConvAgg, eq(_attemptConvAgg.attemptId, _attempts.id))
+      .leftJoin(_attemptPushAgg, eq(_attemptPushAgg.attemptId, _attempts.id))
       .groupBy(_attempts.taskId),
   );
 
@@ -317,73 +239,31 @@ export const tasks = pgView("tasks_v").as((qb) => {
       .groupBy(_taskDependencies.taskId),
   );
 
+  const flag = (col: SQL.Aliased) => sql`COALESCE(${col}, false)`;
+  const t = taskDerived({
+    heldAt: _tasks.heldAt,
+    droppedAt: _tasks.droppedAt,
+    hasAttempt: flag(attemptAgg.hasAttempt),
+    hasCompleted: flag(attemptAgg.hasCompleted),
+    hasActive: flag(attemptAgg.hasActive),
+    hasWaiting: flag(attemptAgg.hasWaiting),
+    hasBlockingDep: sql`COALESCE(${taskBlocking.hasBlockingDep}, false)`,
+    minPushAt: attemptAgg.minPushAt,
+  });
+
   return qb
-    .with(attemptAgg, waiting, completedPush, deps)
+    .with(attemptAgg, deps)
     .select({
       ...getTableColumns(_tasks),
-      // Precedence note — `held_at` gates the `done` branch instead of sitting
-      // below it. A completed attempt (= it pushed AND has no live conversation)
-      // otherwise outranked an explicit hold, so "Hold & close" on a
-      // conversation whose attempt had ever pushed wrote held_at, closed the
-      // last live conversation, flipped the attempt `pushed` → `completed`, and
-      // resolved the task to `done` — silently discarding the hold AND emitting
-      // taskStatusChanged{status:'done'}, which unblocks everything downstream,
-      // so the next task launched.
-      // Hold is a user's explicit "not now": it wins over `done`.
-      //
-      // The two blocked branches are the SAME predicate (an unresolved
-      // prerequisite) split by whether an agent is running: the top one keeps
-      // its precedence over `need_action` / `in_progress` — a blocked task must
-      // read as blocked wherever it is shown — but reports
-      // `in_progress_blocked` so the live attempt is not hidden behind it.
-      // Anything asking "is this blocked?" reads `isBlockedStatus`, which
-      // covers both.
-      //
-      // It stays BELOW the three `hasActive` branches, mirroring the existing
-      // active-overrides-dropped rule — holding a task whose agent is still
-      // running reports the live truth (`in_progress`), not the intent. This is
-      // not a hole in the hold-and-exit path: that handler closes the
-      // conversation, so by the time the hold is observable the task is inactive.
-      status: sql`
-        CASE
-          WHEN ${_tasks.heldAt} IS NULL AND COALESCE(${attemptAgg.hasCompleted}, false)
-                                                                            THEN 'done'
-          WHEN COALESCE(${attemptAgg.hasActive}, false) AND COALESCE(${taskBlocking.hasBlockingDep}, false)
-                                                                            THEN 'in_progress_blocked'
-          WHEN COALESCE(${attemptAgg.hasActive}, false) AND COALESCE(${waiting.hasWaiting}, false)
-                                                                            THEN 'need_action'
-          WHEN COALESCE(${attemptAgg.hasActive}, false)                     THEN 'in_progress'
-          WHEN ${_tasks.droppedAt} IS NOT NULL                              THEN 'dropped'
-          WHEN ${_tasks.heldAt}    IS NOT NULL                              THEN 'held'
-          WHEN COALESCE(${taskBlocking.hasBlockingDep}, false)                  THEN 'blocked'
-          WHEN COALESCE(${attemptAgg.hasAttempt}, false)                    THEN 'attempted'
-          ELSE                                                                   'new'
-        END
-      `
+      status: t.status
         .mapWith(parsed(TaskStatusSchema, "tasks_v.status"))
         .as("status"),
-      active: sql`(
-        NOT COALESCE(${attemptAgg.hasCompleted}, false)
-        AND COALESCE(${attemptAgg.hasActive}, false)
-      )`
-        .mapWith(Boolean)
-        .as("active"),
-      // Same held_at gate as the status CASE, so the two never contradict each
-      // other: a task reported as `held` is not finished, and must not carry a
-      // finished_at (the stats plugins read it as a completion timestamp).
-      finishedAt: sql`
-        CASE
-          WHEN ${_tasks.heldAt} IS NOT NULL                  THEN NULL
-          WHEN COALESCE(${attemptAgg.hasCompleted}, false)   THEN ${completedPush.minCompletedPushAt}
-          WHEN ${_tasks.droppedAt} IS NOT NULL               THEN ${_tasks.droppedAt}
-          ELSE                                                    NULL
-        END
-      `
-        // Same as attempts_v.finished_at above: every non-NULL arm here
-        // (`min_completed_push_at`, `dropped_at`) is a `timestamptz`, so one
-        // column's decoder is what turns the driver's raw string into the `Date`
-        // this column claims to be.
-        .mapWith(nullable(pushes.createdAt))
+      active: t.active.mapWith(Boolean).as("active"),
+      // Every non-NULL arm (`min_push_at`, `dropped_at`) is a `timestamptz`,
+      // so one column's decoder is what turns the driver's raw string into
+      // the `Date` this column claims to be.
+      finishedAt: t.finishedAt
+        .mapWith(nullable(_attemptPushAgg.minPushAt))
         .as("finished_at"),
       dependencies: sql`COALESCE(${deps.dependencies}, ARRAY[]::text[])`
         .mapWith(parsed(z.array(z.string()), "tasks_v.dependencies"))
@@ -391,8 +271,6 @@ export const tasks = pgView("tasks_v").as((qb) => {
     })
     .from(_tasks)
     .leftJoin(attemptAgg, eq(attemptAgg.taskId, _tasks.id))
-    .leftJoin(waiting, eq(waiting.taskId, _tasks.id))
-    .leftJoin(completedPush, eq(completedPush.taskId, _tasks.id))
     .leftJoin(taskBlocking, eq(taskBlocking.taskId, _tasks.id))
     .leftJoin(deps, eq(deps.taskId, _tasks.id));
 });
@@ -421,4 +299,5 @@ export const conversations = pgView("conversations_v").as((qb) =>
 
 // These view objects are declared as derived views via the `View` server
 // contribution in this plugin's server barrel (server/index.ts). tasks_v
-// declares `dependsOn: ["attempts_v"]` there; conversations_v is independent.
+// declares `dependsOn: ["task_blocking_v"]` there (task_blocking_v in turn
+// reads attempts_v); conversations_v is independent.

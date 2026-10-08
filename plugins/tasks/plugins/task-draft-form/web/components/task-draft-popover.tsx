@@ -1,3 +1,4 @@
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   type ReactElement,
   type ReactNode,
@@ -8,14 +9,11 @@ import {
   useState,
 } from "react";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import {
-  useResource,
-  ResourceView,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import {
-  tasksResource,
+  taskRows,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
@@ -336,7 +334,7 @@ export function TaskDraftPopover({
   const activeRelate = useActiveRelateContext();
   const hasAmbientRelate = !relate && activeRelate !== null;
 
-  const tasksResult = useResource(tasksResource);
+  const tasksResult = useLive(taskRows);
 
   const seenIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {

@@ -1,6 +1,5 @@
 export {
   TaskSchema,
-  TaskListItemSchema,
   TaskStatusSchema,
   AttemptSchema,
   AttemptStatusSchema,
@@ -36,22 +35,20 @@ export { newTaskId, newAttemptId, newConversationId } from "./id-mint";
 export { ConversationStatusSchema } from "./conversation-status";
 export { ADOPTED_SPAWNED_BY, isAdoptedConversation } from "./adopted";
 export type { ConversationStatus } from "./conversation-status";
-export {
-  ConversationSummarySchema,
-  AttemptWithConversationsSchema,
-} from "./schemas";
+export { ConversationSummarySchema } from "./schemas";
 export type { ConversationSummary, AttemptWithConversations } from "./schemas";
 
 // Client/shared live-state declarations (single source of truth for key/schema/
 // keyed-ness; the server resources are built from these). See ./resources.ts.
 export {
-  tasksResource,
-  taskDetail,
-  attemptsResource,
+  taskRows,
+  taskDescriptions,
+  attemptRows,
   pushRows,
-  conversationsActiveResource,
-  conversationsSystemResource,
-  conversationsGoneResource,
+  conversationsActive,
+  conversationsSystem,
+  conversationsGone,
+  conversationsById,
   conversationsGoneStats,
   RECENT_GONE_LIMIT,
 } from "./resources";

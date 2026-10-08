@@ -10,6 +10,7 @@ export {
   resourceRegisterMarkers,
   resourceVocabularyOwnerPaths,
 } from "./vocabulary";
+export { mintsOf } from "./mints";
 export type {
   DescriptorFactory,
   DescriptorFactoryName,

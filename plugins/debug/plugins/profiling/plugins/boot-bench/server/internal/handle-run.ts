@@ -117,7 +117,9 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
     const [snap, ...subs] = await Promise.all([
       (async () => {
         const t = performance.now();
-        const r = await assembleBootSnapshot();
+        // Cold mode bypasses the memory path too: a cleared L2 must measure the
+        // loaders, not a persisted alias's kept in-memory snapshot.
+        const r = await assembleBootSnapshot({ memory: !cold });
         return {
           totalMs: performance.now() - t,
           perKey: r.timings,
