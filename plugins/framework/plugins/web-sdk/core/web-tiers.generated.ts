@@ -79,6 +79,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/file-explorer/plugins/git",
   "apps/plugins/file-explorer/plugins/places",
   "apps/plugins/home/plugins/app-cards",
+  "apps/plugins/home/plugins/usage-fields",
   "apps/plugins/mail/plugins/attachments",
   "apps/plugins/mail/plugins/mail-html",
   "apps/plugins/mail/plugins/reading-pane",

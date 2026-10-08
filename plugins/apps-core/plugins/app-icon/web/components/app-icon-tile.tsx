@@ -50,3 +50,32 @@ export function AppIconTile({
       );
   }
 }
+
+/**
+ * An app's icon as a field cell: drawn in the AMBIENT avatar presentation, so
+ * the same field is a launcher tile where the view declares tiles (the icons
+ * view's `AvatarPresentationProvider value="tile"`, filling the box it gives)
+ * and a badge-sized avatar in rows and table cells — where a forced tile would
+ * fill a content-sized box, i.e. collapse to nothing. Same colour either way.
+ */
+export function AppIconAvatar({
+  icon,
+  appId,
+}: {
+  icon: AppIcon;
+  appId: string;
+}) {
+  switch (icon.kind) {
+    case "symbol":
+      return (
+        <span aria-hidden className="block size-full" style={TILE_PALETTE_VARS}>
+          <Avatar
+            symbol={icon.symbol}
+            color={icon.color ?? null}
+            shape="squircle"
+            fallbackKey={appId}
+          />
+        </span>
+      );
+  }
+}

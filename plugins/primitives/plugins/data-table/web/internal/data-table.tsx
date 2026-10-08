@@ -419,13 +419,13 @@ function DataTableRow<TRow>({
           keeps its own flow layout. */}
       <SingleLineProvider value={true}>
         {columns.map((col) => (
-          <Text as="div" key={col.id} className={alignClass(col.align)}>
+          <AlignedCell key={col.id} align={col.align}>
             {col.cell
               ? col.cell(row)
               : col.value
                 ? String(col.value(row) ?? "")
                 : null}
-          </Text>
+          </AlignedCell>
         ))}
       </SingleLineProvider>
       {/* `pin={null}`: the cluster stays IN FLOW, in the reserved trailing
@@ -694,6 +694,32 @@ function alignClass(align: ColumnDef<unknown>["align"]): string | undefined {
     : align === "center"
       ? "text-center"
       : undefined;
+}
+
+/**
+ * A body cell placed per its column's `align`. The cell is a content-sized
+ * (`w-fit`) truncation leaf, so `text-*` alone aligns text inside a box that
+ * hugs it and never moves the box: an aligned cell sits in a full-track row
+ * that justifies it. A start-aligned cell needs none.
+ */
+function AlignedCell({
+  align,
+  children,
+}: {
+  align: ColumnDef<unknown>["align"];
+  children: ReactNode;
+}) {
+  const cell = (
+    <Text as="div" className={alignClass(align)}>
+      {children}
+    </Text>
+  );
+  if (align !== "end" && align !== "center") return cell;
+  return (
+    <Stack direction="row" gap="none" align="center" justify={align}>
+      {cell}
+    </Stack>
+  );
 }
 
 function SortIcon({

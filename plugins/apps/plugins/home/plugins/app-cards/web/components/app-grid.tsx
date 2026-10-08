@@ -17,6 +17,7 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { HomeApps } from "../slots";
 
 const addIcon = symbol("add");
 
@@ -143,7 +144,10 @@ export function AppGrid() {
       rowKey={(a) => a.id}
       // The same tile and name the app launcher draws.
       fields={appFields}
-      views={["icons"]}
+      fieldExtensions={HomeApps.Fields}
+      // Icons is the launcher (tile + name only); the table shows every field,
+      // contributed ones included.
+      views={["icons", "table"]}
       defaultView="icons"
       toolbar={capsuleToolbar}
       searchPlaceholder="Search apps"

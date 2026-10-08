@@ -990,7 +990,7 @@ for a new reader of the two page resources.
     - `liveValue`
     - `scopedLiveColumns`
 - Cross-plugin:
-  - Imported by: 161 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 162 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×48
     - `conversations` ×33
     - `tasks` ×21
@@ -1004,6 +1004,7 @@ for a new reader of the two page resources.
     - `review` ×3
     - `config_v2` ×2
     - `release` ×2
+    - `apps-core/app-usage`
     - `backup/runs-arm`
     - `database/query-deadline`
     - `fields/secret/config`

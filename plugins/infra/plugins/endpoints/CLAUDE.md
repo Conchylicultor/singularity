@@ -213,7 +213,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `isCodec`
     - `multipart`
 - Cross-plugin:
-  - Imported by: 224 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 225 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×59
     - `debug` ×26
     - `conversations` ×24
@@ -228,8 +228,8 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `plugin-meta` ×4
     - `stats` ×4
     - `active-data` ×3
+    - `apps-core` ×3
     - `reports` ×3
-    - `apps-core` ×2
     - `config_v2` ×2
     - `history` ×2
     - `integrations` ×2

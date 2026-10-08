@@ -130,6 +130,10 @@
       "name": "@singularity/plugin-apps-core-app-rail-framing-rail",
       "version": "0.0.1",
     },
+    "plugins/apps-core/plugins/app-usage": {
+      "name": "@singularity/plugin-apps-core-app-usage",
+      "version": "0.0.1",
+    },
     "plugins/apps-core/plugins/chrome-theme": {
       "name": "@singularity/plugin-apps-core-chrome-theme",
       "version": "0.0.1",
@@ -489,6 +493,10 @@
     },
     "plugins/apps/plugins/home/plugins/shell": {
       "name": "@singularity/plugin-apps-home-shell",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/home/plugins/usage-fields": {
+      "name": "@singularity/plugin-apps-home-usage-fields",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/mail": {
@@ -6434,6 +6442,8 @@
 
     "@singularity/plugin-apps-core-app-rail-framing-rail": ["@singularity/plugin-apps-core-app-rail-framing-rail@workspace:plugins/apps-core/plugins/app-rail-framing/plugins/rail"],
 
+    "@singularity/plugin-apps-core-app-usage": ["@singularity/plugin-apps-core-app-usage@workspace:plugins/apps-core/plugins/app-usage"],
+
     "@singularity/plugin-apps-core-chrome-theme": ["@singularity/plugin-apps-core-chrome-theme@workspace:plugins/apps-core/plugins/chrome-theme"],
 
     "@singularity/plugin-apps-core-layout": ["@singularity/plugin-apps-core-layout@workspace:plugins/apps-core/plugins/layout"],
@@ -6563,6 +6573,8 @@
     "@singularity/plugin-apps-home-app-cards": ["@singularity/plugin-apps-home-app-cards@workspace:plugins/apps/plugins/home/plugins/app-cards"],
 
     "@singularity/plugin-apps-home-shell": ["@singularity/plugin-apps-home-shell@workspace:plugins/apps/plugins/home/plugins/shell"],
+
+    "@singularity/plugin-apps-home-usage-fields": ["@singularity/plugin-apps-home-usage-fields@workspace:plugins/apps/plugins/home/plugins/usage-fields"],
 
     "@singularity/plugin-apps-mail": ["@singularity/plugin-apps-mail@workspace:plugins/apps/plugins/mail"],
 

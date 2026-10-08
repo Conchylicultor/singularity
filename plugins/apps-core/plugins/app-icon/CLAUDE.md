@@ -54,6 +54,7 @@ changes to existing `kind: "symbol"` authors.
     - `primitives/css/ui-kit.cn`
     - `ui/icons.Icon`
   - Exports (values):
+    - `AppIconAvatar`
     - `AppIconTile`
     - `AppIconView`
     - `DEFAULT_APP_ICON`

@@ -2976,6 +2976,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`app-cards`** — Launcher grid of one card per installed app, plus the new-app placeholder.
           - Web:
+            - Slots: `HomeApps.Fields`
+            - Slot contributors: `HomeApps.Fields` ← `apps.home.usage-fields`
             - Contributes: `Home.Section` "Apps" → `AppGrid`
             - Uses:
               - `apps-core.ActiveApp`
@@ -2990,10 +2992,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.CreateOption`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
+              - `primitives/data-view.defineFieldExtensions`
               - `primitives/data-view/capsule-toolbar.capsuleToolbar`
               - `primitives/launch.LaunchAgentForm`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `ui/icons.Icon`
+            - Exports (values): `HomeApps`
+          - Cross-plugin:
+            - Imported by: `apps/home/usage-fields`
         - **`shell`** — App shell for Home. Registers the /home app entry, defines the Home.Section slot, and contributes Home's own theme (a black page and the ocean tile palette), which the home app selects.
           - Web:
             - Slots: `Home.Section`
@@ -3016,6 +3022,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `homeApp`
           - Cross-plugin:
             - Imported by: `apps/home/app-cards`
+        - **`usage-fields`** — Contributes per-app usage stats into the Home app grid: opens and active time over 7 days and all time, and when the app was last opened — sortable, filterable fields shown as columns of the grid's table view.
+          - Web:
+            - Contributes: `HomeApps.Fields` "usage" → `UsageFields`
+            - Uses:
+              - `apps-core/app-usage.useAppUsageSummary`
+              - `apps/home/app-cards.HomeApps`
+              - `primitives/loading.Loading`
     - **`mail`** — Mail — a Gmail-class client.
       - Plugins:
         - **`attachments`** — Reading-pane attachment UI: the useMailAttachment() lazy-download hook (deduped, cached) and the AttachmentChip component (filename + size + MIME icon; downloads on click and opens in a new tab). Lazy Gmail attachment blob download: fetches an attachment's bytes on demand (reading-pane chip click or inline cid: image), caches them via infra/attachments, stamps mail_attachments.stored_attachment_id, and serves the same-origin URL.
@@ -7338,9 +7351,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useFocusedAppId`
       - `usePathname`
   - Cross-plugin:
-    - Imported by: 36 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+    - Imported by: 37 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
       - `apps` ×17
-      - `apps-core` ×10
+      - `apps-core` ×11
       - `ui` ×5
       - `config_v2` ×2
       - `shell/global-action-bar`
@@ -7366,6 +7379,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.cn`
           - `ui/icons.Icon`
         - Exports (values):
+          - `AppIconAvatar`
           - `AppIconTile`
           - `AppIconView`
           - `DEFAULT_APP_ICON`
@@ -7468,6 +7482,45 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/app-rail-framing.AppRailFraming`
               - `apps-core/app-rail.AppRail`
               - `primitives/css/spacing.Stack`
+    - **`app-usage`** — Records per-app usage from the browser — a launch whenever the focused app changes to another, active time while the app is focused, the page visible, the window focused and the user not idle for 5 minutes — and reads it back with useAppUsageSummary(). Owns app_usage_daily: per (local day, app) opens and active milliseconds, added to by one batched upsert from the browser tracker's flush endpoint, served as the live per-app summary (7-day and all-time), and swept after two years.
+      - Web:
+        - Contributes: `Core.Root` → `AppUsageRecorder`
+        - Uses:
+          - `apps-core.useFocusedAppId`
+          - `infra/endpoints.EndpointError`
+          - `infra/endpoints.fetchEndpoint`
+          - `network/live.useLive`
+        - Exports (values): `useAppUsageSummary`
+      - Server:
+        - Contributes: `resource.declare` "app-usage.summary"
+        - Uses:
+          - `database.db`
+          - `database/sql-projection.nullable`
+          - `infra/endpoints.implement`
+          - `infra/retention.defineRetention`
+          - `network/live.serveValue`
+        - DB schema: `plugins/apps-core/plugins/app-usage/server/internal/tables.ts`
+        - Exports (values): `_appUsageDaily`
+        - Register: `defineJob('retention.app_usage_daily')`
+        - Resources: `app-usage.summary` (push, unbounded: one row per app id ever used — bounded by the installed app registry (tens of apps), never by time: the GROUP BY folds every day into its app)
+        - Routes: `POST /api/app-usage/flush`
+      - Core:
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
+        - Exports (types):
+          - `AppUsageEntry`
+          - `AppUsageSummaryRow`
+          - `FlushAppUsageBody`
+        - Exports (values):
+          - `AppUsageEntrySchema`
+          - `appUsageSummary`
+          - `AppUsageSummaryRowSchema`
+          - `FlushAppUsageBodySchema`
+          - `flushAppUsageEndpoint`
+          - `LocalDaySchema`
+      - Cross-plugin:
+        - Imported by: `apps/home/usage-fields`
     - **`chrome-theme`** — The app chrome's fixed theme (graphite): the rail, tab bar, action bar and toasts wear it whichever app is focused, so the frame stays the same while the app inside changes.
       - Web:
         - Contributes: `ThemeEngine.FixedTheme` "Chrome"
@@ -13366,7 +13419,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadKnownRelations`
       - `quotedRelationsIn`
   - Cross-plugin:
-    - Imported by: 101 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 102 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×29
       - `page` ×14
       - `infra` ×12
@@ -13378,6 +13431,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `active-data` ×2
       - `build` ×2
       - `stats` ×2
+      - `apps-core/app-usage`
       - `backup`
       - `history/engine`
       - `improve`
@@ -14005,6 +14059,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`sql-projection`** — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no longer declare a type nothing produces.
       - Cross-plugin:
         - Imported by:
+          - `apps-core/app-usage`
           - `apps/chord/video-availability`
           - `apps/deploy/deployments/runs-arm`
           - `backup/runs-arm`
@@ -18592,8 +18647,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 139 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×43
+            - Imported by: 140 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×44
               - `primitives` ×23
               - `page` ×22
               - `conversations` ×16
@@ -19004,8 +19059,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 37 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×35
+        - Slot contributors: 38 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×36
           - `Core.Boot` ×2
       - Core:
         - Uses:
@@ -19931,7 +19986,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isCodec`
           - `multipart`
       - Cross-plugin:
-        - Imported by: 224 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 225 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×59
           - `debug` ×26
           - `conversations` ×24
@@ -19946,8 +20001,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×4
           - `stats` ×4
           - `active-data` ×3
+          - `apps-core` ×3
           - `reports` ×3
-          - `apps-core` ×2
           - `config_v2` ×2
           - `history` ×2
           - `integrations` ×2
@@ -21592,6 +21647,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `markCascadeBounded`
       - Cross-plugin:
         - Imported by:
+          - `apps-core/app-usage`
           - `apps/deploy/analytics/collect`
           - `apps/deploy/deployments`
           - `apps/events/refresh`
@@ -22811,7 +22867,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveValue`
           - `scopedLiveColumns`
       - Cross-plugin:
-        - Imported by: 161 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 162 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×48
           - `conversations` ×33
           - `tasks` ×21
@@ -22825,6 +22881,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review` ×3
           - `config_v2` ×2
           - `release` ×2
+          - `apps-core/app-usage`
           - `backup/runs-arm`
           - `database/query-deadline`
           - `fields/secret/config`
@@ -29966,8 +30023,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoadingVariant`
         - Exports (values): `Loading`
       - Cross-plugin:
-        - Imported by: 174 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×57
+        - Imported by: 175 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×58
           - `ui` ×19
           - `primitives` ×17
           - `conversations` ×15
@@ -32616,8 +32673,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 227 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×227
+    - Contributes: 228 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×228
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -32647,8 +32704,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 226 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×226
+    - Contributes: 227 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×227
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`

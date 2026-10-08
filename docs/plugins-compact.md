@@ -15,7 +15,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`deploy`** [test helpers] [exempt] [17 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`events`** [exempt] [22 sub-plugins] — Events — track events from pluggable sources in one database.
     - **`file-explorer`** [4 sub-plugins] — File explorer app.
-    - **`home`** [2 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
+    - **`home`** [3 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`mail`** [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [exempt] [15 sub-plugins] — Notion-like pages app.
     - **`prototypes`** [11 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
@@ -33,6 +33,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`hidden`** — Hidden app rail — no switcher; sidebar slides flush to the edge.
         - **`rail`** — App-rail framing — the default 2.5rem icon rail.
+    - **`app-usage`** — Records per-app usage from the browser — a launch whenever the focused app changes to another, active time while the app is focused, the page visible, the window focused and the user not idle for 5…
     - **`chrome-theme`** — The app chrome's fixed theme (graphite): the rail, tab bar, action bar and toasts wear it whichever app is focused, so the frame stays the same while the app inside changes.
     - **`layout`** [load-bearing] [exempt] — Apps layout: the Core.Root composition wiring the tab bar, rail framing, and surface together, with the default-app redirect and document-title sync.
     - **`surface`** — Generic surface dispatcher: renders every open tab at once under the ONE surface mode (docked / windows / solo) selected from the Surface.Placement registry, so the modes are mutually exclusive.…

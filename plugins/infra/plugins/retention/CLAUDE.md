@@ -149,6 +149,7 @@ check would have been a patch on a footgun.
     - `markCascadeBounded`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-usage`
     - `apps/deploy/analytics/collect`
     - `apps/deploy/deployments`
     - `apps/events/refresh`

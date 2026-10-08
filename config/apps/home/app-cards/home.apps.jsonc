@@ -1,4 +1,7 @@
 // @hash 6ec84829688d
 {
-  "views": [{ "id": "apps", "name": "Apps", "view": { "type": "icons" } }]
+  "views": [
+    { "id": "apps", "name": "Apps", "view": { "type": "icons" } },
+    { "id": "stats", "name": "Stats", "view": { "type": "table", "sort": { "fieldId": "focusedMs7d", "direction": "desc" } } }
+  ]
 }
