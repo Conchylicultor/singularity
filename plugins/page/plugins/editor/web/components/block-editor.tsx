@@ -51,13 +51,13 @@ import {
   pasteAnchorId,
   blockSelectionRoots,
   withContainersSelected,
-  textOf,
   planForestInsert,
   withMintedIds,
   newBlockId,
   parseMarkdownToForest,
   defaultTextHandle,
   plainOf,
+  runsLength,
   runsOfNode,
   type Block,
   type BlockNode,
@@ -66,6 +66,7 @@ import {
   type SerializedBlock,
 } from "../../core";
 import { fromNodes, toNodes } from "../internal/optimistic-block-ops";
+import { liveRunsOf } from "../internal/live-runs";
 import type { CaretSurface, CaretSurfaceRef } from "../caret-surface";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import {
@@ -306,6 +307,11 @@ export interface BlockEditorHandle extends CaretSurface {
  * already an empty default-text block, otherwise append a fresh one — never
  * stack a second blank paragraph under an existing one. Shared by the editor's
  * own trailing zone (`onEmptyClick`) and the host-facing `focusEnd`.
+ *
+ * "Empty" is asked of the block's text NOW (`liveRunsOf`), never of the row's
+ * ~1 s-lagged `data.text`: a line typed just before the click would otherwise
+ * still read empty, and the click would only put the caret at its end — the
+ * user had to click a second time, once the projection landed, to get a line.
  */
 function openTrailingBlock(
   lastBlock: Block | undefined,
@@ -317,7 +323,7 @@ function openTrailingBlock(
   if (
     lastBlock &&
     lastBlock.type === fallback.type &&
-    textOf(lastBlock) === ""
+    runsLength(liveRunsOf(lastBlock)) === 0
   ) {
     focusBlockBoundary(lastBlock.id, "end");
     return;
@@ -546,7 +552,11 @@ function BlockEditorInner({
         const fallback = defaultTextHandle(contributions.map((c) => c.block));
         if (!fallback) return;
         const first = flat[0]?.block;
-        if (first && first.type === fallback.type && textOf(first) === "") {
+        if (
+          first &&
+          first.type === fallback.type &&
+          runsLength(liveRunsOf(first)) === 0
+        ) {
           focusBlock(first.id);
           return;
         }

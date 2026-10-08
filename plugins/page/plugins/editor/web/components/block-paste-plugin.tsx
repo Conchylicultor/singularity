@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { COMMAND_PRIORITY_NORMAL, PASTE_COMMAND } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { textOf } from "../../core";
+import { plainOf } from "../../core";
 import type { BlockTextPluginProps } from "../internal/block-text-extensions";
 import { resolvePastedBlock } from "../internal/block-paste-handlers";
+import { liveRunsOf } from "../internal/live-runs";
 
 /**
  * Invisible Lexical plugin that turns a pasted file into an attachment block.
@@ -24,7 +25,7 @@ export function BlockPastePlugin({ block, editor }: BlockTextPluginProps) {
         if (!picked) return false; // not a pasted file → let url-paste / default run
         event.preventDefault();
         const { file, handler } = picked;
-        const empty = textOf(block).trim() === "";
+        const empty = plainOf(liveRunsOf(block)).trim() === "";
         void (async () => {
           const data = await handler.build(file);
           // Empty block → convert it in place; otherwise insert a new block after.
