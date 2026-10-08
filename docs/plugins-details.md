@@ -6235,11 +6235,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `SonataDocument.SongSetting` "track-view-sync" → `TrackViewObserver`
               - `Sonata.Section` "Tracks" → `TrackMixerPanel`
-            - Uses: 38 symbols — full list in [`plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md)
               - `apps/sonata/document` ×8
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
               - `primitives/live-state` ×2
+              - `primitives/optimistic-mutation` ×2
               - `primitives/overlay/floating-action` ×2
               - `primitives/search` ×2
               - `apps/sonata/audio/instruments.SonataAudio`
@@ -6259,7 +6260,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/loading.Loading`
-              - `primitives/optimistic-mutation.enqueueResourceWrite`
               - `primitives/overlay/popover.InlinePopover`
               - `ui/icons.Icon`
             - Exports (types): `TrackMixerEntry`
@@ -19060,8 +19060,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 38 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×36
+        - Slot contributors: 39 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×37
           - `Core.Boot` ×2
       - Core:
         - Uses:
@@ -23779,19 +23779,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.InsertAction` ×3
           - `Editor.BlockMenuItem` ← `page.open-as-page`
           - `Editor.TurnInto` ← `page.turn-into-page`
-        - Uses: 81 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 82 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `primitives/live-state` ×5
           - `primitives/text-editor/caret-trigger` ×5
           - `primitives/css/spacing` ×4
           - `primitives/css/ui-kit` ×4
           - `primitives/dom/dom-selection` ×4
           - `primitives/slot-render` ×4
+          - `primitives/undo-redo` ×4
           - `primitives/css/control-panel` ×3
           - `primitives/css/coords` ×3
           - `primitives/multi-select` ×3
           - `primitives/optimistic-mutation` ×3
           - `primitives/text-editor/caret-motion` ×3
-          - `primitives/undo-redo` ×3
           - `reorder` ×3
           - `infra/endpoints` ×2
           - `network/live` ×2
@@ -26965,11 +26965,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Badge`
               - `formatStatusLabel`
           - Cross-plugin:
-            - Imported by: 152 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 153 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `debug` ×34
               - `apps` ×33
               - `conversations` ×23
-              - `reports` ×10
+              - `reports` ×11
               - `plugin-meta` ×8
               - `primitives` ×8
               - `tasks` ×7
@@ -27346,10 +27346,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `debug` ×16
               - `apps` ×15
-              - `reports` ×11
+              - `reports` ×12
               - `conversations` ×9
               - `primitives` ×9
               - `page` ×5
@@ -30509,10 +30509,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HUB_HEARTBEAT_MS`
           - `HUB_TIMEOUT_MS`
           - Types: `FakeWsServerOptions`, `TabHandle`, `TransportHub`
-    - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, and keep-rendered failures with reconnect auto-retry.
+    - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
       - Web:
         - Uses:
           - `infra/endpoints.EndpointError`
+          - `infra/endpoints.getEndpointErrorMessage`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/live-state.getResourceWatermark`
           - `primitives/live-state.hasResourceTxAck`
@@ -30526,12 +30527,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `OptimisticDivergenceReport`
           - `OptimisticOptions`
+          - `OptimisticRejectionReport`
           - `OptimisticResult`
           - `OptimisticSettled`
         - Exports (values):
+          - `enqueueDetachedWrite`
           - `enqueueResourceWrite`
           - `OpNoLongerApplies`
           - `optimisticDivergenceReportSink`
+          - `optimisticRejectionSink`
           - `useOptimisticResource`
       - Cross-plugin:
         - Imported by:
@@ -30541,6 +30545,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversations-view/queue`
           - `page/editor`
           - `reports/optimistic-divergence`
+          - `reports/optimistic-rejection`
       - Exemptions:
         - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - **`outline`** — Umbrella for the outline primitive: the scroll-spy position half and the rail chrome half.
@@ -32381,6 +32386,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UndoRedoShortcutsOptions`
         - Exports (values):
           - `localUndoProps`
+          - `newHistoryEntryId`
           - `resolveUndoOwner`
           - `surfaceUndoProps`
           - `UNDO_OWNER_ATTR`
@@ -32843,8 +32849,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 28 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×28
+    - Slot contributors: 29 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×29
     - Contributes: `ConfigV2.WebRegister` "reports"
     - Uses:
       - `config_v2.ConfigV2`
@@ -32940,8 +32946,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
   - Cross-plugin:
-    - Imported by: 52 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×18
+    - Imported by: 53 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×19
       - `debug` ×17
       - `conversations` ×7
       - `database` ×3
@@ -33126,6 +33132,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `optimisticDivergenceFingerprint`
           - `OptimisticDivergencePayloadSchema`
           - `StoredOptimisticDivergencePayloadSchema`
+    - **`optimistic-rejection`** — Optimistic-rejection collector: drains the optimistic-mutation primitive's rejection sink (a write the server permanently refused — the optimistic op already dropped, or a detached write lost) into an error toast telling the user their edit was not saved, and a deduped report, plus the Debug → Reports summary view. Optimistic-rejection report kind: validates rejected-write payloads (a write the server permanently refused, so the user's edit was lost), fingerprints by resource + label + status + op + normalized reason (excluding params), and renders the investigation task. Re-arms periodically (6h): a rejection recurs on every edit of the same shape.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `OptimisticRejectionCollector`
+          - `Reports.KindView` → `OptimisticRejectionKindView`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `primitives/optimistic-mutation.optimisticRejectionSink`
+          - `reports.report`
+          - `reports.Reports`
+          - `shell/toast.showToast`
+      - Server:
+        - Contributes: `report-kind` "optimistic-rejection"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Exports (types): `OptimisticRejectionPayload`
+        - Exports (values):
+          - `optimisticRejectionFingerprint`
+          - `OptimisticRejectionPayloadSchema`
     - **`outbox`** — Report outbox drain: on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged; an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
       - Server:
         - Uses:
@@ -33989,6 +34015,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/url-paste`
           - `primitives/data-view`
           - `primitives/file-viewer`
+          - `reports/optimistic-rejection`
           - `shell/notifications`
       - Core:
         - Exports (types):

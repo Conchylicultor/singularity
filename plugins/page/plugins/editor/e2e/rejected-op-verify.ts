@@ -93,7 +93,6 @@ await withBrowser(async (h) => {
     "A: ... which is server truth",
     await parentOf(doc.pageId, bravoId),
     doc.pageId, // a top-level line's parent is the page row
-
   );
 
   // ---- B: the same indent saves once the route is released ----------------------
@@ -120,7 +119,6 @@ await withBrowser(async (h) => {
     "C: one undo outdents bravo (B's step)",
     await parentOf(doc.pageId, bravoId),
     doc.pageId, // a top-level line's parent is the page row
-
   );
   await page.keyboard.press(`${mod}+z`);
   await page.waitForTimeout(2500);
@@ -133,7 +131,6 @@ await withBrowser(async (h) => {
     "C: bravo is still a top-level line",
     await parentOf(doc.pageId, bravoId),
     doc.pageId, // a top-level line's parent is the page row
-
   );
 
   await r.finish();
