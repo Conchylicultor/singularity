@@ -18,6 +18,7 @@
   - Uses:
     - `conversations/conversation-ui/item.ConvStatusDot`
     - `conversations/conversation-view.conversationPane`
+    - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
     - `conversations/model-provider.useModelCatalog`
     - `primitives/app-shell.opensPane`
     - `primitives/css/inline.Inline`

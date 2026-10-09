@@ -144,7 +144,7 @@ and all feedback lives inside the message card itself.
 
 ## Plugin reference
 
-- Description: The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted|held → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
+- Description: The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted|held → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), reports a conversation as working from the instant a turn is sent (useOptimisticConversationStatus), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
 - Web:
   - Uses:
     - `infra/endpoints.EndpointError`
@@ -169,14 +169,18 @@ and all feedback lives inside the message card itself.
     - `PendingTurnCard`
     - `reconcilePendingTurns`
     - `sendConversationTurn`
+    - `useOptimisticConversationStatus`
     - `usePendingTurns`
 - Cross-plugin:
   - Imported by:
+    - `conversations/all-conversations`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
     - `conversations/conversation-view/prompt-input`
     - `conversations/conversation-view/prompt-templates`
     - `conversations/conversation-view/push-and-exit`
+    - `conversations/conversation-view/status`
+    - `conversations/conversations-view/data-view`
 - Exemptions:
   - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
   - Exempted by:

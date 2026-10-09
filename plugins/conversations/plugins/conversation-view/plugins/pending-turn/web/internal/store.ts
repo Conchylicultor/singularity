@@ -6,6 +6,7 @@ import {
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import { report } from "@plugins/reports/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   awaitsConfirmation,
   CONFIRM_DEADLINE_MS,
@@ -136,6 +137,14 @@ interface ConvEntry {
   records: PendingTurnRecord[];
   listeners: Set<() => void>;
   timers: Map<string, ReturnType<typeof setTimeout>>;
+  /**
+   * `createdAt` of the newest send the transcript confirmed as delivered. The
+   * record itself is dropped the moment it lands (`sent` is transient), but the
+   * server's status can still lag behind the transcript — this keeps the
+   * optimistic "working" alive across that gap. In-memory only: after a reload
+   * the server's status has long caught up.
+   */
+  lastDeliveredAt: number | null;
 }
 
 const EMPTY: PendingTurnRecord[] = [];
@@ -157,6 +166,7 @@ function getEntry(conversationId: string): ConvEntry {
     records: stored.length ? stored : EMPTY,
     listeners: new Set(),
     timers: new Map(),
+    lastDeliveredAt: null,
   };
   entries.set(conversationId, entry);
   // Attached for the tab's lifetime (bounded by conversations viewed). Our own
@@ -496,6 +506,10 @@ export function reconcilePendingTurns(
   if (entry.records.length === 0) return;
   const now = Date.now();
   const matched = matchPendingTurns(entry.records, events, now);
+  for (const rec of matched.records) {
+    if (rec.state === "sent" && rec.createdAt > (entry.lastDeliveredAt ?? 0))
+      entry.lastDeliveredAt = rec.createdAt;
+  }
   const swept = sweepPendingTurns(matched.records, {
     now,
     tabId: getTabId(),
@@ -509,6 +523,62 @@ export function reconcilePendingTurns(
 }
 
 const getServerSnapshot = (): PendingTurnRecord[] => EMPTY;
+
+/**
+ * States in which a send is on its way into a running agent: in flight, accepted,
+ * or parked in the CLI's queue. `held` is excluded — the conversation is still
+ * starting, and its own status says so — as are the failure states, which
+ * claim nothing reached the agent.
+ */
+function isLiveSend(state: PendingTurnState): boolean {
+  return state === "sending" || state === "posted" || state === "queued";
+}
+
+/** `createdAt` of the newest send that is live or was delivered, else null. */
+function latestSendAt(entry: ConvEntry): number | null {
+  let latest = entry.lastDeliveredAt;
+  for (const rec of entry.records) {
+    if (isLiveSend(rec.state) && rec.createdAt > (latest ?? 0))
+      latest = rec.createdAt;
+  }
+  return latest;
+}
+
+/**
+ * The conversation's status as the user should see it: `working` from the
+ * instant a turn is sent, before the server has seen it start.
+ *
+ * The override holds only while the server reports `waiting` AND its row has
+ * not moved since the send — `updatedAt` is touched exactly when the status
+ * enters or leaves `working`, so a newer `updatedAt` means the server has
+ * already accounted for this turn (started it, or even finished it) and its
+ * status is authoritative again. A send that fails drops out of
+ * {@link isLiveSend}, which retracts the override with it.
+ */
+export function useOptimisticConversationStatus(conversation: {
+  id: string;
+  status: ConversationStatus;
+  updatedAt: Date;
+}): ConversationStatus {
+  const { id } = conversation;
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const entry = getEntry(id);
+      entry.listeners.add(onChange);
+      return () => {
+        entry.listeners.delete(onChange);
+      };
+    },
+    [id],
+  );
+  const getSnapshot = useCallback(() => latestSendAt(getEntry(id)), [id]);
+  const sentAt = useSyncExternalStore(subscribe, getSnapshot, () => null);
+  return conversation.status === "waiting" &&
+    sentAt != null &&
+    sentAt > conversation.updatedAt.getTime()
+    ? "working"
+    : conversation.status;
+}
 
 export function usePendingTurns(conversationId: string): PendingTurnRecord[] {
   const subscribe = useCallback(

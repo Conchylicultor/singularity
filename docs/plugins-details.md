@@ -10075,6 +10075,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `conversations/conversation-ui/item.ConvStatusDot`
           - `conversations/conversation-view.conversationPane`
+          - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
           - `conversations/model-provider.useModelCatalog`
           - `primitives/app-shell.opensPane`
           - `primitives/css/inline.Inline`
@@ -12459,7 +12460,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
-        - **`pending-turn`** — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted|held → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
+        - **`pending-turn`** — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted|held → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), reports a conversation as working from the instant a turn is sent (useOptimisticConversationStatus), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
           - Web:
             - Uses:
               - `infra/endpoints.EndpointError`
@@ -12484,14 +12485,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PendingTurnCard`
               - `reconcilePendingTurns`
               - `sendConversationTurn`
+              - `useOptimisticConversationStatus`
               - `usePendingTurns`
           - Cross-plugin:
             - Imported by:
+              - `conversations/all-conversations`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `conversations/conversation-view/prompt-input`
               - `conversations/conversation-view/prompt-templates`
               - `conversations/conversation-view/push-and-exit`
+              - `conversations/conversation-view/status`
+              - `conversations/conversations-view/data-view`
           - Exemptions:
             - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
             - Exempted by:
@@ -12738,6 +12743,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations.useConversationById`
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/header.HeaderChip`
+              - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
               - `primitives/css/badge.formatStatusLabel`
         - **`tasks-panel`** — Toolbar button that toggles the task pane (tree + detail) for the conversation's task.
           - Web:
@@ -12880,6 +12886,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-ui/item.ConversationItemConv`
               - `conversations/conversation-ui/item.conversationTitle`
               - `conversations/conversation-ui/item.ConvTitleOverride`
+              - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/scroll.Scroll`

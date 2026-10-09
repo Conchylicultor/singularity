@@ -3,6 +3,8 @@ import { useConversationById } from "@plugins/conversations/web";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { HeaderChip } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
+import { useOptimisticConversationStatus } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
+import type { ConversationEntry } from "@plugins/conversations/core";
 
 // Each status is a bordered pill; the live one (working) takes the accent for
 // its text and outline, so the one conversation doing something reads at a glance.
@@ -28,9 +30,15 @@ export function StatusBadge() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
   if (!conversation) return null;
+  return <StatusChip conversation={conversation} />;
+}
+
+// Split out so the optimistic-status hook runs only once the row is known.
+function StatusChip({ conversation }: { conversation: ConversationEntry }) {
+  const status = useOptimisticConversationStatus(conversation);
   return (
-    <HeaderChip colorClass={STATUS_CLASSES[conversation.status]}>
-      {prettify(conversation.status)}
+    <HeaderChip colorClass={STATUS_CLASSES[status]}>
+      {prettify(status)}
     </HeaderChip>
   );
 }

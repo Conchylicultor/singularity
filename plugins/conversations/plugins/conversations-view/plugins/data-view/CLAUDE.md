@@ -18,6 +18,7 @@
     - `conversations/conversation-ui/item.ConversationItemConv`
     - `conversations/conversation-ui/item.conversationTitle`
     - `conversations/conversation-ui/item.ConvTitleOverride`
+    - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/scroll.Scroll`

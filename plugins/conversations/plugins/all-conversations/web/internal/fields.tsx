@@ -3,6 +3,7 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ConvStatusDot } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import { useOptimisticConversationStatus } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import type {
   FieldDef,
   FieldValue,
@@ -46,12 +47,20 @@ function fieldValue(c: ConversationListRow, id: string): FieldValue {
   }
 }
 
-function StatusCell({ conv }: { conv: ConversationListRow }): ReactElement {
+function StatusCell({
+  conv: row,
+}: {
+  conv: ConversationListRow;
+}): ReactElement {
+  // The status the conversation header shows — `working` from the instant a
+  // turn is sent — so this list never disagrees with it.
+  const status = useOptimisticConversationStatus(row);
+  const conv = { ...row, status };
   return (
     <Inline gap="xs">
       <ConvStatusDot conv={conv} />
       <Text as="span" variant="caption">
-        {conv.status}
+        {status}
       </Text>
     </Inline>
   );

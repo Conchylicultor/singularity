@@ -5,11 +5,19 @@ import {
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useTaskShortTitle } from "@plugins/tasks/plugins/task-title/web";
+import { useOptimisticConversationStatus } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { conversationListConfig } from "../../shared/config";
 import { resolveListTitle } from "../internal/list-title";
 
-/** A row the list names: the item's own fields plus its task (id and current title). */
-type SidebarConv = ConversationItemConv & { taskId: string; taskTitle: string };
+/**
+ * A row the list names: the item's own fields plus its task (id and current
+ * title), and the `updatedAt` the shown status is reconciled against.
+ */
+type SidebarConv = ConversationItemConv & {
+  taskId: string;
+  taskTitle: string;
+  updatedAt: Date;
+};
 
 /**
  * One row of the conversations list (every source's `renderRow`), named per the
@@ -24,15 +32,20 @@ type SidebarConv = ConversationItemConv & { taskId: string; taskTitle: string };
  *
  * Takes any row naming its task — the Queue's full `Conversation` and
  * History's list row alike.
+ *
+ * The row's status is the one the conversation header shows: `working` from the
+ * instant a turn is sent (`useOptimisticConversationStatus`), so the dot and the
+ * chip never disagree while the server catches up.
  */
 export function SidebarConversationItem({
-  conv,
+  conv: row,
   muted,
 }: {
   conv: SidebarConv;
   muted?: boolean;
 }): ReactElement {
   const { titleMode } = useConfig(conversationListConfig);
+  const conv = { ...row, status: useOptimisticConversationStatus(row) };
   // Split so only the short mode subscribes to the short-title rows.
   if (titleMode === "short")
     return <ShortTitleItem conv={conv} muted={muted} />;
