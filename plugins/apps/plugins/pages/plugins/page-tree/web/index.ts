@@ -16,7 +16,6 @@ import {
   useHasNoCover,
   useHasNoIcon,
 } from "./components/header-tools";
-import { EditedLabel } from "./components/edited-label";
 import { DeletePageAction } from "./components/delete-page-action";
 import { AddPageBelowAction } from "./components/add-page-below-action";
 import { PageDetail, PageTree } from "./slots";
@@ -75,7 +74,6 @@ export default {
       component: BacklinksUnderTitle,
       useAvailable: useHasBacklinks,
     }),
-    pageDetailPane.Actions({ id: "edited", component: EditedLabel }),
     PageTree.RowActions({ id: "delete", component: DeletePageAction }),
     PageTree.RowActions({ id: "add-below", component: AddPageBelowAction }),
   ],

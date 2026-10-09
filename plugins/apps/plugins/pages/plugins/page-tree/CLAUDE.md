@@ -58,10 +58,9 @@ Writes go through `useSavePageData(page)` (`web/internal/use-save-page-data.ts`)
 which spreads over the page's CURRENT data so two parts never clobber each
 other's keys.
 
-"Edited 2h ago" (`pageDetailPane.Actions` `edited`) reads the editor's
-`pageEditedAt` — the newest `updatedAt` across the page row AND its live
-content blocks: a content edit stamps only the edited block's row, never the
-page row.
+"Edited 2h ago" in the title bar is contributed by `apps/pages/history`, not
+here: the label is the page's version-history entry point (click → the history
+dialog), so it lives with the history UI. It reads the editor's `pageEditedAt`.
 
 ## One row-action registry, no `rowMenu`
 
@@ -161,7 +160,6 @@ it, so an id means the same thing wherever it is clicked.
     - `pageDetailPane.Actions` ← `apps.pages.copy-id`
     - `pageDetailPane.Actions` ← `apps.pages.history`
     - `pageDetailPane.Actions` ← `apps.pages.page-author`
-    - `pageDetailPane.Actions` ← `apps.pages.page-tree`
     - `pageDetailPane.Actions` ← `apps.pages.starred`
     - `pageDetailPane.Actions` ← `primitives.pane`
     - `blockDetailPane.Actions` ← `primitives.pane`
@@ -176,10 +174,9 @@ it, so an id means the same thing wherever it is clicked.
     - `PageDetail.HeaderTool` "change-icon" → `ChangeIconTool`
     - `PageDetail.HeaderTool` "add-cover" → `AddCoverTool`
     - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
-    - `pageDetailPane.Actions` "edited" → `EditedLabel`
     - `PageTree.RowActions` "delete" → `DeletePageAction`
     - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 79 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×9
     - `page/editor` ×7
     - `primitives/data-view` ×5
@@ -216,7 +213,6 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `primitives/relative-time.RelativeTime`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor/paste-images.attachmentUrl`
     - `primitives/tree.useOptionalRowControls`

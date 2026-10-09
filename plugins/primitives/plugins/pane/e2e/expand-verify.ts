@@ -43,7 +43,7 @@ const expand = (p: Session["page"]) =>
 // Deliberately not the star — that label is on every sidebar tree row too, so
 // it is already satisfied on the landing surface before any page is open.
 const headerReady = (p: Session["page"]) =>
-  p.getByRole("button", { name: "Version history", exact: true });
+  p.getByRole("button", { name: /^Edited / });
 // Each open tab carries exactly one close button, labelled with its own title.
 const tabCloses = (p: Session["page"]) =>
   p.getByRole("button", { name: /^Close / });

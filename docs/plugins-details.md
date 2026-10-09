@@ -3793,9 +3793,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/page-tree.pageDetailPane`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
               - `primitives/icon-button.IconButton`
-        - **`history`** — Pages version-history UI: contributes the Version history header button to the page-detail pane, opening the reusable version-history dialog with a faithful, diffed read-only preview of each page version. Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a debounced two-job pipeline bound to blocksChanged, and drops a page's history on delete.
+        - **`history`** — Pages version-history UI: contributes the "Edited 2h ago" label to the page-detail title bar, which opens the reusable version-history dialog with a faithful, diffed read-only preview of each page version. Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a debounced two-job pipeline bound to blocksChanged, and drops a page's history on delete.
           - Web:
-            - Contributes: `pageDetailPane.Actions` "history" → `VersionHistoryAction`
+            - Contributes: `pageDetailPane.Actions` "edited" → `EditedHistoryAction`
             - Uses:
               - `apps/pages/page-tree.pageDetailPane`
               - `history/dialog.VersionHistoryDialog`
@@ -3809,9 +3809,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/icon-button.IconButton`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
+              - `primitives/overlay/tooltip.WithTooltip`
+              - `primitives/relative-time.RelativeTime`
           - Server:
             - Contributes:
               - `trigger` "pages.history.schedule"
@@ -3884,7 +3887,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pageDetailPane.Actions` ← `apps.pages.copy-id`
               - `pageDetailPane.Actions` ← `apps.pages.history`
               - `pageDetailPane.Actions` ← `apps.pages.page-author`
-              - `pageDetailPane.Actions` ← `apps.pages.page-tree`
               - `pageDetailPane.Actions` ← `apps.pages.starred`
               - `pageDetailPane.Actions` ← `primitives.pane`
               - `blockDetailPane.Actions` ← `primitives.pane`
@@ -3899,10 +3901,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.HeaderTool` "change-icon" → `ChangeIconTool`
               - `PageDetail.HeaderTool` "add-cover" → `AddCoverTool`
               - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
-              - `pageDetailPane.Actions` "edited" → `EditedLabel`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 80 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+            - Uses: 79 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
               - `primitives/pane` ×9
               - `page/editor` ×7
               - `primitives/data-view` ×5
@@ -3939,7 +3940,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
-              - `primitives/relative-time.RelativeTime`
               - `primitives/slot-render.defineRenderSlot`
               - `primitives/text-editor/paste-images.attachmentUrl`
               - `primitives/tree.useOptionalRowControls`
@@ -28842,9 +28842,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 383 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 384 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×100
-              - `apps` ×69
+              - `apps` ×70
               - `conversations` ×52
               - `page` ×24
               - `debug` ×23
@@ -30387,8 +30387,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
-        - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×42
+        - Imported by: 109 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×41
           - `primitives` ×18
           - `conversations` ×14
           - `tasks` ×7
@@ -31674,9 +31674,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TooltipDoc`
               - `WithTooltip`
           - Cross-plugin:
-            - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
+            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
               - `primitives` ×15
-              - `apps` ×6
+              - `apps` ×7
               - `page` ×6
               - `conversations` ×5
               - `apps-core` ×3

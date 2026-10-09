@@ -1,4 +1,4 @@
-// @hash 6f0c711be052
+// @hash ff350250c718
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -11,9 +11,9 @@
   // leads, with Copy block ID right beside it — it copies the id of the page
   // the title names, the handle an agent's page tools take. The spacer then
   // pushes everything ABOUT the page to the far end: "Edited 2h ago" first — a
-  // quiet fact you read, not a control — then the kind pill (a state you read
-  // at a glance, tinted on an agent page, and a rare switch to flip), Star,
-  // and History, a rarer, heavier affordance. No authored `⋯` bucket: the bar
+  // quiet fact you read, which also opens the page's version history on click
+  // — then the kind pill (a state you read at a glance, tinted on an agent
+  // page, and a rare switch to flip) and Star. No authored `⋯` bucket: the bar
   // still relocates whatever does not fit behind its own `⋯` when the pane is
   // narrow. The pane's own Expand and Close sit beyond these, painted by the
   // pane chrome rather than this slot.
@@ -21,9 +21,8 @@
     "primitives.pane:title",
     "apps.pages.copy-id:copy-id",
     { "type": "spacer", "id": "page-actions" },
-    "apps.pages.page-tree:edited",
+    "apps.pages.history:edited",
     "apps.pages.page-author:page-author",
-    "apps.pages.starred:star",
-    "apps.pages.history:history"
+    "apps.pages.starred:star"
   ]
 }

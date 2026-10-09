@@ -4,9 +4,9 @@
 
 ## Plugin reference
 
-- Description: Pages version-history UI: contributes the Version history header button to the page-detail pane, opening the reusable version-history dialog with a faithful, diffed read-only preview of each page version. Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a debounced two-job pipeline bound to blocksChanged, and drops a page's history on delete.
+- Description: Pages version-history UI: contributes the "Edited 2h ago" label to the page-detail title bar, which opens the reusable version-history dialog with a faithful, diffed read-only preview of each page version. Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a debounced two-job pipeline bound to blocksChanged, and drops a page's history on delete.
 - Web:
-  - Contributes: `pageDetailPane.Actions` "history" → `VersionHistoryAction`
+  - Contributes: `pageDetailPane.Actions` "edited" → `EditedHistoryAction`
   - Uses:
     - `apps/pages/page-tree.pageDetailPane`
     - `history/dialog.VersionHistoryDialog`
@@ -20,9 +20,12 @@
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/icon-button.IconButton`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
+    - `primitives/overlay/tooltip.WithTooltip`
+    - `primitives/relative-time.RelativeTime`
 - Server:
   - Contributes:
     - `trigger` "pages.history.schedule"

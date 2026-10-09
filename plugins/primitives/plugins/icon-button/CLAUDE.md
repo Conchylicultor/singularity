@@ -62,8 +62,8 @@ icon+count button it stands in for — carries a per-site
   - Exports (types): `IconButtonProps`
   - Exports (values): `IconButton`
 - Cross-plugin:
-  - Imported by: 110 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×42
+  - Imported by: 109 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×41
     - `primitives` ×18
     - `conversations` ×14
     - `tasks` ×7
