@@ -49,8 +49,11 @@ rows going dark.
   conversation); an alias may still not be another kind's prefix
   (`ids:prefix-unique`). `kind.prefixes` is the prefix then the aliases, for a
   namespace test that deliberately does not check the body.
-- **`legacyBareUuid: true`** makes `parse` / `schema` upgrade a bare uuid to
-  `<prefix>-<uuid>`, so old URLs keep resolving after a rewrite.
+- **`legacyBareUuid: true`** makes `parse` / `schema` — and `key` — upgrade a
+  bare uuid to `<prefix>-<uuid>`, so old URLs keep resolving after a rewrite.
+  Declare it only on a kind whose stored rows WERE rewritten (phase 4: song,
+  bkmk, bhist, mail*, evrun, sess, ver, trash): `key` upgrading a bare uuid
+  would miss a row still stored bare.
 - **The pattern's one built-in guard is leading**: no letter, digit, `_` or `-`
   right before the prefix (`legacy-claude-…`, `xtask-…` are not ids, not even
   for `is`). Inline
@@ -127,9 +130,9 @@ is reported by the schema file that exports it, which is where its plugin's
   - Slots:
     - `IdKinds.Kind`
     - `IdKinds.Presenter`
-  - Slot contributors: 25 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `IdKinds.Kind` ×17
-    - `IdKinds.Presenter` ×8
+  - Slot contributors: 33 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `IdKinds.Kind` ×24
+    - `IdKinds.Presenter` ×9
   - Exports (types):
     - `IdPresenter`
     - `IdReferentState`
@@ -178,14 +181,16 @@ is reported by the schema file that exports it, which is where its plugin's
     - `parseKindLabel`
     - `storedIdSchema`
 - Cross-plugin:
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×5
-    - `conversations` ×3
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×9
+    - `conversations` ×4
     - `primitives` ×3
     - `build` ×2
     - `release` ×2
     - `tasks` ×2
     - `active-data/id-chip`
+    - `history/engine`
+    - `infra/trash`
     - `page/editor`
     - `plugin-meta/plugin-health`
     - `reports`

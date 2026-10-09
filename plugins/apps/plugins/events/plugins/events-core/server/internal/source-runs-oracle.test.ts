@@ -57,7 +57,7 @@ import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server
 import { compileCollection } from "@plugins/network/plugins/live/server/testing";
 import { eventSourceRuns, RUN_OUTCOMES } from "../../core";
 import { _eventSourceRuns, _eventSources } from "./tables";
-import { eventSourceIdKind } from "../../core";
+import { eventRunIdKind, eventSourceIdKind } from "../../core";
 
 interface Load {
   key: string;
@@ -333,7 +333,7 @@ describe("events.source-runs — scoped differential oracle", () => {
     let clock = 0;
 
     const insertRun = async (): Promise<string> => {
-      const id = `run-${nextRun++}`;
+      const id = eventRunIdKind.key(`run-${nextRun++}`);
       const sourceId = any(SOURCES);
       clock += 1 + Math.floor(rand() * 5);
       const startedAt = new Date(T0 + clock * 60_000);
@@ -391,7 +391,7 @@ describe("events.source-runs — scoped differential oracle", () => {
             durationMs: Math.floor(rand() * 10_000),
             error: outcome === "failed" ? `rewritten ${id}` : null,
           })
-          .where(eq(_eventSourceRuns.id, id));
+          .where(eq(_eventSourceRuns.id, eventRunIdKind.key(id)));
         changed.add(id);
       } else if (r < 0.9) {
         // The retention sweep: a multi-row delete.
@@ -400,7 +400,7 @@ describe("events.source-runs — scoped differential oracle", () => {
         what = `sweep ${doomed.join(",")}`;
         await testDb.db
           .delete(_eventSourceRuns)
-          .where(inArray(_eventSourceRuns.id, doomed));
+          .where(inArray(_eventSourceRuns.id, doomed.map(eventRunIdKind.key)));
         for (const id of doomed) {
           changed.add(id);
           present.delete(id);

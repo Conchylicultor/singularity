@@ -38,12 +38,12 @@ vi.mock("@plugins/apps/plugins/browser/plugins/shell/web", () => ({
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ResourceError } from "@plugins/primitives/plugins/live-state/web";
-import type { BookmarkRow } from "../../core";
+import { bookmarkIdKind, type BookmarkRow } from "../../core";
 import { BookmarksBar } from "../components/bookmarks-bar";
 
 const refetch = () => Promise.resolve();
 const ROW: BookmarkRow = {
-  id: "b1",
+  id: bookmarkIdKind.key("b1"),
   url: "https://example.com/a",
   title: "A",
   createdAt: new Date(0),

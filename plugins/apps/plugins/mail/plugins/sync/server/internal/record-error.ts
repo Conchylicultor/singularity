@@ -4,6 +4,7 @@ import { _mailSyncState } from "@plugins/apps/plugins/mail/plugins/mail-core/ser
 import { backfillJob } from "./backfill";
 import { deltaJob } from "./delta";
 import { classifyMailSyncError } from "./classify-error";
+import { type MailAccountId } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 
 // Persist sync failures + clear-and-restart on a manual retry. Writing the error
 // onto `mail_sync_state` makes it survive a restart and (via the DB change-feed)
@@ -15,7 +16,7 @@ import { classifyMailSyncError } from "./classify-error";
  * `"error"`; a transient one leaves the status alone (graphile keeps retrying).
  */
 export async function recordSyncError(
-  accountId: string,
+  accountId: MailAccountId,
   err: unknown,
 ): Promise<void> {
   const c = classifyMailSyncError(err);
@@ -41,7 +42,7 @@ export async function recordSyncError(
  * the backfill from the beginning. No-op when the account has no sync_state row
  * yet (the manual endpoint's bootstrap path arms it on first connect).
  */
-export async function kickSync(accountId: string): Promise<void> {
+export async function kickSync(accountId: MailAccountId): Promise<void> {
   const [row] = await db
     .select({ historyId: _mailSyncState.historyId })
     .from(_mailSyncState)

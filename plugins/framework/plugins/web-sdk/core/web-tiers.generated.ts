@@ -24,6 +24,7 @@
 //   - apps/plugins/prototypes/plugins/canvas: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/files: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/document: dependency closure (imported by an eager plugin)
+//   - apps/plugins/sonata/plugins/library: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/player: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/session: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/voicing: dependency closure (imported by an eager plugin)
@@ -82,6 +83,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/home/plugins/app-cards",
   "apps/plugins/home/plugins/usage-fields",
   "apps/plugins/mail/plugins/attachments",
+  "apps/plugins/mail/plugins/mail-core",
   "apps/plugins/mail/plugins/mail-html",
   "apps/plugins/mail/plugins/reading-pane",
   "apps/plugins/mail/plugins/search",
@@ -118,7 +120,6 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/sonata/plugins/audio/plugins/soundfont",
   "apps/plugins/sonata/plugins/chord-chart",
   "apps/plugins/sonata/plugins/controls",
-  "apps/plugins/sonata/plugins/library",
   "apps/plugins/sonata/plugins/look",
   "apps/plugins/sonata/plugins/lyric-line",
   "apps/plugins/sonata/plugins/notation",

@@ -1,7 +1,7 @@
-import { randomUUID } from "node:crypto";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { getHistorySource } from "./registry";
+import { versionIdKind } from "../../core/id-kind";
 import { _entityVersions } from "./tables";
 
 // Notion-style time bucketing: edits within one ~10-min active-editing window
@@ -41,7 +41,7 @@ export async function recordVersion(
 
   if (opts?.pin) {
     await db.insert(_entityVersions).values({
-      id: randomUUID(),
+      id: versionIdKind.mint(),
       sourceId,
       entityId,
       snapshot,
@@ -80,7 +80,7 @@ export async function recordVersion(
       .where(eq(_entityVersions.id, newest.id));
   } else {
     await db.insert(_entityVersions).values({
-      id: randomUUID(),
+      id: versionIdKind.mint(),
       sourceId,
       entityId,
       snapshot,

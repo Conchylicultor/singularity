@@ -22,7 +22,10 @@ vi.mock("../components/message-card", () => ({
 }));
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import {
+  mailAccountIdKind,
+  type MailMessage,
+} from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import type { ResourcePaging } from "@plugins/primitives/plugins/live-state/web";
 import { MessageList } from "../components/message-list";
 
@@ -34,7 +37,7 @@ function message(id: string): MailMessage {
   return {
     id,
     threadId: "t1",
-    accountId: "a1",
+    accountId: mailAccountIdKind.key("a1"),
     from: { email: "a@example.com" },
     to: [],
     cc: [],

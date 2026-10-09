@@ -4,6 +4,7 @@ import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { restoreVersion } from "../../core/endpoints";
 import { recordVersion } from "./record-version";
 import { getHistorySource } from "./registry";
+import { versionIdKind } from "../../core/id-kind";
 import { _entityVersions } from "./tables";
 
 // Reversible replace. First snapshot the current state as a distinct "Before
@@ -29,7 +30,7 @@ export const handleRestoreVersion = implement(
       .from(_entityVersions)
       .where(
         and(
-          eq(_entityVersions.id, params.versionId),
+          eq(_entityVersions.id, versionIdKind.key(params.versionId)),
           eq(_entityVersions.sourceId, params.sourceId),
           eq(_entityVersions.entityId, params.entityId),
         ),

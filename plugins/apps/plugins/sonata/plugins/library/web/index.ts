@@ -9,6 +9,8 @@ import {
 import { PlaySongAction } from "./components/play-song-action";
 import { DeleteSongAction } from "./components/delete-song-action";
 import { Library } from "./slots";
+import { IdKinds } from "@plugins/ids/web";
+import { songIdKind } from "../core";
 import { sonataLibraryPane, sonataPlayerPane } from "./panes";
 
 export { Library } from "./slots";
@@ -24,6 +26,7 @@ export default {
   description:
     "Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances.",
   contributions: [
+    IdKinds.Kind({ kind: songIdKind }),
     Sonata.Home({ id: "library", component: SongLibrary }),
     // The player pane's header. The song title is NOT here: a pane contributes
     // exactly one `title` item into its own header, and the player's title is

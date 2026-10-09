@@ -1,7 +1,7 @@
-import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import type { TrashEntry } from "../../core/schemas";
+import { trashEntryIdKind, type TrashEntryId } from "../../core/id-kind";
 import { _trashEntries } from "./tables";
 
 // Any drizzle executor the ledger insert can ride on: the global handle, a
@@ -10,8 +10,7 @@ import { _trashEntries } from "./tables";
 // global proxy and a fixture DB; the second branch accepts a `db.transaction`
 // callback handle.
 export type TrashExecutor =
-  | NodePgDatabase
-  | Parameters<Parameters<typeof db.transaction>[0]>[0];
+  NodePgDatabase | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
  * Insert one trash-ledger row for a soft-deleted root entity. MUST be called by
@@ -29,8 +28,8 @@ export async function recordTrashEntry(
     label: string;
     meta?: TrashEntry["meta"];
   },
-): Promise<string> {
-  const id = randomUUID();
+): Promise<TrashEntryId> {
+  const id = trashEntryIdKind.mint();
   await tx.insert(_trashEntries).values({
     id,
     sourceId: args.sourceId,

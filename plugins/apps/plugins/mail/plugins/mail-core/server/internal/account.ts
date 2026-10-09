@@ -1,11 +1,12 @@
 import { asc } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
+import type { MailAccountId } from "../../core";
 import { _mailAccounts } from "./tables";
 
 /** THE connected account, as every mail read path sees it. */
 export interface MailAccountRef {
-  id: string;
+  id: MailAccountId;
   email: string;
 }
 
@@ -30,6 +31,6 @@ export async function readMailAccount(
   return row ?? null;
 }
 
-export async function resolveMailAccountId(): Promise<string | null> {
+export async function resolveMailAccountId(): Promise<MailAccountId | null> {
   return (await readMailAccount(db))?.id ?? null;
 }

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { storedIdSchema } from "@plugins/ids/core";
+import { trashEntryIdKind } from "./id-kind";
 
 // One soft-deleted root entity, awaiting restore or purge. Domain-agnostic: the
 // primitive never knows what a `sourceId` names (e.g. "pages") or what
@@ -8,7 +10,7 @@ import { z } from "zod";
 // Deliberately NO drizzle import here — `core/` is web-safe and importable from
 // any runtime; the wire shape is derived from this schema alone.
 export const TrashEntrySchema = z.object({
-  id: z.string(),
+  id: storedIdSchema(trashEntryIdKind),
   sourceId: z.string(),
   rootEntityId: z.string(),
   label: z.string(),

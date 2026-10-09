@@ -1,3 +1,4 @@
+import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import {
   createSongRow,
@@ -91,7 +92,7 @@ export const handleCreateUltimateGuitarSong = implement(
 export const handleGetSongUltimateGuitar = implement(
   getSongUltimateGuitar,
   async ({ params }) => {
-    const row = await songUltimateGuitar.get(params.id);
+    const row = await songUltimateGuitar.get(songIdKind.key(params.id));
     if (!row) return null;
     return {
       tabId: row.tabId,
@@ -117,13 +118,15 @@ export const handleUpdateUltimateGuitarSong = implement(
   updateUltimateGuitarSong,
   async ({ params, body }) => {
     const { durationSec, endBeat, ...tab } = body;
-    const before = await songUltimateGuitar.get(params.id);
-    await songUltimateGuitar.upsert(params.id, tab);
+    // `key` upgrades a pre-rewrite bare-uuid id from a stale client.
+    const id = songIdKind.key(params.id);
+    const before = await songUltimateGuitar.get(id);
+    await songUltimateGuitar.upsert(id, tab);
     if (before?.content !== tab.content) {
-      await ugTabSaved.emit({ songId: params.id });
+      await ugTabSaved.emit({ songId: id });
     }
     await updateSongMeta({
-      id: params.id,
+      id,
       title: tab.songName,
       composer: tab.artistName || null,
       durationSec,

@@ -1,3 +1,6 @@
+export { trashEntryIdKind } from "./id-kind";
+export type { TrashEntryId } from "./id-kind";
+
 export { TrashEntrySchema, TrashOutcomeSchema } from "./schemas";
 export type { TrashEntry, TrashOutcome } from "./schemas";
 

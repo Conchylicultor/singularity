@@ -20,6 +20,7 @@
  * (requires the running embedded cluster — `./singularity build` first).
  */
 
+import { trashEntryIdKind } from "@plugins/infra/plugins/trash/core";
 import {
   describe,
   test,
@@ -601,7 +602,9 @@ describe("blocks created and deleted since the version", () => {
     const [entry] = (await entries()).filter((e) => e.id === entryId);
     await purgeTrashedBlocks([entry!], t.db);
     // The trash primitive deletes the ledger row after a purge; mirror it.
-    await t.db.delete(_trashEntries).where(eq(_trashEntries.id, entryId));
+    await t.db
+      .delete(_trashEntries)
+      .where(eq(_trashEntries.id, trashEntryIdKind.key(entryId)));
     expect(await maybeRow("X")).toBeUndefined();
 
     await restore("P", v1);

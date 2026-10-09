@@ -14,7 +14,10 @@ import {
   _mailSyncState,
   requireGmailToken,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
-import { MAX_CONSECUTIVE_RESYNCS } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import {
+  mailAccountIdKind,
+  MAX_CONSECUTIVE_RESYNCS,
+} from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { ATTACHMENT_SCAN_DELTA_WINDOW_DAYS } from "../../core";
 import { backfillJob } from "./backfill";
 import { upsertLabels } from "./store";
@@ -39,7 +42,7 @@ export const deltaJob = defineJob({
   // checked between attempts, and the `fetch` under it carries no signal, so a
   // single hung socket is not bounded by it.
   hold: "seconds",
-  input: z.object({ accountId: z.string() }),
+  input: z.object({ accountId: z.string().transform(mailAccountIdKind.key) }),
   event: z.never(),
   dedup: { key: ({ accountId }) => accountId },
   maxAttempts: 5,

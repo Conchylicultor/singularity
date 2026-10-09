@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { parsedJson } from "@plugins/database/plugins/sql-column/server";
+import { idColumn } from "@plugins/ids/server";
+import { trashEntryIdKind } from "../../core/id-kind";
 
 // Operation ledger: one row per trashed ROOT entity (a bulk delete of two
 // sub-pages = two independently-restorable entries). Domain-agnostic — the
@@ -13,7 +15,7 @@ import { parsedJson } from "@plugins/database/plugins/sql-column/server";
 export const _trashEntries = pgTable(
   "trash_entries",
   {
-    id: text("id").primaryKey(), // crypto.randomUUID()
+    id: idColumn(trashEntryIdKind), // trashEntryIdKind.mint()
     sourceId: text("source_id").notNull(), // e.g. "pages"
     rootEntityId: text("root_entity_id").notNull(), // the trashed root (a page id)
     label: text("label").notNull(), // display label captured at trash time

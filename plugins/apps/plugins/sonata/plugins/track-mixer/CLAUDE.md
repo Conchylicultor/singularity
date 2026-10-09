@@ -157,12 +157,14 @@ plus a per-song reset.
     - `DELETE /api/sonata/songs/:songId/track-view`
 - Core:
   - Uses:
+    - `apps/sonata/library.songIdKind`
     - `fields.FieldsRecord`
     - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/float/config.floatField`
     - `fields/text/config.textField`
+    - `ids.idKindField`
     - `infra/entities.wireSchema`
   - Exports (types): `TrackViewRow`
   - Exports (values): `TrackViewRowSchema`

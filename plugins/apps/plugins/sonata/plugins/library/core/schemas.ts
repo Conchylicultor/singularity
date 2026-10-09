@@ -7,6 +7,8 @@ import {
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { idKindField } from "@plugins/ids/core";
+import { songIdKind } from "./id-kind";
 
 /**
  * A persisted Sonata song — **source-agnostic** generic metadata only. The raw
@@ -27,7 +29,7 @@ import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
  * display labels are resolved through the generic `SonataDocument.Source` registry.
  */
 export const songFields = {
-  id: textField(),
+  id: idKindField(songIdKind),
   title: textField(),
   composer: nullable(textField()),
   durationSec: floatField(),

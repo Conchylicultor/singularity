@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import type { EventSourceRun } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import {
+  eventRunIdKind,
+  type EventSourceRun,
+} from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { describeRun, formatDuration } from "./format";
 
 function run(patch: Partial<EventSourceRun>): EventSourceRun {
   return {
-    id: "run-1",
+    id: eventRunIdKind.key("run-1"),
     sourceId: "evs-1",
     startedAt: new Date("2026-08-03T10:00:00Z"),
     finishedAt: new Date("2026-08-03T10:00:03Z"),
@@ -63,8 +66,9 @@ describe("describeRun", () => {
   });
 
   test("never renders an empty line for a failure with no error text", () => {
-    expect(describeRun(run({ outcome: "failed", error: null })).length).
-      toBeGreaterThan(0);
+    expect(
+      describeRun(run({ outcome: "failed", error: null })).length,
+    ).toBeGreaterThan(0);
   });
 });
 

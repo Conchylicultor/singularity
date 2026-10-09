@@ -69,5 +69,9 @@ export {
 } from "./internal/endpoints";
 export { eventSources, eventSourceRuns } from "./internal/resources";
 export { externalUrl } from "./internal/external-url";
-export { eventSourceIdKind, eventIdKind } from "./internal/id-kinds";
-export type { EventSourceId, EventId } from "./internal/id-kinds";
+export {
+  eventSourceIdKind,
+  eventIdKind,
+  eventRunIdKind,
+} from "./internal/id-kinds";
+export type { EventSourceId, EventId, EventRunId } from "./internal/id-kinds";

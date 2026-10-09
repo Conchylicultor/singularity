@@ -29,6 +29,7 @@ import {
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import { readMailAccount } from "./account";
 import { _mailAccounts } from "./tables";
+import { mailAccountIdKind } from "../../core";
 
 let t: TestDb;
 
@@ -48,7 +49,7 @@ beforeEach(async () => {
 async function insertAccount(id: string, connectedAt: Date | null) {
   const now = new Date("2026-09-30T12:00:00Z");
   await t.db.insert(_mailAccounts).values({
-    id,
+    id: mailAccountIdKind.key(id),
     email: `${id}@example.invalid`,
     connectedAt,
     createdAt: now,
@@ -68,7 +69,7 @@ describe("readMailAccount", () => {
     await insertAccount("a-late", LATE);
     await insertAccount("z-early", EARLY);
     expect(await readMailAccount(t.db)).toEqual({
-      id: "z-early",
+      id: mailAccountIdKind.key("z-early"),
       email: "z-early@example.invalid",
     });
   });
@@ -76,12 +77,14 @@ describe("readMailAccount", () => {
   test("equal connection times break on id", async () => {
     await insertAccount("m", EARLY);
     await insertAccount("c", EARLY);
-    expect((await readMailAccount(t.db))?.id).toBe("c");
+    expect<string | undefined>((await readMailAccount(t.db))?.id).toBe("c");
   });
 
   test("an account with no recorded connection comes after every connected one", async () => {
     await insertAccount("a-unconnected", null);
     await insertAccount("z-connected", LATE);
-    expect((await readMailAccount(t.db))?.id).toBe("z-connected");
+    expect<string | undefined>((await readMailAccount(t.db))?.id).toBe(
+      "z-connected",
+    );
   });
 });

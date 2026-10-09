@@ -4,13 +4,15 @@ import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { idKindField } from "@plugins/ids/core";
+import { bookmarkIdKind } from "./id-kind";
 
 // One row per bookmark. The `browser_bookmarks` table and this wire schema both
 // derive from `bookmarkFields` (via defineEntity on the server), so a
 // column/schema drift is unrepresentable and every row field binds to its
 // column by name. `createdAt` is a coerced Date on the wire.
 export const bookmarkFields = {
-  id: textField(),
+  id: idKindField(bookmarkIdKind),
   url: textField(),
   title: textField(),
   createdAt: dateField(),

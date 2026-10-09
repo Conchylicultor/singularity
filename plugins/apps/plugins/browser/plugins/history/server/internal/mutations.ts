@@ -1,4 +1,5 @@
 import { db } from "@plugins/database/server";
+import { browserVisitIdKind } from "../../core";
 import { browserHistory } from "./tables";
 
 // Best-effort hostname for the visit title; falls back to the raw url if it
@@ -10,7 +11,7 @@ function titleFor(url: string): string {
 
 export async function recordVisit(url: string): Promise<void> {
   await db.insert(browserHistory).values({
-    id: crypto.randomUUID(),
+    id: browserVisitIdKind.mint(),
     url,
     title: titleFor(url),
   });

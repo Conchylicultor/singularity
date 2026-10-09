@@ -12,6 +12,7 @@ import {
 } from "@plugins/infra/plugins/trash/server";
 import {
   TrashEntrySchema,
+  trashEntryIdKind,
   type TrashEntry,
 } from "@plugins/infra/plugins/trash/core";
 import {
@@ -453,7 +454,7 @@ export async function restoreEntryById(
   const [row] = await executor
     .select()
     .from(_trashEntries)
-    .where(eq(_trashEntries.id, entryId))
+    .where(eq(_trashEntries.id, trashEntryIdKind.key(entryId)))
     .limit(1);
   if (!row) {
     throw new Error(

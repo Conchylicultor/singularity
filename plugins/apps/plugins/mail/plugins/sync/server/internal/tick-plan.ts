@@ -1,8 +1,11 @@
-import type { MailSyncStatus } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import type {
+  MailAccountId,
+  MailSyncStatus,
+} from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 
 /** One account as the tick sees it: its sync-state status, or `null` when it has no row. */
 export interface TickAccount {
-  readonly id: string;
+  readonly id: MailAccountId;
   readonly status: MailSyncStatus | null;
 }
 
@@ -21,7 +24,7 @@ export interface TickPlan {
    */
   readonly bootstrap: boolean;
   /** Accounts in a pull-ready state, each getting a delta enqueued. */
-  readonly delta: readonly string[];
+  readonly delta: readonly MailAccountId[];
 }
 
 /**

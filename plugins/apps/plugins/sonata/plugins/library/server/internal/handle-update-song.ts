@@ -1,5 +1,6 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { updateSong } from "../../core/endpoints";
+import { songIdKind } from "../../core/id-kind";
 import { updateSongMeta } from "./update-song-meta";
 
 /**
@@ -11,6 +12,6 @@ import { updateSongMeta } from "./update-song-meta";
 export const handleUpdateSong = implement(
   updateSong,
   async ({ params, body }) => {
-    await updateSongMeta({ id: params.id, ...body });
+    await updateSongMeta({ id: songIdKind.key(params.id), ...body });
   },
 );

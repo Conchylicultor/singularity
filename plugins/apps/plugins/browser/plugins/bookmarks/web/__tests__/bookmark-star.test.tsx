@@ -43,7 +43,7 @@ vi.mock("@plugins/apps/plugins/browser/plugins/shell/web", () => ({
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ResourceError } from "@plugins/primitives/plugins/live-state/web";
-import type { BookmarkRow } from "../../core";
+import { bookmarkIdKind, type BookmarkRow } from "../../core";
 import { BookmarkStar } from "../components/bookmark-star";
 
 const URL_A = "https://example.com/a";
@@ -124,7 +124,14 @@ describe("BookmarkStar", () => {
 
   it("removes the bookmark it found", () => {
     state.current = URL_A;
-    settled([{ id: "b1", url: URL_A, title: "A", createdAt: new Date(0) }]);
+    settled([
+      {
+        id: bookmarkIdKind.key("b1"),
+        url: URL_A,
+        title: "A",
+        createdAt: new Date(0),
+      },
+    ]);
     render(<BookmarkStar />);
     const star = screen.getByRole("button", { name: "Remove bookmark" });
     expect(star.getAttribute("aria-pressed")).toBe("true");

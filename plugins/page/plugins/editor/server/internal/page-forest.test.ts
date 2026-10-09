@@ -653,7 +653,7 @@ describe("writeForestTarget — the drag/selection ops", () => {
     expect(write.trashedEntryId).not.toBeNull();
     const entries = await t.db.select().from(_trashEntries);
     expect(entries).toHaveLength(1);
-    expect(entries[0]!.id).toBe(write.trashedEntryId!);
+    expect<string>(entries[0]!.id).toBe(write.trashedEntryId!);
     expect(entries[0]!.sourceId).toBe(PAGE_BLOCKS_TRASH_SOURCE);
     expect(entries[0]!.rootEntityId).toBe("A");
     expect(entries[0]!.meta).toEqual({

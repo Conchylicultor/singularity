@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { resetTrackView, upsertTrackView } from "../../shared/endpoints";
 import { _trackView } from "./tables";
@@ -32,7 +33,7 @@ export const handleUpsertTrackView = implement(
         await tx
           .insert(_trackView)
           .values({
-            songId: params.songId,
+            songId: songIdKind.key(params.songId),
             trackId,
             color: body.color ?? null,
             instrument: body.instrument ?? null,
@@ -53,6 +54,8 @@ export const handleUpsertTrackView = implement(
 export const handleResetTrackView = implement(
   resetTrackView,
   async ({ params }) => {
-    await db.delete(_trackView).where(eq(_trackView.songId, params.songId));
+    await db
+      .delete(_trackView)
+      .where(eq(_trackView.songId, songIdKind.key(params.songId)));
   },
 );

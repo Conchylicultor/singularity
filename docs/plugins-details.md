@@ -237,6 +237,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/page-link`
           - `active-data/prototype`
           - `active-data/report`
+          - `active-data/song`
           - `active-data/task-link`
     - **`page-link`** — Renders raw `block-<id>` strings inline as clickable chips that open what the id names: a page id opens the page-detail pane, a content-block id opens the block-detail pane (that block as a page of its own). Transcript only. Presents the block id kind to the id registry. Models emit the bare id, no tag wrapping needed. The block id chip's server half (idChipServer): resolves a bare `block-<id>` to what its chip shows — the page's title, or '<page title> › <block type>' for a content block — for the id registry and for model-read text. Transcript-only, so no page-editor token.
       - Web:
@@ -336,6 +337,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports.getReportTitle`
       - Core:
         - Exports (values): `REPORT_CHIP_SURFACES`
+    - **`song`** — Renders a bare `song-<id>` in a transcript or a page as the generic id chip (the song's title) that opens it in Sonata's player, and presents the song id kind to the id registry. The song id chip's server half (idChipServer): resolves a `song-<id>` to the song's title for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.
+      - Web:
+        - Contributes:
+          - `IdKinds.Presenter` "song"
+          - `InlineChip.Tag` "song" → `GenericIdChip`
+        - Uses:
+          - `active-data/id-chip.idChip`
+          - `active-data/id-chip.rowReferent`
+          - `apps-core/tabs.navigate`
+          - `network/live.useLiveRow`
+      - Server:
+        - Contributes:
+          - `ids.referent` "song"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:song-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:song-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
+        - Uses:
+          - `active-data/id-chip.idChipServer`
+          - `apps/sonata/library._songs`
+          - `database.db`
+      - Core:
+        - Exports (values): `SONG_CHIP_SURFACES`
     - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
       - Web:
         - Contributes: `ActiveData.Tag` "task" → `TaskCard`
@@ -443,12 +465,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`bookmarks`** — Browser bookmarks UI: a star toggle in the chrome actions and a bookmarks bar of clickable chips below the omnibox. Browser bookmarks: the browser_bookmarks table, the browser-bookmarks live collection, and add/delete endpoints backing the star toggle and bookmarks bar.
           - Web:
             - Contributes:
+              - `IdKinds.Kind` "bkmk"
               - `Browser.Actions` "Chrome actions" → `BookmarkStar`
               - `Browser.SubBar` "Sub bar" → `BookmarksBar`
             - Uses:
               - `apps/browser/shell.Browser`
               - `apps/browser/shell.Favicon`
               - `apps/browser/shell.useBrowserNav`
+              - `ids.IdKinds`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.LiveListResult`
               - `network/live.useLive`
@@ -469,11 +493,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useBookmarks`
           - Server:
             - Contributes:
+              - `ids.kind` "bkmk"
               - `resource.declare` "browser-bookmarks"
               - `resource.declare` "browser-bookmarks:groups"
               - `resource.declare` "browser-bookmarks:rows"
             - Uses:
               - `database.db`
+              - `ids.IdKinds`
               - `infra/endpoints.implement`
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
@@ -496,24 +522,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields.fieldsToZodObject`
               - `fields/date/config.dateField`
               - `fields/text/config.textField`
+              - `ids.defineIdKind`
+              - `ids.idKindField`
+              - `ids.IdOf`
               - `network/live.liveCollection`
               - `network/live/filter.liveText`
-            - Exports (types): `BookmarkRow`
+            - Exports (types):
+              - `BookmarkId`
+              - `BookmarkRow`
             - Exports (values):
               - `bookmarkFields`
+              - `bookmarkIdKind`
               - `BookmarkRowSchema`
               - `browserBookmarks`
           - Cross-plugin:
             - Imported by: `apps/browser/start-page`
             - Endpoint callers: `history`
-          - Exemptions:
-            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`history`** — Browser history: a headless recorder that logs every navigation to the history store, plus the browserRecents live value (read with useLive). Browser history store (browser_history table), the distinct-by-url recents live value, and the POST /api/browser/history record endpoint.
           - Web:
-            - Contributes: `Browser.Effects` "Effects" → `RecordVisits`
+            - Contributes:
+              - `IdKinds.Kind` "bhist"
+              - `Browser.Effects` "Effects" → `RecordVisits`
             - Uses:
               - `apps/browser/shell.Browser`
               - `apps/browser/shell.useBrowserNav`
+              - `ids.IdKinds`
               - `infra/endpoints.useEndpointMutation`
             - Exports (types): `BrowserRecent`
             - Exports (values):
@@ -521,9 +554,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BrowserRecentSchema`
               - `useRecordVisit`
           - Server:
-            - Contributes: `resource.declare` "browser-recents"
+            - Contributes:
+              - `ids.kind` "bhist"
+              - `resource.declare` "browser-recents"
             - Uses:
               - `database.db`
+              - `ids.idColumn`
+              - `ids.IdKinds`
               - `infra/endpoints.implement`
               - `network/live.serveValue`
             - DB schema: `plugins/apps/plugins/browser/plugins/history/server/internal/tables.ts`
@@ -532,10 +569,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `recordVisit`
             - Resources: `browser-recents` (push, unbounded: the 12 most recent distinct urls — capped by the loader's LIMIT; a DISTINCT ON derivation over browser_history, not rows of one table)
             - Routes: `POST /api/browser/history`
+          - Core:
+            - Uses:
+              - `ids.defineIdKind`
+              - `ids.IdOf`
+            - Exports (types): `BrowserVisitId`
+            - Exports (values): `browserVisitIdKind`
           - Cross-plugin:
             - Imported by: `apps/browser/start-page`
-          - Exemptions:
-            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`navigation`** — Browser navigation controls: back / forward / reload / home buttons in the chrome bar.
           - Web:
             - Contributes: `Browser.NavControls` "Navigation controls" → `NavControls`
@@ -2296,6 +2337,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EventSources.Type` ← `apps.events.sources.salsanueva`
               - `EventSources.Type` ← `apps.events.sources.url-extract`
             - Contributes:
+              - `IdKinds.Kind` "evrun"
               - `IdKinds.Kind` "evs"
               - `IdKinds.Kind` "evt"
             - Uses:
@@ -2320,6 +2362,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useUpdateEventSource`
           - Server:
             - Contributes:
+              - `ids.kind` "evrun"
               - `ids.kind` "evs"
               - `ids.kind` "evt"
               - `resource.declare` "events.source-runs"
@@ -2409,6 +2452,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EventCategory`
               - `EventId`
               - `EventRecord`
+              - `EventRunId`
               - `EventSource`
               - `EventSourceId`
               - `EventSourceRun`
@@ -2435,6 +2479,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EVENT_CATEGORIES`
               - `eventFields`
               - `eventIdKind`
+              - `eventRunIdKind`
               - `EventSchema`
               - `eventSourceFields`
               - `eventSourceIdKind`
@@ -2490,9 +2535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/url-extract`
           - Exemptions:
-            - Exempts itself from:
-              - `events/no-raw-events-write` — `server/internal/events-repo.ts` (sanctioned)
-              - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+            - Exempts itself from: `events/no-raw-events-write` — `server/internal/events-repo.ts` (sanctioned)
             - Exempted by: `apps/events/events-core` (0 debt)
         - **`reanchor`** — Keeps a recurring event's occurrence columns (starts_at / ends_at / all_day) current as time passes: the hourly re-anchor tick plus the boot pass, so an 'upcoming' filter never drops a series that is still running just because its source has not been re-extracted since the last occurrence.
           - Server:
@@ -3247,9 +3290,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `GmailApiError`
               - `GmailHistoryExpiredError`
-        - **`mail-core`** — Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared connected-account and user-labels live values.
+        - **`mail-core`** — Registers the mail app's own id kinds (mailacct, mailatt, maildraft, mailout) with the web id registry — the server barrel registers the same kinds. Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared connected-account and user-labels live values.
+          - Web:
+            - Contributes:
+              - `IdKinds.Kind` "mailacct"
+              - `IdKinds.Kind` "mailatt"
+              - `IdKinds.Kind` "maildraft"
+              - `IdKinds.Kind` "mailout"
+            - Uses: `ids.IdKinds`
           - Server:
             - Contributes:
+              - `ids.kind` "mailacct"
+              - `ids.kind` "mailatt"
+              - `ids.kind` "maildraft"
+              - `ids.kind` "mailout"
               - `resource.declare` "mail-account"
               - `resource.declare` "mail-labels"
               - `fork-data-exclusion` "mail_attachments"
@@ -3265,6 +3319,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database.db`
               - `database/admin.ExcludeFromBackup`
               - `database/admin.ExcludeFromFork`
+              - `ids.IdKinds`
               - `infra/attachments.Attachments`
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
@@ -3300,19 +3355,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/text/config.enumTextField`
               - `fields/text/config.parsedTextField`
               - `fields/text/config.textField`
+              - `ids.defineIdKind`
               - `ids.externalIdField`
+              - `ids.idKindField`
+              - `ids.IdOf`
               - `network/live.liveValue`
               - `primitives/live-state.tolerantEnum`
             - Exports (types):
               - `MailAccount`
+              - `MailAccountId`
               - `MailAddress`
               - `MailAttachment`
+              - `MailAttachmentId`
               - `MailDraft`
+              - `MailDraftId`
               - `MailLabel`
               - `MailLabelRef`
               - `MailLabelType`
               - `MailMessage`
               - `MailMessageLabel`
+              - `MailOutboxId`
               - `MailOutboxItem`
               - `MailOutboxOpType`
               - `MailOutboxStatus`
@@ -3332,11 +3394,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MAIL_SYNC_STATUSES`
               - `mailAccount`
               - `mailAccountFields`
+              - `mailAccountIdKind`
               - `MailAccountSchema`
               - `MailAddressSchema`
               - `mailAttachmentFields`
+              - `mailAttachmentIdKind`
               - `MailAttachmentSchema`
               - `mailDraftFields`
+              - `mailDraftIdKind`
               - `MailDraftSchema`
               - `mailLabelFields`
               - `MailLabelRefSchema`
@@ -3347,6 +3412,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MailMessageLabelSchema`
               - `MailMessageSchema`
               - `mailOutboxFields`
+              - `mailOutboxIdKind`
               - `MailOutboxItemSchema`
               - `mailSyncState`
               - `mailSyncStateFields`
@@ -3360,8 +3426,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/reading-pane`
               - `apps/mail/sync`
               - `apps/mail/threads`
-          - Exemptions:
-            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`mail-html`** — Privacy-safe email HTML renderer: <MailHtml> runs a DOMPurify sanitize → remote-image gating (proxied only after opt-in) → cid: inline-image resolution → quoted-history collapse pipeline, injected inside a style-scoped container.
           - Cross-plugin:
             - Imported by: `apps/mail/reading-pane`
@@ -4884,6 +4948,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sonataPlayerPane.Actions` ← `apps.sonata.transpose`
               - `sonataPlayerPane.Actions` ← `primitives.pane`
             - Contributes:
+              - `IdKinds.Kind` "song|seed"
               - `Sonata.Home` "library" → `SongLibrary`
               - `sonataPlayerPane.Actions` "back" → `BackToLibrary`
               - `sonataPlayerPane.Actions` "display-picker" → `DisplayPicker`
@@ -4891,7 +4956,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
-            - Uses: 62 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses: 63 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `primitives/pane` ×10
               - `primitives/css/ui-kit` ×6
               - `primitives/data-view` ×6
@@ -4903,6 +4968,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/latest-ref` ×2
               - `primitives/live-state` ×2
               - `apps/sonata/session.useSession`
+              - `ids.IdKinds`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/card.Card`
               - `primitives/css/center.Center`
@@ -4930,11 +4996,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSongLink`
           - Server:
             - Contributes:
+              - `ids.kind` "song|seed"
               - `resource.declare` "sonata.songs"
               - `resource.declare` "sonata.songs:groups"
               - `resource.declare` "sonata.songs:rows"
             - Uses:
               - `database.db`
+              - `ids.IdKinds`
               - `infra/attachments.Attachments`
               - `infra/endpoints.implement`
               - `infra/entities.defaultNow`
@@ -4966,21 +5034,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/date/config.dateField`
               - `fields/float/config.floatField`
               - `fields/text/config.textField`
+              - `ids.defineIdKind`
+              - `ids.idKindField`
+              - `ids.IdOf`
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveCollection`
               - `network/live/filter.liveInstant`
               - `network/live/filter.liveNumber`
               - `network/live/filter.liveText`
+              - `primitives/pane.defineRoute`
             - Exports (types):
               - `Song`
+              - `SongId`
               - `UpdateSongBody`
             - Exports (values):
               - `deleteSong`
+              - `sonataPlayerRoute`
+              - `songIdKind`
               - `songLibrary`
               - `SongSchema`
               - `updateSong`
           - Cross-plugin:
             - Imported by:
+              - `active-data/song`
               - `apps/sonata/audio/engine`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/piano-roll`
@@ -5007,8 +5083,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/transpose` (table `sonata_songs_ext_transpose`)
               - `apps/sonata/sources/ultimate-guitar/alignment` (table `sonata_songs_ext_ug_alignment`)
               - `apps/sonata/sources/ultimate-guitar` (table `sonata_songs_ext_ultimate_guitar`)
-          - Exemptions:
-            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`look`** — Web registration of the Sonata look config (flat / realistic / sketch) plus its View-popover switch — the app's single appearance choice. The palette itself is plain data in core/. Server registration of the Sonata look config (flat / realistic / sketch).
           - Web:
             - Contributes:
@@ -6473,12 +6547,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DELETE /api/sonata/songs/:songId/track-view`
           - Core:
             - Uses:
+              - `apps/sonata/library.songIdKind`
               - `fields.FieldsRecord`
               - `fields.nullable`
               - `fields/bool/config.boolField`
               - `fields/date/config.dateField`
               - `fields/float/config.floatField`
               - `fields/text/config.textField`
+              - `ids.idKindField`
               - `infra/entities.wireSchema`
             - Exports (types): `TrackViewRow`
             - Exports (values): `TrackViewRowSchema`
@@ -8053,11 +8129,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps-core` ×9
           - `debug` ×8
           - `apps` ×6
           - `shell` ×2
+          - `active-data/song`
           - `build`
           - `config_v2/config-link`
           - `primitives/metrics`
@@ -13544,11 +13621,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `debug/session-divergence`
       - Exemptions:
         - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `server/internal/tmux-runtime.ts` (sanctioned)
-    - **`session-chain`** — Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
+    - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
+      - Web:
+        - Contributes: `IdKinds.Kind` "sess"
+        - Uses: `ids.IdKinds`
       - Server:
+        - Contributes: `ids.kind` "sess"
         - Uses:
           - `database.db`
           - `database/sql-projection.parsed`
+          - `ids.IdKinds`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
         - DB schema: `plugins/conversations/plugins/session-chain/server/internal/tables.ts`
@@ -13560,14 +13642,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `listSessionChain`
           - `listSharedClaudeSessionIds`
           - `recordSessionId`
+      - Core:
+        - Uses:
+          - `ids.defineIdKind`
+          - `ids.IdOf`
+        - Exports (types): `SessionLinkId`
+        - Exports (values): `sessionLinkIdKind`
       - Cross-plugin:
         - Imported by:
           - `conversations`
           - `conversations/transcript-watcher`
           - `conversations/usage`
           - `debug/session-divergence`
-      - Exemptions:
-        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - Web:
         - Slots: `conv-summary.actions`
@@ -13820,14 +13906,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadKnownRelations`
       - `quotedRelationsIn`
   - Cross-plugin:
-    - Imported by: 105 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 106 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×29
       - `page` ×14
       - `infra` ×12
       - `conversations` ×11
       - `tasks` ×8
       - `debug` ×6
-      - `active-data` ×4
+      - `active-data` ×5
       - `primitives` ×4
       - `database` ×3
       - `build` ×2
@@ -19596,10 +19682,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `VersionHistoryDialog`
       - Cross-plugin:
         - Imported by: `apps/pages/history`
-    - **`engine`** — Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, and list/get/restore endpoints.
+    - **`engine`** — Registers the version id kind (ver) with the web id registry — the server barrel registers the same kind. Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, and list/get/restore endpoints.
+      - Web:
+        - Contributes: `IdKinds.Kind` "ver"
+        - Uses: `ids.IdKinds`
       - Server:
+        - Contributes: `ids.kind` "ver"
         - Uses:
           - `database.db`
+          - `ids.idColumn`
+          - `ids.IdKinds`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/retention.defineRetention`
@@ -19615,29 +19707,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GET /api/history/:sourceId/:entityId/versions/:versionId`
           - `POST /api/history/:sourceId/:entityId/versions/:versionId/restore`
       - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
+        - Uses:
+          - `ids.defineIdKind`
+          - `ids.IdOf`
+          - `infra/endpoints.defineEndpoint`
         - Exports (types):
           - `Version`
+          - `VersionId`
           - `VersionWithSnapshot`
         - Exports (values):
           - `getVersion`
           - `listVersions`
           - `restoreVersion`
+          - `versionIdKind`
           - `VersionSchema`
           - `VersionWithSnapshotSchema`
       - Cross-plugin:
         - Imported by: `apps/pages/history`
-      - Exemptions:
-        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
 
 - **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useOpen); useIdKinds() / useIdPresenters() read them at render time. The id-kind registry, server half: IdKinds.Kind registers a declared kind and IdKinds.Referent resolves a kind's id to its title; getIdKinds() reads them at call time. idColumn / idRef are a kind's drizzle primary-key and foreign-key columns (typed Id<P>; idRef cascades on update).
   - Web:
     - Slots:
       - `IdKinds.Kind`
       - `IdKinds.Presenter`
-    - Slot contributors: 25 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `IdKinds.Kind` ×17
-      - `IdKinds.Presenter` ×8
+    - Slot contributors: 33 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `IdKinds.Kind` ×24
+      - `IdKinds.Presenter` ×9
     - Exports (types):
       - `IdPresenter`
       - `IdReferentState`
@@ -19686,14 +19781,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 22 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `apps` ×5
-      - `conversations` ×3
+    - Imported by: 29 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `apps` ×9
+      - `conversations` ×4
       - `primitives` ×3
       - `build` ×2
       - `release` ×2
       - `tasks` ×2
       - `active-data/id-chip`
+      - `history/engine`
+      - `infra/trash`
       - `page/editor`
       - `plugin-meta/plugin-health`
       - `reports`
@@ -22534,14 +22631,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `normalizeTraces`
           - `withThreadActivity`
     - **`trash`** — Web seam of the trash primitive: useUndoableTrash() runs a trashing mutation and records ONE entry on the tab's undo stack (undo = restore the minted trash entry, redo = re-trash and re-capture the new entry id), so every trash source gets Cmd+Z restore without hand-rolling it. Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the trash-entries live collection (filterable by source), and the 30-day purge sweep — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
+      - Web:
+        - Contributes: `IdKinds.Kind` "trash"
+        - Uses:
+          - `ids.IdKinds`
+          - `infra/endpoints.fetchEndpoint`
+          - `primitives/undo-redo.useUndoRedo`
+        - Exports (types):
+          - `UndoableTrash`
+          - `UndoableTrashArgs`
+        - Exports (values): `useUndoableTrash`
       - Server:
         - Contributes:
+          - `ids.kind` "trash"
           - `resource.declare` "trash-entries"
           - `resource.declare` "trash-entries:groups"
           - `resource.declare` "trash-entries:rows"
         - Uses:
           - `database.db`
           - `database/sql-column.parsedJson`
+          - `ids.idColumn`
+          - `ids.IdKinds`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/retention.defineRetention`
@@ -22564,35 +22674,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GET /api/trash/:sourceId`
           - `POST /api/trash/:sourceId/:entryId/restore`
           - `POST /api/trash/:sourceId/:entryId/purge`
-      - Web:
-        - Uses:
-          - `infra/endpoints.fetchEndpoint`
-          - `primitives/undo-redo.useUndoRedo`
-        - Exports (types):
-          - `UndoableTrash`
-          - `UndoableTrashArgs`
-        - Exports (values): `useUndoableTrash`
       - Core:
         - Uses:
+          - `ids.defineIdKind`
+          - `ids.IdOf`
+          - `ids.storedIdSchema`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveCollection`
           - `network/live/filter.liveText`
         - Exports (types):
           - `TrashEntry`
+          - `TrashEntryId`
           - `TrashOutcome`
         - Exports (values):
           - `listTrash`
           - `purgeTrash`
           - `restoreTrash`
           - `trashEntries`
+          - `trashEntryIdKind`
           - `TrashEntrySchema`
           - `TrashOutcomeSchema`
       - Cross-plugin:
         - Imported by:
           - `apps/pages/page-tree`
           - `page/editor`
-      - Exemptions:
-        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - **`warmup`** — Declared heavy boot warm-up category: defineWarmup registers a deferred, throttled, scope-gated warm-up; drainWarmups drains them after onAllReady under a concurrency gate + heavy-read slot + macrotask yield, recording each warm-up's run in memory (warmupRunOf / onWarmupRun); listRegisteredWarmups lists the declared set with the plugin that declared each.
       - Server:
         - Uses: `infra/host/host-read-pool.withHeavyReadSlot`
@@ -23415,11 +23520,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveValue`
           - `scopedLiveColumns`
       - Cross-plugin:
-        - Imported by: 176 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 177 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×51
           - `conversations` ×35
           - `tasks` ×21
-          - `active-data` ×10
+          - `active-data` ×11
           - `infra` ×10
           - `page` ×9
           - `debug` ×8
@@ -32673,6 +32778,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `InlineChip.Tag` ← `active-data.page-link`
               - `InlineChip.Tag` ← `active-data.prototype`
               - `InlineChip.Tag` ← `active-data.report`
+              - `InlineChip.Tag` ← `active-data.song`
               - `InlineChip.Tag` ← `active-data.task-link`
               - `InlineChip.Tag` ← `primitives.ui-context.element-picker`
             - Uses:

@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import type { TrashEntry } from "../../core/schemas";
+import { trashEntryIdKind } from "../../core/id-kind";
 import { getTrashSource, type TrashSource } from "./registry";
 import type { TrashExecutor } from "./record-entry";
 import { _trashEntries } from "./tables";
@@ -38,7 +39,8 @@ export async function consumeTrashEntry(
     .from(_trashEntries)
     .where(
       and(
-        eq(_trashEntries.id, params.entryId),
+        // `key` upgrades a bare uuid a pre-rewrite undo stack still holds.
+        eq(_trashEntries.id, trashEntryIdKind.key(params.entryId)),
         eq(_trashEntries.sourceId, params.sourceId),
       ),
     )

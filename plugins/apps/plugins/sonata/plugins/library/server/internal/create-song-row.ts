@@ -1,9 +1,10 @@
 import { db } from "@plugins/database/server";
+import { songIdKind, type SongId } from "../../core/id-kind";
 import { _songs } from "./tables";
 
 export interface CreateSongRowInput {
-  /** Optional stable id (e.g. a starter's seed id). Defaults to a random UUID. */
-  id?: string;
+  /** Optional stable id (a starter's `seed-…` id). Defaults to a fresh `songIdKind.mint()`. */
+  id?: SongId;
   title: string;
   composer: string | null;
   durationSec: number;
@@ -29,8 +30,8 @@ export interface CreateSongRowInput {
  */
 export async function createSongRow(
   input: CreateSongRowInput,
-): Promise<string> {
-  const id = input.id ?? crypto.randomUUID();
+): Promise<SongId> {
+  const id = input.id ?? songIdKind.mint();
   await db
     .insert(_songs)
     .values({

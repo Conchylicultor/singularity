@@ -19,7 +19,10 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useEventSourceRun } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
-import type { EventSourceRun } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import {
+  eventRunIdKind,
+  type EventSourceRun,
+} from "@plugins/apps/plugins/events/plugins/events-core/core";
 import type { LiveRowResult } from "@plugins/network/plugins/live/web";
 import {
   RUN_OUTCOME_LABEL,
@@ -102,7 +105,9 @@ function useRunTitle({ runId }: { runId: string }): string | undefined {
 }
 
 function EventSourceRunPaneView(): ReactNode {
-  const { runId } = eventSourceRunPane.useParams();
+  // `key` upgrades a pre-rewrite bare-uuid URL, so every section reads the
+  // stored `evrun-` id (the model-call section correlates by it).
+  const runId = eventRunIdKind.key(eventSourceRunPane.useParams().runId);
   const row = useEventSourceRun(runId);
 
   // The summary is the pane's own header block, not a section: it is the run

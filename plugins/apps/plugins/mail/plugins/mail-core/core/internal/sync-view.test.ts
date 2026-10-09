@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { deriveMailSyncView } from "./sync-view";
 import type { MailSyncState } from "./types";
+import { mailAccountIdKind } from "./id-kinds";
 
 function row(overrides: Partial<MailSyncState>): MailSyncState {
   return {
-    accountId: "a1",
+    accountId: mailAccountIdKind.key("a1"),
     historyId: "100",
     lastFullSyncAt: null,
     lastDeltaSyncAt: null,
@@ -21,7 +22,10 @@ function row(overrides: Partial<MailSyncState>): MailSyncState {
 
 describe("deriveMailSyncView", () => {
   test("empty rows → idle", () => {
-    expect(deriveMailSyncView([])).toEqual({ phase: "idle", lastSyncedAt: null });
+    expect(deriveMailSyncView([])).toEqual({
+      phase: "idle",
+      lastSyncedAt: null,
+    });
   });
 
   test("status error → error phase with terminal error", () => {
@@ -64,7 +68,10 @@ describe("deriveMailSyncView", () => {
 
   test("delta with a delta timestamp → healthy", () => {
     const v = deriveMailSyncView([
-      row({ status: "delta", lastDeltaSyncAt: new Date("2026-01-02T00:00:00Z") }),
+      row({
+        status: "delta",
+        lastDeltaSyncAt: new Date("2026-01-02T00:00:00Z"),
+      }),
     ]);
     expect(v.phase).toBe("healthy");
     expect(v.lastSyncedAt).toBe(new Date("2026-01-02T00:00:00Z").toISOString());
@@ -72,7 +79,10 @@ describe("deriveMailSyncView", () => {
 
   test("delta with only a full-sync timestamp → healthy", () => {
     const v = deriveMailSyncView([
-      row({ status: "delta", lastFullSyncAt: new Date("2026-01-02T00:00:00Z") }),
+      row({
+        status: "delta",
+        lastFullSyncAt: new Date("2026-01-02T00:00:00Z"),
+      }),
     ]);
     expect(v.phase).toBe("healthy");
   });
@@ -127,11 +137,15 @@ describe("deriveMailSyncView", () => {
   test("worst phase wins across rows; lastSyncedAt is the max", () => {
     const v = deriveMailSyncView([
       row({
-        accountId: "a1",
+        accountId: mailAccountIdKind.key("a1"),
         status: "delta",
         lastDeltaSyncAt: new Date("2026-01-05T00:00:00Z"),
       }),
-      row({ accountId: "a2", status: "error", errorCode: "api_disabled" }),
+      row({
+        accountId: mailAccountIdKind.key("a2"),
+        status: "error",
+        errorCode: "api_disabled",
+      }),
     ]);
     expect(v.phase).toBe("error");
     expect(v.error?.code).toBe("api_disabled");

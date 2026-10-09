@@ -1,9 +1,9 @@
-import { randomUUID } from "node:crypto";
 import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { parsed } from "@plugins/database/plugins/sql-projection/server";
+import { sessionLinkIdKind } from "../../core";
 import { _conversationSessions } from "./tables";
 
 /** One link of a conversation's session chain. */
@@ -46,7 +46,7 @@ export async function recordSessionId(
 
   await conn
     .insert(_conversationSessions)
-    .values({ id: randomUUID(), conversationId, claudeSessionId })
+    .values({ id: sessionLinkIdKind.mint(), conversationId, claudeSessionId })
     .onConflictDoNothing({
       target: [
         _conversationSessions.conversationId,

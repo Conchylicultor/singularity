@@ -18,6 +18,7 @@ import {
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { barStartBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useDeferredLoadState } from "@plugins/framework/plugins/web-sdk/core";
 import {
   PlayerDisplay,
   PlayerDisplayBinding,
@@ -26,7 +27,7 @@ import {
 import { sonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/core";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { songLibrary } from "../core";
+import { sonataPlayerRoute, songIdKind, songLibrary } from "../core";
 import { Library } from "./slots";
 import { SonataLibrarySurface } from "./components/library-surface";
 import { SongTitle } from "./components/song-title-field";
@@ -75,11 +76,6 @@ function SonataLibraryBody(): ReactElement {
  * canonical row from `songLibrary`. `useResolve` hydrates every source for the song on
  * direct navigation / reload (see {@link useSonataPlayerResolve}).
  */
-const sonataPlayerRoute = defineRoute({
-  id: "sonata-player",
-  segment: "song/:songId;bar;view",
-});
-
 export const sonataPlayerPane = Pane.define({
   route: sonataPlayerRoute,
   app: sonataApp,
@@ -115,10 +111,11 @@ export function sonataSongLink(songId: string, bar?: number): string {
 
 /** Canonical song title from its live library row, or the optimistic open hint. */
 function useSongTitle(
-  { songId }: { songId: string },
+  { songId: songIdParam }: { songId: string },
   hint: Hint<{ title: string }>,
 ): string | undefined {
-  const song = useLiveRow(songLibrary, songId);
+  // `key` upgrades a pre-rewrite bare-uuid URL to the stored `song-<uuid>`.
+  const song = useLiveRow(songLibrary, songIdKind.key(songIdParam));
   // `canonical` stays `undefined` until the row settles — precisely what
   // `pick` reads as "not known yet", so the hint shows through in the meantime
   // and is superseded the instant the real row (and any rename) arrives. A
@@ -147,14 +144,23 @@ function useSongTitle(
  * bar ({@link parseBarParam}); a bar past the song's end clamps to its last bar.
  */
 function useSonataPlayerResolve({
-  songId,
+  songId: songIdParam,
   bar: barParam,
 }: {
   songId: string;
   bar?: string;
 }): ResolveResult {
+  // The URL's id as stored: `key` upgrades an old bare-uuid link
+  // (`/sonata/song/<uuid>`, from before the `song-` rewrite) so it resolves.
+  const songId = songIdKind.key(songIdParam);
   const song = useLiveRow(songLibrary, songId);
   const sources = Library.Source.useContributions();
+  // The sources are an open contributed set, and most of them load in the
+  // deferred tier: hydrating before that tier settles reads an incomplete set,
+  // and the loaded song then never re-hydrates (the effect below keeps a song
+  // that is already loaded). So a deep link waits for the tier, as any reader
+  // of a contributed set does.
+  const { deferredComplete } = useDeferredLoadState();
   const loadDocument = useLoadDocument();
   const { requestSeekOnLoad, seekTo, score } = useSession();
   const { content } = useSongDocument();
@@ -178,6 +184,7 @@ function useSonataPlayerResolve({
       placedForRef.current = placementKey(songId, undefined);
       return;
     }
+    if (!deferredComplete) return;
     let cancelled = false;
     void (async () => {
       const rawMap: Record<string, unknown> = {};
@@ -204,7 +211,15 @@ function useSonataPlayerResolve({
     return () => {
       cancelled = true;
     };
-  }, [songId, sources, loadDocument, requestSeekOnLoad, barRef, loadedSongRef]);
+  }, [
+    songId,
+    sources,
+    deferredComplete,
+    loadDocument,
+    requestSeekOnLoad,
+    barRef,
+    loadedSongRef,
+  ]);
 
   // Hydrated exactly when the loaded document is this song: after the load
   // above, or at once for a song already loaded. Another song still loaded
@@ -259,7 +274,7 @@ function SonataPlayerSurface(): ReactElement {
       displayId={params.view ?? null}
       onDisplayChange={(view) =>
         setParams({
-          songId: params.songId,
+          songId: songIdKind.key(params.songId),
           ...(params.bar !== undefined && { bar: params.bar }),
           ...(view !== null && { view }),
         })

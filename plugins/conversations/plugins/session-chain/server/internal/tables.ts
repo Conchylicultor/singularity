@@ -6,6 +6,8 @@ import {
 import { type FieldsRecord } from "@plugins/fields/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { idKindField } from "@plugins/ids/core";
+import { sessionLinkIdKind } from "../../core";
 
 // One row per distinct Claude session id a conversation has ever run under, in
 // first-seen order. A conversation's transcript is spread over SEVERAL session
@@ -14,10 +16,10 @@ import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 // it here as it observes each id change.
 //
 // The field record is local (not `core/`): nothing crosses the runtime boundary,
-// so there is no wire schema to keep in sync. `id` is an app-minted text PK (no
-// DB default); `seenAt` defaults to now() in the DB.
+// so there is no wire schema to keep in sync. `id` is an app-minted text PK
+// (`sess-<uuid>`, no DB default); `seenAt` defaults to now() in the DB.
 const conversationSessionFields = {
-  id: textField(),
+  id: idKindField(sessionLinkIdKind),
   conversationId: textField(),
   claudeSessionId: textField(),
   seenAt: dateField(),

@@ -5,6 +5,8 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { wireSchema } from "@plugins/infra/plugins/entities/core";
+import { idKindField } from "@plugins/ids/core";
+import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 
 // One persisted per-(song, track) view override. `color` is nullable: null means
 // "no override — fall back to the palette default for the track's index".
@@ -27,7 +29,7 @@ import { wireSchema } from "@plugins/infra/plugins/entities/core";
 // `trackViewFields` record; the created/updated timestamps stay in the DDL but
 // are kept off the wire via `TRACK_VIEW_SERVER_ONLY`.
 export const trackViewFields = {
-  songId: textField(),
+  songId: idKindField(songIdKind),
   trackId: textField(),
   color: nullable(textField()),
   instrument: nullable(textField()),

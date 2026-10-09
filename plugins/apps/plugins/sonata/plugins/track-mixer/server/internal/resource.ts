@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { trackViews } from "../../shared/resources";
 import { trackView } from "./tables";
@@ -21,5 +22,5 @@ export const trackViewsServed = serveValue(trackViews, {
     db
       .select(trackView.wireColumns)
       .from(trackView.table)
-      .where(eq(trackView.table.songId, songId)),
+      .where(eq(trackView.table.songId, songIdKind.key(songId))),
 });

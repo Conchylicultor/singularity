@@ -2,6 +2,7 @@ import { listHistory } from "@plugins/apps/plugins/mail/plugins/gmail-api/server
 import type { GmailHistoryRecord } from "@plugins/apps/plugins/mail/plugins/gmail-api/core";
 import { deleteMessage, upsertMessageEnvelope } from "./store";
 import { fetchEnvelopes } from "./fetch-envelopes";
+import { type MailAccountId } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 
 // Shared history-consumption pass used by BOTH the steady-state delta and the
 // self-renewing backfill: paginate `history.list` from a watermark, apply every
@@ -25,7 +26,7 @@ import { fetchEnvelopes } from "./fetch-envelopes";
  */
 export async function applyHistorySince(
   token: string,
-  accountId: string,
+  accountId: MailAccountId,
   startHistoryId: string,
 ): Promise<{ historyId: string; addedIds: string[] }> {
   // Paginate history from the watermark, collecting every record.

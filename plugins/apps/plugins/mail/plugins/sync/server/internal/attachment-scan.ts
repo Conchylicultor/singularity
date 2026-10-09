@@ -5,6 +5,10 @@ import { requireGmailToken } from "@plugins/apps/plugins/mail/plugins/mail-core/
 import { MAX_ATTACHMENT_SCAN_PAGES } from "../../core";
 import { markMessagesWithAttachments } from "./store";
 import { mailSyncLog } from "./sink";
+import {
+  type MailAccountId,
+  mailAccountIdKind,
+} from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 
 // Pre-populate the attachment (paperclip) indicator WITHOUT a body fetch. Gmail's
 // `has:attachment` search operator is the authoritative metadata-only signal —
@@ -20,7 +24,7 @@ import { mailSyncLog } from "./sink";
  */
 export async function scanAttachmentFlags(
   token: string,
-  accountId: string,
+  accountId: MailAccountId,
   q: string,
 ): Promise<void> {
   const ids: string[] = [];
@@ -55,7 +59,10 @@ export const attachmentScanJob = defineJob({
   // seconds: bounded Gmail `messages.list` paging (capped at
   // MAX_ATTACHMENT_SCAN_PAGES), each request under `gmailRequest`'s deadline.
   hold: "seconds",
-  input: z.object({ accountId: z.string(), windowDays: z.number() }),
+  input: z.object({
+    accountId: z.string().transform(mailAccountIdKind.key),
+    windowDays: z.number(),
+  }),
   event: z.never(),
   dedup: { key: ({ accountId }) => accountId },
   maxAttempts: 3,

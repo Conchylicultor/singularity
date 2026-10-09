@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { EventSources } from "./slots";
 import { IdKinds } from "@plugins/ids/web";
-import { eventSourceIdKind, eventIdKind } from "../core";
+import { eventSourceIdKind, eventIdKind, eventRunIdKind } from "../core";
 
 export { EventSources } from "./slots";
 export {
@@ -23,6 +23,7 @@ export default {
   contributions: [
     IdKinds.Kind({ kind: eventSourceIdKind }),
     IdKinds.Kind({ kind: eventIdKind }),
+    IdKinds.Kind({ kind: eventRunIdKind }),
   ],
   slots: EventSources,
 } satisfies PluginDefinition;

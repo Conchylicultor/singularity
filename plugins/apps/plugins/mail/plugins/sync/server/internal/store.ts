@@ -1,11 +1,14 @@
-import { randomUUID } from "node:crypto";
 import { and, eq, inArray, not, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type {
   GmailLabel,
   GmailMessage,
 } from "@plugins/apps/plugins/mail/plugins/gmail-api/core";
-import type { MailAddress } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import {
+  mailAttachmentIdKind,
+  type MailAccountId,
+  type MailAddress,
+} from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import {
   _mailAttachments,
   _mailLabels,
@@ -41,7 +44,7 @@ export function flagsFromLabels(labelIds: string[]): {
 
 /** Upsert the account's Gmail labels into `mail_labels`. */
 export async function upsertLabels(
-  accountId: string,
+  accountId: MailAccountId,
   gmailLabels: GmailLabel[],
 ): Promise<void> {
   if (gmailLabels.length === 0) return;
@@ -78,7 +81,7 @@ export async function upsertLabels(
  * uses the id as the name and self-heals on the next `upsertLabels`.
  */
 export async function ensureLabelsExist(
-  accountId: string,
+  accountId: MailAccountId,
   labelIds: string[],
 ): Promise<void> {
   if (labelIds.length === 0) return;
@@ -121,7 +124,7 @@ export function isMessageHydrated(row: {
  *   stamps `bodyFetchedAt`, and reconciles the attachment metadata.
  */
 async function writeMessage(
-  accountId: string,
+  accountId: MailAccountId,
   msg: GmailMessage,
   full: boolean,
 ): Promise<void> {
@@ -217,7 +220,7 @@ async function writeMessage(
     if (parsed.attachments.length > 0) {
       await db.insert(_mailAttachments).values(
         parsed.attachments.map((a) => ({
-          id: randomUUID(),
+          id: mailAttachmentIdKind.mint(),
           messageId: msg.id,
           accountId,
           gmailAttachmentId: a.gmailAttachmentId,
@@ -242,7 +245,7 @@ async function writeMessage(
  * steady-state delta — the body is fetched lazily on first open.
  */
 export function upsertMessageEnvelope(
-  accountId: string,
+  accountId: MailAccountId,
   msg: GmailMessage,
 ): Promise<void> {
   return writeMessage(accountId, msg, false);
@@ -253,7 +256,7 @@ export function upsertMessageEnvelope(
  * body + attachments, stamping `bodyFetchedAt`. Called when a message is opened.
  */
 export function upsertMessageFull(
-  accountId: string,
+  accountId: MailAccountId,
   msg: GmailMessage,
 ): Promise<void> {
   return writeMessage(accountId, msg, true);
@@ -267,7 +270,7 @@ export function upsertMessageFull(
  * idempotent no-ops. Recomputes each distinct affected thread so its rollup flips.
  */
 export async function markMessagesWithAttachments(
-  accountId: string,
+  accountId: MailAccountId,
   ids: string[],
 ): Promise<void> {
   if (ids.length === 0) return;
@@ -290,7 +293,7 @@ export async function markMessagesWithAttachments(
 
 /** Recompute a thread's denormalized rollups from its messages, or delete it. */
 export async function recomputeThread(
-  accountId: string,
+  accountId: MailAccountId,
   threadId: string,
 ): Promise<void> {
   const messages = await db

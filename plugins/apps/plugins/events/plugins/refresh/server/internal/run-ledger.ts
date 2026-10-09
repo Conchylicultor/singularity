@@ -12,7 +12,10 @@ import {
 } from "@plugins/apps/plugins/events/plugins/events-core/server";
 import type { RefreshErrorClassification } from "./classify-error";
 import { computeNextRunAt } from "./schedule";
-import { eventSourceIdKind } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import {
+  eventSourceIdKind,
+  type EventRunId,
+} from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 // The ONLY writer of `event_source_runs` and of a source row's runtime state.
 //
@@ -73,7 +76,7 @@ async function completeRun(
   source: EventSource,
   run: {
     /** Minted by `runSource` at the start; see the header note. */
-    runId: string;
+    runId: EventRunId;
     finishedAt: Date;
     startedAt: Date;
     outcome: RunOutcome;
@@ -145,7 +148,7 @@ async function completeRun(
  */
 export async function finishUnchanged(
   source: EventSource,
-  args: { runId: string; startedAt: Date; fingerprint: string },
+  args: { runId: EventRunId; startedAt: Date; fingerprint: string },
 ): Promise<void> {
   await completeRun(
     source,
@@ -181,7 +184,7 @@ export async function finishUnchanged(
 export async function finishExtracted(
   source: EventSource,
   args: {
-    runId: string;
+    runId: EventRunId;
     startedAt: Date;
     fingerprint: string | null;
     counts: RunCounts;
@@ -244,7 +247,7 @@ export async function finishExtracted(
 export async function finishFailed(
   source: EventSource,
   args: {
-    runId: string;
+    runId: EventRunId;
     startedAt: Date;
     failure: RefreshErrorClassification;
   },

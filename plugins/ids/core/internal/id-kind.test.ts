@@ -161,6 +161,14 @@ describe("parse / schema", () => {
     expect(() => song.parse(uuid)).toThrow(IdParseError);
   });
 
+  test("key upgrades a bare uuid only for a legacyBareUuid kind", () => {
+    const uuid = crypto.randomUUID();
+    expect<string>(legacy.key(uuid)).toBe(`bkmk-${uuid}`);
+    expect<string>(legacy.key(`bkmk-${uuid}`)).toBe(`bkmk-${uuid}`);
+    expect<string>(legacy.key("anything-else")).toBe("anything-else");
+    expect<string>(song.key(uuid)).toBe(uuid);
+  });
+
   test("schema accepts ids and refuses the rest", () => {
     const id = song.mint();
     expect(song.schema.parse(id)).toBe(id);

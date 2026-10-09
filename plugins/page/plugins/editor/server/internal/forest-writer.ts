@@ -6,6 +6,7 @@ import {
   recordTrashEntry,
   _trashEntries,
 } from "@plugins/infra/plugins/trash/server";
+import { trashEntryIdKind } from "@plugins/infra/plugins/trash/core";
 import { textOf, type BlockNode } from "../../core/block-ops";
 import type { Block } from "../../core/schemas";
 import { PAGE_BLOCK_TYPE, PAGE_BLOCKS_TRASH_SOURCE } from "../../core/schemas";
@@ -991,7 +992,9 @@ async function placeClaimedPage(
     .where(eq(_blocks.trashEntryId, entryId))
     .limit(1);
   if (remaining === undefined) {
-    await ctx.tx.delete(_trashEntries).where(eq(_trashEntries.id, entryId));
+    await ctx.tx
+      .delete(_trashEntries)
+      .where(eq(_trashEntries.id, trashEntryIdKind.key(entryId)));
   }
 
   const restored: DeletedBlockRow[] = [

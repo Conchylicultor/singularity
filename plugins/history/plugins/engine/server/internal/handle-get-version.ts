@@ -3,6 +3,7 @@ import { db } from "@plugins/database/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { getVersion } from "../../core/endpoints";
 import type { VersionWithSnapshot } from "../../core/schemas";
+import { versionIdKind } from "../../core/id-kind";
 import { _entityVersions } from "./tables";
 
 // A single version with its opaque snapshot. 404s if the version doesn't exist
@@ -13,7 +14,7 @@ export const handleGetVersion = implement(getVersion, async ({ params }) => {
     .from(_entityVersions)
     .where(
       and(
-        eq(_entityVersions.id, params.versionId),
+        eq(_entityVersions.id, versionIdKind.key(params.versionId)),
         eq(_entityVersions.sourceId, params.sourceId),
         eq(_entityVersions.entityId, params.entityId),
       ),

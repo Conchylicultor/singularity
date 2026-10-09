@@ -1,4 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { IdKinds } from "@plugins/ids/server";
+import { songIdKind } from "../core";
 import { deleteSong, updateSong } from "../core/endpoints";
 import { handleDeleteSong } from "./internal/handle-delete-song";
 import { handleUpdateSong } from "./internal/handle-update-song";
@@ -22,5 +24,8 @@ export default {
     [deleteSong.route]: handleDeleteSong,
     [updateSong.route]: handleUpdateSong,
   },
-  contributions: [...songLibraryServed.declare],
+  contributions: [
+    IdKinds.Kind({ kind: songIdKind }),
+    ...songLibraryServed.declare,
+  ],
 } satisfies ServerPluginDefinition;

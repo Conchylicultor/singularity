@@ -164,6 +164,7 @@ rendered chip out of a read surface puts the token back on the clipboard.
     - `InlineChip.Tag` ← `active-data.page-link`
     - `InlineChip.Tag` ← `active-data.prototype`
     - `InlineChip.Tag` ← `active-data.report`
+    - `InlineChip.Tag` ← `active-data.song`
     - `InlineChip.Tag` ← `active-data.task-link`
     - `InlineChip.Tag` ← `primitives.ui-context.element-picker`
   - Uses:

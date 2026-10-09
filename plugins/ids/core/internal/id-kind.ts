@@ -138,6 +138,11 @@ export interface IdKind<P extends string, S extends IdShape = IdShape> {
    * builds), so a lookup must reach them: an unknown key simply finds no row.
    * Never a source for an INSERT — a new id comes from {@link mint}; an id a
    * caller hands you to STORE goes through {@link parse}.
+   *
+   * A `legacyBareUuid` kind's rows were rewritten to `<prefix>-<uuid>`, so a
+   * bare uuid can only be a key from before that rewrite (an old URL, a
+   * bookmark): `key` upgrades it the way {@link parse} does, and the lookup
+   * finds the rewritten row. Anything else is branded as is.
    */
   key(value: string): Id<P>;
   /**
@@ -269,7 +274,10 @@ export function defineIdKind<
     return digits.length <= 11 ? n * 1000 : n;
   };
 
-  const key = (value: string): Id<P> => value as Id<P>;
+  const key = (value: string): Id<P> =>
+    legacyBareUuid && BARE_UUID_RE.test(value)
+      ? (`${prefix}-${value}` as Id<P>)
+      : (value as Id<P>);
 
   return Object.freeze({
     prefix,

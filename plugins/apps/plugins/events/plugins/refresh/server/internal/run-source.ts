@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { NonRetryableError } from "@plugins/infra/plugins/jobs/server";
@@ -21,7 +20,10 @@ import {
   markSourceRunning,
 } from "./run-ledger";
 import { refreshLog } from "./sink";
-import { eventSourceIdKind } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import {
+  eventRunIdKind,
+  eventSourceIdKind,
+} from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 // THE engine. The only place that knows the phase order, and deliberately the
 // only thing in this file: every line below is one high-level action, with the
@@ -106,7 +108,7 @@ export async function runSource(sourceId: string): Promise<void> {
   // then stamp itself with the run it belongs to, which is the only way that
   // artifact is reachable from the outcome that explains it. The ledger's
   // invariant is untouched: the row still appears exactly once, complete.
-  const runId = randomUUID();
+  const runId = eventRunIdKind.mint();
   const startedAt = new Date();
   await markSourceRunning(source.id);
 

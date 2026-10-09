@@ -9,7 +9,13 @@ import {
   enumTextField,
   parsedTextField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
-import { externalIdField } from "@plugins/ids/core";
+import { externalIdField, idKindField } from "@plugins/ids/core";
+import {
+  mailAccountIdKind,
+  mailAttachmentIdKind,
+  mailDraftIdKind,
+  mailOutboxIdKind,
+} from "./id-kinds";
 import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
@@ -43,7 +49,7 @@ export const MailAddressSchema = z.object({
 });
 
 export const mailAccountFields = {
-  id: textField(),
+  id: idKindField(mailAccountIdKind),
   email: textField(),
   name: nullable(textField()),
   avatarUrl: nullable(textField()),
@@ -54,7 +60,7 @@ export const mailAccountFields = {
 } satisfies FieldsRecord;
 
 export const mailSyncStateFields = {
-  accountId: textField(),
+  accountId: idKindField(mailAccountIdKind),
   historyId: nullable(textField()),
   lastFullSyncAt: nullable(dateField()),
   lastDeltaSyncAt: nullable(dateField()),
@@ -105,7 +111,7 @@ export const mailLabelFields = {
     reason:
       "Gmail's own label id — the local mirror is keyed by the id the Gmail API returns.",
   }),
-  accountId: textField(),
+  accountId: idKindField(mailAccountIdKind),
   name: textField(),
   // `default` is the field's wire/backfill default and stays what it was (the
   // first of MAIL_LABEL_TYPES). It is NOT the same thing as the schema's
@@ -127,7 +133,7 @@ export const mailThreadFields = {
     reason:
       "Gmail's own thread id — the local mirror is keyed by the id the Gmail API returns.",
   }),
-  accountId: textField(),
+  accountId: idKindField(mailAccountIdKind),
   subject: nullable(textField()),
   snippet: nullable(textField()),
   participants: jsonField<z.infer<typeof MailAddressSchema>[]>({
@@ -152,7 +158,7 @@ export const mailMessageFields = {
       "Gmail's own message id — the local mirror is keyed by the id the Gmail API returns.",
   }),
   threadId: textField(),
-  accountId: textField(),
+  accountId: idKindField(mailAccountIdKind),
   from: jsonField<z.infer<typeof MailAddressSchema>>({
     schema: MailAddressSchema,
     default: { email: "" },
@@ -208,9 +214,9 @@ export const mailMessageLabelFields = {
 } satisfies FieldsRecord;
 
 export const mailAttachmentFields = {
-  id: textField(),
+  id: idKindField(mailAttachmentIdKind),
   messageId: textField(),
-  accountId: textField(),
+  accountId: idKindField(mailAccountIdKind),
   gmailAttachmentId: textField(),
   filename: textField(),
   mimeType: textField(),
@@ -223,8 +229,8 @@ export const mailAttachmentFields = {
 } satisfies FieldsRecord;
 
 export const mailDraftFields = {
-  id: textField(),
-  accountId: textField(),
+  id: idKindField(mailDraftIdKind),
+  accountId: idKindField(mailAccountIdKind),
   threadId: nullable(textField()),
   gmailDraftId: nullable(textField()),
   inReplyToMessageId: nullable(textField()),
@@ -248,8 +254,8 @@ export const mailDraftFields = {
 } satisfies FieldsRecord;
 
 export const mailOutboxFields = {
-  id: textField(),
-  accountId: textField(),
+  id: idKindField(mailOutboxIdKind),
+  accountId: idKindField(mailAccountIdKind),
   opType: enumTextField(MAIL_OUTBOX_OP_TYPES),
   targetType: textField(),
   targetId: textField(),

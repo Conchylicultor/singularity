@@ -6,6 +6,8 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { idColumn } from "@plugins/ids/server";
+import { versionIdKind } from "../../core/id-kind";
 
 // One row per stored version. 1:N (a versioning table — NOT a 1:1
 // entity-extension side-table). Domain-agnostic: the engine never knows what a
@@ -17,7 +19,7 @@ import {
 export const _entityVersions = pgTable(
   "entity_versions",
   {
-    id: text("id").primaryKey(),
+    id: idColumn(versionIdKind),
     sourceId: text("source_id").notNull(),
     entityId: text("entity_id").notNull(),
     // Opaque per-source: the engine hands it back to that source's own

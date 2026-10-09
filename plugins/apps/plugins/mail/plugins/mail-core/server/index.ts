@@ -3,6 +3,13 @@ import {
   ExcludeFromBackup,
   ExcludeFromFork,
 } from "@plugins/database/plugins/admin/server";
+import { IdKinds } from "@plugins/ids/server";
+import {
+  mailAccountIdKind,
+  mailAttachmentIdKind,
+  mailDraftIdKind,
+  mailOutboxIdKind,
+} from "../core";
 import { mailLabelsServed } from "./internal/labels-resource";
 import { mailAccountServed } from "./internal/account-resource";
 import {
@@ -35,6 +42,10 @@ export default {
   description:
     "Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared connected-account and user-labels live values.",
   contributions: [
+    IdKinds.Kind({ kind: mailAccountIdKind }),
+    IdKinds.Kind({ kind: mailAttachmentIdKind }),
+    IdKinds.Kind({ kind: mailDraftIdKind }),
+    IdKinds.Kind({ kind: mailOutboxIdKind }),
     ...mailLabelsServed.declare,
     ...mailAccountServed.declare,
     // The mailbox corpus. Gmail sync is main-only, so a forked worktree neither

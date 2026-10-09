@@ -9,6 +9,7 @@ import {
   requireGmailToken,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
 import { mailAttachmentDownloadEndpoint, mailAttachmentUrl } from "../../core";
+import { mailAttachmentIdKind } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 
 // Lazy Gmail attachment blob download. The sync engine stores attachment
 // *metadata* at hydration (filename / mime / size / gmailAttachmentId) but never
@@ -29,7 +30,9 @@ export const handleMailAttachmentDownload = implement(
     const [row] = await db
       .select()
       .from(_mailAttachments)
-      .where(eq(_mailAttachments.id, body.attachmentRowId))
+      .where(
+        eq(_mailAttachments.id, mailAttachmentIdKind.key(body.attachmentRowId)),
+      )
       .limit(1);
     if (!row) {
       throw new HttpError(

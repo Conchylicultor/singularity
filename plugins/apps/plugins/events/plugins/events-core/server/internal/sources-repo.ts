@@ -16,7 +16,7 @@ import {
   _eventSourceRuns,
 } from "./tables";
 import { getEventSourceType } from "./registry";
-import { eventSourceIdKind } from "../../core";
+import { eventRunIdKind, eventSourceIdKind } from "../../core";
 
 // Source CRUD + the validation that keeps a row's `config` and its type's
 // `configFields` in agreement. Every failure THROWS an `HttpError` — never a
@@ -158,7 +158,7 @@ export async function requireRun(runId: string): Promise<EventSourceRun> {
   const [row] = await db
     .select()
     .from(_eventSourceRuns)
-    .where(eq(_eventSourceRuns.id, runId))
+    .where(eq(_eventSourceRuns.id, eventRunIdKind.key(runId)))
     .limit(1);
   if (!row) throw new HttpError(404, `Unknown event source run: ${runId}`);
   return row;
@@ -191,7 +191,7 @@ export async function listRunEvents(
     .from(_eventSourceRunEvents)
     .innerJoin(_events, eq(_events.id, _eventSourceRunEvents.eventId))
     .innerJoin(_eventSources, eq(_eventSources.id, _events.sourceId))
-    .where(eq(_eventSourceRunEvents.runId, runId))
+    .where(eq(_eventSourceRunEvents.runId, eventRunIdKind.key(runId)))
     .orderBy(_events.startsAt)
     .limit(limit);
 }

@@ -1,4 +1,16 @@
 export {
+  mailAccountIdKind,
+  mailAttachmentIdKind,
+  mailDraftIdKind,
+  mailOutboxIdKind,
+} from "./internal/id-kinds";
+export type {
+  MailAccountId,
+  MailAttachmentId,
+  MailDraftId,
+  MailOutboxId,
+} from "./internal/id-kinds";
+export {
   MAIL_LABEL_TYPES,
   type MailLabelType,
   MAIL_OUTBOX_OP_TYPES,

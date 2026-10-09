@@ -7,6 +7,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
+  eventRunIdKind,
   eventSourceRuns,
   type EventSourceRun,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
@@ -51,7 +52,9 @@ export function SourceRunsSection({
   // Which run the pane beside this list is showing, so the ledger marks it. Read
   // off the route rather than held here: the pane may equally have been reached
   // by a deep link, and there is only ever one answer to "which run is open".
-  const openRunId = eventSourceRunPane.useRouteEntry()?.params.runId;
+  const openRunParam = eventSourceRunPane.useRouteEntry()?.params.runId;
+  const openRunId =
+    openRunParam === undefined ? undefined : eventRunIdKind.key(openRunParam);
 
   // Every column is a typed field, so "show me only the failures" is a filter on
   // `outcome` rather than a bespoke chip — including the `unchanged` runs, which

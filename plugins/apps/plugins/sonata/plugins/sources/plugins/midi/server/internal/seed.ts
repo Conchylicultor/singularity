@@ -8,6 +8,7 @@ import {
   songAttachments,
   updateSongMeta,
 } from "@plugins/apps/plugins/sonata/plugins/library/server";
+import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { MIDI_SOURCE_ID } from "../../shared/constants";
 import { songMidi } from "./tables";
 import { hashMidiBytes } from "./import";
@@ -91,14 +92,22 @@ export async function seedMidiStarters(): Promise<void> {
     // Quarter-note beats: seconds × (bpm / 60).
     const endBeat = (durationSec * starter.bpm) / 60;
 
-    const att = await createAttachment(bytes, `${starter.id}.mid`, "audio/midi");
+    const att = await createAttachment(
+      bytes,
+      `${starter.id}.mid`,
+      "audio/midi",
+    );
     // `createSongRow` inserts only when absent (onConflictDoNothing), so for a
     // starter whose id already exists but whose definition changed (edited
     // title / tempo / notes → new content hash) the row metadata would go stale.
     // Make STARTERS authoritative over metadata too: sync it after ensuring the
     // row exists. (No-op on a fresh insert; corrects a drifted row.)
+    // A starter's id is a fixed natural key in the song kind's `seed` alias
+    // namespace (`seed-fur-elise`) — no shape the kind mints or parses — so it
+    // is branded as is.
+    const songId = songIdKind.key(starter.id);
     await createSongRow({
-      id: starter.id,
+      id: songId,
       title: starter.title,
       composer: starter.composer,
       durationSec,
@@ -106,7 +115,7 @@ export async function seedMidiStarters(): Promise<void> {
       source: MIDI_SOURCE_ID,
     });
     await updateSongMeta({
-      id: starter.id,
+      id: songId,
       title: starter.title,
       composer: starter.composer,
       durationSec,

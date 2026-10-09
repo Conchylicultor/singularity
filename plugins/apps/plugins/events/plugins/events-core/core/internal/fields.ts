@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { idKindField } from "@plugins/ids/core";
-import { eventIdKind, eventSourceIdKind } from "./id-kinds";
+import { eventIdKind, eventRunIdKind, eventSourceIdKind } from "./id-kinds";
 import { nullable, type FieldsRecord } from "@plugins/fields/core";
 import {
   textField,
@@ -213,7 +213,7 @@ export const eventFields = {
  * `runSource` invocation, including the cheap `unchanged` ones.
  */
 export const eventSourceRunFields = {
-  id: textField(),
+  id: idKindField(eventRunIdKind),
   sourceId: textField(),
   startedAt: dateField(),
   finishedAt: nullable(dateField()),
@@ -257,7 +257,7 @@ export const eventSourceRunFields = {
  * outlive nothing they explain.
  */
 export const eventSourceRunEventFields = {
-  runId: textField(),
+  runId: idKindField(eventRunIdKind),
   eventId: textField(),
   action: enumTextField(RUN_EVENT_ACTIONS),
 } satisfies FieldsRecord;

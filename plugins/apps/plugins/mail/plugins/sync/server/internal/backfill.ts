@@ -22,6 +22,10 @@ import { applyHistorySince } from "./history-sync";
 import { attachmentScanJob } from "./attachment-scan";
 import { classifyMailSyncError } from "./classify-error";
 import { recordSyncError } from "./record-error";
+import {
+  type MailAccountId,
+  mailAccountIdKind,
+} from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 
 // Bounded, metadata-only backfill — the on-demand ("instant") sync model. Rather
 // than mirroring the ENTIRE mailbox with full bodies, each run lists one
@@ -52,7 +56,7 @@ export const backfillJob = defineJob({
   // continues by re-enqueue, so the backfill spans many runs, none long.
   hold: "seconds",
   input: z.object({
-    accountId: z.string(),
+    accountId: z.string().transform(mailAccountIdKind.key),
     pageToken: z.string().optional(),
     // Envelopes synced so far across this backfill chain (for the hard cap).
     syncedCount: z.number().optional(),
@@ -179,7 +183,7 @@ export const backfillJob = defineJob({
  */
 async function renewWatermark(
   token: string,
-  accountId: string,
+  accountId: MailAccountId,
   currentHistoryId: string | null,
 ): Promise<string> {
   if (currentHistoryId == null) {

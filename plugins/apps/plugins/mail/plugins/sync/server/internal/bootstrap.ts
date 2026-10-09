@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
@@ -10,19 +9,23 @@ import {
   _mailSyncState,
   requireGmailToken,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
+import {
+  mailAccountIdKind,
+  type MailAccountId,
+} from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { backfillJob } from "./backfill";
 import { upsertLabels } from "./store";
 import { recordSyncError } from "./record-error";
 
 /** Find-or-create the account row for `email`, returning its id. */
-async function findOrCreateAccount(email: string): Promise<string> {
+async function findOrCreateAccount(email: string): Promise<MailAccountId> {
   const [existing] = await db
     .select({ id: _mailAccounts.id })
     .from(_mailAccounts)
     .where(eq(_mailAccounts.email, email))
     .limit(1);
   if (existing) return existing.id;
-  const accountId = randomUUID();
+  const accountId = mailAccountIdKind.mint();
   await db.insert(_mailAccounts).values({
     id: accountId,
     email,
@@ -47,7 +50,7 @@ async function findOrCreateAccount(email: string): Promise<string> {
 // so it can never outlive Gmail's history window and every change during
 // backfill is applied as it happens — see `backfill.ts` / `history-sync.ts`.
 export async function ensureAccount(): Promise<{
-  accountId: string;
+  accountId: MailAccountId;
   status: string;
 }> {
   // Throws loudly if Gmail isn't connected/enabled. Attribute a token failure to

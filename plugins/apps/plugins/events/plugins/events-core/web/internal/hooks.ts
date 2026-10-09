@@ -9,6 +9,7 @@ import {
 import {
   createEventSource,
   deleteEventSource,
+  eventRunIdKind,
   eventSourceRuns,
   eventSources,
   listRunEvents,
@@ -49,7 +50,8 @@ export function useEventSourceRow(
 export function useEventSourceRun(
   runId: string,
 ): LiveRowResult<EventSourceRun> {
-  return useLiveRow(eventSourceRuns, runId);
+  // `key` upgrades a pre-rewrite bare-uuid run id (an old `run/<uuid>` URL).
+  return useLiveRow(eventSourceRuns, eventRunIdKind.key(runId));
 }
 
 /**

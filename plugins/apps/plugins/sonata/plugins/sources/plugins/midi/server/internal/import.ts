@@ -10,6 +10,10 @@ import {
   songAttachments,
   updateSongMeta,
 } from "@plugins/apps/plugins/sonata/plugins/library/server";
+import {
+  songIdKind,
+  type SongId,
+} from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { MIDI_SOURCE_ID } from "../../shared/constants";
 import { deriveMidiSongMeta, parseMidi } from "../../shared/parse";
 import { songMidi, _songMidiExt } from "./tables";
@@ -67,7 +71,10 @@ async function writeMidiSong({
   sourcePath,
   existingSongId,
 }: WriteMidiSongInput): Promise<string> {
-  let id = existingSongId;
+  // Ids read back from a stored row (the caller's, the extension's) are looked
+  // up by, never minted: `key` brands them.
+  let id: SongId | undefined =
+    existingSongId === undefined ? undefined : songIdKind.key(existingSongId);
   if (!id) {
     const dup = await getSongMidiByContentHash(contentHash);
     if (dup) {
@@ -81,7 +88,7 @@ async function writeMidiSong({
       ) {
         return dup.songId;
       }
-      id = dup.songId;
+      id = songIdKind.key(dup.songId);
     }
   }
 

@@ -1,4 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { IdKinds } from "@plugins/ids/server";
+import { versionIdKind } from "../core";
 import { getVersion, listVersions, restoreVersion } from "../core/endpoints";
 import { handleGetVersion } from "./internal/handle-get-version";
 import { handleListVersions } from "./internal/handle-list-versions";
@@ -13,6 +15,7 @@ export default {
   description:
     "Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, and list/get/restore endpoints.",
   register: [entityVersionsRetention],
+  contributions: [IdKinds.Kind({ kind: versionIdKind })],
   httpRoutes: {
     [listVersions.route]: handleListVersions,
     [getVersion.route]: handleGetVersion,

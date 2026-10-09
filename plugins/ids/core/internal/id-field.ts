@@ -83,7 +83,12 @@ export function externalIdField(opts: {
   reason: string;
   meta?: FieldMeta;
 }): FieldDef<string> {
-  const schema: ZodParser<string> = z.string();
+  // An identity transform, not a bare `z.string()`: the text storage arm gives
+  // a plain `ZodString` a bare `text` column with NO decoder
+  // (`fields/text/storage`), and the decoder is the only thing
+  // `ids:pk-declared` can read this declaration back off — a bare string here
+  // left every `defineEntity` external id reported as undeclared.
+  const schema: ZodParser<string> = z.string().transform((value) => value);
   decoderExternals.set(schema, opts.reason);
   return Object.freeze({
     type: textFieldType,

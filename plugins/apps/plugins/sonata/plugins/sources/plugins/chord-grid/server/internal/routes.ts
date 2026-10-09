@@ -1,3 +1,4 @@
+import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import {
   createSongRow,
@@ -36,7 +37,7 @@ export const handleCreateChordGridSong = implement(
 export const handleGetSongChordGrid = implement(
   getSongChordGrid,
   async ({ params }) => {
-    const row = await songChordGrid.get(params.id);
+    const row = await songChordGrid.get(songIdKind.key(params.id));
     if (!row) return null;
     return {
       chordText: row.chordText,
@@ -53,11 +54,13 @@ export const handleGetSongChordGrid = implement(
 export const handleUpdateChordGridSong = implement(
   updateChordGridSong,
   async ({ params, body }) => {
-    await songChordGrid.upsert(params.id, {
+    // `key` upgrades a pre-rewrite bare-uuid id from a stale client.
+    const id = songIdKind.key(params.id);
+    await songChordGrid.upsert(id, {
       chordText: body.chordText,
     });
     await updateSongMeta({
-      id: params.id,
+      id,
       durationSec: body.durationSec,
       endBeat: body.endBeat,
     });

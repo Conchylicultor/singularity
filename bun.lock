@@ -106,6 +106,10 @@
       "name": "@singularity/plugin-active-data-report",
       "version": "0.0.1",
     },
+    "plugins/active-data/plugins/song": {
+      "name": "@singularity/plugin-active-data-song",
+      "version": "0.0.1",
+    },
     "plugins/active-data/plugins/task": {
       "name": "@singularity/plugin-active-data-task",
       "version": "0.0.1",
@@ -6452,6 +6456,8 @@
     "@singularity/plugin-active-data-prototype": ["@singularity/plugin-active-data-prototype@workspace:plugins/active-data/plugins/prototype"],
 
     "@singularity/plugin-active-data-report": ["@singularity/plugin-active-data-report@workspace:plugins/active-data/plugins/report"],
+
+    "@singularity/plugin-active-data-song": ["@singularity/plugin-active-data-song@workspace:plugins/active-data/plugins/song"],
 
     "@singularity/plugin-active-data-task": ["@singularity/plugin-active-data-task@workspace:plugins/active-data/plugins/task"],
 
