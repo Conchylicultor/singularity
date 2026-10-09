@@ -22,6 +22,8 @@ import {
 export { PageLinks } from "./internal/extractor";
 export type { PageLinkExtractor } from "./internal/extractor";
 export { reindexPage } from "./internal/reindex";
+export { loadBacklinkSources } from "./internal/backlink-sources";
+export type { BacklinkSource } from "./internal/backlink-sources";
 
 export default {
   description:

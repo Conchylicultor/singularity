@@ -254,11 +254,16 @@ comes from:
         <page id="…" title="Workspace"/>
         <page id="…" title="This page"/>
       </breadcrumb>
+      <backlinks>
+        <page id="…" title="A page linking here"/>
+      </backlinks>
     </page-meta>
 
 The breadcrumb runs from the root page down to the page holding what you read
-(the last entry), including when you read a block inside it; each id is a
-\`block_id\` you can read. \`created\` and \`edited\` are UTC — \`edited\` is the
+(the last entry), including when you read a block inside it. The backlinks are
+the other pages that link TO that page (a link block or an inline \`[[\` mention),
+by title — \`<backlinks/>\` when none does; read one to see where and why it
+links here. Every id in the header is a \`block_id\` you can read. \`created\` and \`edited\` are UTC — \`edited\` is the
 latest change to the page or any block in it, so it tells you how stale a note
 or todo may be. The header is not part of the page and is READ-ONLY: hand it
 back unchanged or leave it out; an edit to it is ignored.

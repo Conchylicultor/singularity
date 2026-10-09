@@ -9,6 +9,10 @@ const META: PageMeta = {
     { id: "block-mid", title: 'Say "hi" \\ <now>' },
     { id: "block-self", title: "" },
   ],
+  backlinks: [
+    { id: "block-roadmap", title: "Roadmap" },
+    { id: "block-log", title: "Log" },
+  ],
 };
 
 const DOC =
@@ -24,6 +28,10 @@ describe("pageMetaHeader", () => {
         '    <page id="block-mid" title="Say \\"hi\\" \\\\ <now>"/>',
         '    <page id="block-self" title=""/>',
         "  </breadcrumb>",
+        "  <backlinks>",
+        '    <page id="block-roadmap" title="Roadmap"/>',
+        '    <page id="block-log" title="Log"/>',
+        "  </backlinks>",
         "</page-meta>",
         "",
         "",
@@ -47,6 +55,34 @@ describe("splitPageMeta", () => {
     expect(split.meta?.breadcrumb).toEqual(
       META.breadcrumb.map((c) => ({ ...c })),
     );
+    expect(split.meta?.backlinks).toEqual(
+      META.backlinks.map((c) => ({ ...c })),
+    );
+  });
+
+  test("no backlinks is stated as an empty <backlinks/>, and splits back", () => {
+    const header = pageMetaHeader({ ...META, backlinks: [] });
+    expect(header).toContain("\n  <backlinks/>\n</page-meta>");
+    const split = splitPageMeta(header + DOC);
+    expect(split.ok && split.rest).toBe(DOC);
+    expect(split.ok && split.meta?.backlinks).toEqual([]);
+  });
+
+  test("a header from before backlinks (no section) still splits", () => {
+    const old = pageMetaHeader(META).replace(
+      /  <backlinks>\n[\s\S]*<\/backlinks>\n/,
+      "",
+    );
+    const split = splitPageMeta(old + DOC);
+    expect(split.ok && split.rest).toBe(DOC);
+  });
+
+  test("a section repeated is refused", () => {
+    const doubled = pageMetaHeader(META).replace(
+      "</page-meta>",
+      "  <backlinks/>\n</page-meta>",
+    );
+    expect(splitPageMeta(doubled + DOC).ok).toBe(false);
   });
 
   test("a document with no header is returned whole", () => {

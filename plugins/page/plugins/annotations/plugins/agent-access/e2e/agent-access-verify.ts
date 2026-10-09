@@ -282,6 +282,7 @@ interface ApplySummary {
  */
 function readParts(read: string): {
   breadcrumb: { id: string; title: string }[];
+  backlinks: { id: string; title: string }[];
   attrs: Record<string, string>;
   body: string;
 } {
@@ -817,9 +818,10 @@ await withBrowser(async (h) => {
   {
     const meta = readParts(markdown);
     r.ok(
-      "P1: read_page opens with a <page-meta> header: the breadcrumb ends at the page, times to the minute",
+      "P1: read_page opens with a <page-meta> header: the breadcrumb ends at the page, no backlinks to a fresh page, times to the minute",
       meta.breadcrumb.at(-1)?.id === pageId &&
         meta.breadcrumb.at(-1)?.title === TITLE &&
+        meta.backlinks.length === 0 &&
         /^\d{4}-\d\d-\d\dT\d\d:\d\dZ$/.test(meta.attrs.created ?? "") &&
         /^\d{4}-\d\d-\d\dT\d\d:\d\dZ$/.test(meta.attrs.edited ?? ""),
       JSON.stringify(meta),

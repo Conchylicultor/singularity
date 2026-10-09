@@ -25112,6 +25112,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page.editor.block.onRestore`
         - Uses:
           - `database.db`
+          - `database.DbExecutor`
           - `database/sql-projection.nullable`
           - `database/sql-projection.parsed`
           - `infra/events.Trigger`
@@ -25130,8 +25131,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.PAGE_BLOCK_TYPE`
           - `primitives/text-editor/inline-chip.inlineTokensAsText`
         - DB schema: `plugins/page/plugins/links/server/internal/tables.ts`
-        - Exports (types): `PageLinkExtractor`
+        - Exports (types):
+          - `BacklinkSource`
+          - `PageLinkExtractor`
         - Exports (values):
+          - `loadBacklinkSources`
           - `PageLinks`
           - `reindexPage`
         - Register:
@@ -25176,6 +25180,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/pages/page-tree`
           - `page/inline-page-link`
+          - `page/markdown-apply`
           - `page/page-link`
     - **`map`** — Map block type: draws every located item on the page on an interactive map (through the map primitive), with overlays derived on each render from the page's blocks by contributed PageMap.Layer functions — so the map cannot drift from the page and names no block type. Clicking a pin scrolls to and selects the block it stands for; items a layer cannot place yet are counted under the map. Map block type: registers its (empty) `data` schema at the server write boundary.
       - Web:
@@ -25237,6 +25242,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.resolveBlockAnnotations`
           - `page/editor.serializePageContent`
           - `page/editor.StoredBlock`
+          - `page/links.loadBacklinkSources`
         - Exports (types):
           - `ApplyBlockOptions`
           - `ApplyReport`

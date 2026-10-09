@@ -12,7 +12,8 @@
 //
 // Where it differs from the banner: the banner is stripped only on BYTE-IDENTITY
 // with the stored title, because a changed title line is a rename to decide. The
-// header's fields are facts held elsewhere (the page's ancestry, its timestamps)
+// header's fields are facts held elsewhere (the page's ancestry, its timestamps, the
+// pages linking to it)
 // — READ-ONLY, like a tag's annotated attributes — so a header is recognised by
 // its STRUCTURE and its values are ignored. That is also what lets a document
 // read a minute ago still apply after the page's `edited` time moved. A field
@@ -30,7 +31,13 @@
 //         <page id="block-…" title="Singularity"/>
 //         <page id="block-…" title="Hosted"/>
 //       </breadcrumb>
+//       <backlinks>
+//         <page id="block-…" title="Roadmap"/>
+//       </backlinks>
 //     </page-meta>
+//
+// `<backlinks/>` (self-closing) when no page links here: the header states an
+// empty list rather than leaving the reader to guess what an absent one means.
 //
 // A paragraph can never open with `<` in this dialect (the inline serializer
 // escapes it, `core/markdown.ts`), so no block's line can be mistaken for the
@@ -40,10 +47,14 @@ import { formatTagLine, parseTagLine } from "@plugins/page/plugins/editor/core";
 
 const META_TAG = "page-meta";
 const BREADCRUMB_TAG = "breadcrumb";
+const BACKLINKS_TAG = "backlinks";
 const CRUMB_TAG = "page";
 const INDENT = "  ";
 
-/** One page of a breadcrumb: an address `read_page` takes, and its title. */
+/**
+ * One page of a breadcrumb or of the backlinks: an address `read_page` takes,
+ * and its title.
+ */
 export interface PageCrumb {
   id: string;
   title: string;
@@ -57,12 +68,46 @@ export interface PageMeta {
   edited: Date;
   /** Root first, ending with the page itself — "where am I" for any scope. */
   breadcrumb: readonly PageCrumb[];
+  /** The pages linking TO this one (`page/links`), a self-link excluded. */
+  backlinks: readonly PageCrumb[];
 }
 
-/** A header as read back: its attributes and breadcrumb, values unjudged. */
+/** A header as read back: its attributes and page lists, values unjudged. */
 export interface ParsedPageMeta {
   attrs: Record<string, string>;
   breadcrumb: PageCrumb[];
+  backlinks: PageCrumb[];
+}
+
+/** The header's page-list sections, in the order they are emitted. */
+type PageListTag = typeof BREADCRUMB_TAG | typeof BACKLINKS_TAG;
+const PAGE_LIST_KEY = {
+  [BREADCRUMB_TAG]: "breadcrumb",
+  [BACKLINKS_TAG]: "backlinks",
+} as const satisfies Record<PageListTag, keyof ParsedPageMeta>;
+
+function isPageListTag(name: string): name is PageListTag {
+  return Object.hasOwn(PAGE_LIST_KEY, name);
+}
+
+/** One `<tag>` section of `<page/>` lines — self-closing when it lists none. */
+function pageListLines(
+  tag: PageListTag,
+  pages: readonly PageCrumb[],
+): string[] {
+  if (pages.length === 0) return [`${INDENT}${formatTagLine(tag, {}, true)}`];
+  return [
+    `${INDENT}${formatTagLine(tag, {}, false)}`,
+    ...pages.map(
+      (page) =>
+        `${INDENT}${INDENT}${formatTagLine(
+          CRUMB_TAG,
+          { id: page.id, title: page.title },
+          true,
+        )}`,
+    ),
+    `${INDENT}</${tag}>`,
+  ];
 }
 
 /** Minute precision, UTC: `2026-10-07T18:02Z`. */
@@ -81,16 +126,8 @@ export function pageMetaHeader(meta: PageMeta): string {
       { created: minuteIso(meta.created), edited: minuteIso(meta.edited) },
       false,
     ),
-    `${INDENT}${formatTagLine(BREADCRUMB_TAG, {}, false)}`,
-    ...meta.breadcrumb.map(
-      (crumb) =>
-        `${INDENT}${INDENT}${formatTagLine(
-          CRUMB_TAG,
-          { id: crumb.id, title: crumb.title },
-          true,
-        )}`,
-    ),
-    `${INDENT}</${BREADCRUMB_TAG}>`,
+    ...pageListLines(BREADCRUMB_TAG, meta.breadcrumb),
+    ...pageListLines(BACKLINKS_TAG, meta.backlinks),
     `</${META_TAG}>`,
   ];
   return `${lines.join("\n")}\n\n`;
@@ -122,15 +159,19 @@ export function splitPageMeta(markdown: string): PageMetaSplit {
     return { ok: true, meta: null, header: "", rest: markdown };
   }
   const start = i;
-  const meta: ParsedPageMeta = { attrs: open.tag.attrs, breadcrumb: [] };
-  let inBreadcrumb = false;
+  const meta: ParsedPageMeta = {
+    attrs: open.tag.attrs,
+    breadcrumb: [],
+    backlinks: [],
+  };
+  // The page-list section the next `<page/>` line belongs to, if one is open.
+  let section: PageListTag | null = null;
+  const seen = new Set<PageListTag>();
   for (i += 1; i < lines.length; i += 1) {
     const line = lines[i]!.trim();
     if (line === `</${META_TAG}>`) {
-      if (inBreadcrumb) {
-        return refusal(
-          `<${BREADCRUMB_TAG}> is not closed before </${META_TAG}>`,
-        );
+      if (section !== null) {
+        return refusal(`<${section}> is not closed before </${META_TAG}>`);
       }
       let next = i + 1;
       if (next < lines.length && lines[next] === "") next += 1;
@@ -148,23 +189,26 @@ export function splitPageMeta(markdown: string): PageMetaSplit {
         `it has no closing </${META_TAG}> line before a blank line`,
       );
     }
-    if (line === `</${BREADCRUMB_TAG}>` && inBreadcrumb) {
-      inBreadcrumb = false;
+    if (section !== null && line === `</${section}>`) {
+      section = null;
       continue;
     }
     const tag = parseTagLine(line);
-    if (tag.ok && tag.tag.name === BREADCRUMB_TAG && !tag.tag.selfClosing) {
-      if (inBreadcrumb) return refusal(`<${BREADCRUMB_TAG}> is opened twice`);
-      inBreadcrumb = true;
+    if (tag.ok && section === null && isPageListTag(tag.tag.name)) {
+      if (seen.has(tag.tag.name)) {
+        return refusal(`<${tag.tag.name}> appears twice`);
+      }
+      seen.add(tag.tag.name);
+      if (!tag.tag.selfClosing) section = tag.tag.name;
       continue;
     }
     if (
       tag.ok &&
-      inBreadcrumb &&
+      section !== null &&
       tag.tag.name === CRUMB_TAG &&
       tag.tag.selfClosing
     ) {
-      meta.breadcrumb.push({
+      meta[PAGE_LIST_KEY[section]].push({
         id: tag.tag.attrs.id ?? "",
         title: tag.tag.attrs.title ?? "",
       });

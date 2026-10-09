@@ -108,6 +108,9 @@ just a page — with a header stating where it comes from:
     <page id="…" title="Singularity"/>
     <page id="…" title="Hosted"/>     ← the page holding the root, always last
   </breadcrumb>
+  <backlinks>                        ← `<backlinks/>` when nothing links here
+    <page id="…" title="Roadmap"/>
+  </backlinks>
 </page-meta>
 # Hosted
 ```
@@ -124,6 +127,10 @@ just a page — with a header stating where it comes from:
   `planOf`): an unknown line inside it could be content an agent wrote there.
 - **Opt-in**, because its `edited` time changes on every edit: instructions
   delivery hashes its documents, and a TODO's prompt embeds one.
+- `backlinks` is `page/links`' `loadBacklinkSources` (id + title of each live
+  page linking here, self-link excluded) — the edges the Backlinks panel lists.
+  No snippet: it is text of ANOTHER page, read without that page's audience
+  policy, so an agent wanting the context reads the source page itself.
 - `edited` is the editor's `readPageEditedAt`, the value behind the page's
   "Edited" label, so the two never disagree.
 
@@ -480,6 +487,7 @@ annotation in the key would make every status change look like a new block.
     - `page/editor.resolveBlockAnnotations`
     - `page/editor.serializePageContent`
     - `page/editor.StoredBlock`
+    - `page/links.loadBacklinkSources`
   - Exports (types):
     - `ApplyBlockOptions`
     - `ApplyReport`
