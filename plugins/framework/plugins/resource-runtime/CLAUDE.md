@@ -413,15 +413,19 @@ reaches each entry exactly once and resources move over one at a time. Design:
   `U` whose `unchanged` set lists them all is delivered in the `value` role
   whatever the use says: an identity U to a host outside the window, or a lookup
   row's projected-only column, loads nothing (an `I`, a `D` and an unknown
-  `unchanged` stay membership). A window / alias tuple drops a host reached only
-  in the `value` role when it is no member — but only while the tuple is QUIESCENT (snapshot, no
+  `unchanged` stay membership). Every tuple — window, alias or point (after
+  its cut to its own ids) — drops a host reached only in the `value` role when it
+  is no member — but only while the tuple is QUIESCENT (snapshot, no
   pending, not `draining`): a drain admitting that host may have read the side
   table before the write committed. The snapshot it reads is never regressed by a
-  sub-ack whose load predates a push (see H5c below).
+  sub-ack whose load predates a push (see H5c below), and a membership drain whose
+  loads all fail evicts it (its pending is consumed, so it could miss an entrant;
+  a persisted alias's kept snapshot excepted).
 - **Reverse routes resolve in the drain** (`resolveReverseRoutes`), once per
   (entry, route, flush) over the union of the pendings' changed values, capped at
-  500 (over-cap or a throw FULLs the readers). A `value`-role or point reader is
-  bounded to its members / point set; a membership reader is unbounded. The two
+  500 (over-cap or a throw FULLs the readers). A `value`-role reader is bounded to
+  its members (a point reader's: those of its own ids); a membership reader to
+  what could enter — a point reader's id set, a window's nothing (unbounded). The two
   resolve as groups: one unbounded probe serves every reader when it fits the
   cap (each bounded reader cuts it to its own ids); over the cap only the
   unbounded readers go FULL, and the bounded ones probe again within the union

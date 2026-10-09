@@ -19,11 +19,14 @@
  * - with nobody subscribed, the `{}` snapshot stays current (scoped, never
  *   FULL), and its trailing floor persist writes the current value.
  *
- * The `:rows` point sibling is subscribed beside it for two ids and follows
+ * The `:rows` point sibling is subscribed beside it for three ids and follows
  * the same routes: after every statement its view is the whole set's truth
  * restricted to those ids (a where-flip out makes a row absent, a delete
  * drops it, a child insert refills its host's aggregate, a flip back returns
- * it), and none of its loads is FULL after its subscribe either.
+ * it), and none of its loads is FULL after its subscribe either. The third id
+ * is an archived row — requested, never a member until it is flipped in — so
+ * a value-only write to it (a title, a child row its aggregate reads) costs
+ * the point tuple no load, and its where-flip in is an entrant.
  *
  * Then the C39 old-bundle harness (`subscribeAsOldDescriptor`) against the
  * same entry: what a tab still running a bundle that declared the key with a
@@ -86,6 +89,14 @@ const items = pgTable(ITEMS, {
   title: text("title").notNull(),
   rank: integer("rank").notNull(),
   archived: boolean("archived").notNull(),
+  /**
+   * Server-only: no row field and no route reads it. A routed trigger compares
+   * old and new only for the columns of a route that reads FEWER than the
+   * table has, so without it the one route on this table reads every column,
+   * nothing is compared, and every UPDATE arrives with `unchanged` unknown —
+   * a membership change for every tuple, never a value-only one.
+   */
+  memo: text("memo"),
 });
 const notes = pgTable(
   NOTES,
@@ -184,7 +195,8 @@ function canonical(v: unknown): string {
 
 /** The `:rows` tuple the oracle watches beside `{}`: canonical, as a client sends it. */
 const ROWS_KEY = `${KEY}:rows`;
-const POINT_IDS = ["a", "b"];
+/** `x` is archived — requested, but no member until it is flipped in. */
+const POINT_IDS = ["a", "b", "x"];
 const pointParams = collection.rows.point.encode(POINT_IDS);
 
 interface View {
@@ -256,7 +268,8 @@ beforeAll(async () => {
   await db.execute(
     sql.raw(
       `CREATE TABLE ${ITEMS} (id text PRIMARY KEY, title text NOT NULL,
-                              rank integer NOT NULL, archived boolean NOT NULL);
+                              rank integer NOT NULL, archived boolean NOT NULL,
+                              memo text);
        CREATE TABLE ${NOTES} (id text PRIMARY KEY, item_id text NOT NULL);
        CREATE INDEX sao_notes_item_idx ON ${NOTES} (item_id);`,
     ),
@@ -388,7 +401,8 @@ describe("serveCollection `all` — runtime oracle over the real feed", () => {
     // FULL once (and persisted) — the only FULL load of the run.
     const seedFrom = routed.length;
     await db.execute(
-      sql.raw(`INSERT INTO ${ITEMS} VALUES ('a', 'A', 1, false), ('b', 'B', 2, false), ('c', 'C', 3, false);
+      sql.raw(`INSERT INTO ${ITEMS} VALUES ('a', 'A', 1, false), ('b', 'B', 2, false), ('c', 'C', 3, false),
+                                           ('x', 'X', 5, true);
                INSERT INTO ${NOTES} VALUES ('n1', 'a');`),
     );
     await settled(NOTES, seedFrom);
@@ -459,6 +473,37 @@ describe("serveCollection `all` — runtime oracle over the real feed", () => {
     expect((pointValue() as Array<{ id: string }>).map((r) => r.id)).toEqual([
       "a",
     ]);
+    // `x` — requested by the point tuple, archived so no member — takes a
+    // value-only write of each kind. Neither the whole set (no snapshot row)
+    // nor the point tuple (an id it does not hold) loads anything.
+    const pointCost = async (table: string, statement: string) => {
+      const from = rowLoads.length;
+      const cost = await check(await step(table, statement));
+      return { ...cost, rowLoads: rowLoads.slice(from) };
+    };
+    expect(
+      await pointCost(ITEMS, `UPDATE ${ITEMS} SET title = 'X2' WHERE id = 'x'`),
+    ).toEqual({ loads: [], orderOf: 0, rowLoads: [] });
+    expect(
+      await pointCost(NOTES, `INSERT INTO ${NOTES} VALUES ('n3', 'x')`),
+    ).toEqual({ loads: [], orderOf: 0, rowLoads: [] });
+    // Its where-flip in is an entrant in both, carrying the writes it skipped.
+    expect(
+      await pointCost(
+        ITEMS,
+        `UPDATE ${ITEMS} SET archived = false WHERE id = 'x'`,
+      ),
+    ).toEqual({
+      loads: [{ ids: ["x"] }],
+      orderOf: 1,
+      rowLoads: [{ ids: ["x"] }],
+    });
+    expect(pointValue()).toContainEqual({
+      id: "x",
+      title: "X2",
+      rank: 5,
+      notes: 1,
+    });
     // Never once FULL after the subscribe — the whole set nor its point sibling.
     expect(loads.slice(baseline).some((l) => l.ids === "FULL")).toBe(false);
     expect(rowLoads.slice(rowBaseline).some((l) => l.ids === "FULL")).toBe(

@@ -15,8 +15,9 @@
  *
  * After every step:
  *
- * - the subscribed `{}` view and the `:rows` point view (over A, D) equal a
- *   fresh FULL load;
+ * - the subscribed `{}` view and both `:rows` point views equal a fresh FULL
+ *   load: one over A, D (two pages), and one over A, P — a page and a content
+ *   paragraph, the shape `useBlockTarget` once subscribed;
  * - each `pageId` group of the set, sorted by `docRank`, is document order —
  *   `docOrderRows` + `compareDocOrder`, the order the old `pages` loader
  *   derived on every load (parity);
@@ -25,6 +26,13 @@
  *   exactly the pages the reconcile re-minted; an insert or a restore is one
  *   refill and one `orderOf`; a trash an exit after its one-id probe;
  * - nothing is ever loaded FULL after the subscribe.
+ *
+ * The A, P tuple then walks P through every membership edge: a value-only
+ * write to P while it is no member loads NOTHING in it (the point tuple drops
+ * a value-only change to an id it does not hold); turning P into a page is an
+ * entrant (the positive control), a write to it then a refill, turning it back
+ * an exit, and a trash / restore of it as content stays membership — probed,
+ * and nothing enters.
  *
  * Then C39: a tab still running a bundle that subscribed the old key `pages`
  * is refused `unknown-key`, a `skew` verdict (the Reload prompt).
@@ -195,13 +203,24 @@ async function expectParity(label: string): Promise<void> {
   });
 }
 
-/** What a step must cost: the set's loads and `orderOf` calls, and the `:rows` (A, D) reader's loads. */
+/**
+ * What a step must cost: the set's loads and `orderOf` calls, and the `:rows`
+ * readers' loads — both tuples' together (a load names its ids, not its
+ * tuple), compared as a multiset since the two tuples drain in either order.
+ */
 interface StepCost {
   loads: TreeLoad[];
   orderOf: number;
   rowLoads: TreeLoad[];
 }
 const NOTHING: StepCost = { loads: [], orderOf: 0, rowLoads: [] };
+
+/** Loads in a fixed order, so two tuples' loads compare whatever order they drained in. */
+function sortedLoads(loads: readonly TreeLoad[]): TreeLoad[] {
+  return [...loads].sort((a, b) =>
+    JSON.stringify(a.ids) < JSON.stringify(b.ids) ? -1 : 1,
+  );
+}
 
 async function runSql(step: TreeStep, cost: StepCost): Promise<void> {
   const got = await oracle.run(step);
@@ -211,13 +230,26 @@ async function runSql(step: TreeStep, cost: StepCost): Promise<void> {
     step: step.label,
     loads: got.loads[KEY] ?? [],
     orderOf: got.orderOf[KEY] ?? 0,
-    rowLoads: got.loads[ROWS_KEY] ?? [],
-  }).toEqual({ step: step.label, ...cost });
+    rowLoads: sortedLoads(got.loads[ROWS_KEY] ?? []),
+  }).toEqual({
+    step: step.label,
+    ...cost,
+    rowLoads: sortedLoads(cost.rowLoads),
+  });
+}
+
+/** The ids a `:rows` view holds, sorted. */
+function rowIds(params: Record<string, string>): string[] {
+  return PageRowSchema.array()
+    .parse(oracle.view(ROWS_KEY, params))
+    .map((r) => r.id)
+    .sort();
 }
 
 /**
  * Run a REAL writer, then a no-cost sync write (a fold toggle on the content
- * paragraph: no member, so it loads nothing) through the oracle so the
+ * paragraph: no member of the set, and a value-only write to an id the A, P
+ * tuple does not hold — so it loads nothing) through the oracle so the
  * runtime has gone quiet over both. The writer's own changes commit — and so
  * route — first; the loads since the writer started are its cost. (`orderOf`
  * is counted per `run`, so a writer step pins loads only.)
@@ -302,8 +334,12 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
     await oracle.subscribe(KEY);
     const pointParams = pagesTree.rows.point.encode([A, D]);
     await oracle.subscribe(ROWS_KEY, pointParams);
+    // A page and a content paragraph: P is requested but no member.
+    const contentParams = pagesTree.rows.point.encode([A, P]);
+    await oracle.subscribe(ROWS_KEY, contentParams);
     await oracle.converged("seed");
     await expectParity("seed");
+    expect(rowIds(contentParams)).toEqual([A]);
     expect(setOrder(PageRowSchema.array().parse(oracle.view(KEY)))).toEqual({
       "<root>": [W, X],
       [W]: [A, B, D],
@@ -312,7 +348,9 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
 
     // A keystroke burst's `data.text` projection on a content block: no page
     // row changed, so nothing loads — the cost the legacy loader paid twice
-    // (membership select + doc-order CTE) on every one.
+    // (membership select + doc-order CTE) on every one. Nor in the A, P tuple,
+    // which requests P: a `data`-only write moves no column its membership
+    // reads, and P is no member, so the point tuple drops it.
     await runSql(
       {
         label: "typing",
@@ -357,10 +395,14 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
       .sort();
     expect(reminted.length).toBeGreaterThan(0);
     expect(drag.loads).toEqual([{ ids: reminted }]);
-    expect(drag.rowLoads).toEqual(
-      reminted.some((id) => id === A || id === D)
-        ? [{ ids: reminted.filter((id) => id === A || id === D) }]
-        : [],
+    // Each point tuple refills the re-minted pages it holds; the sync fold
+    // toggle on P costs the A, P tuple nothing (a value-only write, no member).
+    const heldBy = (ids: readonly string[]): TreeLoad[] => {
+      const held = reminted.filter((id) => ids.includes(id));
+      return held.length > 0 ? [{ ids: held }] : [];
+    };
+    expect(sortedLoads(drag.rowLoads)).toEqual(
+      sortedLoads([...heldBy([A, D]), ...heldBy([A, P])]),
     );
     expect(setOrder(PageRowSchema.array().parse(oracle.view(KEY)))[W]).toEqual([
       D,
@@ -411,12 +453,91 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
       { loads: [{ ids: [X] }], orderOf: 1, rowLoads: [] },
     );
 
+    // P through every membership edge, in the A, P tuple. A positive control
+    // first: turning P into a page (a `type` write, with the `doc_rank` the
+    // reconcile would mint — first in W's group, before D) is an entrant, in
+    // the set (one refill, one `orderOf`) and in the tuple.
+    const ranks = await docRanks();
+    const firstInW = Rank.between(null, Rank.from(ranks.get(D)!)).toString();
+    await runSql(
+      {
+        label: "P.turn-into-page",
+        statements: [
+          `UPDATE page_blocks SET type = 'page', data = '${pagePayload(P)}'::jsonb,
+                  doc_rank = '${firstInW}' WHERE id = '${P}'`,
+        ],
+      },
+      { loads: [{ ids: [P] }], orderOf: 1, rowLoads: [{ ids: [P] }] },
+    );
+    expect(rowIds(contentParams)).toEqual([P, A].sort());
+
+    // A data write to P, now a member: its refill, in the set and the tuple.
+    await runSql(
+      {
+        label: "P.member-write",
+        statements: [
+          `UPDATE page_blocks SET data = '${pagePayload("P typed")}'::jsonb WHERE id = '${P}'`,
+        ],
+      },
+      { loads: [{ ids: [P] }], orderOf: 0, rowLoads: [{ ids: [P] }] },
+    );
+
+    // Back into content: a where-flip exit — one one-id probe in each reader,
+    // found gone, no `orderOf`.
+    await runSql(
+      {
+        label: "P.turn-into-content",
+        statements: [
+          `UPDATE page_blocks SET type = '${paraStub.type}',
+                  data = '{"text":[{"text":"back"}]}'::jsonb, doc_rank = NULL
+           WHERE id = '${P}'`,
+        ],
+      },
+      { loads: [{ ids: [P] }], orderOf: 0, rowLoads: [{ ids: [P] }] },
+    );
+    expect(rowIds(contentParams)).toEqual([A]);
+
+    // A trash and a restore of P as content: `deleted_at` is a column the
+    // membership reads, so each stays a membership change — probed by id in
+    // the set and the tuple — yet P is no page either way, so nothing enters.
+    await runSql(
+      {
+        label: "P.trash",
+        statements: [
+          `UPDATE page_blocks SET deleted_at = now(), trash_entry_id = 'te-p' WHERE id = '${P}'`,
+        ],
+      },
+      { loads: [{ ids: [P] }], orderOf: 0, rowLoads: [{ ids: [P] }] },
+    );
+    await runSql(
+      {
+        label: "P.restore",
+        statements: [
+          `UPDATE page_blocks SET deleted_at = NULL, trash_entry_id = NULL WHERE id = '${P}'`,
+        ],
+      },
+      { loads: [{ ids: [P] }], orderOf: 0, rowLoads: [{ ids: [P] }] },
+    );
+    expect(rowIds(contentParams)).toEqual([A]);
+
+    // And typing into P, a non-member again: nothing, in either reader.
+    await runSql(
+      {
+        label: "P.typing-again",
+        statements: [
+          `UPDATE page_blocks SET data = '{"text":[{"text":"typing again…"}]}'::jsonb WHERE id = '${P}'`,
+        ],
+      },
+      NOTHING,
+    );
+
     expect(
       oracle
         .loadsOf(KEY)
         .slice(baseline)
         .some((l) => l.ids === "FULL"),
     ).toBe(false);
+    oracle.unsubscribe(ROWS_KEY, contentParams);
     oracle.unsubscribe(ROWS_KEY, pointParams);
     oracle.unsubscribe(KEY);
   });

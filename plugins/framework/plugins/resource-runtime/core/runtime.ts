@@ -913,9 +913,10 @@ interface RoutingRecord {
 }
 
 /**
- * A `TupleRouting` after the runtime shaped it by the tuple's membership kind
- * (`shapeForTuple`): every value-only host is either kept as `affected` or
- * dropped, so no unshaped `valueOnly` set can reach the scheduler.
+ * A `TupleRouting` after the runtime shaped it (`shapeForTuple`): a point tuple's
+ * hosts cut to its own ids, then — one rule for every kind — each value-only host
+ * either kept as `affected` (the tuple holds it, or is not quiescent) or dropped,
+ * so no unshaped `valueOnly` set can reach the scheduler.
  */
 type ShapedRouting =
   | Exclude<TupleRouting, { kind: "scoped" }>
@@ -1028,9 +1029,9 @@ interface RegistryEntry {
    * The pks whose pending this entry's drain has taken and not finished — set at
    * the drain's snapshot+clear, cleared when the drain settles. With
    * `pendingNotifies` it defines a QUIESCENT tuple: the router may drop a
-   * value-role change to a non-member only when neither holds its pk, since a
-   * drain admitting that host may already have read the side table before the
-   * write committed.
+   * value-only change to a non-member — of any membership kind, point included —
+   * only when neither holds its pk, since a drain admitting that host may
+   * already have read the side table before the write committed.
    */
   draining: Set<string>;
   /** Present ⇒ a routed entry (see `ResourceDefinition.routes`). */
@@ -3681,6 +3682,14 @@ export function createResourceRuntime(
   // PERSISTED unbounded-window alias recomputes on every change whether or not
   // anyone is subscribed, and reconstructs its persisted value FROM the
   // snapshot, so it keeps it across N→0 (see `releaseSubRefcount`).
+  // Drop a tuple's keyed diff base; the order signatures and base floor go with
+  // it (their lifecycle mirrors the snapshot's).
+  function evictSnapshot(entry: RegistryEntry, pk: string): void {
+    entry.snapshots?.delete(pk);
+    entry.orderSigs?.delete(pk);
+    entry.baseFloors?.delete(pk);
+  }
+
   function keepsIdleSnapshot(entry: RegistryEntry): boolean {
     return (
       isUnboundedWindow(entry) &&
@@ -4195,7 +4204,21 @@ export function createResourceRuntime(
       } catch (err) {
         if (evictOnContractError(entry, params, err)) return;
         reportLoaderError(`loader failed for ${entry.key}`, err);
-        return; // never ship or cascade a torn read; snapshot untouched — and no ack (no false ack on failure)
+        // The pending is consumed, so the snapshot may now miss a real member
+        // this change admitted — and the router reads membership off it: a
+        // quiescent tuple would drop that member's every later value-only
+        // change for good. Evict it instead (as at N→0), so the tuple is not
+        // quiescent and its next change is a FULL that re-seeds it. A kept
+        // (persisted alias) snapshot is the L2 floor persist's source, so it
+        // stays.
+        if (
+          owner !== "kept" &&
+          owner !== undefined &&
+          snapshotOwner(entry, pk) === owner
+        ) {
+          evictSnapshot(entry, pk);
+        }
+        return; // never ship or cascade a torn read — and no ack (no false ack on failure)
       }
       // L2 persist floors the row with the FLIGHT's own watermark — the one its
       // starter captured before its first read — instead of a separately
@@ -4775,26 +4798,36 @@ export function createResourceRuntime(
     }
   }
 
-  // The ids one pending's answer from a reverse route is bounded to: a point
-  // tuple's own id set, the members of a window / alias tuple that read the route
-  // only in the value role, or null (unbounded). `"full"` when a point set cannot
-  // be decoded — its refill would otherwise admit ids outside the set.
+  // The ids one pending's answer from a reverse route is bounded to, by the
+  // same rule as `shapeForTuple`: a tuple that reads the route only in the value
+  // role resolves within its members (its snapshot's keys — for a point tuple,
+  // those of its own ids), since a value-role change cannot admit anyone. A
+  // membership-role reader is bounded only by what could enter: a point tuple's
+  // own id set, or nothing (null) for a window / alias. With no snapshot to
+  // read members off, a point tuple falls back to its id set and a window to
+  // unbounded. `"full"` when a point set cannot be decoded — its refill would
+  // otherwise admit ids outside the set.
   function reverseWithin(
     entry: RegistryEntry,
     pending: PendingNotify,
     membershipRole: boolean,
   ): ReadonlySet<string> | null | "full" {
     const membership = entry.membership;
+    const snapshot = membershipRole
+      ? undefined
+      : entry.snapshots?.get(paramsKey(pending.params));
     if (membership?.kind === "point") {
+      let ids: Set<string>;
       try {
-        return new Set(membership.idsOf(pending.params));
+        ids = new Set(membership.idsOf(pending.params));
       } catch (err) {
         reportLoaderError(`idsOf failed for ${entry.key}`, err);
         return "full";
       }
+      return snapshot
+        ? new Set([...ids].filter((id) => snapshot.has(id)))
+        : ids;
     }
-    if (membershipRole) return null;
-    const snapshot = entry.snapshots?.get(paramsKey(pending.params));
     return snapshot ? new Set(snapshot.keys()) : null;
   }
 
@@ -5761,11 +5794,7 @@ export function createResourceRuntime(
       // opted-in persisted resources; bounded-membership entries (never
       // persisted) evict like any other keyed entry — the resubscribe opens a
       // new tracking span, so it takes the full path and re-seeds.
-      if (!keepsIdleSnapshot(entry)) {
-        entry.snapshots?.delete(pk);
-        entry.orderSigs?.delete(pk); // lifecycle mirrors the snapshot eviction
-        entry.baseFloors?.delete(pk);
-      }
+      if (!keepsIdleSnapshot(entry)) evictSnapshot(entry, pk);
       if (entry.onLastUnsubscribe) {
         try {
           entry.onLastUnsubscribe(params);
@@ -6341,16 +6370,20 @@ export function createResourceRuntime(
     return uses;
   }
 
-  // Shape a scoped outcome by the tuple's membership kind. A point tuple keeps
-  // only the ids in its own set, whatever the role. A window / alias tuple keeps
-  // a value-only host (one reached only through value-role routes, which cannot
-  // move membership) only if it is a member — but only while the tuple is
-  // QUIESCENT: a snapshot, no pending, not draining. Otherwise a drain that is
-  // admitting that host may have read the side table before this write
-  // committed, and dropping the change would leave the host stale for good; so it
-  // is delivered as membership instead (one extra refill, at worst). The same
-  // guard turns its value-role reverse routes into membership ones (resolved
-  // without the members bound).
+  // Shape a scoped outcome by the tuple's membership kind, with ONE rule. A
+  // point tuple first keeps only the ids in its own set, whatever the role.
+  // Then, whatever the kind, a value-only host (one reached only through
+  // value-role routes, or a `U` that left every `moves` column unchanged — it
+  // cannot move membership) is kept only if the tuple holds it — but only while
+  // the tuple is QUIESCENT: a snapshot, no pending, not draining. Otherwise a
+  // drain that is admitting that host may have read the side table before this
+  // write committed, and dropping the change would leave the host stale for
+  // good; so it is delivered as membership instead (one extra refill, at
+  // worst). The same guard turns its value-role reverse routes into membership
+  // ones (resolved without the members bound — see `reverseWithin`). A point
+  // snapshot is exactly the members its loader returned, so a requested id it
+  // does not hold is not a member (a drain that fails evicts it rather than
+  // leave it missing an entrant — see `drainMembershipFull`).
   function shapeForTuple(
     entry: RegistryEntry,
     pk: string,
@@ -6359,17 +6392,14 @@ export function createResourceRuntime(
   ): ShapedRouting {
     if (outcome.kind !== "scoped") return outcome;
     const membership = entry.membership!;
-    const { affected, valueOnly, deleted } = outcome;
+    let { affected, valueOnly, deleted } = outcome;
     if (membership.kind === "point") {
       const ids = new Set(membership.idsOf(params));
       const inSet = (set: ReadonlySet<string>) =>
         new Set([...set].filter((id) => ids.has(id)));
-      return {
-        kind: "scoped",
-        affected: inSet(new Set([...affected, ...valueOnly])),
-        deleted: inSet(deleted),
-        unresolved: outcome.unresolved,
-      };
+      affected = inSet(affected);
+      valueOnly = inSet(valueOnly);
+      deleted = inSet(deleted);
     }
     const snapshot = entry.snapshots?.get(pk);
     const quiescent =

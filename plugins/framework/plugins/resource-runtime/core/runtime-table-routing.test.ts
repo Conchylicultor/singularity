@@ -8,7 +8,8 @@
  * `hosts_ext` (a 1:1 extension keyed by its host — an `alias` route), and
  * `sources` (an N:1 lookup the hosts reference — a `reverse` route). The window
  * orders hosts by `n`; `tag` / `enabled` params filter by the joined columns,
- * which is what turns their routes from the `value` role into `membership`.
+ * which is what turns their routes from the `value` role into `membership`; a
+ * `maxN` param filters by the base's own `n` (a point tuple's `where`).
  *
  * The matrix (op × map kind × role × membership kind × several routes on one
  * table) pins, per cell: which tuples get a pending, scoped vs FULL vs ack-only,
@@ -69,6 +70,7 @@ function makeWorld() {
   const matches = (p: ResourceParams, id: string): boolean => {
     const h = hosts.get(id);
     if (!h) return false;
+    if (p.maxN !== undefined && h.n > Number(p.maxN)) return false;
     if (p.tag !== undefined && ext.get(id) !== p.tag) return false;
     if (p.enabled === "1" && !(h.src !== null && sources.get(h.src)?.enabled))
       return false;
@@ -149,7 +151,8 @@ interface FixtureOpts {
 // `limit` members; `point` = the ids named by the `ids` param; `alias` = the
 // unbounded `scopedMembership` window. Records every loader call, windowIdsOf
 // run and resolve call; `park()` makes the NEXT loader call capture its rows and
-// then wait — a SELECT that already ran — until released.
+// then wait — a SELECT that already ran — until released; `failLoads(n)` makes
+// the next `n` loader calls throw (recorded all the same).
 function routed(opts: FixtureOpts = {}) {
   const w = makeWorld();
   const loads: Array<{ params: ResourceParams; ids: string[] | "FULL" }> = [];
@@ -157,6 +160,7 @@ function routed(opts: FixtureOpts = {}) {
   const reports: string[] = [];
   let windowIdsCalls = 0;
   let parkNext: Promise<void> | null = null;
+  let failing = 0;
   const h = createHarness({
     reportError: (ctx) => reports.push(ctx),
     ...opts.runtime,
@@ -178,6 +182,10 @@ function routed(opts: FixtureOpts = {}) {
     c?: { affectedIds: readonly string[] },
   ): Promise<Row[]> => {
     loads.push({ params: p, ids: c ? [...c.affectedIds].sort() : "FULL" });
+    if (failing > 0) {
+      failing--;
+      throw new Error("injected loader failure");
+    }
     const rows = c
       ? c.affectedIds.filter((id) => w.matches(p, id)).map(w.rowOf)
       : full(p);
@@ -273,6 +281,9 @@ function routed(opts: FixtureOpts = {}) {
         release = r;
       });
       return release;
+    },
+    failLoads(n: number): void {
+      failing = n;
     },
     framesOf,
     pushesOf: (params: ResourceParams) =>
@@ -427,6 +438,31 @@ describe("alias routes", () => {
     f.change("hosts", "U", { ids: ["h1"] });
     await settle();
     expect(deltas(f.pushesOf(W3)).at(-1)!.version).toBe(base + 1);
+  });
+
+  test("point twin: a value-role write to a requested NON-member's extension loads nothing; its writer still gets its ack, and no version moves", async () => {
+    // h4 is requested but outside `maxN` — not a member of the point snapshot.
+    const P = { ids: "h1,h4", maxN: "3" };
+    const f = routed({ kind: "point" });
+    seed(f);
+    await f.h.subscribe("win", P, { acks: true });
+    const base = f.framesOf(P).find((x) => x.kind === "sub-ack")!.version!;
+    const at = f.loads.length;
+    f.w.ext.set("h4", "x");
+    f.change("hosts_ext", "I", {
+      ids: ["h4"],
+      keys: { parent_id: ["h4"] },
+      xid: "701",
+    });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([]);
+    expect(f.pushesOf(P).map((x) => [x.kind, x.ackTx])).toEqual([
+      ["ack", ["701"]],
+    ]);
+    f.w.hosts.get("h1")!.n = 1.5;
+    f.change("hosts", "U", { ids: ["h1"] });
+    await settle();
+    expect(deltas(f.pushesOf(P)).at(-1)!.version).toBe(base + 1);
   });
 
   test("a side-table I / U / D is a host U: an extension DELETE refills its host, never deletes it", async () => {
@@ -834,114 +870,215 @@ describe("full routes, gate, key filter, several routes per table", () => {
 
 // --- `moves`: a U that cannot move the tuple is a value change for it ----------
 
-describe("moves — a membership use's membership-neutral U", () => {
-  // The base moves on `n` (the order) only, the lookup on `enabled` (a
-  // filtered tuple's predicate) and `id` (its join key).
-  const movingUses = (p: ResourceParams): ReadonlyMap<string, TupleUse> =>
-    new Map<string, TupleUse>([
-      ["hosts", { role: "membership", moves: ["n"] }],
-      ["ext", { role: p.tag !== undefined ? "membership" : "value" }],
-      [
-        "src",
-        p.enabled === "1"
-          ? { role: "membership", moves: ["enabled", "id"] }
-          : { role: "value" },
-      ],
-    ]);
+// Each case runs for a window and for a point tuple. The point set names a
+// member (h1), requested non-members (h3, h4: outside `maxN`) and an absent
+// row (h0), so a non-member's neutral U is dropped there too, and a move on `n`
+// (its `where`) admits it.
+const POINT = { ids: "h0,h1,h3,h4", maxN: "2" };
+interface MovesCase {
+  kind: "window" | "point";
+  base: ResourceParams;
+  race: ResourceParams;
+  filtered: ResourceParams;
+  filteredMembers: string[];
+  entrantWithin: string[] | null;
+  /** The loads an identity D of member h1 costs (after h0 entered). */
+  exitLoads: string[][];
+}
+describe.each<MovesCase>([
+  {
+    kind: "window",
+    base: W3,
+    race: { limit: "2" },
+    filtered: { limit: "3", enabled: "1" },
+    filteredMembers: ["h1", "h2"],
+    entrantWithin: null,
+    // The window [h0, h1, h2] loses h1 and backfills its new tail, h3.
+    exitLoads: [["h3"]],
+  },
+  {
+    kind: "point",
+    base: POINT,
+    race: POINT,
+    // `maxN: 3` lets h3 in once its source is enabled (the reverse entrant).
+    filtered: { ...POINT, maxN: "3", enabled: "1" },
+    filteredMembers: ["h1"],
+    // A membership-role reverse is bounded by what could enter: the id set.
+    entrantWithin: ["h0", "h1", "h3", "h4"],
+    // A point set has no tail: the exit loads nothing.
+    exitLoads: [],
+  },
+])(
+  "moves — a membership use's membership-neutral U ($kind)",
+  ({
+    kind,
+    base,
+    race,
+    filtered,
+    filteredMembers,
+    entrantWithin,
+    exitLoads,
+  }) => {
+    // The base moves on `n` (the order, and the point `where`) only, the
+    // lookup on `enabled` (a filtered tuple's predicate) and `id` (its join key).
+    const movingUses = (p: ResourceParams): ReadonlyMap<string, TupleUse> =>
+      new Map<string, TupleUse>([
+        ["hosts", { role: "membership", moves: ["n"] }],
+        ["ext", { role: p.tag !== undefined ? "membership" : "value" }],
+        [
+          "src",
+          p.enabled === "1"
+            ? { role: "membership", moves: ["enabled", "id"] }
+            : { role: "value" },
+        ],
+      ]);
+    const ids = (f: Fixture, params: ResourceParams) =>
+      (f.clientValue(params) as Row[]).map((r) => r.id);
+    // The client converged to the loader's truth. A point set is unordered
+    // (an entrant appends), so it is compared by id; a window in order.
+    const expectConverged = (f: Fixture, params: ResourceParams) => {
+      const byId = (rows: Row[]) =>
+        kind === "point"
+          ? [...rows].sort((a, b) => (a.id < b.id ? -1 : 1))
+          : rows;
+      expect(byId(f.clientValue(params) as Row[])).toEqual(
+        byId(f.full(params)),
+      );
+    };
 
-  test("an identity U missing every moving column refills only a member, with no windowIdsOf; a non-member loads nothing", async () => {
-    const f = await seeded({ uses: movingUses });
-    const at = f.loads.length;
-    const ids = f.windowIdsCalls;
-    f.w.hosts.get("h1")!.src = "s2";
-    f.change("hosts", "U", { ids: ["h1"], unchanged: ["id", "n"] });
-    await settle();
-    // Quiescent again (a pending would deliver it as membership — the guard).
-    f.change("hosts", "U", { ids: ["h4"], unchanged: ["id", "n"] });
-    await settle();
-    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h1"] }]);
-    expect(f.windowIdsCalls).toBe(ids);
-    expect(f.clientValue(W3)).toEqual(f.full(W3));
-  });
-
-  test("an identity U touching a moving column stays membership: a non-member is a candidate entrant", async () => {
-    const f = await seeded({ uses: movingUses });
-    const at = f.loads.length;
-    f.w.hosts.get("h4")!.n = 0;
-    f.change("hosts", "U", { ids: ["h4"], unchanged: ["id", "src"] });
-    await settle();
-    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h4"] }]);
-    expect(f.clientValue(W3)).toEqual(f.full(W3));
-  });
-
-  test("a membership-neutral U to a non-member is still delivered while the tuple has a pending (the quiescence guard)", async () => {
-    const f = await seeded({ uses: movingUses });
-    const at = f.loads.length;
-    f.w.hosts.get("h4")!.n = 0; // a real move: h4 is a candidate entrant…
-    f.change("hosts", "U", { ids: ["h4"], unchanged: ["id", "src"] });
-    // …and, in the same flush, a neutral U to non-member h3 (its source).
-    f.w.hosts.get("h3")!.src = "s1";
-    f.change("hosts", "U", { ids: ["h3"], unchanged: ["id", "n"] });
-    await settle();
-    expect(f.loadsSince(at)[0]).toEqual({ params: W3, ids: ["h3", "h4"] });
-    expect(f.clientValue(W3)).toEqual(f.full(W3));
-  });
-
-  test("a membership-neutral U to the host a drain is admitting ends fresh (the quiescence race, via `moves`)", async () => {
-    const L2 = { limit: "2" };
-    const f = await seeded({ uses: movingUses }, L2);
-    const release = f.park();
-    f.w.hosts.get("h3")!.n = 0; // h3 enters the window…
-    f.change("hosts", "U", { ids: ["h3"], unchanged: ["id", "src"] });
-    await tick(); // …its refill read source s2 and parked
-    // A neutral U (only `src` moved) commits mid-drain: h3 is no member of
-    // the snapshot yet, but it must not be dropped as a value change.
-    f.w.hosts.get("h3")!.src = "s1";
-    f.change("hosts", "U", { ids: ["h3"], unchanged: ["id", "n"] });
-    release();
-    await settle();
-    await settle();
-    expect(f.clientValue(L2)).toEqual(f.full(L2));
-    expect((f.clientValue(L2) as Row[])[0]).toMatchObject({
-      id: "h3",
-      label: "S1",
+    test("an identity U missing every moving column refills only a member, with no windowIdsOf; a non-member loads nothing", async () => {
+      const f = await seeded({ kind, uses: movingUses }, base);
+      const at = f.loads.length;
+      const calls = f.windowIdsCalls;
+      f.w.hosts.get("h1")!.src = "s2";
+      f.change("hosts", "U", { ids: ["h1"], unchanged: ["id", "n"] });
+      await settle();
+      // Quiescent again (a pending would deliver it as membership — the guard).
+      f.change("hosts", "U", { ids: ["h4"], unchanged: ["id", "n"] });
+      await settle();
+      expect(f.loadsSince(at)).toEqual([{ params: base, ids: ["h1"] }]);
+      expect(f.windowIdsCalls).toBe(calls);
+      expectConverged(f, base);
     });
-  });
 
-  test("unknown `unchanged`, an I and a D stay membership whatever `moves` says", async () => {
-    const f = await seeded({ uses: movingUses });
-    const at = f.loads.length;
-    f.w.hosts.set("h0", { n: 0, src: "s1" });
-    f.change("hosts", "I", { ids: ["h0"] });
-    f.change("hosts", "U", { ids: ["h4"], unchanged: null });
-    await settle();
-    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h0", "h4"] }]);
-    expect(f.clientValue(W3)).toEqual(f.full(W3));
-  });
+    test("an identity U touching a moving column stays membership: a non-member is a candidate entrant", async () => {
+      const f = await seeded({ kind, uses: movingUses }, base);
+      const at = f.loads.length;
+      f.w.hosts.get("h4")!.n = 0;
+      f.change("hosts", "U", { ids: ["h4"], unchanged: ["id", "src"] });
+      await settle();
+      expect(f.loadsSince(at)).toEqual([{ params: base, ids: ["h4"] }]);
+      expectConverged(f, base);
+      expect(ids(f, base)).toContain("h4"); // the positive control: it entered
+    });
 
-  test("a reverse route's U missing its moving columns resolves within the members; one touching them resolves unbounded", async () => {
-    const E = { limit: "3", enabled: "1" };
-    const f = await seeded({ uses: movingUses }, E);
-    f.w.sources.get("s1")!.label = "S1'";
-    f.change("sources", "U", {
-      ids: ["s1"],
-      keys: { id: ["s1"] },
-      unchanged: ["enabled", "id"],
+    test("a membership-neutral U to a non-member is still delivered while the tuple has a pending (the quiescence guard)", async () => {
+      const f = await seeded({ kind, uses: movingUses }, base);
+      const at = f.loads.length;
+      f.w.hosts.get("h4")!.n = 0; // a real move: h4 is a candidate entrant…
+      f.change("hosts", "U", { ids: ["h4"], unchanged: ["id", "src"] });
+      // …and, in the same flush, a neutral U to h3 (its source).
+      f.w.hosts.get("h3")!.src = "s1";
+      f.change("hosts", "U", { ids: ["h3"], unchanged: ["id", "n"] });
+      await settle();
+      expect(f.loadsSince(at)[0]).toEqual({ params: base, ids: ["h3", "h4"] });
+      expectConverged(f, base);
     });
-    await settle();
-    expect(f.resolveLog).toEqual([{ changed: ["s1"], within: ["h1", "h2"] }]);
-    f.resolveLog.length = 0;
-    f.w.sources.get("s2")!.enabled = true;
-    f.change("sources", "U", {
-      ids: ["s2"],
-      keys: { id: ["s2"] },
-      unchanged: ["id", "label"],
+
+    test("a membership-neutral U to the host a drain is admitting ends fresh (the quiescence race, via `moves`)", async () => {
+      const f = await seeded({ kind, uses: movingUses }, race);
+      const release = f.park();
+      f.w.hosts.get("h3")!.n = 0; // h3 enters the tuple…
+      f.change("hosts", "U", { ids: ["h3"], unchanged: ["id", "src"] });
+      await tick(); // …its refill read source s2 and parked
+      // A neutral U (only `src` moved) commits mid-drain: h3 is no member of
+      // the snapshot yet, but it must not be dropped as a value change.
+      f.w.hosts.get("h3")!.src = "s1";
+      f.change("hosts", "U", { ids: ["h3"], unchanged: ["id", "n"] });
+      release();
+      await settle();
+      await settle();
+      expectConverged(f, race);
+      expect(
+        (f.clientValue(race) as Row[]).find((r) => r.id === "h3"),
+      ).toMatchObject({ label: "S1" });
     });
-    await settle();
-    expect(f.resolveLog).toEqual([{ changed: ["s2"], within: null }]);
-    expect(f.clientValue(E)).toEqual(f.full(E));
-  });
-});
+
+    test("unknown `unchanged`, an I and a D stay membership whatever `moves` says", async () => {
+      const f = await seeded({ kind, uses: movingUses }, base);
+      const at = f.loads.length;
+      f.w.hosts.set("h0", { n: 0, src: "s1" });
+      f.change("hosts", "I", { ids: ["h0"] });
+      f.change("hosts", "U", { ids: ["h4"], unchanged: null });
+      await settle();
+      expect(f.loadsSince(at)).toEqual([{ params: base, ids: ["h0", "h4"] }]);
+      expectConverged(f, base);
+      const at2 = f.loads.length;
+      f.w.hosts.delete("h1");
+      f.change("hosts", "D", { ids: ["h1"] });
+      await settle();
+      // An identity D exits h1 with no refill of it (a window backfills its tail).
+      expect(f.loadsSince(at2)).toEqual(
+        exitLoads.map((ids) => ({ params: base, ids })),
+      );
+      expect(ids(f, base)).not.toContain("h1");
+      expectConverged(f, base);
+    });
+
+    test("a reverse route's U missing its moving columns resolves within the members; one touching them resolves unbounded", async () => {
+      const f = await seeded({ kind, uses: movingUses }, filtered);
+      f.w.sources.get("s1")!.label = "S1'";
+      f.change("sources", "U", {
+        ids: ["s1"],
+        keys: { id: ["s1"] },
+        unchanged: ["enabled", "id"],
+      });
+      await settle();
+      expect(f.resolveLog).toEqual([
+        { changed: ["s1"], within: filteredMembers },
+      ]);
+      f.resolveLog.length = 0;
+      const at = f.loads.length;
+      f.w.sources.get("s2")!.enabled = true;
+      f.change("sources", "U", {
+        ids: ["s2"],
+        keys: { id: ["s2"] },
+        unchanged: ["id", "label"],
+      });
+      await settle();
+      expect(f.resolveLog).toEqual([
+        { changed: ["s2"], within: entrantWithin },
+      ]);
+      // The positive control: s2's enable admits h3, its only referrer.
+      expect(f.loadsSince(at)).toEqual([{ params: filtered, ids: ["h3"] }]);
+      expect(ids(f, filtered)).toContain("h3");
+      expectConverged(f, filtered);
+    });
+
+    // A failed drain consumes its pending: a snapshot it left as it was could
+    // miss the member the change admitted, and the router would drop that
+    // member's every later value-only change. The failure evicts it instead.
+    test("a membership drain whose loads all fail leaves no stale diff base: the next value-only U to its entrant re-seeds the tuple", async () => {
+      const f = await seeded({ kind, uses: movingUses }, base);
+      const at = f.loads.length;
+      f.failLoads(2); // the scoped refill, then its FULL fallback
+      f.w.hosts.get("h4")!.n = 0; // h4 enters…
+      f.change("hosts", "U", { ids: ["h4"], unchanged: ["id", "src"] });
+      await settle();
+      expect(ids(f, base)).not.toContain("h4"); // …but no frame said so
+      f.w.hosts.get("h4")!.src = "s1"; // a neutral U to the missed entrant
+      f.change("hosts", "U", { ids: ["h4"], unchanged: ["id", "n"] });
+      await settle();
+      expect(f.loadsSince(at)).toEqual([
+        { params: base, ids: ["h4"] },
+        { params: base, ids: "FULL" },
+        { params: base, ids: "FULL" }, // no diff base: the FULL re-seed
+      ]);
+      expect(ids(f, base)).toContain("h4");
+      expectConverged(f, base);
+    });
+  },
+);
 
 // --- Targets: which tuples a change can reach --------------------------------
 
@@ -1020,8 +1157,9 @@ describe("targets", () => {
     expect(f.h.runtime.persistedDefinitions()).toEqual({});
   });
 
-  test("point membership: every route's ids are intersected with the tuple's set; a reverse resolves within it", async () => {
-    const P = { ids: "h1,h3" };
+  test("point membership: every route's ids are intersected with the tuple's set; a value-role write loads only a member; a value-role reverse resolves within the members", async () => {
+    // h1 and h3 requested; h3 (n = 3) is outside `maxN`, so h1 is the only member.
+    const P = { ids: "h1,h3", maxN: "2" };
     const f = routed({ kind: "point" });
     seed(f);
     await f.h.subscribe("win", P);
@@ -1029,14 +1167,20 @@ describe("targets", () => {
     f.change("hosts_ext", "U", { ids: ["h2"], keys: { parent_id: ["h2"] } });
     await settle();
     expect(f.loadsSince(at)).toEqual([]);
+    // A requested non-member: the value-only write cannot admit it — nothing loads.
     f.change("hosts_ext", "U", { ids: ["h3"], keys: { parent_id: ["h3"] } });
     await settle();
-    expect(f.loadsSince(at)).toEqual([{ params: P, ids: ["h3"] }]);
+    expect(f.loadsSince(at)).toEqual([]);
+    f.w.ext.set("h1", "x");
+    f.change("hosts_ext", "U", { ids: ["h1"], keys: { parent_id: ["h1"] } });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: P, ids: ["h1"] }]);
     at = f.loads.length;
     f.change("sources", "U", { ids: ["s1"], keys: { id: ["s1"] } });
     await settle();
-    expect(f.resolveLog).toEqual([{ changed: ["s1"], within: ["h1", "h3"] }]);
+    expect(f.resolveLog).toEqual([{ changed: ["s1"], within: ["h1"] }]);
     expect(f.loadsSince(at)).toEqual([{ params: P, ids: ["h1"] }]);
+    expect(f.clientValue(P)).toEqual(f.full(P));
   });
 });
 
@@ -1236,6 +1380,57 @@ describe("freshness", () => {
       id: "h3",
       tag: "new",
     });
+  });
+
+  // The point twin, through a value-role REVERSE route. The write lands while a
+  // drain admits h3, so it is lifted to membership; it resolves in the NEXT
+  // drain (a mid-drain change is a new pending), whose snapshot already holds
+  // h3 — so its bound names h3 by either path, and h3 ends fresh.
+  test("a lookup write committing while a drain admits h3 into a point set ends fresh (the quiescence race, reverse route)", async () => {
+    const P = { ids: "h1,h3", maxN: "2" };
+    const f = routed({ kind: "point" });
+    seed(f);
+    await f.h.subscribe("win", P); // [h1]
+    const release = f.park();
+    f.w.hosts.get("h3")!.n = 0; // h3 enters the set…
+    f.change("hosts", "U", { ids: ["h3"] });
+    await tick(); // …its refill read label `S2` and parked
+    f.w.sources.get("s2")!.label = "S2'"; // the lookup write commits mid-drain
+    f.change("sources", "U", { ids: ["s2"], keys: { id: ["s2"] } });
+    release();
+    await settle();
+    await settle();
+    expect(f.resolveLog).toEqual([{ changed: ["s2"], within: ["h1", "h3"] }]);
+    expect(
+      [...(f.clientValue(P) as Row[])].sort((a, b) => (a.id < b.id ? -1 : 1)),
+    ).toEqual(f.full(P));
+    expect(
+      (f.clientValue(P) as Row[]).find((r) => r.id === "h3"),
+    ).toMatchObject({ label: "S2'" });
+  });
+
+  // The point twin of the sub-ack regression: a point tuple drops a value-only
+  // change to an id its snapshot lacks, so a regressed base would drop h3's.
+  test("a second tab's sub-ack loaded before a drain admitted h3 into a point set does not un-admit it from the diff base", async () => {
+    const P = { ids: "h1,h3", maxN: "2" };
+    const f = routed({ kind: "point", runtime: { sockets: 2 } });
+    seed(f);
+    await f.h.subscribe("win", P); // tab A: [h1]
+    const release = f.park();
+    await f.h.subscribe("win", P, { socket: 1 }); // tab B's load read [h1] and parked
+    f.w.hosts.get("h3")!.n = 0; // M: h3 enters the set
+    f.change("hosts", "U", { ids: ["h3"] });
+    await settle(); // the drain admitted h3: the diff base is {h1, h3}
+    release();
+    await settle(); // tab B's sub-ack lands
+    const at = f.loads.length;
+    f.w.ext.set("h3", "new"); // W: a value-role write to h3's extension
+    f.change("hosts_ext", "U", { ids: ["h3"], keys: { parent_id: ["h3"] } });
+    await settle();
+    expect(f.loadsSince(at)).toEqual([{ params: P, ids: ["h3"] }]);
+    expect(
+      (f.clientValue(P) as Row[]).find((r) => r.id === "h3"),
+    ).toMatchObject({ tag: "new" });
   });
 });
 
