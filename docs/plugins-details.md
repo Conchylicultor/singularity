@@ -11827,6 +11827,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.skill`
                   - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`
                   - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.tool-search`
+                  - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.web-search`
                   - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.workflow`
                   - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.write`
                 - Contributes:
@@ -11865,6 +11866,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/write`
               - Core:
@@ -12157,6 +12159,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/cluster.Cluster`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
+                - **`web-search`** — Renders WebSearch calls as the query and its source count; opened, the model-written summary in full and the sources grouped by site, folded beneath it.
+                  - Web:
+                    - Contributes: `JsonlViewerTool.Renderer` "WebSearch" → `WebSearchToolView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+                      - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/collapsible.Collapsible`
+                      - `primitives/collapsible.CollapsibleChevron`
+                      - `primitives/collapsible.CollapsibleContent`
+                      - `primitives/collapsible.CollapsibleTrigger`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/css/yield.yieldClass`
+                      - `primitives/markdown.Markdown`
                 - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
                   - Web:
                     - Slots: `workflow-node.actions`
@@ -27345,11 +27361,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useCollapsibleContext`
           - `useExpandAll`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `ui` ×9
           - `primitives` ×7
           - `apps` ×6
-          - `conversations` ×5
+          - `conversations` ×6
           - `plugin-meta` ×4
           - `review` ×3
           - `debug` ×2
@@ -28268,9 +28284,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 378 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 379 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×93
-              - `conversations` ×61
+              - `conversations` ×62
               - `primitives` ×50
               - `debug` ×34
               - `ui` ×28
@@ -28454,9 +28470,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 349 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 350 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×90
-              - `conversations` ×69
+              - `conversations` ×70
               - `primitives` ×39
               - `debug` ×32
               - `page` ×20
@@ -28779,10 +28795,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempted by: `primitives/css/ui-kit` (0 debt)
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `primitives` ×7
               - `apps` ×5
-              - `conversations` ×3
+              - `conversations` ×4
               - `debug` ×3
               - `ui` ×3
               - `history/dialog`
@@ -30753,6 +30769,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/teammate-message`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/markdown-extensions`
           - `debug/memory`

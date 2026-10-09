@@ -74,11 +74,11 @@ could accept — which is how `sidebar-pane-section` used to read them one by on
     - `useCollapsibleContext`
     - `useExpandAll`
 - Cross-plugin:
-  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui` ×9
     - `primitives` ×7
     - `apps` ×6
-    - `conversations` ×5
+    - `conversations` ×6
     - `plugin-meta` ×4
     - `review` ×3
     - `debug` ×2

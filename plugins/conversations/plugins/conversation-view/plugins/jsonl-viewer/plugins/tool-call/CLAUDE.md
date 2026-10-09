@@ -21,6 +21,7 @@
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.skill`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.tool-search`
+    - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.web-search`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.workflow`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.write`
   - Contributes:
@@ -59,6 +60,7 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call/skill`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/tool-search`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/jsonl-viewer/tool-call/write`
 - Core:
@@ -77,6 +79,7 @@
   - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
   - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.
   - **`tool-search`** — Renders ToolSearch calls as the deferred tools they loaded: the tool names in the row, a select's not-found names flagged, a keyword search's query and match count.
+  - **`web-search`** — Renders WebSearch calls as the query and its source count; opened, the model-written summary in full and the sources grouped by site, folded beneath it.
   - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
   - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
 
