@@ -83,7 +83,7 @@ export function DoneHeaderAction() {
       label={done ? "Done — click to reopen" : "Mark as done"}
       aria-pressed={done}
       loading={pending}
-      className={done ? "text-success" : undefined}
+      className={done ? "text-success-text" : undefined}
       onClick={() => setStatus(name, { done: !done })}
     />
   );

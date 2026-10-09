@@ -39,7 +39,7 @@ const VARIANT_TEXT: Record<Notification["variant"], string> = {
   error: "text-destructive-text",
   warning: "text-warning",
   info: "text-info",
-  success: "text-success",
+  success: "text-success-text",
 };
 
 const VARIANT_BORDER_MUTED: Record<Notification["variant"], string> = {
@@ -53,7 +53,7 @@ const VARIANT_TEXT_MUTED: Record<Notification["variant"], string> = {
   error: "text-destructive-text/70",
   warning: "text-warning/70",
   info: "text-info/70",
-  success: "text-success/70",
+  success: "text-success-text/70",
 };
 
 function NotificationRow({

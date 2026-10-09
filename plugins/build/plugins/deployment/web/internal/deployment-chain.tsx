@@ -45,7 +45,7 @@ function short(sha: string): string {
  * needs one.
  */
 const TONE_CLASS = {
-  success: "text-success",
+  success: "text-success-text",
   primary: "text-primary-text",
   destructive: "text-destructive-text",
   muted: "text-muted-foreground",

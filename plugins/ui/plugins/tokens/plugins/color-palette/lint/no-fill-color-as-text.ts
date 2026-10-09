@@ -7,19 +7,19 @@ const createRule = ESLintUtils.RuleCreator(
 );
 
 /**
- * `primary` and `destructive` are FILL colours (Send, Stop, a destructive
- * button), read with their `*-foreground` label on top. Used as text on a
- * surface they need the palette's text twins, `primary-text` and
- * `destructive-text`: on a dark surface no single value is both dark enough
+ * `primary`, `destructive` and `success` are FILL colours (Send, Stop, Go,
+ * a destructive button), read with their `*-foreground` label on top. Used as text on a
+ * surface they need the palette's text twins (`primary-text`,
+ * `destructive-text`, `success-text`): on a dark surface no single value is both dark enough
  * for a white label at 4.5:1 and light enough to read at 4.5:1 against the
  * surface, so a theme with deep fills sets the twins lighter. A bare
- * `text-primary` / `text-destructive` would paint the fill colour as text and
+ * `text-primary` / `text-destructive` / `text-success` would paint the fill colour as text and
  * go unreadable under such a theme.
  *
  * Flags the bare text-colour utility (any variant prefix, any opacity
  * modifier); `text-primary-foreground` and the `-text` twins are untouched.
  */
-const FILL_AS_TEXT = /^text-(primary|destructive)(\/\d+)?$/;
+const FILL_AS_TEXT = /^text-(primary|destructive|success)(\/\d+)?$/;
 
 export default function buildRule({
   collectTokens,
@@ -33,7 +33,7 @@ export default function buildRule({
       type: "problem",
       docs: {
         description:
-          "Disallow text-primary / text-destructive: text takes the palette's text twins (text-primary-text / text-destructive-text), the fill colours stay fills.",
+          "Disallow text-primary / text-destructive / text-success: text takes the palette's text twins (text-*-text), the fill colours stay fills.",
       },
       schema: [],
       messages: {

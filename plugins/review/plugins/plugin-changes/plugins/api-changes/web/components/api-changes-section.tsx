@@ -34,9 +34,9 @@ function DiffSection({
         <Text as={Line} variant="caption" key={item} className="gap-xs">
           <Icon
             icon={addIcon}
-            className={cn("size-3 text-success", rigidClass())}
+            className={cn("size-3 text-success-text", rigidClass())}
           />
-          <code className="text-success">{item}</code>
+          <code className="text-success-text">{item}</code>
         </Text>
       ))}
       {diff.removed.map((item) => (

@@ -2,7 +2,7 @@ import noFillColorAsText from "./no-fill-color-as-text";
 
 /**
  * Lint barrel for `no-fill-color-as-text`: text uses the palette's
- * `primary-text` / `destructive-text` twins, never the fill colours. Auto-
+ * `primary-text` / `destructive-text` / `success-text` twins, never the fill colours. Auto-
  * discovered by the root `eslint.config.ts` and enabled repo-wide as `error`.
  */
 export default {

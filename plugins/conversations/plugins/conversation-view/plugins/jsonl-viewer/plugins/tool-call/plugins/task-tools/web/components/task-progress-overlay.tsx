@@ -34,7 +34,7 @@ function StatusIcon({ status }: { status: string }) {
       return (
         <Icon
           icon={checkCircleIcon}
-          className={cn("size-4 text-success", rigidClass())}
+          className={cn("size-4 text-success-text", rigidClass())}
         />
       );
     case "failed":

@@ -100,10 +100,12 @@ function AttemptCommitsChip({ attemptId }: { attemptId: string }) {
           <span className="text-muted-foreground">·</span>
           <Icon
             icon={publishIcon}
-            className={`size-3.5 ${behind > 0 ? "text-muted-foreground" : "text-success"}`}
+            className={`size-3.5 ${behind > 0 ? "text-muted-foreground" : "text-success-text"}`}
           />
           <span
-            className={behind > 0 ? "text-muted-foreground" : "text-success"}
+            className={
+              behind > 0 ? "text-muted-foreground" : "text-success-text"
+            }
           >
             {pushCount}
           </span>

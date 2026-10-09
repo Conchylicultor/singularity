@@ -22,7 +22,7 @@ const VARIANT_CLASS: Record<BadgeVariant, string> = {
   primary: "bg-primary/15 text-primary-text",
   warning: "bg-warning/15 text-warning",
   destructive: "bg-destructive/15 text-destructive-text",
-  success: "bg-success/15 text-success",
+  success: "bg-success/15 text-success-text",
   info: "bg-info/15 text-info",
 };
 

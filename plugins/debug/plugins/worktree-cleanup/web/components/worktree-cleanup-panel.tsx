@@ -52,7 +52,7 @@ function relativeAge(iso: string): string {
 
 function StatusBadge({ status }: { status: string }) {
   const color: Record<string, string> = {
-    done: "bg-success/10 text-success",
+    done: "bg-success/10 text-success-text",
     dropped: "bg-muted text-muted-foreground",
     in_progress: "bg-info/10 text-info",
     need_action: "bg-warning/10 text-warning",
@@ -71,7 +71,7 @@ function StatusBadge({ status }: { status: string }) {
 function DirtyIndicator({ entry }: { entry: WorktreeEntry }) {
   if (!entry.dirExists && !entry.dbExists) {
     return (
-      <Text as="span" variant="caption" className="text-success">
+      <Text as="span" variant="caption" className="text-success-text">
         fully clean
       </Text>
     );

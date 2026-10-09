@@ -37,7 +37,7 @@ const TYPE_BADGE_CLASSES: Record<MemoryFile["type"], string> = {
   index: "bg-muted text-muted-foreground",
   feedback: "bg-warning/10 text-warning",
   project: "bg-info/10 text-info",
-  user: "bg-success/10 text-success",
+  user: "bg-success/10 text-success-text",
   reference: "bg-categorical-5/15 text-categorical-5",
   other: "bg-muted text-muted-foreground",
 };

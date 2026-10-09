@@ -107,7 +107,9 @@ const BUTTON_CLASS: Record<Mode, string> = {
   restore: PRIMARY,
   send: PRIMARY,
   queue: PRIMARY,
-  go: "bg-success hover:bg-success/90 text-success-foreground",
+  // An action, not a status: its own fill, so a theme can deepen the button
+  // without darkening every success dot and badge.
+  go: "bg-success-action hover:bg-success-action/90 text-success-action-foreground",
   stop: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
   "push-and-exit": PRIMARY,
   exit: PRIMARY,

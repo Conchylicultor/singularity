@@ -137,9 +137,9 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
   // painted, so a theme that leaves them out renders exactly as before; a theme
   // sets one to restyle that role alone.
   //
-  // A primary / destructive colour used AS TEXT on a surface (a link, an
+  // A primary / destructive / success colour used AS TEXT on a surface (a link, an
   // error message), apart from the same colour used as a FILL under its
-  // `*Foreground` label (Send, Stop). One value cannot serve both on a dark
+  // `*Foreground` label (Send, Stop, Go). One value cannot serve both on a dark
   // surface: a fill dark enough for a white label at 4.5:1 is too dark to read
   // at 4.5:1 against the surface, and vice versa. Default = the fill colour,
   // as every text use painted before; a theme with deep fills lifts these.
@@ -150,6 +150,22 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
   destructiveText: {
     default: "var(--destructive)",
     label: "Destructive as text",
+  },
+  successText: {
+    default: "var(--success)",
+    label: "Success as text",
+  },
+  // The fill of an affirmative ACTION (the prompt's Go button) and its label,
+  // apart from `success`, which marks a success STATE (a running or done dot,
+  // a green badge). Default = the success colours the button always wore; a
+  // theme sets these to style the action without moving every status mark.
+  successAction: {
+    default: "var(--success)",
+    label: "Success action",
+  },
+  successActionForeground: {
+    default: "var(--success-foreground)",
+    label: "On success action",
   },
   // Emphasised text above body text: a conversation pane's title.
   strongForeground: {

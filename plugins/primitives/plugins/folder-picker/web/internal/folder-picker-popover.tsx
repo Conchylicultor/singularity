@@ -77,7 +77,7 @@ export function FolderPickerPopover({
               {verdict.valid ? (
                 <Icon
                   icon={checkCircleIcon}
-                  className="size-4 text-success"
+                  className="size-4 text-success-text"
                   title="Folder exists"
                 />
               ) : (

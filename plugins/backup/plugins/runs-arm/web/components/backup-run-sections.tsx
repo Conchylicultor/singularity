@@ -54,7 +54,7 @@ function TargetResultLine({
         />
         <span className="font-medium capitalize">{result.targetId}</span>
         {result.ok ? (
-          <Icon icon={checkCircleIcon} className="size-3.5 text-success" />
+          <Icon icon={checkCircleIcon} className="size-3.5 text-success-text" />
         ) : (
           <Icon icon={errorIcon} className="size-3.5 text-destructive-text" />
         )}

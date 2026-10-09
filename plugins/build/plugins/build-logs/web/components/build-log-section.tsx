@@ -103,7 +103,7 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
           {step.success ? (
             <Icon
               icon={checkIcon}
-              className={cn("size-3.5 text-success", rigidClass())}
+              className={cn("size-3.5 text-success-text", rigidClass())}
             />
           ) : (
             <Icon

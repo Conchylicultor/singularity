@@ -104,7 +104,7 @@ function AttemptCodeReviewSummary({
       <Text as="span" variant="count">
         {count}
       </Text>
-      <Text as="span" variant="count" className="text-success">
+      <Text as="span" variant="count" className="text-success-text">
         +{additions}
       </Text>
       <Text as="span" variant="count" className="text-destructive-text">

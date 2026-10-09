@@ -16,7 +16,7 @@ function statusBadgeClass(status: string): string {
     case "in_progress":
       return "bg-info/15 text-info";
     case "completed":
-      return "bg-success/15 text-success";
+      return "bg-success/15 text-success-text";
     default:
       return "bg-muted text-muted-foreground";
   }

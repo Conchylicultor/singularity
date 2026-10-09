@@ -67,7 +67,7 @@ export const STATUS_META: Record<
   },
   done: {
     icon: checkCircleIcon,
-    iconClassName: cn("text-success"),
+    iconClassName: cn("text-success-text"),
     label: "Done",
     badgeClassName: cn("bg-muted"),
     dotClass: "bg-success",

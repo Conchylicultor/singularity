@@ -18,7 +18,7 @@ export const COLOR_BG: Record<CalloutColor, string> = {
 export const COLOR_TEXT: Record<CalloutColor, string> = {
   default: "text-muted-foreground",
   info: "text-info",
-  success: "text-success",
+  success: "text-success-text",
   warning: "text-warning",
   danger: "text-destructive-text",
 };

@@ -88,6 +88,9 @@
        always painted — see the group for which surface reads which. */
     --color-primary-text: var(--primary-text);
     --color-destructive-text: var(--destructive-text);
+    --color-success-text: var(--success-text);
+    --color-success-action: var(--success-action);
+    --color-success-action-foreground: var(--success-action-foreground);
     --color-strong-foreground: var(--strong-foreground);
     --color-subtle-foreground: var(--subtle-foreground);
     --color-chip: var(--chip);

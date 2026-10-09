@@ -44,7 +44,7 @@ export function DeferredToolsDeltaView({ event }: AttachmentRendererProps) {
               key={name}
               className="text-muted-foreground"
             >
-              <span className="text-success">+</span> {name}
+              <span className="text-success-text">+</span> {name}
             </Text>
           ))}
           {att.removedNames?.map((name) => (

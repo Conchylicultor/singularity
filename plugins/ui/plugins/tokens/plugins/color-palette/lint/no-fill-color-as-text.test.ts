@@ -26,7 +26,9 @@ ruleTester.run(
   rule as unknown as Parameters<RuleTester["run"]>[1],
   {
     valid: [
-      { code: `const C = () => <span className="text-primary-text" />;` },
+      {
+        code: `const C = () => <span className="text-primary-text text-success-text" />;`,
+      },
       {
         code: `const C = () => <span className="hover:text-destructive-text/80" />;`,
       },
@@ -38,6 +40,10 @@ ruleTester.run(
     invalid: [
       {
         code: `const C = () => <span className="text-primary" />;`,
+        errors: [{ messageId: "fillAsText" }],
+      },
+      {
+        code: `const C = () => <span className="text-success" />;`,
         errors: [{ messageId: "fillAsText" }],
       },
       {

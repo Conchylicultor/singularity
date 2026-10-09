@@ -86,7 +86,7 @@ function fmtDelta(mb: number): string {
 
 function deltaClass(mb: number): string {
   if (mb > 0.05) return "text-destructive-text";
-  if (mb < -0.05) return "text-success";
+  if (mb < -0.05) return "text-success-text";
   return "text-muted-foreground";
 }
 

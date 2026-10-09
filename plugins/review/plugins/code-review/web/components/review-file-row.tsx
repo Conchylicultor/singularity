@@ -133,7 +133,7 @@ export function ReviewFileRow({
             variant="caption"
             className={cn("gap-sm tabular-nums", rigidClass())}
           >
-            <span className="text-success">+{file.additions}</span>
+            <span className="text-success-text">+{file.additions}</span>
             <span className="text-destructive-text">−{file.deletions}</span>
             {level !== "safe" && (
               <Icon

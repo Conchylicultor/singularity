@@ -429,7 +429,7 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
       {job.alive !== null && (
         <Field label="Worker">
           {job.alive ? (
-            <span className="text-success">
+            <span className="text-success-text">
               alive — holds this job&apos;s advisory lock
             </span>
           ) : (
@@ -698,7 +698,7 @@ function EventsTabInner({
                       colorClass={
                         r.matchedCount === 0
                           ? "bg-destructive/10 text-destructive-text"
-                          : "bg-success/10 text-success"
+                          : "bg-success/10 text-success-text"
                       }
                     >
                       {r.matchedCount}

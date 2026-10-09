@@ -57,7 +57,7 @@ export function PluginChangeCard({
         <Badge
           colorClass={
             plugin.status === "added"
-              ? "bg-success/15 text-success"
+              ? "bg-success/15 text-success-text"
               : "bg-info/15 text-info"
           }
           className={cn(rigidClass(), "font-semibold")}
