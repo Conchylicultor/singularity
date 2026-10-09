@@ -6,6 +6,9 @@
  *  - a card on an ancestor page covers every page below it, root-first;
  *  - an instructions page covers its PARENT page's subtree, itself included;
  *  - a sibling subtree is not covered;
+ *  - a link-to-page block pointing at an instructions page makes it cover the
+ *    page the link sits on (once, at its root-most cover), unless the link is
+ *    withheld;
  *  - an instructions card inside a private card is never delivered, and a
  *    private card inside instructions is redacted out of the rendered markdown;
  *  - `globalInstructions` finds global cards and pages anywhere;
@@ -34,6 +37,7 @@ import { collectContributions } from "@plugins/framework/plugins/server-core/cor
 import { pageBlockHandle } from "@plugins/page/plugins/editor/core";
 import { Editor } from "@plugins/page/plugins/editor/server";
 import { textBlock } from "@plugins/page/plugins/text/core";
+import { pageLinkBlock } from "@plugins/page/plugins/page-link/core";
 import { privateNotesBlock } from "@plugins/page/plugins/annotations/plugins/private-notes/core";
 import { instructionsBlock } from "../../core";
 import {
@@ -63,6 +67,7 @@ beforeEach(async () => {
         Editor.BlockData(textBlock),
         Editor.BlockData(instructionsBlock),
         Editor.BlockData(privateNotesBlock),
+        Editor.BlockData(pageLinkBlock),
       ],
     },
   ]);
@@ -227,14 +232,32 @@ const ROWS: Row[] = [
 ];
 
 async function seed(): Promise<void> {
-  for (const r of ROWS) {
-    await t.db.execute(
-      sql`INSERT INTO page_blocks (id, parent_id, page_id, type, rank, data)
-          VALUES (${r.id}, ${r.parent}, ${r.page}, ${r.type}, ${r.rank},
-                  ${JSON.stringify(r.data)}::jsonb)`,
-    );
-  }
+  for (const r of ROWS) await insert(r);
 }
+
+async function insert(r: Row): Promise<void> {
+  await t.db.execute(
+    sql`INSERT INTO page_blocks (id, parent_id, page_id, type, rank, data)
+        VALUES (${r.id}, ${r.parent}, ${r.page}, ${r.type}, ${r.rank},
+                ${JSON.stringify(r.data)}::jsonb)`,
+  );
+}
+
+/** A link-to-page block `id` on `page` (under `parent`, default the page) → `target`. */
+const link = (
+  id: string,
+  page: string,
+  target: string,
+  parent = page,
+  rank = "z0",
+): Row => ({
+  id,
+  parent,
+  page,
+  type: "page-link",
+  rank,
+  data: { pageId: target },
+});
 
 async function setData(id: string, data: unknown): Promise<void> {
   await t.db.execute(
@@ -307,6 +330,48 @@ describe("instructionsInScope", () => {
       sql`UPDATE page_blocks SET deleted_at = now(), trash_entry_id = 'trash-test' WHERE id IN ('IR', 'IR-1', 'IR-PV', 'IR-PV-1')`,
     );
     expect(ids(await inScope("TRACK"))).toEqual(["TI"]);
+  });
+
+  test("a linked instructions page covers the page the link sits on", async () => {
+    await insert(link("L-OTHER", "OTHER", "TI"));
+    const refs = await inScope("OTHER");
+    expect(ids(refs)).toEqual(["IR", "IO", "TI"]);
+    expect(refs[2]!.covers).toEqual({ pageId: "OTHER", title: "Other" });
+  });
+
+  test("a linked instructions page reaches pages below the link", async () => {
+    await insert({
+      id: "SUB",
+      parent: "OTHER",
+      page: "OTHER",
+      type: "page",
+      rank: "b0",
+      data: { title: "Sub", icon: null },
+    });
+    await insert(link("L-OTHER", "OTHER", "TI"));
+    expect(ids(await inScope("SUB"))).toEqual(["IR", "IO", "TI"]);
+  });
+
+  test("an instructions page reached twice is returned once, at its root-most cover", async () => {
+    await insert(link("L-ROOT", "ROOT", "TI"));
+    await insert(link("L-TRACK", "TRACK", "TI"));
+    const refs = await inScope("TRACK");
+    expect(ids(refs)).toEqual(["IR", "TI"]);
+    expect(refs[1]!.covers).toEqual({ pageId: "ROOT", title: "Root" });
+  });
+
+  test("a link inside a private card is never followed", async () => {
+    await insert(link("L-PV", "ROOT", "TI", "PV"));
+    expect(ids(await inScope("OTHER"))).toEqual(["IR", "IO"]);
+  });
+
+  test("a link to an ordinary page, or a trashed link, brings nothing", async () => {
+    await insert(link("L-PLAIN", "OTHER", "TRACK"));
+    await insert(link("L-GONE", "OTHER", "TI", "OTHER", "z1"));
+    await t.db.execute(
+      sql`UPDATE page_blocks SET deleted_at = now(), trash_entry_id = 'trash-test' WHERE id = 'L-GONE'`,
+    );
+    expect(ids(await inScope("OTHER"))).toEqual(["IR", "IO"]);
   });
 
   test("an unknown page has nothing in scope", async () => {

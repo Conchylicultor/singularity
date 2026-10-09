@@ -13,7 +13,7 @@ Two forms, like `<agent-inline>` / `<agent-page>`:
 |---|---|---|
 | Stored as | block type `instructions` (this plugin's `core`) | a `page` row with `data.instructions: true` ([`instructions-page`](plugins/instructions-page/CLAUDE.md)) |
 | Made with | `/instructions` (aliases `/rules`, `/guidance`, `/conventions`) | `/instructions page`, or the page header's kind control |
-| Covers | the page it sits on, and every page below | its PARENT page, and every page below, itself included (a top-level one covers only itself) |
+| Covers | the page it sits on, and every page below | its PARENT page, and every page below, itself included (a top-level one covers only itself) — plus the page of every link-to-page block pointing at it |
 | Global switch | the card's rail menu | the page header's kind control |
 
 Both are the human's words: `audience: "agent"`, `author: "human"`. An agent reads
@@ -61,11 +61,16 @@ RenderedInstructions = InstructionsRef & { markdown, contentHash }
 
 - **Scope** is one recursive CTE up `page_blocks.page_id` from the page to the
   root, collecting live cards whose `page_id` is on the chain and instructions
-  pages whose `page_id` or own `id` is. Ordered root-first (general before
-  particular), cards before pages within one covered page.
+  pages whose `page_id` or own `id` is — or that a live link-to-page block
+  (`page-link`) on the chain points at, covering the link's page as if the page
+  lived there. An inline `[[page]]` mention is not followed: it names a page, it
+  does not place one. Ordered root-first (general before particular), cards
+  before pages within one covered page; a block reached twice is returned once,
+  at its root-most cover (deliveries are keyed by block id).
 - **Withheld stays withheld.** A block whose ancestors (within the page it is
   displayed in) include a human-audience row — a `/private` card — is never in
-  scope, global or not. The type set is `humanAudienceTypes()` from the
+  scope, global or not; a linked instructions page is withheld when either the
+  link or the page's own placement is. The type set is `humanAudienceTypes()` from the
   [`annotations`](../../CLAUDE.md) umbrella's server barrel, the same predicate
   `agent-access` redacts with. It lives on the umbrella rather than in
   `agent-access` because `agent-access` imports THIS plugin, so this plugin cannot
