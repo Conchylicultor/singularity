@@ -77,7 +77,7 @@ function StatusIcon({ state }: { state: RecordingState }): ReactNode {
     case "loading":
       return null;
     case "working":
-      return <Spinner className="text-primary" />;
+      return <Spinner className="text-primary-text" />;
     case "aligned":
       return glyph(checkIcon, "text-success");
     case "weak":
