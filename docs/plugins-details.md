@@ -36739,6 +36739,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LUCIDE_SPRITE`
           - `lucideId`
           - `lucideNameOf`
+          - `navIcons`
           - `parseStyleKey`
           - `resolveSymbolStyle`
           - `runtimeSymbol`

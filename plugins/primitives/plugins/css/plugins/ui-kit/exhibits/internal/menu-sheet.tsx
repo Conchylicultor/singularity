@@ -27,7 +27,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const icons = {
@@ -50,7 +50,6 @@ const icons = {
   timer: symbol("timer"),
   more: symbol("more-horiz"),
   edit: symbol("edit"),
-  openInNew: symbol("open-in-new"),
   link: symbol("link"),
   copy: symbol("content-copy"),
   archive: symbol("archive"),
@@ -236,7 +235,7 @@ export default function MenuSheetExhibit() {
                 <DropdownMenuShortcut>R</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Icon icon={icons.openInNew} /> Open in new tab
+                <Icon icon={navIcons.newTab} /> Open in new tab
                 <DropdownMenuShortcut>⌘↵</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuItem>

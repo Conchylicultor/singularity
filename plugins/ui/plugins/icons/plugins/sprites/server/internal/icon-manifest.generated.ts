@@ -215,7 +215,6 @@ export const ICON_MANIFEST: {
     "notifications-active",
     "numbers",
     "open-in-browser",
-    "open-in-new",
     "open-with",
     "output",
     "palette",
