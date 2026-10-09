@@ -4123,15 +4123,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `REAL_APP_LABEL`
               - `REAL_APP_SOURCE`
           - Plugins:
-            - **`exhibit`** — The exhibit: counterpart kind for the prototype canvas's Real app frame: one real app component, looked up by id (exhibit:<id>) in the exhibit catalog (plugin-meta/exhibits — any plugin's exhibits/ folder, isolated or app) and rendered inside the running app at the canvas's size.
+            - **`exhibit`** — The exhibit: counterpart kind for the prototype canvas's Real app frame: one real app component, looked up by id (exhibit:<id>) in the exhibit catalog (plugin-meta/exhibits — any plugin's exhibits/ folder, isolated or app) and rendered inside the running app at the canvas's size — in the theme of the app named after an @ (exhibit:<id>@/agents renders it inside the agent manager's theme boundary).
               - Web:
                 - Contributes: `Counterpart.Kind` "App exhibit" → `ExhibitCounterpart`
                 - Uses:
+                  - `apps-core.ActiveApp`
+                  - `apps-core.Apps`
+                  - `apps-core.resolveAppForPath`
                   - `apps/prototypes/compare.Counterpart`
                   - `plugin-meta/exhibits.ExhibitResult`
                   - `plugin-meta/exhibits.ExhibitView`
                   - `plugin-meta/exhibits.useExhibit`
                   - `primitives/css/badge.Badge`
+                  - `primitives/css/theme-boundary.Theme`
+                  - `primitives/css/ui-kit.appThemeScope`
             - **`route`** — The route: and app: counterpart kinds for the prototype canvas's Real app frame: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route: (route:/agents/c/123: no rail, no tab bar, just the screen) and with its chrome for app: (app:/agents: rail, tab bar and action bar included) — so a whole-screen or whole-app mock is compared against the real thing as this branch renders it, never a second implementation that could drift.
               - Web:
                 - Contributes:
@@ -7377,8 +7382,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useFocusedAppId`
       - `usePathname`
   - Cross-plugin:
-    - Imported by: 37 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `apps` ×17
+    - Imported by: 38 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `apps` ×18
       - `apps-core` ×11
       - `ui` ×5
       - `config_v2` ×2
@@ -27323,23 +27328,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog`
         - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
-            - Uses:
+            - Uses: 21 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+              - `primitives/css/ui-kit` ×10
+              - `primitives/css/text` ×2
+              - `primitives/row-actions` ×2
               - `primitives/css/rail.useRailGuard`
               - `primitives/css/selection-indicator.CheckboxIndicator`
               - `primitives/css/spacing.Stack`
               - `primitives/css/switch.SwitchIndicator`
-              - `primitives/css/text.SectionLabel`
-              - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.Popover`
-              - `primitives/css/ui-kit.PopoverContent`
-              - `primitives/css/ui-kit.PopoverMaxHeight`
-              - `primitives/css/ui-kit.PopoverTrigger`
               - `primitives/icon-button.IconButton`
               - `primitives/overlay/tooltip.WithTooltip`
-              - `primitives/row-actions.RowActions`
-              - `primitives/row-actions.rowActionsAnchor`
               - `ui/icons.Icon`
             - Exports (types):
               - `ControlPanelBlockProps`
@@ -27388,9 +27386,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell/global-action-bar`
           - Exemptions:
             - Exempts itself from: `control-panel/no-adhoc-panel-body` — `web/internal/control-panel-popover.tsx` (sanctioned)
-            - Exempted by:
-              - `primitives/css/control-panel` (0 debt)
-              - `primitives/css/ui-kit` (0 debt)
+            - Exempted by: `primitives/css/control-panel` (0 debt)
         - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
         - **`coords`** — Coordinate-space positioning primitive: <Placed x y> / placedStyle() places a box by runtime numbers on both axes, plus pct() for fractional coordinates.
           - Web:
@@ -28136,6 +28132,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/tab-surface`
               - `apps-core/theme-scope`
               - `apps/file-explorer/browser`
+              - `apps/prototypes/compare/exhibit`
               - `apps/website/pages/apps`
               - `apps/website/shell`
               - `layouts/miller`
@@ -28240,6 +28237,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Input`
               - `isAppThemeScope`
               - `isSubThemeScope`
+              - `MENU_LABEL`
+              - `MENU_LABEL_PAINT`
+              - `MENU_ROW`
+              - `MENU_ROW_CHECKED`
+              - `MENU_ROW_PAINT`
+              - `MENU_SEPARATOR`
+              - `MENU_VALUE`
               - `OverlayPanel`
               - `Popover`
               - `POPOVER_MAX_HEIGHT`
@@ -28314,9 +28318,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 380 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 381 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×100
-              - `apps` ×68
+              - `apps` ×69
               - `conversations` ×50
               - `page` ×24
               - `debug` ×23
@@ -28347,7 +28351,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `search/quick-find`
           - Exemptions:
             - Exempts itself from:
-              - `control-panel/no-adhoc-panel-body` — `web/components/ui/dropdown-menu.tsx`, `web/components/ui/select.tsx` (sanctioned)
               - `surface/no-adhoc-surface` — `web/components/ui` (sanctioned)
               - `viewport-overlay/no-adhoc-viewport-overlay` — `web/components/ui` (sanctioned)
           - Core:

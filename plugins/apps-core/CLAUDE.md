@@ -98,8 +98,8 @@ keeps reading the old location until then.
     - `useFocusedAppId`
     - `usePathname`
 - Cross-plugin:
-  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×17
+  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×18
     - `apps-core` ×11
     - `ui` ×5
     - `config_v2` ×2

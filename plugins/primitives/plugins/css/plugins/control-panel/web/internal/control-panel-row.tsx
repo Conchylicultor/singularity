@@ -1,4 +1,9 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  MENU_ROW_CHECKED,
+  MENU_ROW_PAINT,
+  MENU_VALUE,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { SwitchIndicator } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import {
@@ -348,7 +353,7 @@ export function ControlPanelRow({
       select === "radio" ? (
         <Icon
           icon={checkIcon}
-          className={cn("size-3.5 text-foreground", !checked && "invisible")}
+          className={cn("size-3.5 text-primary", !checked && "invisible")}
         />
       ) : (
         mark
@@ -371,12 +376,15 @@ export function ControlPanelRow({
   const described = description !== undefined;
 
   const rowClass = cn(
-    "group/cp-row cp-row text-body transition-colors",
-    "[&_svg:not([class*='size-'])]:icon-auto",
+    "group/cp-row cp-row transition-colors",
+    // The shared menu row's paint (ui-kit `theme/menu-row.ts`): type role,
+    // resting colour, icon tone, checked label, and — through `data-variant`
+    // below — the destructive tone. The geometry stays `cp-row`'s own subgrid.
+    MENU_ROW_PAINT,
+    MENU_ROW_CHECKED,
     muted && "text-muted-foreground",
-    tone === "danger" && "text-destructive",
-    interactive &&
-      (tone === "danger" ? "hover:bg-destructive/10" : "hover:bg-hover-fill"),
+    // This row's highlight state is `:hover`; the paint is the shared one.
+    interactive && "hover:menu-row-lit",
     // WHO gets rung is the one class that differs between the two
     // constructions, and each spelling is inert on the other path.
     // `focus-ring` is `&:focus-visible`, which a `<div>` box can never satisfy;
@@ -405,6 +413,12 @@ export function ControlPanelRow({
   const selection = select
     ? { role: SELECT_ROLE[select], "aria-checked": checked ?? false }
     : undefined;
+
+  // The danger tone is the shared menu row's destructive tone, keyed on the
+  // same attribute a dropdown item carries, so its text, icons and highlight
+  // follow from `menu-row` rather than from classes restated here.
+  const toneAttr =
+    tone === "danger" ? { "data-variant": "destructive" } : undefined;
 
   // The description hangs off the HOST, so assistive tech reads the row's name
   // and then its hint. The node it points at is a zero-box `sr-only` sibling
@@ -465,7 +479,8 @@ export function ControlPanelRow({
     <span
       data-cp-cell="trailing"
       className={cn(
-        "flex items-center gap-2xs text-caption text-muted-foreground",
+        "flex items-center gap-2xs",
+        MENU_VALUE,
         described && TITLE_LINE_CELL,
       )}
     >
@@ -482,7 +497,7 @@ export function ControlPanelRow({
   // focus nomination — and everything that describes the ROW stays on the box.
   if (hasActions) {
     return (
-      <div ref={hostRef} className={rowClass}>
+      <div ref={hostRef} className={rowClass} {...toneAttr}>
         <SelectRegion
           href={href}
           onSelect={onSelect}
@@ -507,7 +522,7 @@ export function ControlPanelRow({
             selection beside it. */}
         <span
           data-cp-cell="trailing"
-          className="col-[-2/-1] flex items-center gap-2xs text-caption text-muted-foreground"
+          className={cn("col-[-2/-1] flex items-center gap-2xs", MENU_VALUE)}
         >
           {trailingContent}
           <RowActions pin={null}>{actions}</RowActions>
@@ -532,6 +547,7 @@ export function ControlPanelRow({
         ref={hostRef}
         onClick={onSelect}
         className={rowClass}
+        {...toneAttr}
         {...selection}
         {...describedBy}
       >
@@ -548,6 +564,7 @@ export function ControlPanelRow({
         disabled={disabled}
         onClick={onSelect}
         className={rowClass}
+        {...toneAttr}
         {...selection}
         {...describedBy}
       >
@@ -557,7 +574,7 @@ export function ControlPanelRow({
     );
   }
   return (
-    <div ref={hostRef} className={rowClass} {...describedBy}>
+    <div ref={hostRef} className={rowClass} {...toneAttr} {...describedBy}>
       {leadingCells}
       {trailingCell}
     </div>
@@ -605,7 +622,11 @@ function SelectRegion({
     "grid grid-cols-subgrid col-[1/-2] self-stretch items-center min-w-0",
     // `outline-none`: the ring is painted by the row BOX (`focus-ring-from`), so
     // the UA outline would be a second, tighter indicator inside it.
-    "rounded-md text-left outline-none",
+    "rounded-panel-row text-left outline-none",
+    // The selection's state is reported HERE, not on the row box, so the
+    // shared checked label (colour + weight) is applied here too.
+    MENU_ROW_CHECKED,
+    "aria-checked:not-[[role=switch]]:text-strong-foreground",
     // The disabled treatment, scoped to the selection. `pointer-events-none` as
     // well as the attribute, because a `<a>`/`<span>` region takes no `disabled`
     // — and the row box around it must stay live either way, so its actions

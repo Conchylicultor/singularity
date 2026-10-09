@@ -27,6 +27,16 @@ export {
 
 export { SingleLineProvider, useSingleLine } from "./theme/single-line";
 
+export {
+  MENU_ROW,
+  MENU_ROW_PAINT,
+  MENU_ROW_CHECKED,
+  MENU_LABEL,
+  MENU_LABEL_PAINT,
+  MENU_VALUE,
+  MENU_SEPARATOR,
+} from "./theme/menu-row";
+
 export { Button, buttonVariants } from "./components/ui/button";
 export { ButtonGroup } from "./components/ui/button-group";
 export {

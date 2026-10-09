@@ -185,6 +185,7 @@ the code:
     - `apps-core/tab-surface`
     - `apps-core/theme-scope`
     - `apps/file-explorer/browser`
+    - `apps/prototypes/compare/exhibit`
     - `apps/website/pages/apps`
     - `apps/website/shell`
     - `layouts/miller`

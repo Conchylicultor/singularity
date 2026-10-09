@@ -2,15 +2,6 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
-    rule: "control-panel/no-adhoc-panel-body",
-    paths: [
-      "web/components/ui/dropdown-menu.tsx",
-      "web/components/ui/select.tsx",
-    ],
-    kind: "sanctioned",
-    reason: "The primitives that define the hairline.",
-  },
-  {
     rule: "surface/no-adhoc-surface",
     paths: ["web/components/ui"],
     kind: "sanctioned",

@@ -1,6 +1,11 @@
 import * as React from "react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 
+import {
+  MENU_LABEL,
+  MENU_ROW,
+  MENU_SEPARATOR,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/menu-row";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward";
 import { usePopupOpenMirror } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/popup-open-mirror";
@@ -220,10 +225,7 @@ function SelectLabel({
   return (
     <SelectPrimitive.GroupLabel
       data-slot="select-label"
-      className={cn(
-        "px-xs py-xs text-caption text-muted-foreground",
-        className,
-      )}
+      className={cn(MENU_LABEL, className)}
       {...props}
     />
   );
@@ -238,7 +240,10 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "grid w-full cursor-default grid-cols-[minmax(0,1fr)_auto] items-center gap-xs rounded-md py-xs pl-xs text-body outline-hidden select-none focus:bg-hover-fill focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-sm",
+        // The shared menu row (`theme/menu-row.ts`); only the grid and the
+        // highlight's state model are the select's own.
+        MENU_ROW,
+        "grid grid-cols-[minmax(0,1fr)_auto] items-center data-highlighted:menu-row-lit *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-sm",
         className,
       )}
       {...props}
@@ -251,7 +256,7 @@ function SelectItem({
           <span className="pointer-events-none flex size-4 items-center justify-center" />
         }
       >
-        <Icon icon={checkIcon} className="pointer-events-none" />
+        <Icon icon={checkIcon} className="pointer-events-none text-primary" />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
   );
@@ -264,13 +269,7 @@ function SelectSeparator({
   return (
     <SelectPrimitive.Separator
       data-slot="select-separator"
-      // `rail-bleed` full-bleeds the hairline through the panel's own rail
-      // (whatever it is), instead of hardcoding the one step the group used to pad by.
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- my-1 is the divider's vertical inset; no named margin utility
-      className={cn(
-        "pointer-events-none rail-bleed my-1 h-px bg-border",
-        className,
-      )}
+      className={cn(MENU_SEPARATOR, "pointer-events-none", className)}
       {...props}
     />
   );

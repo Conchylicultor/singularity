@@ -108,6 +108,14 @@ construction, so none of these apply to it):
   `secondary`/`destructive` paint their own background, so their hover is
   relative to *themselves* and correctly stays a fixed token.
 
+## Menu rows: `menu-row` / `menu-row-lit`
+
+The state layer of the shared menu row (the class lists are `menu-row.ts`
+beside this file; ui-kit's CLAUDE.md has the full contract). `menu-row-lit` is
+only ever applied under a state variant (`data-highlighted:`, `data-popup-open:`,
+`hover:`), which is how three state models share one paint without this file
+naming any of their DOM.
+
 ## Adding a custom `@utility` (the twMerge marker)
 
 `app.css` is the **single source of truth** for every custom `@utility` AND for how

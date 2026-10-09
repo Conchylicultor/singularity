@@ -155,6 +155,58 @@ makes the row a flex item that shrink-wraps to its label: dead pointer space
 beside the text, and `ml-auto` (shortcut, submenu chevron) collapsing back
 against it. `w-full` keeps a row's width the menu's business, not the caller's.
 
+## Menu rows share one definition
+
+Every menu row in the app — `DropdownMenuItem` / `CheckboxItem` / `RadioItem` /
+`SubTrigger`, `SelectItem`, and `ControlPanel.Row` — is drawn from one
+definition, so the menus match and cannot drift. **A new menu-like row applies
+it too**; never spell a row's paint again.
+
+It lives in two halves, read together:
+
+- **`web/theme/menu-row.ts`** (exported from the barrel) — the class lists:
+  `MENU_ROW` (the full row for an item that owns its geometry), `MENU_ROW_PAINT`
+  (the paint alone, for `ControlPanel.Row`, which keeps its `cp-row` subgrid),
+  `MENU_ROW_CHECKED`, `MENU_LABEL` / `MENU_LABEL_PAINT`, `MENU_VALUE`,
+  `MENU_SEPARATOR`. Every overridable property is its own twMerge-classified
+  class, so a caller's `className` replaces exactly the one it names
+  (`picker-pill`'s `gap-lg`).
+- **`@utility menu-row` / `menu-row-lit` in `app.css`** — the states a class
+  list cannot say: the icon tone, the checked label, the destructive tone
+  (`[data-variant="destructive"]`), and the highlighted paint.
+
+**The highlight is one utility each component wires to its own state**, because
+there are three state models: base-ui's `data-highlighted` (and `data-popup-open`
+on an open submenu's trigger) and a control-panel row's `:hover`. So the
+component writes `data-highlighted:menu-row-lit` / `hover:menu-row-lit`; ui-kit
+never learns control-panel's DOM, and the variant's (0,2,0) specificity beats
+the resting classes by construction. A tone re-points the vars the lit paint
+reads, so a destructive row highlights to its own wash with no per-state guard.
+
+The mapping — geometry global, colours only theme tokens:
+
+| | |
+|---|---|
+| height | `min-h-panel-row` (`--panel-row-h`, = `control-height-md` by default) |
+| inline · block pad · icon gap · corners | `px-row` (`--pad-row-x`) · `py-xs` · `gap-sm` · `rounded-panel-row` |
+| text | `text-label`, `text-subtle-foreground`; icons `icon-auto`, `muted-foreground` |
+| highlighted | `bg-hover-fill`, `strong-foreground`, icons `subtle-foreground` |
+| checked / selected | label `strong-foreground` + semibold; the mark `text-primary` |
+| section label | `text-caption font-semibold text-faint-foreground`, sentence case |
+| shortcut / trailing value | `text-caption text-faint-foreground`, plain text — no badge |
+| separator | `bg-border` hairline, `rail-bleed` |
+| destructive | `text-destructive` (icon too); highlighted `destructive` at 10% |
+| disabled | `opacity-50`, no pointer events |
+
+The icon tone reaches only our `<Icon>` glyphs (`svg[data-icon]`) that carry no
+colour class of their own, so a check mark's `text-primary` or a status glyph's
+tint keeps its colour.
+
+A dropdown menu's width is `menu-min` by default: sized to its items, floored at
+the density token `popoverWidthMenuMin`, never stretched to its trigger. A picker
+standing in for a field passes `width="anchor-min"`; `SelectContent` keeps
+matching its trigger (a listbox).
+
 ## Labelled menu sections: use DropdownMenuSection, never a groupless label
 
 Base-ui's `Menu.GroupLabel` (our `DropdownMenuLabel`) reads its ancestor
@@ -411,6 +463,13 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `Input`
     - `isAppThemeScope`
     - `isSubThemeScope`
+    - `MENU_LABEL`
+    - `MENU_LABEL_PAINT`
+    - `MENU_ROW`
+    - `MENU_ROW_CHECKED`
+    - `MENU_ROW_PAINT`
+    - `MENU_SEPARATOR`
+    - `MENU_VALUE`
     - `OverlayPanel`
     - `Popover`
     - `POPOVER_MAX_HEIGHT`
@@ -485,9 +544,9 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useSidebar`
     - `useSingleLine`
 - Cross-plugin:
-  - Imported by: 380 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 381 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×100
-    - `apps` ×68
+    - `apps` ×69
     - `conversations` ×50
     - `page` ×24
     - `debug` ×23
@@ -518,7 +577,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `search/quick-find`
 - Exemptions:
   - Exempts itself from:
-    - `control-panel/no-adhoc-panel-body` — `web/components/ui/dropdown-menu.tsx`, `web/components/ui/select.tsx` (sanctioned)
     - `surface/no-adhoc-surface` — `web/components/ui` (sanctioned)
     - `viewport-overlay/no-adhoc-viewport-overlay` — `web/components/ui` (sanctioned)
 - Core:

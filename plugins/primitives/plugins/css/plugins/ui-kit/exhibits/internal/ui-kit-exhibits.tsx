@@ -1,4 +1,5 @@
 import {
+  appExhibit,
   regionExhibit,
   type Exhibit,
 } from "@plugins/plugin-meta/plugins/exhibits/core";
@@ -31,5 +32,14 @@ export const uiKitExhibits: Exhibit[] = [
     label: "Overlay panel region",
     widths: [262, 420, 524],
     render: (children) => <OverlayPanel padding="md">{children}</OverlayPanel>,
+  }),
+  // Every kind of dropdown menu, held open — the real-app half of the Menu
+  // prototype's side-by-side. An app exhibit: its icons are drawn from the
+  // app's sprite sheet and its menus portal into the running page.
+  appExhibit({
+    id: "ui-kit/menu-sheet",
+    label: "Dropdown menus",
+    widths: [820, 1280],
+    load: () => import("./menu-sheet"),
   }),
 ];

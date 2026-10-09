@@ -28,9 +28,17 @@
 //   - `anchor` — exactly the trigger's width (a listbox: the closed control and the
 //     open list are the same box, so the selected row lands where the value was).
 //   - `anchor-min` — at least the trigger's width, growing past it for longer item
-//     labels (a menu: the trigger is a floor, not a cap).
-//   - `snug` — no meaningful anchor at all (a submenu, whose "trigger" is one row of
-//     its parent menu): size to content over a small floor.
+//     labels (a picker standing in for a field: the trigger is a floor, not a cap).
+//   - `snug` — no meaningful anchor at all: size to content over a small floor.
+//
+// And one sizes a MENU, deliberately not relative to its trigger:
+//
+//   - `menu-min` — `DropdownMenuContent`'s default (and its submenus'): as wide
+//     as its items, floored at the density token `popoverWidthMenuMin`,
+//     whatever the trigger's width. A menu opened from a wide trigger used to
+//     stretch to it (`anchor-min`); a menu's width is its content's business.
+//     The floor is `min()`ed with the available width, because `min-width`
+//     beats `max-width`.
 //
 // Both anchor roles read `--anchor-width` WITH AN IN-VAR FALLBACK, for the same
 // reason `--available-height` carries one below: the var only exists once a
@@ -69,6 +77,7 @@ export type PopoverWidth =
   | "snug"
   | "anchor"
   | "anchor-min"
+  | "menu-min"
   | "menu"
   | "described"
   | "builder"
@@ -90,6 +99,8 @@ export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
   anchor: "w-[var(--anchor-width,0px)] min-w-36",
   "anchor-min":
     "w-max min-w-[max(8rem,var(--anchor-width,0px))] max-w-(--available-width)",
+  "menu-min":
+    "w-max min-w-[min(var(--popover-width-menu-min),var(--available-width,100vw))] max-w-(--available-width)",
   // The four role widths are density tokens (`popoverWidth*`, defaults
   // 262px / 262px / 524px / 320px), so a theme sizes its menus and pickers.
   menu: "w-(--popover-width-menu) max-w-(--available-width)", // a list of choices

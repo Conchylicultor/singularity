@@ -111,12 +111,14 @@ export function CompactControls({
       open={open}
       onOpenChange={setOpen}
       align="end"
-      // `builder`, because the widest thing this panel can host is a builder: the
-      // filter and sort panels open INSIDE it now rather than in a popover of
-      // their own, and a six-track rule row squeezed into menu width would be the
-      // measurement-driven width this vocabulary exists to remove. The role
-      // clamps itself to the available width on a narrow surface.
-      size="builder"
+      // `menu`: the root page is a search field and one row per control — a
+      // list of choices. The pages it pushes declare their own width role
+      // (`control.size`, below): filter and sort open at `builder`, because a
+      // six-track rule row squeezed into menu width would be the
+      // measurement-driven width this vocabulary exists to remove; settings
+      // declares none and keeps `menu`, the width it opens at on its own
+      // trigger. Every role clamps itself to the available width.
+      size="menu"
       label="View options"
       // Idle it is an `IconButton`, which carries the tooltip — the popover has
       // no `tooltip` prop of its own, by design: the trigger owns it, and a

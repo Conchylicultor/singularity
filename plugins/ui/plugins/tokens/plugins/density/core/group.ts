@@ -109,6 +109,12 @@ export const densityGroup = defineTokenGroup("density", {
     label: "Builder popover width",
   },
   popoverWidthPicker: { default: "20rem", label: "Picker popover width" },
+  // The FLOOR of a dropdown menu (`menu-min`, `DropdownMenuContent`'s
+  // default): a menu sizes to its items, never narrower than this and never
+  // to its trigger's width. Its own token rather than the `menu` width above:
+  // that one is the fixed width of a control panel whose setting rows hold an
+  // 8rem field, which is too wide a floor for a three-item menu.
+  popoverWidthMenuMin: { default: "11rem", label: "Menu minimum width" },
   // A fourth role: a list of choices that each carry a visible description
   // line (the page-kind menu), whose width decides how many lines each
   // description wraps to. Default = the menu width.

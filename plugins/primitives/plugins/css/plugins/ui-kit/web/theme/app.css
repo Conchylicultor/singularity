@@ -558,6 +558,8 @@
 /* The icon-only end segment of a split control: its inline padding (density
  * `padSplitArrowX`, default the `xs` control pad). */
 @utility px-split-arrow { padding-inline: var(--pad-split-arrow-x); } /* twmerge: extend px */
+/* The inline half of `p-row` — a menu row's inline inset (`MENU_ROW`). */
+@utility px-row { padding-inline: var(--pad-row-x); } /* twmerge: extend px */
 /* The space after an icon leading an inline text run whose children the caller
  * supplies (a select / menu item label): the run must stay inline so `truncate`
  * can ellipsize it, so a flex gap is not available, and the ramp has no margin
@@ -959,6 +961,78 @@
  * itself compact (a `DataTable` with `density="compact"`). Reads its own density
  * token, whose default is a fraction of `--pad-row-y`, so it follows the preset. */
 @utility py-row-compact { padding-top: var(--pad-row-compact-y); padding-bottom: var(--pad-row-compact-y); } /* twmerge: extend py */
+
+/* MENU ROWS — the one visual definition every menu row in the app is drawn
+ * from: `DropdownMenuItem` / `CheckboxItem` / `RadioItem` / `SubTrigger`,
+ * `SelectItem`, and `ControlPanel.Row`. A new menu-like row applies it too.
+ * The class lists that compose these live in ONE place, `theme/menu-row.ts`
+ * (`MENU_ROW`, `MENU_ROW_PAINT`, `MENU_LABEL`, …) — read the two together.
+ *
+ * What is HERE is only what a class list cannot say: the row's states. Every
+ * overridable single property (height, inline pad, gap, radius, type role,
+ * resting text colour) is its own twMerge-classified class in `menu-row.ts`, so
+ * a caller's `gap-lg` / `text-muted-foreground` replaces the default cleanly;
+ * the states below sit one specificity step above those, so they win over a
+ * resting class without anyone ordering the stylesheet.
+ *
+ * THE HIGHLIGHT IS ONE UTILITY EACH COMPONENT WIRES TO ITS OWN STATE. There are
+ * three state models — base-ui marks the keyboard/pointer highlight
+ * `[data-highlighted]` and an open submenu's trigger `[data-popup-open]`; a
+ * control-panel row is a plain `<button>`, lit by `:hover` — and ui-kit must not
+ * learn control-panel's DOM. So `menu-row-lit` is the highlighted PAINT and the
+ * component names the state: `data-highlighted:menu-row-lit`,
+ * `hover:menu-row-lit`. A variant-prefixed class is `.x[state]` / `.x:hover`
+ * (0,2,0), which beats the resting classes (0,1,0) by construction.
+ *
+ * The lit paint reads three vars `menu-row` declares (fill, text, icon), so a
+ * TONE re-points them once and both of its states follow: the destructive row
+ * (`[data-variant="destructive"]` — the dropdown's own attribute, which the
+ * control-panel row also stamps for `tone="danger"`) highlights to a destructive
+ * wash instead of the neutral fill, with no `not-data-[variant=…]` guard on
+ * every state class.
+ *
+ * Icons take their own tone (`--menu-row-icon`): a step quieter than the label
+ * at rest, a step up when lit. Only our `<Icon>` glyphs (`svg[data-icon]`)
+ * WITHOUT a colour class of their own — the check mark's `text-primary`, a
+ * status glyph's tint keep theirs. `:where()` keeps it at the utility's own
+ * specificity. */
+@utility min-h-panel-row { min-height: var(--panel-row-h); } /* twmerge: extend min-h */
+@utility rounded-panel-row { border-radius: var(--radius-panel-row); } /* twmerge: extend rounded */
+@utility menu-row {
+  /* twmerge: standalone -- The row's STATE layer (tone vars, checked, destructive, icon tone); every overridable single property is a separate class in menu-row.ts. */
+  --menu-row-icon: var(--muted-foreground);
+  --menu-row-lit-fill: var(--hover-fill);
+  --menu-row-lit-text: var(--strong-foreground);
+  --menu-row-lit-icon: var(--subtle-foreground);
+  & :where(svg[data-icon]:not([class*="text-"])) {
+    color: var(--menu-row-icon);
+  }
+  /* Checked / selected reads in the LABEL (strong) — the mark itself is the
+     caller's `text-primary` glyph. base-ui stamps `data-checked` (menu) or
+     `data-selected` (select); a control-panel row reports `aria-checked`, which
+     a switch row also carries — but a switch's on state is a toggle, not a
+     choice, so it does not embolden its label. The weight is a class on the
+     row (`MENU_ROW_CHECKED` in menu-row.ts): a utility may set no type
+     metric that is not a role. */
+  &[data-checked],
+  &[data-selected],
+  &[aria-checked="true"]:not([role="switch"]) {
+    color: var(--strong-foreground);
+  }
+  &[data-variant="destructive"] {
+    color: var(--destructive);
+    --menu-row-icon: var(--destructive);
+    --menu-row-lit-fill: color-mix(in oklab, var(--destructive) 10%, transparent);
+    --menu-row-lit-text: var(--destructive);
+    --menu-row-lit-icon: var(--destructive);
+  }
+}
+@utility menu-row-lit {
+  /* twmerge: standalone -- The highlighted paint, only ever applied under a state variant (data-highlighted:, data-popup-open:, hover:); reads the vars menu-row declares. */
+  background-color: var(--menu-row-lit-fill);
+  color: var(--menu-row-lit-text);
+  --menu-row-icon: var(--menu-row-lit-icon);
+}
 
 /* Floating-bar safe area — right inset that clears the global floating action
  * bar (a fixed top-right overlay). Width is owned + published by the

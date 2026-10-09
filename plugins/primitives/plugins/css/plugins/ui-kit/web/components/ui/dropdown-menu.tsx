@@ -11,6 +11,12 @@ import type {
   PopoverPadding,
   PopoverMaxHeight,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width";
+import {
+  MENU_LABEL,
+  MENU_ROW,
+  MENU_SEPARATOR,
+  MENU_VALUE,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/menu-row";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -66,7 +72,7 @@ function DropdownMenuContent({
   alignOffset = 0,
   side = "bottom",
   sideOffset = 4,
-  width = "anchor-min",
+  width = "menu-min",
   padding = "xs",
   maxHeight = "viewport",
   className,
@@ -86,7 +92,13 @@ function DropdownMenuContent({
      * the panel's own class bundle.
      */
     className?: string;
-    /** Closed width role; default "at least the trigger, growing past it". */
+    /**
+     * Closed width role; default `menu-min` — sized to the items, floored at
+     * the theme's menu minimum (`popoverWidthMenuMin`), and never the
+     * trigger's width (a menu hung off a wide trigger is still a menu). A
+     * picker standing in for a field passes `anchor-min` to keep at least its
+     * trigger's width.
+     */
     width?: PopoverWidth;
     /** Padding role; default `xs` (the previously baked-in menu padding). */
     padding?: PopoverPadding;
@@ -153,10 +165,7 @@ function DropdownMenuLabel({
     <MenuPrimitive.GroupLabel
       data-slot="dropdown-menu-label"
       data-inset={inset}
-      className={cn(
-        "px-xs py-xs text-caption font-medium text-muted-foreground data-inset:pl-xl",
-        className,
-      )}
+      className={cn(MENU_LABEL, "data-inset:pl-xl", className)}
       {...props}
     />
   );
@@ -207,9 +216,11 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        // `w-full`: a menu row spans its menu — see the note above
-        // `DropdownMenuContent`. Same declaration `SelectItem` already carries.
-        "group/dropdown-menu-item relative flex w-full cursor-default items-center gap-xs rounded-md px-xs py-xs text-body outline-hidden select-none focus:bg-hover-fill focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-xl data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive",
+        // The shared menu row (`theme/menu-row.ts`): geometry, paint, the
+        // destructive tone (keyed on `data-variant`) and disabled. Only the
+        // layout and the highlight's state model are this component's.
+        MENU_ROW,
+        "relative flex items-center data-highlighted:menu-row-lit data-inset:pl-xl",
         className,
       )}
       {...props}
@@ -234,7 +245,9 @@ function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "flex w-full cursor-default items-center gap-xs rounded-md px-xs py-xs text-body outline-hidden select-none focus:bg-hover-fill focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-xl data-popup-open:bg-hover-fill data-popup-open:text-accent-foreground data-open:bg-hover-fill data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        // An open submenu keeps its trigger lit while the pointer is inside it.
+        MENU_ROW,
+        "flex items-center data-highlighted:menu-row-lit data-popup-open:menu-row-lit data-inset:pl-xl",
         className,
       )}
       {...props}
@@ -250,9 +263,9 @@ function DropdownMenuSubContent({
   alignOffset = -3,
   side = "right",
   sideOffset = 0,
-  // A submenu's "anchor" is one row of its parent menu, so anchor-relative width
-  // is meaningless here: size to content over a small floor instead.
-  width = "snug",
+  // Same role as the menu it opened from, so a submenu sizes like every
+  // other menu (its "anchor" is one row of the parent, never a width to match).
+  width = "menu-min",
   className,
   ...props
 }: React.ComponentProps<typeof DropdownMenuContent>) {
@@ -288,13 +301,14 @@ function DropdownMenuCheckboxItem({
       data-slot="dropdown-menu-checkbox-item"
       data-inset={inset}
       className={cn(
-        "grid w-full cursor-default grid-cols-[minmax(0,1fr)_auto] items-center gap-xs rounded-md py-xs pl-xs text-body outline-hidden select-none focus:bg-hover-fill focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-xl data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        MENU_ROW,
+        "grid grid-cols-[minmax(0,1fr)_auto] items-center data-highlighted:menu-row-lit data-inset:pl-xl",
         className,
       )}
       checked={checked}
       {...props}
     >
-      <span className="min-w-0 truncate lead-icon-xs [&>svg]:inline-block [&>svg]:shrink-0 [&>svg]:align-middle">
+      <span className="min-w-0 truncate lead-icon-sm [&>svg]:inline-block [&>svg]:shrink-0 [&>svg]:align-middle">
         {children}
       </span>
       <span
@@ -302,7 +316,7 @@ function DropdownMenuCheckboxItem({
         data-slot="dropdown-menu-checkbox-item-indicator"
       >
         <MenuPrimitive.CheckboxItemIndicator>
-          <Icon icon={checkIcon} />
+          <Icon icon={checkIcon} className="text-primary" />
         </MenuPrimitive.CheckboxItemIndicator>
       </span>
     </MenuPrimitive.CheckboxItem>
@@ -331,12 +345,13 @@ function DropdownMenuRadioItem({
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
       className={cn(
-        "grid w-full cursor-default grid-cols-[minmax(0,1fr)_auto] items-center gap-xs rounded-md py-xs pl-xs text-body outline-hidden select-none focus:bg-hover-fill focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-xl data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        MENU_ROW,
+        "grid grid-cols-[minmax(0,1fr)_auto] items-center data-highlighted:menu-row-lit data-inset:pl-xl",
         className,
       )}
       {...props}
     >
-      <span className="min-w-0 truncate lead-icon-xs [&>svg]:inline-block [&>svg]:shrink-0 [&>svg]:align-middle">
+      <span className="min-w-0 truncate lead-icon-sm [&>svg]:inline-block [&>svg]:shrink-0 [&>svg]:align-middle">
         {children}
       </span>
       <span
@@ -344,7 +359,7 @@ function DropdownMenuRadioItem({
         data-slot="dropdown-menu-radio-item-indicator"
       >
         <MenuPrimitive.RadioItemIndicator>
-          <Icon icon={checkIcon} />
+          <Icon icon={checkIcon} className="text-primary" />
         </MenuPrimitive.RadioItemIndicator>
       </span>
     </MenuPrimitive.RadioItem>
@@ -358,11 +373,7 @@ function DropdownMenuSeparator({
   return (
     <MenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      // `rail-bleed` full-bleeds the hairline through the panel's own rail
-      // (whatever role it is on), instead of hardcoding the one step this menu
-      // happens to default to. Same fix as `SelectSeparator`.
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- my-1 is the divider's vertical inset; no named margin utility
-      className={cn("rail-bleed my-1 h-px bg-border", className)}
+      className={cn(MENU_SEPARATOR, className)}
       {...props}
     />
   );
@@ -375,10 +386,7 @@ function DropdownMenuShortcut({
   return (
     <span
       data-slot="dropdown-menu-shortcut"
-      className={cn(
-        "ml-auto text-caption tracking-widest text-muted-foreground group-focus/dropdown-menu-item:text-accent-foreground",
-        className,
-      )}
+      className={cn(cn(MENU_VALUE, "ml-auto"), className)}
       {...props}
     />
   );

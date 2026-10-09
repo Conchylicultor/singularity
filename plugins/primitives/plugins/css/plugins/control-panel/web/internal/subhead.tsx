@@ -1,4 +1,7 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  MENU_LABEL_PAINT,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type React from "react";
 
@@ -22,9 +25,9 @@ export interface ControlPanelSubheadProps {
  *
  * It is NOT an eyebrow either. A second small-caps line directly under a
  * `Section`'s reads as a peer band rather than as something inside it, so this
- * takes the vocabulary's third rung for in-band non-row text — the one
- * `SettingNote`, `SettingDescription`, a `Section`'s `description` and `Empty`
- * already share — rather than minting a fourth.
+ * wears the shared MENU section label (ui-kit `MENU_LABEL_PAINT`: faint caption,
+ * semibold, sentence case) — the same label a dropdown or select section has,
+ * since a run of rows is exactly what both name.
  *
  * And it is NOT a field label: that rung names ONE control and is drawn in a
  * row's label cell, on the TEXT rail. This names a RUN, which is the eyebrow's
@@ -46,8 +49,7 @@ export function ControlPanelSubhead({
     <Text
       as="div"
       variant="caption"
-      tone="muted"
-      className={cn("pt-xs pb-2xs", className)}
+      className={cn(MENU_LABEL_PAINT, "pt-xs pb-2xs", className)}
     >
       {children}
     </Text>

@@ -4,7 +4,7 @@ import { ExhibitCounterpart } from "./components/exhibit-counterpart";
 
 export default {
   description:
-    "The exhibit: counterpart kind for the prototype canvas's Real app frame: one real app component, looked up by id (exhibit:<id>) in the exhibit catalog (plugin-meta/exhibits — any plugin's exhibits/ folder, isolated or app) and rendered inside the running app at the canvas's size.",
+    "The exhibit: counterpart kind for the prototype canvas's Real app frame: one real app component, looked up by id (exhibit:<id>) in the exhibit catalog (plugin-meta/exhibits — any plugin's exhibits/ folder, isolated or app) and rendered inside the running app at the canvas's size — in the theme of the app named after an @ (exhibit:<id>@/agents renders it inside the agent manager's theme boundary).",
   contributions: [
     Counterpart.Kind({
       match: "exhibit",
