@@ -44,7 +44,8 @@ const HEADER_PIN_STYLE = { top: "calc(-1 * var(--rail-block-start, 0px))" };
  *
  * Two things are INVARIANTS, not props — a call site cannot forget them:
  *
- *  - **Fit the viewport, and scroll.** `maxHeight` is only a comfort cap layered
+ *  - **Fit the viewport, and scroll** — unless the caller declares the panel
+ *    is no scroller (`scroll={false}`, below). `maxHeight` is only a comfort cap layered
  *    on top (see `POPOVER_MAX_HEIGHT`); the clamp-to-`--available-height` and the
  *    scroller are unconditional. X is hidden rather than scrolled because CSS
  *    cannot pair `overflow-y: auto` with `overflow-x: visible` — asking for one
@@ -72,6 +73,15 @@ export interface OverlayPanelProps extends Passthrough<HTMLDivElement> {
   padding?: PopoverPadding;
   /** Comfort cap on top of the unconditional viewport fit; default `viewport`. */
   maxHeight?: PopoverMaxHeight;
+  /**
+   * `true` (default): the panel fits the viewport and scrolls, with edge fades.
+   * `false`: the panel is not a scroller and owns its overflow — for a small
+   * panel whose natural size always fits (a toolbar, a disclosure morphing open
+   * out of its trigger), holding content that may legitimately draw past its
+   * box. It gives up the viewport clamp, the scroller and the fades;
+   * `maxHeight` does not apply.
+   */
+  scroll?: boolean;
   /** Optional sticky header rendered above the content, full-bleed through the padding. */
   header?: React.ReactNode;
   /** Landing spot for a consumer override — always the LAST `cn()` argument. */
@@ -87,6 +97,7 @@ export function OverlayPanel({
   width = "content",
   padding = "md",
   maxHeight = "viewport",
+  scroll = true,
   header,
   className,
   children,
@@ -152,8 +163,10 @@ export function OverlayPanel({
         "z-popover origin-(--transform-origin) duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95",
         POPOVER_WIDTH[width],
         POPOVER_PADDING[padding],
-        POPOVER_MAX_HEIGHT[maxHeight],
-        "scroll-fade overflow-x-hidden overflow-y-auto",
+        scroll && [
+          POPOVER_MAX_HEIGHT[maxHeight],
+          "scroll-fade overflow-x-hidden overflow-y-auto",
+        ],
         className,
       )}
     >

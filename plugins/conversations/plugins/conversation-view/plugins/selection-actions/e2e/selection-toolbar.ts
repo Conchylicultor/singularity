@@ -61,18 +61,12 @@ await withBrowser(async (h) => {
   await snap(page, out, "toolbar");
   if (!shown) return r.finish();
 
-  const trigger = page
-    .locator("[data-ui-owner^='Actions@']")
-    .getByRole("button", { name: "All templates" });
+  const trigger = page.locator("[data-ui-owner^='Actions@'] .group\\/fa");
   await trigger.hover();
-  const panelOpen = await page
-    .getByRole("dialog", { name: "All templates" })
-    .waitFor({ state: "visible", timeout: 3000 })
-    .then(() => true)
-    .catch((err: unknown) => {
-      if (!(err instanceof Error)) throw err;
-      return false;
-    });
+  await page.waitForTimeout(400);
+  const panelOpen = await trigger.evaluate((el) =>
+    el.hasAttribute("data-open"),
+  );
   r.ok("✎ opens the panel of every quick answer", panelOpen);
   r.ok(
     "selection survives the hover",

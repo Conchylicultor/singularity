@@ -75,6 +75,11 @@ export interface FloatingSurfaceProps {
    * Scrolling is not part of the role: the surface always scrolls internally.
    */
   maxHeight?: PopoverMaxHeight;
+  /**
+   * Whether the panel scrolls (default) — see `OverlayPanel`'s `scroll`: a
+   * small toolbar holding a control that draws past its box passes `false`.
+   */
+  scroll?: boolean;
   /** Preferred side of the anchor (default `"bottom"`). Flips on collision. */
   side?: "top" | "right" | "bottom" | "left";
   /** Alignment along the chosen side (default `"start"`). */
@@ -114,6 +119,7 @@ export function FloatingSurface({
   width = "content",
   padding = "xs",
   maxHeight = "viewport",
+  scroll = true,
   side = "bottom",
   align = "start",
   sideOffset = 4,
@@ -221,6 +227,7 @@ export function FloatingSurface({
         width={width}
         padding={padding}
         maxHeight={maxHeight}
+        scroll={scroll}
         // Fade in where it belongs, never slide there. Until Floating UI has
         // measured, the panel sits at the viewport origin; the panel's own
         // `duration-*` with CSS's default `transition-property: all` would

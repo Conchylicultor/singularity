@@ -3,12 +3,15 @@ import {
   type SpaceStep,
 } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import {
-  insetClass,
   type StackAlign,
   type StackDirection,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  OverlayPanel,
+  type PopoverPadding,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { type ComponentProps, type ReactNode, useRef } from "react";
 import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
@@ -54,10 +57,11 @@ export interface FloatingActionProps extends Omit<
   "className"
 > {
   /**
-   * The panel's card:
-   * - `outlined` — a hairline border, a translucent blurred ground and a soft
-   *   shadow, all present while collapsed and deepening when open.
-   * - `ghost` — no card while collapsed; the outlined card appears on open.
+   * The panel's card. The panel IS ui-kit's `OverlayPanel`, so open it wears
+   * the theme's popover surface unless the variant is its own surface:
+   * - `outlined` — collapsed, a hairline ring, a translucent blurred ground and
+   *   a soft shadow; open, the popover.
+   * - `ghost` — no card while collapsed; open, the popover.
    * - `glass` — a frosted capsule that is the same collapsed and open: a
    *   hairline RING (a box-shadow, so it adds no size — the panel is exactly
    *   pad + content tall), a more translucent ground under a stronger,
@@ -66,7 +70,7 @@ export interface FloatingActionProps extends Omit<
    */
   variant?: "outlined" | "ghost" | "glass";
   /**
-   * The panel's corners: `rounded` (the default, the `md` radius) or `pill`
+   * The panel's corners: `rounded` (the default, the popover's corner role) or `pill`
    * (fully rounded ends — a capsule around a single row of controls).
    */
   shape?: "rounded" | "pill";
@@ -89,8 +93,8 @@ export interface FloatingActionProps extends Omit<
   align?: StackAlign;
   /** Gap between the trigger and the content, from the spacing ramp. */
   gap?: SpaceStep;
-  /** Padding inside the panel, from the spacing ramp. */
-  pad?: SpaceStep;
+  /** Padding inside the panel — the popover's own padding role (its rail). */
+  pad?: PopoverPadding;
   closeDelay?: number;
   anchor?: FloatingAnchor;
   /**
@@ -135,7 +139,7 @@ function FloatingActionPanel({
   triggerAt = "start",
   align,
   gap,
-  pad,
+  pad = "none",
   variant = "outlined",
   shape = "rounded",
   closeDelay,
@@ -218,41 +222,43 @@ function FloatingActionPanel({
       {...rootProps}
     >
       <div className={cn("absolute w-max", anchorClasses[anchor])}>
-        <div
+        <OverlayPanel
           ref={panelRef}
+          // THE popover panel — the one every popover, menu and floating
+          // surface renders — so the open panel's paint (`--popover`, its ring,
+          // radius and shadow roles) and its padding rail are the theme's, never
+          // a lookalike of it. It is not a scroller here (`scroll={false}`): the
+          // panel owns its overflow, clipping the morph below.
+          scroll={false}
+          padding={pad}
           // Closed content is inert: invisible (FadeIn) panel items must not be
           // pointer- or Tab-reachable. The stable wrapper underneath still
           // receives the pointer-enter that opens it.
           inert={!open}
           // `overflow-hidden` here clips the width/height transition, not text.
-          // `no-clip-without-nowrap` used to need a disable and no longer does:
-          // the panel's direction/align come from FLOW_CLASS / ALIGN_CLASS, and
-          // now that the shared walk follows those maps the rule reads the
-          // `flex-col` / `items-*` in them and correctly stops calling this a
-          // single-line text row.
+          // The panel is a flex box along `direction` whose ONE child fills it
+          // (`flex-1 min-*-0`): a panel clamped by the morph's max-w / max-h
+          // then clamps that child too, so its reversed flow still packs the
+          // trigger against the far edge, and the child starts on the panel's
+          // padding rail as `OverlayPanel` expects of its children.
           className={cn(
             "flex overflow-hidden",
             // A pill capsule's controls echo its ends: every control inside
             // rounds fully (the shape group's control radius, re-read here),
             // so a hovered button is a pill inside the pill, never a
-            // rounded-rect patch in a capsule.
-            shape === "pill"
-              ? "rounded-full [--radius-control:calc(infinity*1px)]"
-              : "rounded-md",
+            // rounded-rect patch in a capsule. `rounded` keeps the popover's
+            // own corner role.
+            shape === "pill" && "rounded-full [--radius-control:calc(infinity*1px)]",
             FLOW_CLASS[direction][triggerAt],
-            align && ALIGN_CLASS[align],
-            gap && rampClass("gap", gap),
-            pad && insetClass({ pad }),
-            "transition-[width,max-width,max-height,padding,background-color,box-shadow,border-color] duration-200 ease-out",
-            variant === "outlined" && [
-              "border border-border/60 backdrop-blur",
-              "bg-background/80 group-data-open/fa:bg-background/90",
-              "shadow-sm group-data-open/fa:shadow-md",
-            ],
-            variant === "ghost" && [
-              "border border-transparent group-data-open/fa:border-border/60",
-              "group-data-open/fa:bg-background/90 group-data-open/fa:shadow-md group-data-open/fa:backdrop-blur",
-            ],
+            "transition-[width,max-width,max-height,padding,background-color,box-shadow] duration-200 ease-out",
+            // Collapsed, `outlined` / `ghost` lay their resting look over the
+            // popover paint; open, the popover paint is the whole look.
+            !open &&
+              variant === "outlined" &&
+              "bg-background/80 shadow-sm ring-border/60 backdrop-blur",
+            !open &&
+              variant === "ghost" &&
+              "bg-transparent shadow-none ring-transparent",
             // Glass is its own surface over whatever app is behind it, so
             // every tone is a translucent mix rather than an opaque step:
             // - ground: the background at 72% under an 18px, 1.6× saturated
@@ -276,16 +282,25 @@ function FloatingActionPanel({
           )}
           {...props}
         >
-          {/* The trigger's rigid wrapper: this `shrink-0` is the load-bearing
-              collapsed-footprint guarantee — the whole point of the slot. It
-              keeps the always-visible trigger from flex-shrinking to 0 next to
-              a tall/wide `children` sibling under a clamped panel. It is also
-              the box whose resizes re-size the hover hitbox above. */}
-          <div ref={triggerRef} className="shrink-0">
-            {typeof trigger === "function" ? trigger(open) : trigger}
+          <div
+            className={cn(
+              "flex min-h-0 min-w-0 flex-1",
+              FLOW_CLASS[direction][triggerAt],
+              align && ALIGN_CLASS[align],
+              gap && rampClass("gap", gap),
+            )}
+          >
+            {/* The trigger's rigid wrapper: this `shrink-0` is the load-bearing
+                collapsed-footprint guarantee — the whole point of the slot. It
+                keeps the always-visible trigger from flex-shrinking to 0 next to
+                a tall/wide `children` sibling under a clamped panel. It is also
+                the box whose resizes re-size the hover hitbox above. */}
+            <div ref={triggerRef} className="shrink-0">
+              {typeof trigger === "function" ? trigger(open) : trigger}
+            </div>
+            {children}
           </div>
-          {children}
-        </div>
+        </OverlayPanel>
       </div>
     </div>
   );

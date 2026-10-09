@@ -67,6 +67,9 @@ function SelectionToolbarFor({ composer }: { composer: PromptComposer }) {
       side="top"
       align="center"
       sideOffset={6}
+      // The quick answers' ✎ panel morphs open out of the toolbar; a
+      // scrolling surface would clip it to the toolbar's height.
+      scroll={false}
     >
       {selection && <Actions selection={selection} composer={composer} />}
     </FloatingSurface>

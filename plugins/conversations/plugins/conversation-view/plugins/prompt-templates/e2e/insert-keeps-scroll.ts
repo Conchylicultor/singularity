@@ -12,10 +12,13 @@
  *   end/middle — seeded, then clicked to place the caret
  *
  *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/prompt-templates/e2e/insert-keeps-scroll.ts \
- *     --conv <id> [--caret typed|restored|end|middle] [--panel] [--headed]
+ *     --conv <id> [--caret typed|restored|end|middle] [--panel] [--out <prefix>] [--headed]
+ *
+ * `--panel` opens the template panel first (and screenshots it to `--out`).
  */
 import {
   arg,
+  snap,
   boot,
   flag,
   pathUrl,
@@ -102,6 +105,7 @@ await withBrowser(async (h) => {
       .first()
       .hover();
     await page.waitForTimeout(700);
+    await snap(page, arg("out") ?? "/tmp/insert-keeps-scroll", "panel");
   }
 
   // The ButtonGroup's send sibling and the overflow-clipped strip sit on top of

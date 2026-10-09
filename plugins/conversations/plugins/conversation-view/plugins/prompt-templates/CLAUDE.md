@@ -9,7 +9,7 @@
   - Contributes:
     - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `config_v2` ×2
     - `primitives/css/spacing` ×2
@@ -22,7 +22,6 @@
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/scroll.Scroll`
-    - `primitives/overlay/hover-popover.HoverPopover`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `ui/icons.Icon`
   - Exports (types):

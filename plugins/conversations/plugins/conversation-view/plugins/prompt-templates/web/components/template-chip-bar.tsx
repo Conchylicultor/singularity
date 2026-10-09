@@ -16,7 +16,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { HoverPopover } from "@plugins/primitives/plugins/overlay/plugins/hover-popover/web";
 import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import {
@@ -52,16 +51,16 @@ export interface TemplateChipBarProps {
   /** Whether ➤ is live; ✎ always is. */
   canSend: boolean;
   /**
-   * What the bar sits in — only the host knows, so it is required.
+   * What the bar sits in — only the host knows, so it is required. It decides
+   * the pinned strip only; the ✎ panel morphs open in place either way.
    *
-   * `row`: a row that gives the bar its slack (the prompt bar). The pinned strip
-   * is adaptive — a chip that doesn't fit is dropped, it is still in the panel —
-   * and the panel morphs open in place from the ✎.
+   * `row`: a row that gives the bar its slack (the prompt bar). The strip is
+   * adaptive — a chip that doesn't fit is dropped, it is still in the panel.
    *
    * `floating`: a shrink-to-content floating surface (the selection toolbar).
-   * There is no slack to measure, so every pinned chip is drawn; and the surface
-   * scrolls internally, which would clip a panel morphing out of it, so the
-   * panel opens as a portaled hover popover from the ✎ instead.
+   * There is no slack to measure, so every pinned chip is drawn. The surface
+   * must not clip what draws past it (`FloatingSurface scroll={false}`), or
+   * the panel morphing open is cut to the toolbar's height.
    */
   host: "row" | "floating";
   /** The config the panel's gear opens. */
@@ -197,7 +196,7 @@ export function TemplateChipBar({
   const trigger = (
     <Icon
       icon={editIcon}
-      className="size-3 text-muted-foreground/40 group-data-open/fa:text-muted-foreground group-aria-expanded/button:text-muted-foreground transition-colors"
+      className="size-3 text-muted-foreground/40 group-data-open/fa:text-muted-foreground transition-colors"
     />
   );
 
@@ -247,47 +246,25 @@ export function TemplateChipBar({
         {/* `FloatingAction` is not density-participating, so its collapsed box
             can't read the provider above — these numbers are hand-matched to the
             xs chip height (1.5rem) it sits beside. */}
-        {host === "row" ? (
-          <FloatingAction
-            className="relative size-6 z-popover"
-            variant="ghost"
-            // A column with the gear at the BOTTOM of the opened stack, chips
-            // flush with the host bar's right edge.
-            direction="col"
-            triggerAt="end"
-            align="end"
-            gap="xs"
-            pad="xs"
-            // The same panel's collapsed→open morph, which the primitive animates
-            // but does not size.
-            panelClassName={cn(
-              "max-w-6 group-data-open/fa:max-w-sm max-h-6 group-data-open/fa:max-h-56",
-            )}
-            trigger={trigger}
-          >
-            <FloatingActionFadeIn>{panel}</FloatingActionFadeIn>
-          </FloatingAction>
-        ) : (
-          <HoverPopover
-            label="All templates"
-            side="top"
-            align="end"
-            padding="xs"
-            trigger={
-              <Button
-                variant="ghost"
-                aspect="icon"
-                aria-label="All templates"
-                // Pressing it must not take the host's selection or caret.
-                onMouseDown={(e) => e.preventDefault()}
-                className="aria-expanded:bg-hover-fill"
-              >
-                {trigger}
-              </Button>
-            }
-            content={panel}
-          />
-        )}
+        <FloatingAction
+          className="relative size-6 z-popover"
+          variant="ghost"
+          // A column with the gear at the BOTTOM of the opened stack, chips
+          // flush with the host bar's right edge.
+          direction="col"
+          triggerAt="end"
+          align="end"
+          gap="xs"
+          pad="xs"
+          // The same panel's collapsed→open morph, which the primitive animates
+          // but does not size.
+          panelClassName={cn(
+            "max-w-6 group-data-open/fa:max-w-sm max-h-6 group-data-open/fa:max-h-56",
+          )}
+          trigger={trigger}
+        >
+          <FloatingActionFadeIn>{panel}</FloatingActionFadeIn>
+        </FloatingAction>
       </Stack>
     </ControlSizeProvider>
   );

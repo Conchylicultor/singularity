@@ -21,8 +21,8 @@ so it fades in on open.
 ## The panel's layout is props, its size is a class
 
 The panel is the primitive's flex box, so its flow is stated as roles it owns:
-`direction` (`row` | `col`), `triggerAt` (`start` | `end`), `align`, and `gap` /
-`pad` from the spacing ramp. `triggerAt="end"` is the reversal: the trigger is
+`direction` (`row` | `col`), `triggerAt` (`start` | `end`), `align`, `gap` from
+the spacing ramp, and `pad` — the popover's own padding role. `triggerAt="end"` is the reversal: the trigger is
 always the first DOM child, and reversing also flips where a clamped panel packs
 its items — which is what keeps the trigger flush against a bottom-anchored
 panel's bottom edge while the content is revealed above it. Stating that as
@@ -34,6 +34,21 @@ own.
 open extent is a per-call-site measurement. It is typed `ClassName`, so its value
 comes out of `cn()` and `no-adhoc-layout` reads its tokens: a layout class
 written there is a lint error, not a silent override.
+
+## The panel IS the popover panel
+
+The morphing panel renders ui-kit's `OverlayPanel` — the one panel every
+popover, menu, select and floating surface renders — with `scroll={false}` (it
+owns its overflow: it clips its own morph). So the open panel wears the theme's
+overlay surface (`--popover`, `--popover-border` ring, `rounded-popover`,
+`shadow-popover`) and its padding rail, and cannot drift from a popover's look.
+Collapsed, the `variant` lays its resting look over that paint (`ghost`:
+nothing; `outlined`: a translucent chip); open, the popover paint is the whole
+look, and the transition animates between the two. `glass` is the exception:
+it is its own surface (below), laid over the popover paint in both states.
+
+A host that itself floats (a `FloatingSurface` toolbar) must not clip the panel
+morphing out of it: it passes `scroll={false}` too.
 
 ## The `glass` variant and the `pill` shape
 
@@ -81,10 +96,11 @@ global action bar's `e2e/focus-restore.ts` checks this in Chromium.
 - Description: Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
 - Web:
   - Uses:
-    - `primitives/css/spacing.insetClass`
     - `primitives/css/spacing.StackAlign`
     - `primitives/css/spacing.StackDirection`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.OverlayPanel`
+    - `primitives/css/ui-kit.PopoverPadding`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/overlay/popup-open.PopupOpenScope`
   - Exports (types):
