@@ -27,29 +27,40 @@
 //
 //   - `anchor` — exactly the trigger's width (a listbox: the closed control and the
 //     open list are the same box, so the selected row lands where the value was).
-//   - `anchor-min` — at least the trigger's width, growing past it for longer item
-//     labels (a picker standing in for a field: the trigger is a floor, not a cap).
+//   - `anchor-min` — at least the trigger's width (and the menu minimum), growing
+//     past it for longer item labels (a Select; a picker standing in for a field:
+//     the trigger is a floor, not a cap).
 //   - `snug` — no meaningful anchor at all: size to content over a small floor.
 //
-// And one sizes a MENU, deliberately not relative to its trigger:
+// Two size a MENU, between the density tokens `popoverWidthMenuMin` /
+// `popoverWidthMenuMax` — the common rule (Apple, Material, Linear): a menu is
+// as wide as its items between a floor and a cap, and a surface never resizes
+// while it is open:
 //
-//   - `menu-min` — `DropdownMenuContent`'s default (and its submenus'): as wide
-//     as its items, floored at the density token `popoverWidthMenuMin`,
-//     whatever the trigger's width. A menu opened from a wide trigger used to
-//     stretch to it (`anchor-min`); a menu's width is its content's business.
-//     The floor is `min()`ed with the available width, because `min-width`
+//   - `menu-fit` — a PLAIN menu, `DropdownMenuContent`'s default (and its
+//     submenus'): as wide as its items, clamped to the two tokens, whatever
+//     the trigger's width (a menu's width is its content's business). Most
+//     menus have short labels and land on the floor, so they match. Both
+//     bounds are `min()`ed with the available width, because `min-width`
 //     beats `max-width`.
+//   - `menu` — a CONTROL PANEL's list of choices (`ControlPanelPopover`):
+//     FIXED at the max, because a panel has pages and must not jump between
+//     them; so it is exactly as wide as the widest plain menu. A theme that
+//     wants every menu one width sets the two tokens equal.
+//
+// `anchor-min` (a Select, a picker standing in for a field) floors at the menu
+// minimum too, so a listbox under a narrow trigger is still a menu's width.
 //
 // Both anchor roles read `--anchor-width` WITH AN IN-VAR FALLBACK, for the same
 // reason `--available-height` carries one below: the var only exists once a
 // positioner's `size.apply` has run, and an undefined var invalidates the whole
-// `max()` at computed-value time — which would silently drop the 8rem floor, not
+// `max()` at computed-value time — which would silently drop the menu floor, not
 // just the anchor term. Surfaces that publish no anchor at all (a dialog) then
 // degrade to the floor rather than to nothing.
 
-// Three roles size a panel by WHAT IT IS rather than by a tier — the
+// Four roles size a panel by WHAT IT IS rather than by a tier — the
 // control-panel vocabulary's only width dial (`ControlPanelPopover size`).
-// `menu` is a list of choices; `builder` is a six-track rule row; `picker` is a
+// `menu` is a list of choices (fixed at the menu max, above); `builder` is a six-track rule row; `picker` is a
 // panel whose body is a GRID (swatches, icons, cover thumbnails). They are new
 // roles rather than aliases of `md` (256px) / `xl` (320px) / `3xl` (480px) on
 // purpose: reusing a t-shirt size re-imports the thing the vocabulary exists to
@@ -69,15 +80,14 @@
 // description line (the page-kind menu, where each kind is a policy read before
 // it is picked). Its width decides how many lines each description wraps to, so
 // a theme sizes it apart from a plain menu of one-word rows — the Pages theme
-// draws its section menu at 248px and its kind menu at 300px. Default = the
-// menu width, so nothing moves until a theme says otherwise.
+// draws its section menu at 248px and its kind menu at 300px.
 export type PopoverWidth =
   | "content"
   | "fit"
   | "snug"
   | "anchor"
   | "anchor-min"
-  | "menu-min"
+  | "menu-fit"
   | "menu"
   | "described"
   | "builder"
@@ -98,12 +108,12 @@ export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
   snug: "w-max min-w-24 max-w-(--available-width)",
   anchor: "w-[var(--anchor-width,0px)] min-w-36",
   "anchor-min":
-    "w-max min-w-[max(8rem,var(--anchor-width,0px))] max-w-(--available-width)",
-  "menu-min":
-    "w-max min-w-[min(var(--popover-width-menu-min),var(--available-width,100vw))] max-w-(--available-width)",
+    "w-max min-w-[min(max(var(--popover-width-menu-min),var(--anchor-width,0px)),var(--available-width,100vw))] max-w-(--available-width)",
+  "menu-fit":
+    "w-max min-w-[min(var(--popover-width-menu-min),var(--available-width,100vw))] max-w-[min(var(--popover-width-menu-max),var(--available-width,100vw))]",
   // The four role widths are density tokens (`popoverWidth*`, defaults
-  // 262px / 262px / 524px / 320px), so a theme sizes its menus and pickers.
-  menu: "w-(--popover-width-menu) max-w-(--available-width)", // a list of choices
+  // 300px / 280px / 524px / 320px), so a theme sizes its menus and pickers.
+  menu: "w-(--popover-width-menu-max) max-w-(--available-width)", // a control panel's list of choices
   described: "w-(--popover-width-described) max-w-(--available-width)", // choices with description lines
   builder: "w-(--popover-width-builder) max-w-(--available-width)", // a six-track rule row
   picker: "w-(--popover-width-picker) max-w-(--available-width)", // a panel whose body is a grid

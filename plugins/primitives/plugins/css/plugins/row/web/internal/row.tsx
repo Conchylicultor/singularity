@@ -12,7 +12,6 @@ import {
 import type React from "react";
 
 export type RowSize = "sm" | "md";
-export type RowHover = "accent" | "muted";
 
 /**
  * The row's focusable control, as a capability rather than a node. `Row` decides
@@ -111,8 +110,6 @@ export interface RowProps extends RowControlProps, Passthrough {
   selected?: boolean;
   /** Text+gap density only; PADDING is always p-row. sm=text-xs gap-1.5, md=text-sm gap-2. Default "md". */
   size?: RowSize;
-  /** Hover treatment. "accent" (sidebars/menus, default) | "muted" (cards/popovers). */
-  hover?: RowHover;
   /** Adds a `border` (bordered chip-rows). */
   bordered?: boolean;
   /** Tree depth px → style paddingLeft (overrides p-row's left). */
@@ -180,7 +177,6 @@ export interface RowProps extends RowControlProps, Passthrough {
 export function Row({
   selected,
   size = "md",
-  hover = "accent",
   bordered,
   indent,
   icon,
@@ -316,18 +312,18 @@ export function Row({
     // reads brighter than its neighbours' (a theme whose accent text equals its
     // body text sees no change). Leaves that set their own tone (a muted
     // subtitle, a finished row's dimmed title) keep it.
-    hover === "accent" &&
-      (selected
-        ? // The selected tier (`--selected`, default = the accent hover
-          // fill), so a theme can set hover and selection apart.
-          "bg-selected text-accent-foreground [--scrim:var(--selected)]"
-        : "hover:bg-accent hover:[--scrim:var(--accent)]"),
-    hover === "muted" &&
-      (selected
-        ? "bg-muted [--scrim:var(--muted)]"
-        : // `in srgb`, not oklab: this must reproduce what ALPHA COMPOSITING of
-          // `bg-muted/50` over the backdrop paints, and that happens in sRGB.
-          "hover:bg-muted/50 hover:[--scrim:color-mix(in_srgb,var(--muted)_50%,var(--chrome-mask))]"),
+    // The hover is the SURFACE's, never the caller's: every surface publishes
+    // `--hover-fill` (a card its muted tone, the sidebar its accent, a popover
+    // its own `popoverHover`), so a row hovers to the right step above
+    // whatever it sits on. There used to be a `hover="accent" | "muted"` prop
+    // — a caller's guess at that surface — and a guess for one theme was wrong
+    // in another (Mist's popover IS its muted tone, so a `muted` row in a menu
+    // hovered to nothing).
+    selected
+      ? // The selected tier (`--selected`, default = the accent hover
+        // fill), so a theme can set hover and selection apart.
+        "bg-selected text-accent-foreground [--scrim:var(--selected)]"
+      : "hover:bg-hover-fill hover:[--scrim:var(--hover-fill)]",
     bordered && "border",
     className,
   );

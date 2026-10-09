@@ -23,8 +23,8 @@
     - `TooltipDoc`
     - `WithTooltip`
 - Cross-plugin:
-  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×16
+  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×15
     - `apps` ×6
     - `page` ×6
     - `conversations` ×5

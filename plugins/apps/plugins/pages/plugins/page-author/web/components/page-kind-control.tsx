@@ -182,7 +182,7 @@ export function PageKindControl() {
         </Button>
       }
     >
-      <ControlPanel.Section label="Agents on this page" heading="group">
+      <ControlPanel.Section label="Agents on this page">
         {KIND_ORDER.map((k) => (
           <ControlPanel.Row
             key={k}

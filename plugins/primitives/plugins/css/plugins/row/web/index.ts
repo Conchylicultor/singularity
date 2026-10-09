@@ -6,7 +6,6 @@ export {
   type RowControlProps,
   type RowFocus,
   type RowSize,
-  type RowHover,
 } from "./internal/row";
 export {
   SectionHeaderRow,

@@ -24,14 +24,10 @@ export function FileDisambiguation({
         {matches.map((filePath) => {
           const lastSlash = filePath.lastIndexOf("/");
           const dir = lastSlash >= 0 ? filePath.slice(0, lastSlash + 1) : "";
-          const name = lastSlash >= 0 ? filePath.slice(lastSlash + 1) : filePath;
+          const name =
+            lastSlash >= 0 ? filePath.slice(lastSlash + 1) : filePath;
           return (
-            <Row
-              key={filePath}
-              size="sm"
-              hover="muted"
-              onClick={() => onSelect(filePath)}
-            >
+            <Row key={filePath} size="sm" onClick={() => onSelect(filePath)}>
               <span className="text-muted-foreground">{dir}</span>
               <span className="font-medium text-foreground">{name}</span>
             </Row>

@@ -37,9 +37,9 @@ export interface ControlPanelBlockProps {
  * ITS LABEL IS A FIELD LABEL, so it is drawn in a row's label cell — on the TEXT
  * rail, not on the panel's content edge. Invariant #1 says every LABEL starts at
  * one x, and a Block label sits at the same rung as a Setting label and a Row
- * label. A `Section` label is an eyebrow, a different rung, and keeps the
+ * label. A `Section` label names a band, a different rung, and keeps the
  * panel's content edge. In a panel with no icon track the two coincide; in one
- * with icons the eyebrow hangs back by design. Gated by the `block-label-rail`
+ * with icons the band label hangs back by design. Gated by the `block-label-rail`
  * fixture rather than by this paragraph, because it is exactly the kind of thing
  * that drifts silently.
  */

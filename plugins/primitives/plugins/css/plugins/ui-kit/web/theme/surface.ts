@@ -54,10 +54,11 @@ export const SURFACE_LEVELS: Record<SurfaceLevel, string> = {
   // with, so a ghost button in a popover matches the items beside it.
   overlay:
     // The outline is `--popover-border` (default: the 10% foreground ring it
-    // always drew); a row hovers at the selected tier (`--selected`, default =
-    // the accent it always hovered to), so a theme whose accent IS its popover
-    // tone still shows the hover. Corners and shadow are the shape / shadow
+    // always drew); a row hovers at the overlay's own hover tone
+    // (`--popover-hover`, default = the selected tier `--selected`, itself
+    // default = the accent it always hovered to), so a theme whose accent IS
+    // its popover tone still shows the hover. Corners and shadow are the shape / shadow
     // groups' popover roles (`rounded-popover`, `shadow-popover`), defaulting
     // to the `rounded-lg` and `shadow-md` steps it always wore.
-    "rounded-popover bg-popover text-popover-foreground shadow-popover ring-1 ring-popover-border [--chrome-mask:var(--popover)] [--hover-fill:var(--selected)]",
+    "rounded-popover bg-popover text-popover-foreground shadow-popover ring-1 ring-popover-border [--chrome-mask:var(--popover)] [--hover-fill:var(--popover-hover)]",
 };

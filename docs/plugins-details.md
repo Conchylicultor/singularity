@@ -18904,6 +18904,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`space-ramp-in-sync`**
             - **`table-defs-in-schema-glob`**
             - **`tailwind-scan-covers-classes`**
+            - **`theme-bridge-reads`**
             - **`token-group-vars-in-sync`**
             - **`tsconfig-alias-single-owner`**
             - **`type-check`**
@@ -19095,9 +19096,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 140 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 141 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×44
-              - `primitives` ×23
+              - `primitives` ×24
               - `page` ×22
               - `conversations` ×16
               - `apps-core` ×5
@@ -25407,7 +25408,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.Editor`
           - `page/editor.useEditorScope`
           - `page/page-reference.usePageNavigation`
-          - `primitives/css/row.Row`
+          - `primitives/css/control-panel.ControlPanel`
           - `ui/icons.Icon`
     - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary, and supplies the target page's title to the `<page>` tag an agent reads.
       - Web:
@@ -27730,16 +27731,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog`
         - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
-            - Uses: 21 symbols — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
-              - `primitives/css/ui-kit` ×10
-              - `primitives/css/text` ×2
-              - `primitives/row-actions` ×2
+            - Uses:
               - `primitives/css/rail.useRailGuard`
               - `primitives/css/selection-indicator.CheckboxIndicator`
               - `primitives/css/spacing.Stack`
               - `primitives/css/switch.SwitchIndicator`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.MENU_LABEL_PAINT`
+              - `primitives/css/ui-kit.MENU_ROW_CHECKED`
+              - `primitives/css/ui-kit.MENU_ROW_PAINT`
+              - `primitives/css/ui-kit.MENU_VALUE`
+              - `primitives/css/ui-kit.Popover`
+              - `primitives/css/ui-kit.PopoverContent`
+              - `primitives/css/ui-kit.PopoverMaxHeight`
+              - `primitives/css/ui-kit.PopoverTrigger`
               - `primitives/icon-button.IconButton`
               - `primitives/overlay/tooltip.WithTooltip`
+              - `primitives/row-actions.RowActions`
+              - `primitives/row-actions.rowActionsAnchor`
               - `ui/icons.Icon`
             - Exports (types):
               - `ControlPanelBlockProps`
@@ -27759,7 +27770,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ControlPanelRowTone`
               - `ControlPanelRuleListProps`
               - `ControlPanelRuleRowProps`
-              - `ControlPanelSectionHeading`
               - `ControlPanelSectionProps`
               - `ControlPanelSettingProps`
               - `ControlPanelSize`
@@ -27774,9 +27784,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useControlPanelHost`
               - `usePanelStack`
           - Cross-plugin:
-            - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×10
-              - `page` ×4
+              - `page` ×5
               - `primitives` ×4
               - `config_v2` ×2
               - `tasks` ×2
@@ -28171,7 +28181,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `RowControlProps`
               - `RowFocus`
-              - `RowHover`
               - `RowProps`
               - `RowSize`
               - `SectionHeaderDisclosure`
@@ -28181,11 +28190,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Row`
               - `SectionHeaderRow`
           - Cross-plugin:
-            - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+            - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
               - `apps` ×15
               - `ui` ×11
-              - `page` ×9
               - `primitives` ×9
+              - `page` ×8
               - `conversations` ×5
               - `plugin-meta` ×3
               - `tasks` ×3
@@ -30265,9 +30274,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
-        - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×42
-          - `primitives` ×19
+          - `primitives` ×18
           - `conversations` ×14
           - `tasks` ×7
           - `debug` ×6
@@ -30367,22 +30376,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useLatestRef`
     - **`launch`** — The standard launch-an-agent popover, and the split [model | launch] control under it.
       - Web:
-        - Uses: 35 symbols — full list in [`plugins/primitives/plugins/launch/REFERENCE.md`](../plugins/primitives/plugins/launch/REFERENCE.md)
-          - `primitives/css/ui-kit` ×8
+        - Uses: 33 symbols — full list in [`plugins/primitives/plugins/launch/REFERENCE.md`](../plugins/primitives/plugins/launch/REFERENCE.md)
+          - `primitives/css/ui-kit` ×9
           - `tasks/launch-options` ×5
           - `conversations/model-provider` ×4
-          - `primitives/css/fill` ×2
           - `primitives/pane` ×2
           - `conversations/conversation-view.conversationPane`
           - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
           - `infra/endpoints.fetchEndpoint`
+          - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
           - `primitives/css/spacing.Stack`
           - `primitives/css/switch.Switch`
           - `primitives/css/text.Text`
-          - `primitives/icon-button.IconButton`
           - `primitives/overlay/popover.InlinePopover`
-          - `primitives/overlay/tooltip.Kbd`
           - `primitives/persistent-draft.useDraft`
           - `primitives/shortcuts.formatShortcutLabel`
           - `primitives/text-editor/composer.ComposerField`
@@ -31542,8 +31549,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TooltipDoc`
               - `WithTooltip`
           - Cross-plugin:
-            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
-              - `primitives` ×16
+            - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
+              - `primitives` ×15
               - `apps` ×6
               - `page` ×6
               - `conversations` ×5

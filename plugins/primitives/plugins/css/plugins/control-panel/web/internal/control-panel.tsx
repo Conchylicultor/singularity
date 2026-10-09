@@ -1,9 +1,9 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useRailGuard } from "@plugins/primitives/plugins/css/plugins/rail/web";
 import {
-  SectionLabel,
-  Text,
-} from "@plugins/primitives/plugins/css/plugins/text/web";
+  cn,
+  MENU_LABEL_PAINT,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useRailGuard } from "@plugins/primitives/plugins/css/plugins/rail/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type React from "react";
 
 export interface ControlPanelProps {
@@ -100,21 +100,17 @@ export function ControlPanel({
   );
 }
 
-/**
- * How a section's label reads: `eyebrow` (default) is the small-caps label;
- * `group` is a sentence-case group head on the `group` type role in
- * `--group-foreground` — the quiet head a menu of choices wears ("Agents on
- * this page"), sized by the theme's group role rather than by the eyebrow's.
- */
-export type ControlPanelSectionHeading = "eyebrow" | "group";
-
 export interface ControlPanelSectionProps {
-  /** The section's label on the panel's own content rail — the icon rail. */
-  label?: React.ReactNode;
-  /** How the label reads; default `eyebrow`. See `ControlPanelSectionHeading`. */
-  heading?: ControlPanelSectionHeading;
   /**
-   * A muted line under the eyebrow, INSIDE the band. It is prose about the
+   * The section's label on the panel's own content rail — the icon rail. It
+   * wears the shared menu section label (ui-kit `MENU_LABEL_PAINT`: faint
+   * caption, semibold, sentence case), the same as a dropdown's or a
+   * `Subhead`'s, so every menu surface names its runs alike. There used to be an
+   * `eyebrow` (small caps) / `group` choice here; one label is the point.
+   */
+  label?: React.ReactNode;
+  /**
+   * A muted line under the label, INSIDE the band. It is prose about the
    * band, not a row — so it reserves no track, takes no row height, and
    * invariant #2 never sees it. It lands on the panel's rail beside the label
    * above it by doing nothing at all.
@@ -145,7 +141,6 @@ export interface ControlPanelSectionProps {
  */
 export function ControlPanelSection({
   label,
-  heading = "eyebrow",
   description,
   className,
   children,
@@ -153,19 +148,13 @@ export function ControlPanelSection({
   return (
     <div className={cn("cp-band", className)}>
       {label != null ? (
-        heading === "group" ? (
-          <Text
-            as="div"
-            variant="group"
-            className="flex control-min-xs items-center text-group-foreground"
-          >
-            {label}
-          </Text>
-        ) : (
-          <SectionLabel className="flex control-min-xs items-center">
-            {label}
-          </SectionLabel>
-        )
+        <Text
+          as="div"
+          variant="caption"
+          className={cn(MENU_LABEL_PAINT, "flex control-min-xs items-center")}
+        >
+          {label}
+        </Text>
       ) : null}
       {description != null ? (
         <Text as="div" variant="caption" tone="muted" className="pb-2xs">

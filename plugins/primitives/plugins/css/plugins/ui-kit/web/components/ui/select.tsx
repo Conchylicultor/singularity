@@ -121,7 +121,7 @@ function SelectContent({
   align = "center",
   alignOffset = 0,
   alignItemWithTrigger = true,
-  width = "anchor",
+  width = "anchor-min",
   padding = "xs",
   maxHeight = "viewport",
   ...props
@@ -138,7 +138,12 @@ function SelectContent({
      * the panel's own class bundle.
      */
     className?: string;
-    /** Closed width role; default "exactly the trigger's width". */
+    /**
+     * Closed width role; default `anchor-min` — at least the trigger's width
+     * (the list opens over the value it lists) and at least a menu's minimum
+     * (`popoverWidthMenuMin`), so a listbox under a narrow trigger is still as
+     * wide as any other menu.
+     */
     width?: PopoverWidth;
     /**
      * Padding role; default `xs` — the panel OPENS the region and items live in

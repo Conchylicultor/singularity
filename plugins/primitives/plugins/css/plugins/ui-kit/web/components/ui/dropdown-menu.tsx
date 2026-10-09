@@ -14,11 +14,14 @@ import type {
 import {
   MENU_LABEL,
   MENU_ROW,
+  MENU_ROW_TRAIL,
   MENU_SEPARATOR,
   MENU_VALUE,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/menu-row";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/control-size";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/button";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const chevronRightIcon = symbol("chevron-right");
@@ -72,7 +75,7 @@ function DropdownMenuContent({
   alignOffset = 0,
   side = "bottom",
   sideOffset = 4,
-  width = "menu-min",
+  width = "menu-fit",
   padding = "xs",
   maxHeight = "viewport",
   className,
@@ -93,9 +96,9 @@ function DropdownMenuContent({
      */
     className?: string;
     /**
-     * Closed width role; default `menu-min` — sized to the items, floored at
-     * the theme's menu minimum (`popoverWidthMenuMin`), and never the
-     * trigger's width (a menu hung off a wide trigger is still a menu). A
+     * Closed width role; default `menu-fit` — sized to the items, between
+     * the theme's menu bounds (`popoverWidthMenuMin` / `popoverWidthMenuMax`),
+     * and never the trigger's width (a menu hung off a wide trigger is still a menu). A
      * picker standing in for a field passes `anchor-min` to keep at least its
      * trigger's width.
      */
@@ -201,15 +204,86 @@ function DropdownMenuSection({
   );
 }
 
+/**
+ * A row's own action, revealed while the row is highlighted (pointer OR
+ * keyboard): a one-time variant of what the row does — the model picker's
+ * "launch this model now" beside "make it the default". The row draws it, at
+ * the `xs` control density, so it fits inside the row's height and every
+ * menu's action looks the same; a click on it never selects the row.
+ */
+interface MenuRowAction {
+  icon: IconRef;
+  /** The action's name: its aria-label and hover title. */
+  label: string;
+  /** May return a promise: the button shows its pending state until it settles. */
+  onAction: (e: React.MouseEvent) => unknown;
+}
+
+/**
+ * The trailing parts a row may carry, shared by every item kind: a hover
+ * action, then a keyboard shortcut (plain faint text — the menu's value style,
+ * never a keycap). The check mark of a checkbox / radio item follows them.
+ */
+interface MenuRowTrailProps {
+  /** A keyboard shortcut label, already formatted (`formatShortcutLabel`). */
+  shortcut?: string;
+  action?: MenuRowAction;
+}
+
+function MenuRowTrailParts({ shortcut, action }: MenuRowTrailProps) {
+  return (
+    <>
+      {action && (
+        // A zero-height box centred on the row's line: the button overflows it
+        // evenly, so a row with an action is exactly as tall as one without
+        // (the `xs` box is shorter than `--panel-row-h`, but not than the
+        // row's content box once its block pad is counted).
+        <span className="flex h-0 items-center">
+          <ControlSizeProvider size="xs">
+            {/* eslint-disable-next-line icon-button/prefer-icon-button -- ui-kit sits below the icon-button primitive; the menu row owns its action's one look */}
+            <Button
+              variant="ghost"
+              aspect="icon"
+              tabIndex={-1}
+              aria-label={action.label}
+              title={action.label}
+              data-slot="dropdown-menu-item-action"
+              // `transition-colors`, not the Button's `transition-all`: that
+              // also animates `visibility`, which kept the action showing on
+              // a row the highlight had already left.
+              className="invisible transition-colors group-data-highlighted/menu-row:visible"
+              onClick={(e) => {
+                e.stopPropagation();
+                return action.onAction(e);
+              }}
+            >
+              <Icon icon={action.icon} />
+            </Button>
+          </ControlSizeProvider>
+        </span>
+      )}
+      {shortcut && (
+        <span data-slot="dropdown-menu-shortcut" className={MENU_VALUE}>
+          {shortcut}
+        </span>
+      )}
+    </>
+  );
+}
+
 function DropdownMenuItem({
   className,
   inset,
   variant = "default",
+  shortcut,
+  action,
+  children,
   ...props
-}: MenuPrimitive.Item.Props & {
-  inset?: boolean;
-  variant?: "default" | "destructive";
-}) {
+}: MenuPrimitive.Item.Props &
+  MenuRowTrailProps & {
+    inset?: boolean;
+    variant?: "default" | "destructive";
+  }) {
   return (
     <MenuPrimitive.Item
       data-slot="dropdown-menu-item"
@@ -224,7 +298,14 @@ function DropdownMenuItem({
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+      {(shortcut || action) && (
+        <span className={MENU_ROW_TRAIL}>
+          <MenuRowTrailParts shortcut={shortcut} action={action} />
+        </span>
+      )}
+    </MenuPrimitive.Item>
   );
 }
 
@@ -253,7 +334,9 @@ function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      <Icon icon={chevronRightIcon} className="ml-auto" />
+      <span className={MENU_ROW_TRAIL}>
+        <Icon icon={chevronRightIcon} />
+      </span>
     </MenuPrimitive.SubmenuTrigger>
   );
 }
@@ -265,7 +348,7 @@ function DropdownMenuSubContent({
   sideOffset = 0,
   // Same role as the menu it opened from, so a submenu sizes like every
   // other menu (its "anchor" is one row of the parent, never a width to match).
-  width = "menu-min",
+  width = "menu-fit",
   className,
   ...props
 }: React.ComponentProps<typeof DropdownMenuContent>) {
@@ -292,10 +375,13 @@ function DropdownMenuCheckboxItem({
   children,
   checked,
   inset,
+  shortcut,
+  action,
   ...props
-}: MenuPrimitive.CheckboxItem.Props & {
-  inset?: boolean;
-}) {
+}: MenuPrimitive.CheckboxItem.Props &
+  MenuRowTrailProps & {
+    inset?: boolean;
+  }) {
   return (
     <MenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
@@ -311,13 +397,16 @@ function DropdownMenuCheckboxItem({
       <span className="min-w-0 truncate lead-icon-sm [&>svg]:inline-block [&>svg]:shrink-0 [&>svg]:align-middle">
         {children}
       </span>
-      <span
-        className="pointer-events-none flex size-4 items-center justify-center"
-        data-slot="dropdown-menu-checkbox-item-indicator"
-      >
-        <MenuPrimitive.CheckboxItemIndicator>
-          <Icon icon={checkIcon} className="text-primary" />
-        </MenuPrimitive.CheckboxItemIndicator>
+      <span className={MENU_ROW_TRAIL}>
+        <MenuRowTrailParts shortcut={shortcut} action={action} />
+        <span
+          className="pointer-events-none flex size-4 items-center justify-center"
+          data-slot="dropdown-menu-checkbox-item-indicator"
+        >
+          <MenuPrimitive.CheckboxItemIndicator>
+            <Icon icon={checkIcon} className="text-primary" />
+          </MenuPrimitive.CheckboxItemIndicator>
+        </span>
       </span>
     </MenuPrimitive.CheckboxItem>
   );
@@ -336,10 +425,13 @@ function DropdownMenuRadioItem({
   className,
   children,
   inset,
+  shortcut,
+  action,
   ...props
-}: MenuPrimitive.RadioItem.Props & {
-  inset?: boolean;
-}) {
+}: MenuPrimitive.RadioItem.Props &
+  MenuRowTrailProps & {
+    inset?: boolean;
+  }) {
   return (
     <MenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
@@ -354,13 +446,16 @@ function DropdownMenuRadioItem({
       <span className="min-w-0 truncate lead-icon-sm [&>svg]:inline-block [&>svg]:shrink-0 [&>svg]:align-middle">
         {children}
       </span>
-      <span
-        className="pointer-events-none flex size-4 items-center justify-center"
-        data-slot="dropdown-menu-radio-item-indicator"
-      >
-        <MenuPrimitive.RadioItemIndicator>
-          <Icon icon={checkIcon} className="text-primary" />
-        </MenuPrimitive.RadioItemIndicator>
+      <span className={MENU_ROW_TRAIL}>
+        <MenuRowTrailParts shortcut={shortcut} action={action} />
+        <span
+          className="pointer-events-none flex size-4 items-center justify-center"
+          data-slot="dropdown-menu-radio-item-indicator"
+        >
+          <MenuPrimitive.RadioItemIndicator>
+            <Icon icon={checkIcon} className="text-primary" />
+          </MenuPrimitive.RadioItemIndicator>
+        </span>
       </span>
     </MenuPrimitive.RadioItem>
   );
@@ -386,7 +481,7 @@ function DropdownMenuShortcut({
   return (
     <span
       data-slot="dropdown-menu-shortcut"
-      className={cn(cn(MENU_VALUE, "ml-auto"), className)}
+      className={cn(MENU_VALUE, "ml-auto", className)}
       {...props}
     />
   );

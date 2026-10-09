@@ -69,7 +69,6 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
               href={`/api/attachments/${a.id}`}
               download={a.filename}
               bordered
-              hover="muted"
             >
               <span>{a.filename}</span>
               <Text as="span" variant="caption" tone="muted">

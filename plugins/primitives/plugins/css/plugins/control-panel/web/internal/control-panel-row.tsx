@@ -85,6 +85,15 @@ interface ControlPanelRowCommon {
   /** Muted foreground — for a secondary row ("New field", "Add filter"). */
   muted?: boolean;
   /**
+   * Select on PRESS without taking focus — for a panel opened beside a live
+   * caret (the page editor's block menu), where a plain click would first
+   * blur the editor and move its selection before the row's action runs. The
+   * row selects on a primary-button `mousedown` (with `preventDefault`, so
+   * focus stays where it is); keyboard activation (Enter / Space) still
+   * selects.
+   */
+  keepFocus?: boolean;
+  /**
    * Disables the row's SELECTION — not the whole row.
    *
    * On a row with no `actions` those are the same thing, and it reads as it
@@ -273,6 +282,7 @@ export function ControlPanelRow({
   actions,
   tone = "default",
   muted,
+  keepFocus,
   disabled,
   onSelect: onSelectProp,
   href,
@@ -294,6 +304,7 @@ export function ControlPanelRow({
   const onSelect = push !== undefined ? () => stack?.push(push) : onSelectProp;
   const isLink = href != null;
   const isButton = !isLink && (onSelect != null || disabled != null);
+  const press = selectHandlers(onSelect, keepFocus);
   const interactive = isLink || isButton;
   const hasActions = actions != null;
 
@@ -383,17 +394,22 @@ export function ControlPanelRow({
     MENU_ROW_PAINT,
     MENU_ROW_CHECKED,
     muted && "text-muted-foreground",
-    // This row's highlight state is `:hover`; the paint is the shared one.
+    // This row's highlight states are `:hover` and KEYBOARD focus; the paint is
+    // the shared one — so a row reached by Tab or arrow lights exactly like a
+    // dropdown row under the arrow keys, one indicator in every menu rather
+    // than a fill in one surface and a ring in the other.
     interactive && "hover:menu-row-lit",
-    // WHO gets rung is the one class that differs between the two
-    // constructions, and each spelling is inert on the other path.
-    // `focus-ring` is `&:focus-visible`, which a `<div>` box can never satisfy;
-    // `focus-ring-from` is `:has(> [data-focus-ring]:focus-visible)`, and the
-    // select element IS a direct child, so keyboard focus on the SELECTION
-    // rings the whole row — while focus on an action button inside the cluster
-    // rings only that button. `focus-ring-within` would light both at once,
-    // which is two indicators for one focus.
-    interactive && (hasActions ? "focus-ring-from" : "focus-ring"),
+    // WHO is focused differs between the two constructions, and each spelling
+    // is inert on the other path. `focus-visible:` is the box itself, which a
+    // `<div>` box can never satisfy; the `has-[…]` form is the select element —
+    // a direct child — so keyboard focus on the SELECTION lights the whole row,
+    // while focus on an action button inside the cluster rings only that button
+    // (its own `focus-ring`). Lighting on `:focus-within` would light the row
+    // for the button too: two indicators for one focus.
+    interactive &&
+      (hasActions
+        ? "has-[>[data-focus-ring]:focus-visible]:menu-row-lit"
+        : "outline-none focus-visible:menu-row-lit"),
     // The actions cluster brings its OWN hover group rather than piggybacking
     // on `group/cp-row`, so the trailing cluster reveals only when this class is
     // on the row it belongs to. Same construction as `RuleRow` and `SettingRow`.
@@ -501,6 +517,7 @@ export function ControlPanelRow({
         <SelectRegion
           href={href}
           onSelect={onSelect}
+          press={press}
           disabled={disabled}
           isLink={isLink}
           isButton={isButton}
@@ -562,7 +579,7 @@ export function ControlPanelRow({
         type="button"
         ref={hostRef}
         disabled={disabled}
-        onClick={onSelect}
+        {...press}
         className={rowClass}
         {...toneAttr}
         {...selection}
@@ -602,6 +619,7 @@ export function ControlPanelRow({
 function SelectRegion({
   href,
   onSelect,
+  press,
   disabled,
   isLink,
   isButton,
@@ -611,6 +629,7 @@ function SelectRegion({
 }: {
   href?: string;
   onSelect?: () => void;
+  press: SelectHandlers;
   disabled?: boolean;
   isLink: boolean;
   isButton: boolean;
@@ -620,8 +639,8 @@ function SelectRegion({
 }) {
   const className = cn(
     "grid grid-cols-subgrid col-[1/-2] self-stretch items-center min-w-0",
-    // `outline-none`: the ring is painted by the row BOX (`focus-ring-from`), so
-    // the UA outline would be a second, tighter indicator inside it.
+    // `outline-none`: the row BOX paints the focus (the lit fill, keyed on this
+    // node's `:focus-visible`), so the UA outline would be a second indicator.
     "rounded-panel-row text-left outline-none",
     // The selection's state is reported HERE, not on the row box, so the
     // shared checked label (colour + weight) is applied here too.
@@ -633,7 +652,7 @@ function SelectRegion({
     // still work.
     disabled && "pointer-events-none opacity-50",
   );
-  // Nominates this node as the one whose focus rings the box, written `=""` like
+  // Nominates this node as the one whose focus lights the box, written `=""` like
   // every other marker attribute in the repo — presence is the whole signal.
   const focus = { "data-focus-ring": "", "data-cp-select": "" };
 
@@ -656,7 +675,7 @@ function SelectRegion({
       <button
         type="button"
         disabled={disabled}
-        onClick={onSelect}
+        {...press}
         className={className}
         {...focus}
         {...selection}
@@ -693,3 +712,32 @@ const SELECT_ROLE: Record<
   radio: "radio",
   switch: "switch",
 };
+
+type SelectHandlers = {
+  onClick?: React.MouseEventHandler<HTMLElement>;
+  onMouseDown?: React.MouseEventHandler<HTMLElement>;
+};
+
+/**
+ * How a button row selects: on click, or — `keepFocus` — on a primary-button
+ * press with the default prevented, so focus never leaves wherever it is. A
+ * keyboard activation (Enter / Space) arrives as a `click` with `detail === 0`
+ * and still selects; a pointer click (`detail > 0`) was already handled on
+ * press, so it is not run twice.
+ */
+function selectHandlers(
+  onSelect: (() => void) | undefined,
+  keepFocus: boolean | undefined,
+): SelectHandlers {
+  if (!keepFocus) return { onClick: onSelect };
+  return {
+    onMouseDown: (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      onSelect?.();
+    },
+    onClick: (e) => {
+      if (e.detail === 0) onSelect?.();
+    },
+  };
+}

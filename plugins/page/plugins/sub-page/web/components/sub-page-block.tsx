@@ -118,12 +118,11 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
         // the current row. The bespoke ring that used to live here was a SECOND
         // focus indicator, drawn on the row box while the browser drew its own
         // on the inner control; `Row` now owns the focus ring, and this owns
-        // "current". `hover="accent"` (the `Row` default) is not cosmetic: it is
-        // what makes `selected` resolve to `bg-accent`, the exact tint the
-        // editor's own caret host paints — so the two void arms, the row and
-        // the host's box, say "the caret is here" in one voice.
+        // "current": `selected` resolves to `bg-selected` (default = the
+        // accent), the tint the editor's own caret host paints — so the two
+        // void arms, the row and the host's box, say "the caret is here" in
+        // one voice.
         selected={isFocused}
-        hover="accent"
         // The decoration's wash — dropped while the caret is here, because
         // `selected` and a tint are both a row BACKGROUND, and `Row` merges its
         // caller's class last: kept, the tint would erase the caret cue. Hover

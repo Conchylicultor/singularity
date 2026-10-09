@@ -66,7 +66,7 @@ export function TokenRow({
   }
 
   return (
-    <Row hover="muted" className="gap-sm">
+    <Row className="gap-sm">
       {isColor ? (
         <ColorPickerPopover value={value} onChange={handleColorChange} />
       ) : null}

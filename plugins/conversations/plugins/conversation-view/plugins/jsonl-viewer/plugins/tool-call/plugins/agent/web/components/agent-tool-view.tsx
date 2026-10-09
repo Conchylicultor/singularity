@@ -152,7 +152,6 @@ export function AgentToolView({ event }: ToolRendererProps) {
 
           <Row
             size="sm"
-            hover="muted"
             bordered
             onClick={openReport}
             className="rounded-md border-border/40 text-muted-foreground"

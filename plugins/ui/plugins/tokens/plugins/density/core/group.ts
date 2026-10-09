@@ -100,26 +100,26 @@ export const densityGroup = defineTokenGroup("density", {
   // Default = the `2xs` step it always had; `0px` packs root rows like
   // nested ones.
   treeRootGap: { default: "var(--space-2xs)", label: "Tree root row gap" },
-  // The three popover width ROLES (`PopoverContent width`) — a list of
-  // choices, a six-track rule row, a panel whose body is a grid. Defaults =
-  // the widths they always had (262px / 524px / 320px).
-  popoverWidthMenu: { default: "16.375rem", label: "Menu popover width" },
+  // A MENU's width bounds. A plain menu (`menu-fit`, `DropdownMenuContent`'s
+  // default; Select's floor) sizes to its items between the two; a control
+  // panel (`menu`, multi-page, so it must not resize as you move through it)
+  // is fixed at the max, so it is exactly as wide as the widest plain menu.
+  // A theme that wants every menu one width sets both to the same value.
+  // Defaults = the Menu prototype's 200px / 300px.
+  popoverWidthMenuMin: { default: "12.5rem", label: "Menu minimum width" },
+  popoverWidthMenuMax: { default: "18.75rem", label: "Menu maximum width" },
+  // The other fixed popover width ROLES (`PopoverContent width`) — a
+  // six-track rule row, a panel whose body is a grid.
   popoverWidthBuilder: {
     default: "32.75rem",
     label: "Builder popover width",
   },
   popoverWidthPicker: { default: "20rem", label: "Picker popover width" },
-  // The FLOOR of a dropdown menu (`menu-min`, `DropdownMenuContent`'s
-  // default): a menu sizes to its items, never narrower than this and never
-  // to its trigger's width. Its own token rather than the `menu` width above:
-  // that one is the fixed width of a control panel whose setting rows hold an
-  // 8rem field, which is too wide a floor for a three-item menu.
-  popoverWidthMenuMin: { default: "11rem", label: "Menu minimum width" },
-  // A fourth role: a list of choices that each carry a visible description
-  // line (the page-kind menu), whose width decides how many lines each
-  // description wraps to. Default = the menu width.
+  // A list of choices that each carry a visible description line (the
+  // page-kind menu), whose width decides how many lines each description
+  // wraps to. Default = the Menu prototype's 280px described menu.
   popoverWidthDescribed: {
-    default: "16.375rem",
+    default: "17.5rem",
     label: "Described-menu popover width",
   },
   // A control panel's geometry (`ControlPanel`): the panel's own inset — which

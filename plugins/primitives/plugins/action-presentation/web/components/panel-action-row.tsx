@@ -72,7 +72,6 @@ export function PanelActionRow({
   return (
     <Row
       icon={<Icon icon={icon} active={active} />}
-      hover="muted"
       onClick={onClick}
       onAuxClick={onAuxClick}
       onMouseDown={onMouseDown}

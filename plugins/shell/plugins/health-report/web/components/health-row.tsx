@@ -165,7 +165,6 @@ function ExpandTrigger({
   }
   return (
     <Row
-      hover="muted"
       onClick={ctx.toggle}
       aria-expanded={ctx.open}
       aria-controls={ctx.contentId}

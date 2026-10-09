@@ -9,6 +9,13 @@ inline` bridges (which map `--color-*`/`--text-*`/`--radius-*`/`--shadow-*`
 utility tokens onto the runtime vars), the structural `--z-*` ladder,
 `color-scheme` on `:root`/`.dark`, the `@utility` definitions, and `@layer base`.
 
+**Never read a bridge copy as a value** (`var(--color-x)`) outside `@theme` — in
+a `@utility`, a rule, or a class string. The bridge property lives on `:root`,
+where its `var()` is substituted once, so a scoped app theme
+(`[data-theme-scope]`) is ignored and the desktop colour paints. Read the
+runtime var (`var(--x)`); Tailwind's own utilities already do. Enforced by the
+`theme-bridge-reads` check.
+
 There's no SSR, so the first painted frame is themed by two pre-paint mechanisms
 instead of by `ThemeInjector` (which only runs after React mounts + a config
 round-trip):

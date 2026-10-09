@@ -15,7 +15,7 @@ import { scrollbarGroup } from "@plugins/ui/plugins/tokens/plugins/scrollbar/cor
  *
  * The surface ramp, darkest first: the page (`background`), the sidebar and
  * cards one step up, then the quiet fill every hover, chip, pill and selected
- * row shares.
+ * row shares — and menus and popovers, which float on it.
  */
 const DARK = {
   page: "oklch(0.195 0.012 248)",
@@ -66,8 +66,14 @@ const colorPalette = colorPaletteGroup.fragment({
     foreground: DARK.text,
     card: DARK.panel,
     cardForeground: DARK.text,
-    popover: DARK.panel,
+    // Menus and popovers float one step above the cards they open over (the
+    // fill), edged by the firm outline, and a row under the pointer or arrow
+    // keys lifts one step past that — the Menu prototype's bg-2 → bg-3. Its
+    // own hover token, so the selected rows of lists keep the fill.
+    popover: DARK.fill,
     popoverForeground: DARK.text,
+    popoverHover: DARK.fillHover,
+    popoverBorder: DARK.input,
     primary: DARK.teal,
     primaryForeground: DARK.tealInk,
     secondary: DARK.fill,

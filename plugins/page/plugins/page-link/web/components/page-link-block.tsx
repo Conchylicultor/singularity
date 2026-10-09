@@ -197,7 +197,6 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
           onSelect={(id) => editor.update({ pageId: id })}
           trigger={
             <Row
-              hover="muted"
               className="text-muted-foreground"
               icon={<Icon icon={linkIcon} />}
             >
@@ -244,7 +243,6 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
           onSelect={(id) => editor.update({ pageId: id })}
           trigger={
             <Row
-              hover="muted"
               icon={<Icon icon={linkIcon} className="text-muted-foreground" />}
             >
               <Placeholder>(page not found)</Placeholder>
@@ -264,7 +262,6 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   return (
     <div className="px-md py-xs">
       <Row
-        hover="muted"
         onClick={() => nav?.open(pageId)}
         actions={actions}
         icon={

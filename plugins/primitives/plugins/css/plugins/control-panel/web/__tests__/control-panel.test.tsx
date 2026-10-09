@@ -158,7 +158,7 @@ describe("ControlPanel.Row — `actions` splits the row", () => {
     ).toBe(false);
   });
 
-  it("rings the ROW from the selection's focus, never from an action's", () => {
+  it("lights the ROW from the selection's focus, never from an action's", () => {
     const { container } = render(
       <ControlPanel>
         <ControlPanel.Row
@@ -169,14 +169,16 @@ describe("ControlPanel.Row — `actions` splits the row", () => {
         </ControlPanel.Row>
       </ControlPanel>,
     );
-    // `focus-ring-from` is `:has(> [data-focus-ring]:focus-visible)`, and the
-    // selection is a direct child — so one ring around the whole row for the
-    // row's own focus, and none when an action button inside the cluster is
-    // focused (it rings itself). `focus-ring-within` would light both at once.
+    // Keyed on `:has(> [data-focus-ring]:focus-visible)`, and the selection is
+    // a direct child — so the whole row lights (the shared menu highlight) for
+    // the row's own focus, and not when an action button inside the cluster is
+    // focused (it rings itself). `:focus-within` would light both at once.
     const classes = container.querySelector(".cp-row")!.className.split(/\s+/);
-    expect(classes).toContain("focus-ring-from");
-    expect(classes).not.toContain("focus-ring");
-    expect(classes).not.toContain("focus-ring-within");
+    expect(classes).toContain(
+      "has-[>[data-focus-ring]:focus-visible]:menu-row-lit",
+    );
+    expect(classes).not.toContain("focus-visible:menu-row-lit");
+    expect(classes).not.toContain("focus-within:menu-row-lit");
   });
 
   it("leaves a row WITHOUT actions exactly as it was", () => {
@@ -197,7 +199,7 @@ describe("ControlPanel.Row — `actions` splits the row", () => {
       [...box.children].map((c) => c.getAttribute("data-cp-cell")),
     ).toEqual(["gutter", "icon", "label", "trailing"]);
     expect(box.querySelector("[data-cp-select]")).toBeNull();
-    expect(box.className.split(/\s+/)).toContain("focus-ring");
+    expect(box.className.split(/\s+/)).toContain("focus-visible:menu-row-lit");
   });
 });
 
@@ -998,30 +1000,19 @@ describe("ControlPanel.Row — push", () => {
   });
 });
 
-describe('ControlPanel.Section — heading="group"', () => {
-  it("draws the label on the group role, not as the eyebrow", () => {
+describe("ControlPanel.Section — label", () => {
+  it("draws the shared menu section label, never small caps", () => {
     render(
       <ControlPanel>
-        <ControlPanel.Section label="Agents on this page" heading="group">
+        <ControlPanel.Section label="Agents on this page">
           <ControlPanel.Row>Page</ControlPanel.Row>
         </ControlPanel.Section>
       </ControlPanel>,
     );
     const label = screen.getByText("Agents on this page");
-    expect(label.className).toContain("text-group");
-    expect(label.className).toContain("text-group-foreground");
+    expect(label.className).toContain("text-faint-foreground");
+    expect(label.className).toContain("font-semibold");
     expect(label.className).not.toContain("uppercase");
-  });
-
-  it("keeps the eyebrow by default", () => {
-    render(
-      <ControlPanel>
-        <ControlPanel.Section label="Page kind">
-          <ControlPanel.Row>Page</ControlPanel.Row>
-        </ControlPanel.Section>
-      </ControlPanel>,
-    );
-    expect(screen.getByText("Page kind").className).not.toContain("text-group");
   });
 });
 
@@ -1053,7 +1044,7 @@ describe("ControlPanelPopover — the showing page's width role", () => {
     );
     const row = await screen.findByRole("button", { name: /Filter/ });
     const panel = row.closest('[data-slot="popover-content"]')!;
-    expect(panel.className).toContain("w-(--popover-width-menu)");
+    expect(panel.className).toContain("w-(--popover-width-menu-max)");
 
     fireEvent.click(row);
     await screen.findByText("Filter builder");

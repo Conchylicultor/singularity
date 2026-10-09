@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
-import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
+import {
+  ControlPanel,
+  ControlPanelPopover,
+} from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import type { FieldDef } from "../../../core";
 import { useResolveFieldIcon } from "../../internal/use-field-icon";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -32,12 +34,14 @@ export function FieldPicker<TRow>(props: {
   const currentIcon = current ? resolveIcon(current.type ?? "text") : undefined;
 
   return (
-    <InlinePopover
-      resetOnClose
+    // A control panel, so the field list draws the shared menu row (its rows
+    // need the panel's grid) and the popover is a menu's width.
+    <ControlPanelPopover
       open={open}
       onOpenChange={setOpen}
       align="start"
-      width="lg"
+      maxHeight="lg"
+      label={props.label ?? "Filter field"}
       trigger={
         <ControlPanel.Field
           aria-label={props.label ?? "Filter field"}
@@ -55,6 +59,6 @@ export function FieldPicker<TRow>(props: {
           props.onChange(fieldId);
         }}
       />
-    </InlinePopover>
+    </ControlPanelPopover>
   );
 }

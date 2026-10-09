@@ -40,7 +40,6 @@ export function TabStrip() {
           <Row
             key={tab.id}
             size="sm"
-            hover="muted"
             selected={tab.active}
             className="max-w-52"
             title={tabLabel(tab.url)}

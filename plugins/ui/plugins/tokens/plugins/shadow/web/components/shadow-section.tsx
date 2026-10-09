@@ -223,7 +223,7 @@ export function ShadowSection() {
         <CollapsibleContent className="ml-2 mt-1">
           <Stack gap="xs">
             {/* Color row */}
-            <Row hover="muted" className="gap-sm">
+            <Row className="gap-sm">
               <Text
                 as="span"
                 variant="label"
@@ -261,7 +261,7 @@ export function ShadowSection() {
             {/* Numeric/text param rows */}
             {/* eslint-disable-next-line data-view/no-adhoc-row-list -- fixed token-editor param rows, not domain records */}
             {PARAM_FIELDS.map(({ key, label }) => (
-              <Row key={key} hover="muted" className="gap-sm">
+              <Row key={key} className="gap-sm">
                 <Text
                   as="span"
                   variant="label"

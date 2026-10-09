@@ -91,7 +91,6 @@ export function RelationChip({
       <Row
         bordered
         size="sm"
-        hover="muted"
         actionsAlwaysVisible
         className={
           isTerminal ? "text-muted-foreground line-through" : undefined

@@ -23,16 +23,14 @@ export interface ControlPanelSubheadProps {
  * of what a heading is for. Same reason `RuleList`, `Empty` and `Block` are not
  * bands.
  *
- * It is NOT an eyebrow either. A second small-caps line directly under a
- * `Section`'s reads as a peer band rather than as something inside it, so this
- * wears the shared MENU section label (ui-kit `MENU_LABEL_PAINT`: faint caption,
- * semibold, sentence case) — the same label a dropdown or select section has,
- * since a run of rows is exactly what both name.
+ * It wears the shared MENU section label (ui-kit `MENU_LABEL_PAINT`: faint
+ * caption, semibold, sentence case) — the same label a `Section`, a dropdown or
+ * a select section has, since a run of rows is exactly what all of them name.
  *
  * And it is NOT a field label: that rung names ONE control and is drawn in a
- * row's label cell, on the TEXT rail. This names a RUN, which is the eyebrow's
+ * row's label cell, on the TEXT rail. This names a RUN, which is the band label's
  * side of invariant #1's split — so it carries no rail class at all and lands on
- * whatever region hosts it by doing nothing, beside the eyebrow above it and an
+ * whatever region hosts it by doing nothing, beside the band label above it and an
  * icon column back from the labels below. Gated by the `subhead-rail` fixture
  * rather than by this paragraph.
  *

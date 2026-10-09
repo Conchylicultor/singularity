@@ -52,7 +52,6 @@ export function PlaceCard({ data, refresh, onReplace }: PlaceCardProps) {
 
   return (
     <Row
-      hover="muted"
       {...(data.mapsUrl
         ? { href: data.mapsUrl, target: "_blank", rel: "noreferrer" }
         : {})}

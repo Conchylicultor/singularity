@@ -439,6 +439,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`space-ramp-in-sync`**
   - **`table-defs-in-schema-glob`**
   - **`tailwind-scan-covers-classes`**
+  - **`theme-bridge-reads`**
   - **`token-group-vars-in-sync`**
   - **`tsconfig-alias-single-owner`**
   - **`type-check`**

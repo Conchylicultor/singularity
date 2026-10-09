@@ -188,7 +188,6 @@ export function SectionHeaderRow({
         aria-controls={ctx?.contentId}
         onClick={onClick}
         actionsAlwaysVisible
-        hover="muted"
         actions={actions}
         className={cn(VARIANT_CLASS[variant], className)}
         {...rest}
@@ -224,7 +223,6 @@ export function SectionHeaderRow({
       aria-controls={ctx?.contentId}
       onClick={onClick}
       actionsAlwaysVisible
-      hover="muted"
       actions={actions}
       icon={<CollapsibleChevron open={open} />}
       className={cn(VARIANT_CLASS[variant], className)}

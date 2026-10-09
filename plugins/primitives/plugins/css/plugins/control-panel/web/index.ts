@@ -15,7 +15,6 @@ export { type ControlPanelStackProps } from "./internal/panel-stack";
 export {
   type ControlPanelProps,
   type ControlPanelSectionProps,
-  type ControlPanelSectionHeading,
   type ControlPanelFooterProps,
   type ControlPanelEmptyProps,
   type ControlPanelRuleListProps,

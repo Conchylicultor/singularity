@@ -3,9 +3,8 @@ import {
   SearchInput,
   useTextFilter,
 } from "@plugins/primitives/plugins/search/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { FieldDef } from "../../../core";
 import { useResolveFieldIcon } from "../../internal/use-field-icon";
@@ -14,8 +13,13 @@ import { FieldSections, fieldSearchText } from "../../internal/field-sections";
 
 /**
  * Notion-style search-first field picker: a "Filter by…" typeahead over the
- * schema's filterable fields, each rendered as an icon + label `Row`. Selecting a
- * field reports its id to `onPick` in a single click. The shared building block
+ * schema's filterable fields, each rendered as an icon + label
+ * `ControlPanel.Row` — the shared menu row, so the list highlights, sizes and
+ * reads like every other menu. Selecting a field reports its id to `onPick` in a
+ * single click. It must be drawn inside a control panel (every host is one: the
+ * filter / sort panels, and `FieldPicker`'s `ControlPanelPopover`). The panel
+ * scrolls the list; there is no inner scroller, which would clip the rows'
+ * full-width highlight. The shared building block
  * behind every "choose a field" surface in the filter builder — the empty state,
  * the `Add filter` affordance, and changing an existing rule's field — so they
  * all gain typeahead from one place.
@@ -48,41 +52,30 @@ export function FieldSearchList<TRow>(props: {
         placeholder={props.placeholder ?? "Filter by…"}
         aria-label="Search fields"
       />
-      <Scroll className="max-h-64">
-        <Stack gap="2xs">
-          {filtered.length === 0 ? (
-            <Text
-              as="div"
-              variant="caption"
-              tone="muted"
-              className="px-2xs py-xs"
-            >
-              No fields
-            </Text>
-          ) : (
-            // Sectioned over the FILTERED set, so a search that matches nothing
-            // in a band drops that band's heading with it.
-            <FieldSections fields={filtered}>
-              {(fields) =>
-                fields.map((field) => {
-                  const icon = resolveIcon(field.type ?? "text");
-                  return (
-                    <Row
-                      key={field.id}
-                      size="sm"
-                      hover="muted"
-                      icon={icon ? <Icon icon={icon} /> : undefined}
-                      onClick={() => props.onPick(field.id)}
-                    >
-                      <span className="truncate">{field.label}</span>
-                    </Row>
-                  );
-                })
-              }
-            </FieldSections>
-          )}
-        </Stack>
-      </Scroll>
+      {filtered.length === 0 ? (
+        <Text as="div" variant="caption" tone="muted" className="py-xs">
+          No fields
+        </Text>
+      ) : (
+        // Sectioned over the FILTERED set, so a search that matches nothing
+        // in a band drops that band's heading with it.
+        <FieldSections fields={filtered}>
+          {(fields) =>
+            fields.map((field) => {
+              const icon = resolveIcon(field.type ?? "text");
+              return (
+                <ControlPanel.Row
+                  key={field.id}
+                  icon={icon ? <Icon icon={icon} /> : undefined}
+                  onSelect={() => props.onPick(field.id)}
+                >
+                  {field.label}
+                </ControlPanel.Row>
+              );
+            })
+          }
+        </FieldSections>
+      )}
       {props.footer}
     </Stack>
   );

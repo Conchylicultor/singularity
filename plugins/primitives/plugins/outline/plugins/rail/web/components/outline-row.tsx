@@ -39,7 +39,6 @@ export function OutlineRow({ entry, active, onJump }: OutlineRowProps) {
     <Row
       ref={rowRef}
       size="sm"
-      hover="muted"
       selected={active}
       data-outline-row=""
       data-outline-id={entry.id}

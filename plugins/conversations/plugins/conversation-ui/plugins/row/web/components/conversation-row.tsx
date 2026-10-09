@@ -15,7 +15,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
  *
  * One word instead of three mechanics: it picks the `ConversationItem` layout
  * AND the `Row`'s density, which a caller previously had to keep in step by
- * hand (`size="sm" hover="muted"` beside `layout="inline"`).
+ * hand (`size="sm"` beside `layout="inline"`).
  */
 export type ConversationRowLayout = "block" | "inline";
 
@@ -118,7 +118,6 @@ function ConversationRowShell({
   return (
     <Row
       size={inline ? "sm" : "md"}
-      hover={inline ? "muted" : "accent"}
       selected={opener.isOpen(convId)}
       title={title}
       actions={actions}

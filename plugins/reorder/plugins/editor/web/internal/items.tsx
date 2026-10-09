@@ -512,7 +512,6 @@ export function RestoreButton({
               <Row
                 key={item.key}
                 size="sm"
-                hover="accent"
                 icon={<Icon icon={addIcon} className="text-muted-foreground" />}
                 onClick={() => {
                   handleRestore(item.key);
@@ -531,7 +530,6 @@ export function RestoreButton({
               <Row
                 key={insert.label}
                 size="sm"
-                hover="accent"
                 icon={<Icon icon={addIcon} className="text-muted-foreground" />}
                 onClick={() => {
                   insert.onInsert();
@@ -586,7 +584,7 @@ export function RestoreButton({
         </div>
 
         <div className="p-xs">
-          <Row size="sm" hover="accent" disabled icon={<Icon icon={addIcon} />}>
+          <Row size="sm" disabled icon={<Icon icon={addIcon} />}>
             Create custom plugin
           </Row>
         </div>

@@ -72,7 +72,6 @@ function PluginTreeNode({ node, depth }: { node: PluginNode; depth: number }) {
   return (
     <>
       <Row
-        hover="accent"
         size="sm"
         indent={depth * 16 + 8}
         icon={chevronIcon}

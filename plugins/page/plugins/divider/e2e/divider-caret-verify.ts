@@ -147,8 +147,8 @@ await withBrowser(async (h) => {
 
   // --- sub-page row, for a tint comparison ---------------------------------
   // Turn the paragraph above into a sub-page ("Turn into" -> "Page"): its Row
-  // paints the same fact via `selected` + `hover="accent"`, which resolves to
-  // the same `bg-accent`.
+  // paints the same fact via `selected`, which resolves to `bg-selected`
+  // (default = the same accent).
   {
     const paraBlock = page
       .getByText("A paragraph above the divider", { exact: true })

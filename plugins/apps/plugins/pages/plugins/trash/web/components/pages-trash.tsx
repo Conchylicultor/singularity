@@ -198,7 +198,6 @@ function TrashList({
           <Row
             key={entry.id}
             icon={<Icon icon={descriptionIcon} />}
-            hover="muted"
             actionsAlwaysVisible
             actions={
               <Inline gap="xs">

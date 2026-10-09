@@ -1,4 +1,5 @@
 import noAdhocPanelBody from "./no-adhoc-panel-body";
+import noRowInPanel from "./no-row-in-panel";
 import type { LintContribution } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 /**
@@ -39,7 +40,11 @@ import type { LintContribution } from "@plugins/framework/plugins/tooling/plugin
  */
 export default {
   name: "control-panel",
-  rules: {},
+  // A row inside a panel is a `ControlPanel.Row`, never the generic `Row`:
+  // see `no-row-in-panel.ts`.
+  rules: {
+    "no-row-in-panel": noRowInPanel,
+  },
   // Class rules are FACTORIES: they read class tokens, so they take the one
   // shared walk from `buildLintConfig` instead of hand-copying it. See
   // @plugins/framework/plugins/tooling/plugins/lint/core/class-token-walk.ts.

@@ -141,7 +141,6 @@ function RankedList({
         return (
           <Row
             key={row.value}
-            hover="muted"
             selected={selected}
             disabled={click.kind === "blocked"}
             title={

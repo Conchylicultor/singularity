@@ -20,6 +20,7 @@ export type ExemptableRuleId =
   | "config-link/no-unlinked-config-picker"
   | "context-safety/no-unstable-context-value"
   | "control-panel/no-adhoc-panel-body"
+  | "control-panel/no-row-in-panel"
   | "daemon/no-raw-worker"
   | "data-view/no-adhoc-row-list"
   | "database/no-pool-await-in-transaction"

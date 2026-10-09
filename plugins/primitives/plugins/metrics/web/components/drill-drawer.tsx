@@ -237,7 +237,6 @@ function DrillRow({
 }): ReactNode {
   return (
     <Row
-      hover="muted"
       onClick={
         item.link === undefined ? undefined : () => navigate(item.link!.href)
       }

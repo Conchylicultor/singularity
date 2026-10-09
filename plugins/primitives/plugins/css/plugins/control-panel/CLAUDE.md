@@ -249,7 +249,7 @@ rendered node.
 **A `Block` label is drawn in a row's label cell — on the TEXT rail, not the
 panel's content edge.** Invariant #1 says every *label* starts at one x, and a
 Block label is a field label, the same rung as a Setting label and a Row label. A
-`Section` label is an *eyebrow*, a different rung, and keeps the panel's content
+`Section` label names a band, a different rung, and keeps the panel's content
 edge. In a panel with no icon track the two coincide, which is exactly why this
 is gated by the `block-label-rail` fixture rather than by this paragraph. `Block`
 is also **not** a `Section`: it carries no `cp-band`, so a run of blocks is one
@@ -268,15 +268,16 @@ for a call site that has mixed the two up.
 
 ## The three label rungs, and where each one starts
 
-A label either names the panel's **band** (`Section`'s eyebrow — small-caps, on
-the panel's content edge), a **run of rows inside one band** (`Subhead` —
-caption/muted, on that same edge) or **one control** (a `Row` / `Setting` /
+A label either names the panel's **band** (`Section`'s label), a **run of rows
+inside one band** (`Subhead`) — both the shared menu section label (ui-kit
+`MENU_LABEL_PAINT`: faint caption, semibold, sentence case, the same a dropdown
+section wears) on the panel's content edge — or **one control** (a `Row` / `Setting` /
 `Block` label — drawn in a row's label cell, on the text rail). Invariant #1's
 split is band-and-run versus field, not "heading versus body".
 
 `Subhead` is the middle rung, and it exists because the outer two are both wrong
 for it: a `Section` would rule a hairline between the heading and its own rows,
-and a field label would indent it an icon column past the eyebrow above it. It
+and a field label would indent it an icon column past the band label above it. It
 reaches its rail by carrying no class at all — the *inherit* half of the rail
 contract — so it is equally correct in a region that is not a panel. Gated by
 `subhead-rail` (a panel with an icon column, where the two rails are genuinely
@@ -524,9 +525,15 @@ unspellable. (The filter builder's own sub-pages still push through
 `useFilterPanelStack`, which re-enters a filter scope around the page; they do
 not have the chevron yet.)
 
-Two more opt-in shapes, defaults unchanged: `Section heading="group"` draws the
-label as a sentence-case group head (`group` role, `--group-foreground`)
-instead of the eyebrow, and `Row indicator="trailing"` on a check / radio row
+**Every row in a panel is a `ControlPanel.Row`** — never the generic `css/row`
+`Row`, which has its own height, gap and highlight (`control-panel/no-row-in-panel`
+rejects one drawn inside a panel element in the same component). A row lights
+with the shared menu highlight on hover AND on keyboard focus, exactly like a
+dropdown row under the arrow keys — no focus ring. A panel opened beside a live
+caret (the page editor's block menu) passes `keepFocus`: the row selects on
+press without taking focus, and Enter / Space still select.
+
+One more opt-in shape, default unchanged: `Row indicator="trailing"` on a check / radio row
 draws the mark after the value so the leading cell holds a real `icon` — role
 and `aria-checked` unchanged. A row with a visible `description` reads as a
 title (medium, strong) over its prose, and its leading and trailing cells sit on
@@ -559,7 +566,7 @@ Plus `setting-rail` (the two row grids' labels on one text rail, and the value
 rail across a panel mixing `Row`, `Setting fit="field"`, `Setting fit="inline"`
 and `Block` — the pair that can actually drift), `block-label-rail` and
 `subhead-rail` (the two sides of the label-rung split above — a field label on
-the text rail, a sub-head on the eyebrow's — each gated in a panel with an icon
+the text rail, a sub-head on the band label's — each gated in a panel with an icon
 column so the two rails are genuinely apart) and `group-nested-rail` (a nested
 group's republished rail against its children).
 
@@ -607,16 +614,26 @@ The primitive needs **no** new lint exemptions: it inherits the
 
 - Description: The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
 - Web:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×10
-    - `primitives/css/text` ×2
-    - `primitives/row-actions` ×2
+  - Uses:
     - `primitives/css/rail.useRailGuard`
     - `primitives/css/selection-indicator.CheckboxIndicator`
     - `primitives/css/spacing.Stack`
     - `primitives/css/switch.SwitchIndicator`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.MENU_LABEL_PAINT`
+    - `primitives/css/ui-kit.MENU_ROW_CHECKED`
+    - `primitives/css/ui-kit.MENU_ROW_PAINT`
+    - `primitives/css/ui-kit.MENU_VALUE`
+    - `primitives/css/ui-kit.Popover`
+    - `primitives/css/ui-kit.PopoverContent`
+    - `primitives/css/ui-kit.PopoverMaxHeight`
+    - `primitives/css/ui-kit.PopoverTrigger`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/tooltip.WithTooltip`
+    - `primitives/row-actions.RowActions`
+    - `primitives/row-actions.rowActionsAnchor`
     - `ui/icons.Icon`
   - Exports (types):
     - `ControlPanelBlockProps`
@@ -636,7 +653,6 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `ControlPanelRowTone`
     - `ControlPanelRuleListProps`
     - `ControlPanelRuleRowProps`
-    - `ControlPanelSectionHeading`
     - `ControlPanelSectionProps`
     - `ControlPanelSettingProps`
     - `ControlPanelSize`
@@ -651,9 +667,9 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `useControlPanelHost`
     - `usePanelStack`
 - Cross-plugin:
-  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×10
-    - `page` ×4
+    - `page` ×5
     - `primitives` ×4
     - `config_v2` ×2
     - `tasks` ×2

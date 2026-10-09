@@ -195,7 +195,6 @@ function InstrumentPicker({
             track's GM program / the default timbre. Active when no override. */}
         <Row
           size="sm"
-          hover="muted"
           selected={!instrumentCustomized}
           icon={<Icon icon={autoModeIcon} />}
           actions={
@@ -223,7 +222,6 @@ function InstrumentPicker({
                 <Row
                   key={o.id}
                   size="sm"
-                  hover="muted"
                   selected={active}
                   icon={
                     icon ? (

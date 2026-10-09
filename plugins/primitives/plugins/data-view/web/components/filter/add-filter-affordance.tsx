@@ -3,7 +3,6 @@ import {
   ControlPanel,
   usePanelStack,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { useFilterEditor } from "../../internal/use-filter-editor";
 import { FieldSearchList } from "./field-search-list";
 import { useFilterPanelStack } from "./filter-scope";
@@ -75,23 +74,18 @@ function AddFilterPanel({ groupId }: { groupId: string }): ReactNode {
 /**
  * The "Add filter group" advanced row, shared by the pushed add page and the
  * empty-state field list so both expose the grouped-filter path identically below
- * the field list.
- *
- * A `css/row` `Row` and not a `ControlPanel.Row`, because it lives INSIDE
- * `FieldSearchList` — it belongs to that list's vocabulary, not to the panel's,
- * and the two lists it appears in are both search results. It draws no divider
- * above itself: the one it used to borrow from the dropdown menu is exactly the
- * hand-placed separator this pass removes.
+ * the field list. A `ControlPanel.Row` like the fields above it, so it highlights
+ * and sizes as one of them. It draws no divider above itself: the one it used to
+ * borrow from the dropdown menu is exactly the hand-placed separator this pass
+ * removes.
  */
 export function AddGroupRow(props: { onClick: () => void }): ReactNode {
   return (
-    <Row
-      size="sm"
-      hover="muted"
+    <ControlPanel.Row
       icon={<Icon icon={accountTreeIcon} />}
-      onClick={props.onClick}
+      onSelect={props.onClick}
     >
       Add filter group
-    </Row>
+    </ControlPanel.Row>
   );
 }

@@ -70,7 +70,6 @@ export function BookmarksBar() {
           <Row
             key={b.id}
             size="sm"
-            hover="muted"
             className="w-auto"
             title={b.title}
             icon={<Favicon url={b.url} size={14} />}

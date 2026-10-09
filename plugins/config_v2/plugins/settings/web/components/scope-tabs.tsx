@@ -179,7 +179,6 @@ function AddScopeButton({
               <Row
                 key={entry.id}
                 size="sm"
-                hover="muted"
                 icon={<AppIconView icon={entry.icon} />}
                 onClick={() => {
                   fork({ body: { storePath, scopeId: sid } });

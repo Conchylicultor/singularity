@@ -75,7 +75,7 @@ export function ChangeCoverPopover({
       label="Change cover"
       trigger={trigger}
     >
-      <ControlPanel.Section label="Gradient" heading="group">
+      <ControlPanel.Section label="Gradient">
         {/* Five to a row, each swatch filling its column, so the ten presets
             are two even rows at any picker width. */}
         <Grid cols={5} gap="xs" className="pb-sm pt-2xs">

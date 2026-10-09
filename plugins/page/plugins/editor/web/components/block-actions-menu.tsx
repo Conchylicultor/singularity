@@ -1,6 +1,5 @@
 import { useMemo, useState, type ReactElement } from "react";
 
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
@@ -118,11 +117,10 @@ export function BlockActionsMenu({
   const { copy: copyBlockId } = useCopyToClipboard(block.id);
 
   const close = () => setOpen(false);
-  // Every commit fires on `onMouseDown` after a `preventDefault`: the handle sits
+  // Every row commits with `keepFocus` (on press, focus kept): the handle sits
   // beside a live caret, and a plain click would blur the block's editor (moving
   // the DOM selection) before the action runs.
-  const commit = (run: () => void) => (e: React.MouseEvent) => {
-    e.preventDefault();
+  const commit = (run: () => void) => () => {
     run();
     close();
   };
@@ -174,7 +172,8 @@ export function BlockActionsMenu({
                 there is nothing to offer — the container's fold and its child's
                 hide the same lines. */}
             {childCount > 1 && (
-              <Row
+              <ControlPanel.Row
+                keepFocus
                 icon={
                   block.expanded ? (
                     <Icon icon={unfoldLessIcon} />
@@ -182,10 +181,10 @@ export function BlockActionsMenu({
                     <Icon icon={unfoldMoreIcon} />
                   )
                 }
-                onMouseDown={commit(() => api.setExpanded(!block.expanded))}
+                onSelect={commit(() => api.setExpanded(!block.expanded))}
               >
                 {block.expanded ? "Collapse" : "Expand"}
-              </Row>
+              </ControlPanel.Row>
             )}
             {/* Remove and Delete are DIFFERENT intents and must stay separate.
                 Remove dissolves the box and promotes the children into its slot
@@ -194,12 +193,13 @@ export function BlockActionsMenu({
                 Delete takes the subtree with it, exactly as any other block's
                 Delete does. A single "delete the container" would conflate them. */}
             {!isScopeRoot && (
-              <Row
+              <ControlPanel.Row
+                keepFocus
                 icon={<Icon icon={doNotDisturbOnIcon} />}
-                onMouseDown={commit(() => unwrapBlock(block.id))}
+                onSelect={commit(() => unwrapBlock(block.id))}
               >
                 {`Remove ${containerName}`}
-              </Row>
+              </ControlPanel.Row>
             )}
           </ControlPanel.Section>
         </>
@@ -242,23 +242,25 @@ export function BlockActionsMenu({
         ) : null}
         {/* The popover closes on commit, so the hook's own `copied` flash is
             never seen — the toast is the feedback. */}
-        <Row
+        <ControlPanel.Row
+          keepFocus
           icon={<Icon icon={contentCopyIcon} />}
-          onMouseDown={commit(() => {
+          onSelect={commit(() => {
             copyBlockId();
             showToast({ description: "Block ID copied" });
           })}
         >
           Copy block ID
-        </Row>
+        </ControlPanel.Row>
         {!isScopeRoot && (
-          <Row
-            className="text-destructive"
+          <ControlPanel.Row
+            keepFocus
+            tone="danger"
             icon={<Icon icon={deleteIcon} />}
-            onMouseDown={commit(() => api.remove())}
+            onSelect={commit(() => api.remove())}
           >
             Delete
-          </Row>
+          </ControlPanel.Row>
         )}
       </ControlPanel.Section>
     </ControlPanelPopover>

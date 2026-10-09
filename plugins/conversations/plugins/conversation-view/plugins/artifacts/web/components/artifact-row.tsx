@@ -38,9 +38,6 @@ export interface ArtifactRowProps {
  * happened to inherit, and the focus ring the same one every other row in the
  * app paints.
  *
- * `hover="muted"` because this row lives on a popover panel, not in a sidebar:
- * the accent tint is the sidebar/menu treatment and reads as a selection here.
- *
  * Shared by every kind that lists rows, so a prototype line and a research line
  * cannot drift apart. A kind whose items want a different shape — thumbnails,
  * name chips — renders its own and reuses {@link RelationMarker} instead.
@@ -78,7 +75,6 @@ export function ArtifactRow({
       // decision, because the glyph is sized from the ROW's rung — a title that
       // declared a different one would put the two back out of step.
       size="sm"
-      hover="muted"
       disabled={inertReason !== undefined || onOpen === undefined}
       onClick={() => {
         onOpen?.();

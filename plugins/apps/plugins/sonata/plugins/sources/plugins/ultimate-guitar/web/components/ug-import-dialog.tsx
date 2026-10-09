@@ -302,7 +302,6 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
                     ref={idx === activeIdx ? activeRef : undefined}
                     selected={idx === activeIdx}
                     disabled={listDisabled}
-                    hover="muted"
                     icon={
                       importing ? (
                         <Spinner className="size-4" />

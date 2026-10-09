@@ -35,7 +35,6 @@ export function FoldLine({ section, foldLines }: FoldLineProps): ReactNode {
   return (
     <Row
       size="sm"
-      hover="muted"
       title={foldLines.summary}
       aria-expanded={fold.open}
       onClick={() => foldLines.setOpen(key, !fold.open)}

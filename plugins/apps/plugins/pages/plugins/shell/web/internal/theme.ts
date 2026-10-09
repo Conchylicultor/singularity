@@ -119,7 +119,7 @@ const density = densityGroup.fragment(
     // A nested row's fill starts under its parent's icon, not at the edge.
     treePillIndent: "14px",
     treeRootGap: "0px",
-    popoverWidthMenu: "15.5rem",
+    popoverWidthMenuMax: "15.5rem",
     popoverWidthDescribed: "18.75rem",
     popoverWidthPicker: "20.5rem",
     panelPad: "0.375rem",

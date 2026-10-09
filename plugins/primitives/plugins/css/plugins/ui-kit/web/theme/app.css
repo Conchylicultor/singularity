@@ -257,14 +257,14 @@
   /* twmerge: standalone -- State-scoped border-color under :focus-visible; must coexist with the resting border-* class, not replace it. */
   @apply outline-none;
   &:focus-visible {
-    border-color: color-mix(in oklch, var(--color-input), var(--color-foreground) 18%);
+    border-color: color-mix(in oklch, var(--input), var(--foreground) 18%);
   }
 }
 
 @utility focus-border-within {
   /* twmerge: standalone -- State-scoped border-color under :has(); must coexist with the resting border-* class, not replace it. */
   &:has(:focus-visible) {
-    border-color: color-mix(in oklch, var(--color-input), var(--color-foreground) 18%);
+    border-color: color-mix(in oklch, var(--input), var(--foreground) 18%);
   }
 }
 

@@ -187,6 +187,16 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     default: "color-mix(in oklab, var(--foreground) 10%, transparent)",
     label: "Popover border",
   },
+  // A highlighted row's fill INSIDE a floating panel (a menu row under the
+  // pointer or arrow keys) — the overlay surface's own hover, the way the
+  // sidebar has `sidebarAccent`. Default = the selected-row fill it always
+  // shared, so a theme that leaves it out changes nothing; a theme whose
+  // popover sits a step above its cards sets it a step above the popover,
+  // without moving the selected rows of its lists and trees.
+  popoverHover: {
+    default: "var(--selected)",
+    label: "Popover row hover",
+  },
   // A neutral header chip's fill (a conversation's model chip).
   chip: {
     default: "var(--muted)",

@@ -18,13 +18,11 @@ import {
  *
  * The heading is `ControlPanel.Subhead` — the panel vocabulary's own member, so
  * it follows the panel's label rails and typography rather than being hand-rolled
- * here. It carries no rail class of its own, which is what makes it right in the
- * one surface with no panel around it: the bare `InlinePopover` in
- * `web/components/filter/field-picker.tsx`, where it lands on that region's
- * content edge instead.
+ * here. Every host is a control panel (the field picker included), so it lands
+ * on the panel's rail.
  *
- * `children` renders one band's rows — whatever vocabulary the surface is drawn
- * in (a `Row`, a `ControlPanel.Row`, a `SortableList` of them).
+ * `children` renders one band's rows — a `ControlPanel.Row` each, or a
+ * `SortableList` of them.
  */
 export function FieldSections<TRow>(props: {
   fields: FieldDef<TRow>[];

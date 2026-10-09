@@ -79,7 +79,6 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
           subdirs.map((entry) => (
             <Row
               key={entry.name}
-              hover="muted"
               icon={
                 <Icon icon={folderIcon} className="text-muted-foreground" />
               }

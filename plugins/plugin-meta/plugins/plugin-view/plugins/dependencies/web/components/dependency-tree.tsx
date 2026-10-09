@@ -143,7 +143,6 @@ function DepRow({ node, depth }: { node: DepTreeNode; depth: number }) {
   return (
     <>
       <Row
-        hover="accent"
         size="sm"
         indent={depth * 16 + 8}
         icon={chevronIcon}

@@ -119,7 +119,6 @@ function AlsoInWindow({
             <Row
               key={t.id}
               size="sm"
-              hover="muted"
               title={t.triggerLabel}
               {...openPane.link(
                 traceDetailPane,

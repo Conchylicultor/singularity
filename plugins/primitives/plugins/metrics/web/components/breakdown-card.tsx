@@ -56,7 +56,6 @@ function BreakdownRows({
       {data.rows.map((row) => (
         <Row
           key={row.key}
-          hover="muted"
           onClick={
             row.link === undefined ? undefined : () => navigate(row.link!.href)
           }

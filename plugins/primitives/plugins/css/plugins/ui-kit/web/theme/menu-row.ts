@@ -47,8 +47,10 @@ export const MENU_ROW_CHECKED =
  * (`--pad-row-x`), block inset (`xs`, which only a row taller than its
  * floor — a described choice — ever shows), icon↔label gap (`sm`), corners
  * (`--radius-panel-row`) and the disabled treatment. The component appends its own highlight variant.
+ * Names itself `group/menu-row`, so a part of the row (the trailing action)
+ * reveals on the row's own highlight: `group-data-highlighted/menu-row:…`.
  */
-export const MENU_ROW = `${MENU_ROW_PAINT} ${MENU_ROW_CHECKED} w-full min-h-panel-row px-row py-xs gap-sm rounded-panel-row cursor-default select-none outline-hidden data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0`;
+export const MENU_ROW = `${MENU_ROW_PAINT} ${MENU_ROW_CHECKED} group/menu-row w-full min-h-panel-row px-row py-xs gap-sm rounded-panel-row cursor-default select-none outline-hidden data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0`;
 
 /** A section label over a run of rows: faint, caption role, semibold, sentence case. */
 export const MENU_LABEL_PAINT =
@@ -62,6 +64,13 @@ export const MENU_LABEL = `${MENU_LABEL_PAINT} px-row py-xs`;
  * badge and no fill.
  */
 export const MENU_VALUE = "text-caption text-faint-foreground";
+
+/**
+ * A row's trailing cluster — its action, shortcut and check mark, in that
+ * order — pushed to the row's end (`ml-auto`; a grid row's last track needs
+ * none). One class list so the dropdown's items and its sub-trigger end alike.
+ */
+export const MENU_ROW_TRAIL = "ml-auto flex shrink-0 items-center gap-xs";
 
 /**
  * The hairline between runs of rows. `rail-bleed` spans it through the panel's

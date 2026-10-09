@@ -133,7 +133,6 @@ export function EntryEditor({
                     <Row
                       key={id}
                       size="sm"
-                      hover="muted"
                       onClick={() => add(id)}
                       title={String(id)}
                     >

@@ -201,10 +201,31 @@ The icon tone reaches only our `<Icon>` glyphs (`svg[data-icon]`) that carry no
 colour class of their own, so a check mark's `text-primary` or a status glyph's
 tint keeps its colour.
 
-A dropdown menu's width is `menu-min` by default: sized to its items, floored at
-the density token `popoverWidthMenuMin`, never stretched to its trigger. A picker
-standing in for a field passes `width="anchor-min"`; `SelectContent` keeps
-matching its trigger (a listbox).
+| keyboard focus (control panel) | the same lit paint (`focus-visible:menu-row-lit`), never a ring |
+| highlighted (in a popover) | `--hover-fill` = the overlay's `popoverHover` token (default `selected`) |
+| trailing action | `action={{ icon, label, onAction }}` — an `xs` ghost icon button, shown while the row is highlighted |
+
+A row's **trailing cluster** is part of the shared row, never hand-built at a
+call site: `DropdownMenuItem` / `CheckboxItem` / `RadioItem` take
+`shortcut` (a formatted label, drawn as `MENU_VALUE` text — never a `Kbd`
+keycap) and `action` (a one-time variant of the row's own choice, e.g. the
+model picker's "launch now"; it reveals on `group-data-highlighted/menu-row`,
+so arrow keys show it too, and a click on it never selects the row), in the
+order action · shortcut · check. A selected default is a `RadioGroup` value,
+not a hand-placed check.
+
+**Menu widths — one rule** (the common one: as wide as the content between a
+floor and a cap, and a surface never resizes while open), both bounds density
+tokens `popoverWidthMenuMin` / `popoverWidthMenuMax` (200px / 300px):
+
+- a **plain menu** (`DropdownMenuContent`, its submenus) is `menu-fit`: sized to
+  its items between the two — most land on the floor, so they match;
+- a **Select** is `anchor-min`: at least its trigger and at least the floor;
+- a **control panel** (`ControlPanelPopover size="menu"`) is `menu`: fixed at
+  the max, since it has pages and must not jump between them.
+
+Never set a width at a call site; a theme that wants every menu one width sets
+the two tokens equal.
 
 ## Labelled menu sections: use DropdownMenuSection, never a groupless label
 

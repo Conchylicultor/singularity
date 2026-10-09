@@ -3050,6 +3050,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-tailwind-scan-covers-classes",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/theme-bridge-reads": {
+      "name": "@singularity/plugin-framework-tooling-checks-theme-bridge-reads",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/token-group-vars-in-sync": {
       "name": "@singularity/plugin-framework-tooling-checks-token-group-vars-in-sync",
       "version": "0.0.1",
@@ -7876,6 +7880,8 @@
     "@singularity/plugin-framework-tooling-checks-table-defs-in-schema-glob": ["@singularity/plugin-framework-tooling-checks-table-defs-in-schema-glob@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/table-defs-in-schema-glob"],
 
     "@singularity/plugin-framework-tooling-checks-tailwind-scan-covers-classes": ["@singularity/plugin-framework-tooling-checks-tailwind-scan-covers-classes@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/tailwind-scan-covers-classes"],
+
+    "@singularity/plugin-framework-tooling-checks-theme-bridge-reads": ["@singularity/plugin-framework-tooling-checks-theme-bridge-reads@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/theme-bridge-reads"],
 
     "@singularity/plugin-framework-tooling-checks-token-group-vars-in-sync": ["@singularity/plugin-framework-tooling-checks-token-group-vars-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/token-group-vars-in-sync"],
 
