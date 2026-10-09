@@ -83,7 +83,7 @@ interface LiveEntry extends RuntimeInfo {
   runtime: string;
 }
 
-export interface LiveSnapshot {
+interface LiveSnapshot {
   next: Map<string, LiveEntry>;
   failedRuntimes: Set<string>;
 }
@@ -93,10 +93,7 @@ export interface LiveSnapshot {
  * runtime that throws is recorded as failed — its conversations' state is
  * unknown, and the decision leaves them untouched.
  */
-export async function collectLive(
-  ids?: readonly string[],
-  opts: { report: boolean } = { report: true },
-): Promise<LiveSnapshot> {
+async function collectLive(ids?: readonly string[]): Promise<LiveSnapshot> {
   const merged = new Map<string, LiveEntry>();
   const failedRuntimes = new Set<string>();
   for (const runtime of Runtime.all()) {
@@ -105,7 +102,6 @@ export async function collectLive(
       entries = ids ? await runtime.inspect(ids) : await runtime.list();
     } catch (err) {
       failedRuntimes.add(runtime.id);
-      if (!opts.report) continue;
       console.error(
         `[conversations.status] runtime "${runtime.id}" ${ids ? "inspect" : "list"} failed`,
         err,
@@ -221,7 +217,7 @@ function livenessOf(row: Conversation, live: LiveSnapshot): Liveness {
 }
 
 /** One conversation's plan, with the async session-id gate run first. */
-export async function planFor(
+async function planFor(
   row: Conversation,
   live: LiveSnapshot,
   holds: ReadonlyMap<string, QuestionHold>,
@@ -254,7 +250,7 @@ export async function planFor(
  * zero-row INSERT … ON CONFLICT DO NOTHING) on every reconcile, churning the
  * change-feed. Main-only: nothing else adopts.
  */
-export async function orphansOf(
+async function orphansOf(
   live: LiveSnapshot,
   activeIds: ReadonlySet<string>,
 ): Promise<string[]> {
@@ -413,11 +409,6 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
   }
 }
 
-// When a signal-driven reconcile last ran for a conversation — read by the
-// shadow audit (status-shadow-audit.ts) only, to tell a late signal from a
-// missed one. Bounded: the audit prunes stale entries on every tick.
-export const lastSignalReconcileAt = new Map<string, number>();
-
 /** Reconcile `rows` (active rows) plus the orphans in `live`. Inside the gate. */
 async function reconcileRows(
   rows: Conversation[],
@@ -480,8 +471,6 @@ function reconcileIds(ids: readonly string[]): Promise<void> {
     if (inspected.size === 0) return;
     const live = await collectLive([...inspected]);
     await reconcileRows(rows, live);
-    const now = Date.now();
-    for (const id of inspected) lastSignalReconcileAt.set(id, now);
   });
 }
 

@@ -9562,7 +9562,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "auto-start-model-unavailable"
       - `report-kind` "claude-code-unavailable-at-spawn"
       - `report-kind` "conversation-spawn-failed"
-    - Uses: 67 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 66 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×27
       - `conversations/transcript-watcher` ×7
       - `config_v2` ×3
@@ -9579,7 +9579,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `conversations/preprompts.resolvePreprompt`
       - `database/fork.databaseForkJob`
       - `infra/attachments.getAttachment`
-      - `infra/background/timer.defineTimer`
       - `infra/jobs.defineJob`
       - `infra/worktree/spare-pool.spareRefillJob`
       - `shell/notifications.recordNotification`
@@ -9635,7 +9634,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `defineTriggerEvent('conversation.turn-completed')`
       - `defineTriggerEvent('conversation.userTurnSent')`
       - `defineJob('conversations.status-sweep')`
-      - `defineTimer('conversations.status-shadow-audit')`
     - Routes:
       - `GET /api/conversations`
       - `GET /api/conversations/:id`
@@ -9706,8 +9704,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `improve`
       - `page/annotations/agent-notes/agent-page`
     - Endpoint callers: `transcript-api`
-  - Exemptions:
-    - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/status-shadow-audit.ts` (debt)
   - Plugins:
     - **`agents`** — Named agent definitions that launch conversations.
       - Web:
@@ -19614,7 +19610,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `auth`
-              - `conversations`
               - `debug/health-monitor`
               - `debug/queue-health`
               - `debug/stuck-spans`
@@ -19623,7 +19618,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `shared/timer.ts` (sanctioned)
             - Exempted by:
               - `auth` (0 debt)
-              - `conversations` (1 debt)
               - `debug/health-monitor` (0 debt)
               - `debug/queue-health` (0 debt)
               - `debug/stuck-spans` (0 debt)

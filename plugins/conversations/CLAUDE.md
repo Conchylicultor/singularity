@@ -38,7 +38,7 @@
     - `report-kind` "auto-start-model-unavailable"
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
-  - Uses: 67 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×27
     - `conversations/transcript-watcher` ×7
     - `config_v2` ×3
@@ -55,7 +55,6 @@
     - `conversations/preprompts.resolvePreprompt`
     - `database/fork.databaseForkJob`
     - `infra/attachments.getAttachment`
-    - `infra/background/timer.defineTimer`
     - `infra/jobs.defineJob`
     - `infra/worktree/spare-pool.spareRefillJob`
     - `shell/notifications.recordNotification`
@@ -111,7 +110,6 @@
     - `defineTriggerEvent('conversation.turn-completed')`
     - `defineTriggerEvent('conversation.userTurnSent')`
     - `defineJob('conversations.status-sweep')`
-    - `defineTimer('conversations.status-shadow-audit')`
   - Routes:
     - `GET /api/conversations`
     - `GET /api/conversations/:id`
@@ -182,8 +180,6 @@
     - `improve`
     - `page/annotations/agent-notes/agent-page`
   - Endpoint callers: `transcript-api`
-- Exemptions:
-  - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/status-shadow-audit.ts` (debt)
 - Sub-plugins:
   - **`agents`** — Named agent definitions that launch conversations.
   - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the…

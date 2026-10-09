@@ -22,10 +22,6 @@ import {
   conversationsStatusSweepJob,
   startStatusReconciler,
 } from "./internal/status-reconciler";
-import {
-  startStatusShadowAudit,
-  statusShadowAuditTimer,
-} from "./internal/status-shadow-audit";
 import { registerOrphanedAttemptReport } from "./internal/orphaned-attempt-report";
 import {
   startTurnEmitter,
@@ -159,12 +155,10 @@ export default {
     conversationTurnCompleted,
     userTurnSent,
     conversationsStatusSweepJob,
-    statusShadowAuditTimer,
   ],
   onReady: async () => {
     registerOrphanedAttemptReport();
     await startStatusReconciler();
-    startStatusShadowAudit();
     await startTurnEmitter();
   },
 } satisfies ServerPluginDefinition;

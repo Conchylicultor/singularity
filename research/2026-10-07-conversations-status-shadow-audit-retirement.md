@@ -69,6 +69,14 @@ audit.
 
 ### Step 2 (follow-up task, about a day after step 1 is on main): delete the audit
 
+**Done 2026-10-08.** Step 1 landed on main at 2026-10-07 02:49 CEST. In the ~39 h after it, there were no new
+`StatusSignalMissed` reports (the only row, `report-1791007226575-fwzi89`, was last seen at 01:48 CEST,
+before the push). The log showed 19 late fixes, every one a `status` patch fixed by a signal in 2–6 s.
+The audit, `shadow-audit-step.ts` and its test, the `timer/no-unlisted-timer` exemption (which by then
+lived in `plugins/conversations/exempt/index.ts`), `lastSignalReconcileAt`, `collectLive`'s
+`report` option (only the audit turned it off) and the reconciler exports only the audit imported are
+deleted.
+
 If Debug → Reports shows no new `StatusSignalMissed` and the late-latency log lines stay at a few
 seconds, delete:
 

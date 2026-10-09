@@ -38,7 +38,7 @@ behaviour.
 | agent died | 0–1 s | immediate (tmux hook) |
 | pane title | 0–1 s | next transition or sweep (**slower**; task titles are generated independently) |
 | stuck "starting" | 30 s | up to about 90 s (**slower**, failure path only) |
-| a missed signal | ≤1 s (next tick) | ≤60 s (sweep). **This is the risk**, and the shadow audit (Verification 4) measures it. |
+| a missed signal | ≤1 s (next tick) | ≤60 s (sweep). **This was the risk.** The shadow audit (Verification 4) found two classes, both fixed, then none in a day; it was removed on 2026-10-08 (research/2026-10-07-conversations-status-shadow-audit-retirement.md). |
 
 Host-wide: the per-second `ps`, `list-panes` and capture-pane work stops on every backend, main
 and every worktree.

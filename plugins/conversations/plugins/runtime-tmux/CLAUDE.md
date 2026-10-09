@@ -203,11 +203,9 @@ deletes signal files untouched for a day, in both the tmux and the op-signal
 directory (the latter is `infra/worktree`'s; this runtime is its only reader).
 The op-signal directory exists so no backend has to watch
 `~/.singularity/worktrees/` recursively: that tree also holds every build's
-output (thousands of files per build), which would stream to every backend. Until the push path has proved itself,
-a temporary 1 s shadow of the retired poller on main
-(`conversations.status-shadow-audit`) writes nothing and reports any state change
-no signal delivered — one fixed only by the sweep, or not at all; a signal that
-merely came late is logged, not reported. Every session name is tested against
+output (thousands of files per build), which would stream to every backend. A
+temporary 1 s shadow of the retired poller ran on main until the push path had
+proved itself (no missed signal in a day after its last fix); it is gone. Every session name is tested against
 one constant, `AGENT_SESSION_RE` (`pane-rows.ts`), by the pane listing and every
 signal route alike: a tmux-side `-f` copy of it once kept every pane, and main
 adopted sessions no signal could name. Design:
