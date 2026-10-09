@@ -26,11 +26,12 @@ export function PromptInput({
     },
   );
 
+  // `starting` stays sendable: the server holds a turn that arrives before the
+  // agent can take it, and delivers it the moment the agent can (as its launch
+  // message when the pane does not exist yet). See the conversations server's
+  // held-turns.ts.
   const disabled =
-    live.status === "gone" ||
-    live.status === "done" ||
-    live.status === "starting" ||
-    !!live.waitingFor;
+    live.status === "gone" || live.status === "done" || !!live.waitingFor;
 
   const insertRef = useRef<((text: string) => void) | null>(null);
 
@@ -72,12 +73,12 @@ export function PromptInput({
       ? "Waiting for your answer in the terminal"
       : live.status === "done"
         ? "Conversation is done"
-        : live.status === "gone"
-          ? "Conversation is disconnected"
-          : "Starting…"
-    : live.status === "working"
-      ? "Queue a message — Enter to queue, Shift+Enter for newline"
-      : "Send a message — Enter to send, Shift+Enter for newline";
+        : "Conversation is disconnected"
+    : live.status === "starting"
+      ? "Agent starting — send now, it gets your message when ready"
+      : live.status === "working"
+        ? "Queue a message — Enter to queue, Shift+Enter for newline"
+        : "Send a message — Enter to send, Shift+Enter for newline";
 
   return (
     <PromptEditor

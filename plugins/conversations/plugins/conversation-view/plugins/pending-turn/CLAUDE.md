@@ -34,7 +34,7 @@ pending state (the answer form, whose delivered turn the transcript also hides).
 It deliberately does **not** suppress the failure card: a send needing Retry must
 be reachable however it started.
 
-State machine per record: `sending → posted → queued/sent`, with
+State machine per record: `sending → posted|held → queued/sent`, with
 `failed-post` (`http` | `network`) on a POST failure and `unconfirmed` when the
 90s confirmation deadline elapses without a transcript match (the tmux
 paste-race symptom — files one deduped `turn-unconfirmed` report on entry).
@@ -47,6 +47,17 @@ its own failure card on the next reconcile instead of stranding beside the
 delivered message. Nothing but the transcript resolves a record. Failures are
 **manual retry only** — the paste race can strand text in the CLI input box, so
 re-send must be deliberate.
+
+`held` is `posted` for a conversation that was still `starting`: the turn
+endpoint answers `held: true` when the server kept the turn because the agent
+cannot take input yet (the conversations server's `held-turns.ts` delivers it
+as the launch message, or types it in once the input box first appears). It
+shares everything with `posted` — the deadline, the sweep, the matcher, all
+through `awaitsConfirmation` — and differs only in the card's caption
+("Waiting for the agent to start…"). A held turn delivered as the launch
+message lands in the transcript behind the task's preprompt block, so the
+user-text arm also accepts a row that ENDS with the record's text at a word
+boundary (`rowCarriesText`); the enqueue arm stays identity-only.
 
 That same symmetry is why `createdAt` — the instant the send was dispatched,
 and the record's only notion of time — is set once and never moved, including
@@ -64,7 +75,7 @@ returns a transcript-resolved (`queued`/`sent`) record untouched. Every path
 that could otherwise strand a record — the deadline timer, the owner-tab reload
 adoption, the TTL sweep, the FIFO overflow — routes through it. Consequently
 `deadlineAt != null` means exactly "awaiting first transcript confirmation": it
-lives only on `posted` records, is cleared the moment the transcript accounts
+lives only on `posted` / `held` records, is cleared the moment the transcript accounts
 for the record, and is never inherited across a match. Before that, a record
 promoted `unconfirmed → queued` off an enqueue row kept its already-elapsed
 deadline and was demoted straight back, and the two rules cycled forever — one
@@ -123,7 +134,7 @@ a pass that matches nothing is now genuinely inert; it used to force a commit
 + notify on every fresh record's first pass purely to record its baseline.
 
 `PendingTurnCard` renders by state (replace, never duplicate): dimmed echo card
-for `sending`/`posted`, destructive/warning card with Retry + Copy-to-draft for
+for `sending`/`posted`/`held`, destructive/warning card with Retry + Copy-to-draft for
 `failed-post`/`unconfirmed`, and nothing for `queued`/`sent` — the native
 queue-op row / real user-text row has taken over. `sent` is transient (dropped
 at reconcile, never persisted): a reconciled message gets no extra indicator,
@@ -133,7 +144,7 @@ and all feedback lives inside the message card itself.
 
 ## Plugin reference
 
-- Description: The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
+- Description: The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted|held → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
 - Web:
   - Uses:
     - `infra/endpoints.EndpointError`

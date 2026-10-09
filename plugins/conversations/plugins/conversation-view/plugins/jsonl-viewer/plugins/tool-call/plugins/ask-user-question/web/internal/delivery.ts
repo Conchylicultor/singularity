@@ -25,6 +25,6 @@ export const answerQuestionDelivery = defineTurnDelivery<{ text: string }>({
       { body: { text: payload.text }, signal },
     );
     // The server pastes the text verbatim; the record's own text matches.
-    return { resolvedText: null };
+    return { resolvedText: null, held: false };
   },
 });

@@ -162,6 +162,38 @@ async function captureInputDraft(
   return parseInputDraft(stdout);
 }
 
+// waitForInputReady() — how long a freshly started agent may take to draw its
+// input box before a held turn gives up on it (5–9 s is typical at the current
+// host load; the bound is generous for a box under heavy concurrent load), and
+// the cadence of the check, the same fresh capture typeTurn polls.
+const INPUT_READY_TIMEOUT_MS = 60_000;
+const INPUT_READY_POLL_INTERVAL_MS = 250;
+
+/**
+ * Wait until the pane's `❯` input box parses (captureInputDraft !== null), at
+ * most INPUT_READY_TIMEOUT_MS or until `signal` aborts.
+ *
+ * This file's one sanctioned wait that is not a submit verification, and like
+ * those it is a bounded check of the rendered box, not a loop over time: the CLI
+ * emits no "input box drawn" event, and the `starting → waiting` status flip
+ * that triggers the caller (a sessions-file write) comes close to the box's
+ * first paint but does not guarantee it. Typing before the box exists lands the
+ * keystrokes in the booting TUI. A pane that does not exist yet reads as no box
+ * and keeps waiting, which is what a pane still being created should do.
+ */
+async function waitForInputReady(
+  conversationId: string,
+  signal: AbortSignal,
+): Promise<"ready" | "timeout"> {
+  const deadline = Date.now() + INPUT_READY_TIMEOUT_MS;
+  for (;;) {
+    if (signal.aborted) return "timeout";
+    if ((await captureInputDraft(conversationId)) !== null) return "ready";
+    if (Date.now() + INPUT_READY_POLL_INTERVAL_MS >= deadline) return "timeout";
+    await Bun.sleep(INPUT_READY_POLL_INTERVAL_MS);
+  }
+}
+
 async function sendEnter(conversationId: string): Promise<void> {
   await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Enter"], {
     stdout: "pipe",
@@ -716,6 +748,10 @@ export const tmuxRuntime: ConversationRuntime = {
     //    (captureInputDraft). The menu is already dismissed, so typeTurn writes
     //    into the idle prompt.
     await typeTurn(conversationId, text);
+  },
+
+  waitUntilReady(conversationId: string, signal: AbortSignal) {
+    return waitForInputReady(conversationId, signal);
   },
 
   async flushInteractivePrompt(conversationId: string): Promise<void> {

@@ -9562,8 +9562,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "auto-start-model-unavailable"
       - `report-kind` "claude-code-unavailable-at-spawn"
       - `report-kind` "conversation-spawn-failed"
-    - Uses: 66 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `tasks/tasks-core` ×27
+      - `report-kind` "held-turn-undelivered"
+    - Uses: 67 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `tasks/tasks-core` ×28
       - `conversations/transcript-watcher` ×7
       - `config_v2` ×3
       - `infra/claude-cli/availability` ×3
@@ -9586,6 +9587,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/task-preprompt.getTaskPreprompt`
     - DB schema:
       - `plugins/conversations/server/internal/tables-created-event.ts`
+      - `plugins/conversations/server/internal/tables-held-turns.ts`
       - `plugins/conversations/server/internal/tables-turn-completed-event.ts`
       - `plugins/conversations/server/internal/tables-user-turn-sent-event.ts`
     - Exports (types):
@@ -9630,6 +9632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `defineJob('conversations.notify-created')`
       - `defineJob('conversations.turn-emitter.reconcile')`
       - `defineJob('conversations.spawn')`
+      - `defineJob('conversations.deliver-held-turns')`
       - `defineTriggerEvent('conversation.created')`
       - `defineTriggerEvent('conversation.turn-completed')`
       - `defineTriggerEvent('conversation.userTurnSent')`
@@ -12257,7 +12260,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
-        - **`pending-turn`** — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
+        - **`pending-turn`** — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted|held → queued/sent, failed-post, unconfirmed) that runs the turn's registered TurnDelivery, verifies delivery against the transcript (normalized-text match), files a report when an accepted turn never lands, and renders the per-record PendingTurnCard. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery; the jsonl-viewer drives reconcilePendingTurns on every events change. Contributes the turn-send-safety lint rule. No slot contributions.
           - Web:
             - Uses:
               - `infra/endpoints.EndpointError`

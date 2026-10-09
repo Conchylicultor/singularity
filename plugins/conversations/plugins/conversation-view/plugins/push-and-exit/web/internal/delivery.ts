@@ -19,6 +19,6 @@ export const pushAndExitDelivery = defineTurnDelivery<null>({
     await fetchEndpoint(startPushAndExit, { id: conversationId }, { signal });
     // The server sends the config prompt verbatim; the record's own text is
     // already the match target.
-    return { resolvedText: null };
+    return { resolvedText: null, held: false };
   },
 });

@@ -23,13 +23,15 @@ function copyToDraft(conversationId: string, text: string): void {
     // Quota exceeded — silently ignore
   }
   window.dispatchEvent(
-    new CustomEvent("singularity:draft-updated", { detail: { storageKey: sKey } }),
+    new CustomEvent("singularity:draft-updated", {
+      detail: { storageKey: sKey },
+    }),
   );
 }
 
 /**
  * Renders one pending-turn record by state (replace, never duplicate): a card
- * only for `sending | posted | failed-post | unconfirmed`, and nothing for
+ * only for `sending | posted | held | failed-post | unconfirmed`, and nothing for
  * `queued`/`sent` — there the native queue-op row / real user-text row has
  * taken over the display. All feedback lives inside the card itself; a
  * reconciled message gets no extra indicator.
@@ -48,12 +50,18 @@ export function PendingTurnCard({
   conversationId: string;
   record: PendingTurnRecord;
 }) {
-  const inFlight = record.state === "sending" || record.state === "posted";
-  const failed = record.state === "failed-post" || record.state === "unconfirmed";
+  const inFlight =
+    record.state === "sending" ||
+    record.state === "posted" ||
+    record.state === "held";
+  const failed =
+    record.state === "failed-post" || record.state === "unconfirmed";
   useReportSync({
     phase: failed ? "error" : inFlight ? "syncing" : "idle",
     label: "message",
-    retry: failed ? () => retryPendingTurn(conversationId, record.id) : undefined,
+    retry: failed
+      ? () => retryPendingTurn(conversationId, record.id)
+      : undefined,
     savedAt: record.matchedAt ?? null,
   });
 
@@ -66,11 +74,19 @@ export function PendingTurnCard({
     return (
       <Stack gap="sm" className="opacity-70">
         <div className="relative rounded-md border border-border/60 bg-background px-md py-sm">
-          <Text as="div" variant="body" className="whitespace-pre-wrap break-words">
+          <Text
+            as="div"
+            variant="body"
+            className="whitespace-pre-wrap break-words"
+          >
             {record.text}
           </Text>
           <Text as="div" variant="caption" className="text-muted-foreground/60">
-            {record.state === "sending" ? "Sending…" : "Sent to CLI — confirming…"}
+            {record.state === "sending"
+              ? "Sending…"
+              : record.state === "held"
+                ? "Waiting for the agent to start…"
+                : "Sent to CLI — confirming…"}
           </Text>
         </div>
         <Stack direction="row" gap="sm" align="center" className="px-xs py-xs">
@@ -96,7 +112,11 @@ export function PendingTurnCard({
       )}
     >
       <Stack gap="xs">
-        <Text as="div" variant="body" className="whitespace-pre-wrap break-words">
+        <Text
+          as="div"
+          variant="body"
+          className="whitespace-pre-wrap break-words"
+        >
           {record.text}
         </Text>
         <Text

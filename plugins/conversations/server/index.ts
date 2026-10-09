@@ -34,6 +34,10 @@ import {
 import { notifyConversationCreatedJob } from "./internal/notify-created-job";
 import { spawnConversationJob } from "./internal/spawn-job";
 import {
+  deliverHeldTurnsJob,
+  heldTurnUndeliveredKind,
+} from "./internal/deliver-held-turns-job";
+import {
   claudeCodeUnavailableAtSpawnKind,
   conversationSpawnFailedKind,
 } from "./internal/spawn-report-kinds";
@@ -144,6 +148,7 @@ export default {
     conversationSpawnFailedKind,
     claudeCodeUnavailableAtSpawnKind,
     autoStartModelUnavailableKind,
+    heldTurnUndeliveredKind,
   ],
   register: [
     maybeLaunchTaskJob,
@@ -151,6 +156,7 @@ export default {
     notifyConversationCreatedJob,
     turnEmitterReconcileJob,
     spawnConversationJob,
+    deliverHeldTurnsJob,
     conversationCreated,
     conversationTurnCompleted,
     userTurnSent,

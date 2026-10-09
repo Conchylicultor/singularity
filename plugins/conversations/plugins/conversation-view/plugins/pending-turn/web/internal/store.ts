@@ -7,6 +7,7 @@ import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import { report } from "@plugins/reports/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import {
+  awaitsConfirmation,
   CONFIRM_DEADLINE_MS,
   isTerminal,
   isTranscriptResolved,
@@ -69,6 +70,10 @@ import {
 export type PendingTurnState =
   | "sending"
   | "posted"
+  // `posted` for a conversation that was still starting: the server holds the
+  // turn and delivers it once the agent can take input. Same deadline and
+  // matching as `posted` (see `awaitsConfirmation`); only the caption differs.
+  | "held"
   | "queued"
   // Transient: assigned by the matcher, dropped at reconcile in the same pass —
   // never committed/persisted. The real user-text row is the only feedback.
@@ -228,9 +233,9 @@ function fileUnconfirmedReport(
 // deadline moved by another tab re-arms instead of tripping early.
 
 function timerDelayFor(rec: PendingTurnRecord, now: number): number | null {
-  // `posted` only: a transcript-resolved record carries no deadline at all.
+  // `posted` / `held` only: a transcript-resolved record carries no deadline.
   if (
-    rec.state === "posted" &&
+    awaitsConfirmation(rec.state) &&
     rec.deadlineAt != null &&
     rec.ownerTabId === getTabId()
   ) {
@@ -272,7 +277,7 @@ function onTimer(conversationId: string, recordId: string): void {
   const rec = entry.records.find((r) => r.id === recordId);
   if (!rec) return;
   const now = Date.now();
-  if (rec.state !== "posted") return;
+  if (!awaitsConfirmation(rec.state)) return;
   if (rec.deadlineAt == null) return;
   if (now < rec.deadlineAt) {
     // Deadline moved (e.g. extended by another tab) — re-arm the remainder.
@@ -337,7 +342,10 @@ async function runDelivery(
           : (r.deadlineAt ?? now + CONFIRM_DEADLINE_MS),
       };
       return r.state === "sending"
-        ? { ...enriched, state: "posted" as const }
+        ? {
+            ...enriched,
+            state: res.held ? ("held" as const) : ("posted" as const),
+          }
         : enriched;
     });
   } catch (err) {

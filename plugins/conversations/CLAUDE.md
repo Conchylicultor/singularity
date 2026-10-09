@@ -38,8 +38,9 @@
     - `report-kind` "auto-start-model-unavailable"
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
-  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×27
+    - `report-kind` "held-turn-undelivered"
+  - Uses: 67 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×28
     - `conversations/transcript-watcher` ×7
     - `config_v2` ×3
     - `infra/claude-cli/availability` ×3
@@ -62,6 +63,7 @@
     - `tasks/task-preprompt.getTaskPreprompt`
   - DB schema:
     - `plugins/conversations/server/internal/tables-created-event.ts`
+    - `plugins/conversations/server/internal/tables-held-turns.ts`
     - `plugins/conversations/server/internal/tables-turn-completed-event.ts`
     - `plugins/conversations/server/internal/tables-user-turn-sent-event.ts`
   - Exports (types):
@@ -106,6 +108,7 @@
     - `defineJob('conversations.notify-created')`
     - `defineJob('conversations.turn-emitter.reconcile')`
     - `defineJob('conversations.spawn')`
+    - `defineJob('conversations.deliver-held-turns')`
     - `defineTriggerEvent('conversation.created')`
     - `defineTriggerEvent('conversation.turn-completed')`
     - `defineTriggerEvent('conversation.userTurnSent')`
@@ -255,7 +258,7 @@
       - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
       - **`op-status`** — Banner above the prompt input showing the worktree's in-flight op (build / push / check / test / e2e) from the op-store in-flight collection: the wait it is parked in (reason, requeue cycle, its own…
       - **`open-app`** — Opens the conversation's namespace (`http://<id>.localhost:9000`) on the page its task was filed from when one was attached (else `/`) — in a new browser tab by default, or framed in a pane beside…
-      - **`pending-turn`** [exempt] — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted →…
+      - **`pending-turn`** [exempt] — The single entry point for sending a turn from the browser, and owner of the entire send lifecycle: a durable (localStorage) per-conversation pending-turn state machine (sending → posted|held →…
       - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
       - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Named template chips that prepend text to the conversation…
       - **`push-and-exit`** [exempt] — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.

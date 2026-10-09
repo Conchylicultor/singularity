@@ -108,12 +108,12 @@ export function FloatingTemplateChips({
 
   // The same gate the prompt input applies to Enter — a template send IS a turn
   // send, so the two must open and close together. In particular `working` stays
-  // sendable: the server queues the turn exactly as it does for a typed one.
+  // sendable: the server queues the turn exactly as it does for a typed one, and
+  // so does `starting`: the server holds it until the agent can take it.
   const canSend =
     !!live &&
     live.status !== "gone" &&
     live.status !== "done" &&
-    live.status !== "starting" &&
     !live.waitingFor;
 
   // Most-used first, frozen for as long as this conversation is open (the

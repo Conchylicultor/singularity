@@ -81,8 +81,10 @@ export const postConversationTurn = defineEndpoint({
   body: PostTurnBodySchema,
   // The server's finalText (attachment refs rewritten to @<disk-path>, trimmed).
   // The pending-turn store matches THIS against the transcript — the raw draft
-  // never appears verbatim in the session JSONL.
-  response: z.object({ resolvedText: z.string() }),
+  // never appears verbatim in the session JSONL. `held`: the conversation was
+  // still `starting`, so the server kept the turn and delivers it once the agent
+  // can take input (server/internal/held-turns.ts).
+  response: z.object({ resolvedText: z.string(), held: z.boolean() }),
 });
 
 export const stopConversation = defineEndpoint({

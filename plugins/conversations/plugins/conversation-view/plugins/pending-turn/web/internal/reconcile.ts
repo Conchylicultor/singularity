@@ -67,6 +67,17 @@ export function isTranscriptResolved(state: PendingTurnState): boolean {
   return state === "queued" || state === "sent";
 }
 
+/**
+ * Accepted by the server and awaiting its first transcript confirmation: the
+ * only states that carry a live confirmation deadline. `held` is `posted` for a
+ * conversation that was still starting — the server kept the turn and delivers
+ * it once the agent can take input — so the two are one state as far as the
+ * deadline, the sweep and the matcher are concerned; only the caption differs.
+ */
+export function awaitsConfirmation(state: PendingTurnState): boolean {
+  return state === "posted" || state === "held";
+}
+
 /** Already settled as a failure — the TTL sweep re-reports only non-terminals. */
 export function isTerminal(rec: PendingTurnRecord): boolean {
   return (
@@ -106,6 +117,21 @@ export function toUnconfirmed(
     },
     report: !rec.reported,
   };
+}
+
+/**
+ * Does a transcript row's normalized text carry the record's normalized text?
+ * Identity, or the row ENDING with it at a word boundary. The suffix arm is for
+ * a turn the server held while the agent was starting and then delivered as
+ * the agent's launch message: that message is the task's preprompt block (and
+ * the launch's own prompt, if any) followed by the held turn, so the row the
+ * transcript writes is longer than the record's text but ends with it. The row
+ * still has to be written at or after the record's send (the watermark), so a
+ * longer earlier message ending with the same words cannot resolve it.
+ */
+export function rowCarriesText(row: string, target: string): boolean {
+  if (row === target) return true;
+  return target.length > 0 && row.endsWith(` ${target}`);
 }
 
 /**
@@ -215,18 +241,23 @@ export function matchPendingTurns(
     consumed: Set<number>,
     target: string,
     since: number,
+    carries: (row: string, target: string) => boolean,
   ): boolean => {
     const idx = candidates.findIndex(
-      (c, i) => c.atMs >= since && !consumed.has(i) && c.normalized === target,
+      (c, i) =>
+        c.atMs >= since && !consumed.has(i) && carries(c.normalized, target),
     );
     if (idx === -1) return false;
     consumed.add(idx);
     return true;
   };
+  // The suffix arm is user-text only: a launch message is a delivered turn,
+  // never a prompt parked in the CLI's queue, so an enqueue row matches by
+  // identity alone.
   const takeUserText = (target: string, since: number): boolean =>
-    take(userTexts, consumedUser, target, since);
+    take(userTexts, consumedUser, target, since, rowCarriesText);
   const takeEnqueue = (target: string, since: number): boolean =>
-    take(enqueues, consumedEnqueue, target, since);
+    take(enqueues, consumedEnqueue, target, since, (row, t) => row === t);
 
   const next = records.map((rec) => {
     const target = normalizeForMatch(rec.resolvedText ?? rec.text);
@@ -246,7 +277,7 @@ export function matchPendingTurns(
       takeEnqueue(target, since);
       return rec;
     }
-    // Everything else — in-flight (`sending` / `posted`) and failed
+    // Everything else — in-flight (`sending` / `posted` / `held`) and failed
     // (`failed-post` / `unconfirmed`) alike. A failed record is matchable for
     // the same reason a matched record outranks a late POST error in the store:
     // the POST outcome is not the truth channel. A send whose side effect
@@ -294,7 +325,7 @@ export interface SweepOutcome extends MatchOutcome {
  * the matcher's output so a record that matched this very pass lands `sent`
  * before any retirement can consider it.
  *
- * Only `posted` records carry a live deadline. `queued` is transcript-confirmed
+ * Only `posted` / `held` records carry a live deadline. `queued` is transcript-confirmed
  * and therefore has none (see `toUnconfirmed`) — a prompt parked in the CLI's
  * own queue is displayed by the native queue-op row, and it resolves when the
  * CLI dequeues it into a `user-text` row.
@@ -331,7 +362,7 @@ export function sweepPendingTurns(
       // outcome is unknown and auto-resend is forbidden — surface it.
       rec = retire(rec, INTERRUPTED_MESSAGE);
     } else if (
-      rec.state === "posted" &&
+      awaitsConfirmation(rec.state) &&
       rec.deadlineAt != null &&
       now >= rec.deadlineAt
     ) {

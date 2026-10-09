@@ -37,6 +37,7 @@ import {
 import { autoAnswerConfig } from "../../shared/config";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { conversationCreated } from "./tables-created-event";
+import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
 import {
   readQuestionHolds,
   reapQuestionHolds,
@@ -360,6 +361,19 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
   }
 
   await updateConversation(id, plan.patch);
+
+  // Leaving `starting` for a live status: deliver any turn the user sent while
+  // it was starting (held-turns.ts). A row swept to gone/done keeps its held
+  // turns for the Resume that respawns it. Enqueued AFTER the status write on purpose — the write is
+  // an UPDATE of the row every accept locks, so a turn the accept held before
+  // it is already committed when the flush looks, and a turn accepted after it
+  // saw the new status and was sent directly.
+  if (
+    row.status === "starting" &&
+    (plan.patch.status === "working" || plan.patch.status === "waiting")
+  ) {
+    await deliverHeldTurnsJob.enqueue({ conversationId: id });
+  }
 
   // `conversations.claude_session_id` is the live TAIL (what `claude --resume`
   // hands back); the chain is the full ordered history the transcript readers

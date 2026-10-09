@@ -4,6 +4,7 @@ import {
   CLOCK_SKEW_ALLOWANCE_MS,
   matchPendingTurns,
   normalizeForMatch,
+  rowCarriesText,
   sweepPendingTurns,
   type SweepContext,
 } from "./reconcile";
@@ -65,7 +66,59 @@ describe("normalizeForMatch", () => {
   });
 });
 
+describe("rowCarriesText", () => {
+  test("identity matches", () => {
+    expect(rowCarriesText("hello world", "hello world")).toBe(true);
+  });
+
+  test("a row ending with the text at a word boundary matches", () => {
+    expect(
+      rowCarriesText(
+        "<special_instructions> x </special_instructions> hello world",
+        "hello world",
+      ),
+    ).toBe(true);
+  });
+
+  test("a suffix inside a word, a prefix, or an empty target does not", () => {
+    expect(rowCarriesText("ahello world", "hello world")).toBe(false);
+    expect(rowCarriesText("hello world and more", "hello world")).toBe(false);
+    expect(rowCarriesText("anything", "")).toBe(false);
+  });
+});
+
 describe("matchPendingTurns", () => {
+  test("a held turn delivered as the launch message matches behind the preprompt", () => {
+    // The server held the turn while the agent was starting and appended it to
+    // the launch prompt, after the task's preprompt block: the transcript's
+    // first user row is longer than the record's text but ends with it.
+    const launch =
+      "<special_instructions>\nBe terse.\n</special_instructions>\n\nhello world";
+    const { records, changed } = matchPendingTurns(
+      [rec({ state: "held", resolvedText: "hello world" })],
+      [userText(launch)],
+      SENT_AT + 1_000,
+    );
+    expect(changed).toBe(true);
+    expect(records[0]!.state).toBe("sent");
+  });
+
+  test("the suffix arm is gated by the send watermark too", () => {
+    const { changed } = matchPendingTurns(
+      [rec({ state: "held" })],
+      [userText("earlier message ending hello world", BEFORE)],
+    );
+    expect(changed).toBe(false);
+  });
+
+  test("an enqueue row matches by identity only", () => {
+    const { changed } = matchPendingTurns(
+      [rec()],
+      [enqueue("prefix hello world")],
+    );
+    expect(changed).toBe(false);
+  });
+
   test("matches on resolvedText (server attachment rewrite), not the raw draft", () => {
     // Draft holds the markdown attachment ref; the server rewrote it to an
     // @<disk-path> image token, which the transcript parser then stripped.
@@ -378,6 +431,7 @@ describe("the reconcile transition is a fixed point", () => {
   const STATES: PendingTurnState[] = [
     "sending",
     "posted",
+    "held",
     "queued",
     "sent",
     "failed-post",

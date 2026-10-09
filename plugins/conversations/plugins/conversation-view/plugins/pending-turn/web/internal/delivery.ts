@@ -32,6 +32,14 @@ import { postConversationTurn } from "@plugins/conversations/core";
  */
 export interface TurnDeliveryResult {
   resolvedText: string | null;
+  /**
+   * The server accepted the turn but is HOLDING it: the agent is still starting
+   * and cannot take input yet. It is delivered once the agent can (as the
+   * launch message, or typed in when the input box first appears), so the
+   * record waits in `held` rather than `posted` — same confirmation deadline,
+   * different caption.
+   */
+  held: boolean;
 }
 
 export interface TurnDelivery<P> {
@@ -60,7 +68,9 @@ type ErasedDelivery = TurnDelivery<unknown>;
 
 const registry = new Map<string, ErasedDelivery>();
 
-export function defineTurnDelivery<P>(delivery: TurnDelivery<P>): TurnDelivery<P> {
+export function defineTurnDelivery<P>(
+  delivery: TurnDelivery<P>,
+): TurnDelivery<P> {
   const erased = delivery as unknown as ErasedDelivery;
   const existing = registry.get(delivery.id);
   // Idempotent under a re-evaluated module (HMR); a genuine id collision between
@@ -104,6 +114,6 @@ export const postTurnDelivery = defineTurnDelivery<{ text: string }>({
       { id: conversationId },
       { body: { text: payload.text }, signal },
     );
-    return { resolvedText: res.resolvedText };
+    return { resolvedText: res.resolvedText, held: res.held };
   },
 });

@@ -42,6 +42,7 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { attemptBranchName } from "@plugins/infra/plugins/worktree/core";
 import { worktreePathFor } from "@plugins/infra/plugins/worktree/server";
 import { spawnConversationJob } from "./spawn-job";
+import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
 import { conversationCreated } from "./tables-created-event";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
 import { resolvePreprompt } from "@plugins/conversations/plugins/preprompts/server";
@@ -572,6 +573,12 @@ async function respawnResume(row: Conversation): Promise<void> {
     model: row.model,
     effort: await resolveTaskEffort(row.taskId),
   });
+
+  // A turn held while this conversation was last `starting` (a launch that
+  // never came up, then went `gone`) is delivered now that a session runs
+  // again. The flip out of the `starting` set above enqueues the flush too;
+  // dedup folds the two.
+  await deliverHeldTurnsJob.enqueue({ conversationId: row.id });
 }
 
 export async function resumeConversation(id: string): Promise<Conversation> {

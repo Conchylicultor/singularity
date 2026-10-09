@@ -42,4 +42,7 @@ export const apiRuntime: ConversationRuntime = {
   async flushInteractivePrompt(): Promise<void> {
     throw new Error("api runtime: flushInteractivePrompt() not implemented");
   },
+  async waitUntilReady(): Promise<"ready" | "timeout"> {
+    throw new Error("api runtime: waitUntilReady() not implemented");
+  },
 };

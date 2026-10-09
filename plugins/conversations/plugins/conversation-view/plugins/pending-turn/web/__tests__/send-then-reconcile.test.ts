@@ -38,7 +38,7 @@ const offlineDelivery = defineTurnDelivery<{ text: string }>({
   async send() {
     // Accepted, and the endpoint rewrote nothing — the record keeps matching on
     // its own echoed text.
-    return { resolvedText: null };
+    return { resolvedText: null, held: false };
   },
 });
 

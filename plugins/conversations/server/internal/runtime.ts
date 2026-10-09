@@ -102,6 +102,17 @@ export interface ConversationRuntime {
    * simply stops after the form clears (no answer is sent).
    */
   flushInteractivePrompt(conversationId: string): Promise<void>;
+  /**
+   * Wait, bounded, until the session can take a typed turn — for a session that
+   * was just started, until the agent has drawn its input box. Resolves
+   * `"timeout"` (never throws for it) when the bound or `signal` elapses first,
+   * so the caller decides what an agent that never became ready means. Used to
+   * deliver turns held while the conversation was starting (held-turns.ts).
+   */
+  waitUntilReady(
+    conversationId: string,
+    signal: AbortSignal,
+  ): Promise<"ready" | "timeout">;
 }
 
 const registry = new Map<string, ConversationRuntime>();
@@ -166,6 +177,15 @@ export async function flushInteractivePrompt(id: string): Promise<void> {
   const row = await getConversationRuntime(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
   await Runtime.get(row.runtime).flushInteractivePrompt(id);
+}
+
+export async function waitUntilReady(
+  id: string,
+  signal: AbortSignal,
+): Promise<"ready" | "timeout"> {
+  const row = await getConversationRuntime(id);
+  if (!row) throw new Error(`Conversation ${id} not found`);
+  return Runtime.get(row.runtime).waitUntilReady(id, signal);
 }
 
 export async function getConversationRow(id: string): Promise<{
