@@ -15183,7 +15183,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `liveStateChurnConfig`
               - `LiveStateNoopPayloadSchema`
-    - **`live-state-health`** — Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.
+    - **`live-state-health`** — Live health inspector for the client live-state pipeline (sockets, shared transport, per-resource subscriptions), opened from the Debug sidebar.
       - Web:
         - Slots: `liveStateHealthPane.Actions`
         - Slot contributors: `liveStateHealthPane.Actions` ← `primitives.pane`
@@ -19550,12 +19550,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isBareSpecifier`
               - `isBrowserUnreachableDynamic`
               - `isInlinedPackage`
+              - `isWorkerChunkPath`
               - `makeArtifactExternal`
               - `packageNameOf`
               - `readFleetVendorMeta`
               - `runWebArtifactsPipeline`
               - `sha256Hex`
               - `SHARED_ROOT`
+              - `WORKER_ASSETS_DIR`
           - Cross-plugin:
             - Imported by: `framework/cli/build`
           - Exemptions:
@@ -30582,7 +30584,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `afterOpen`
           - `beforeOpen`
           - `runActivation`
-    - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel. useQueryResource / useInfiniteQueryResource read a plain TanStack query (e.g. a POST endpoint via fetchEndpoint) as a ResourceResult.
+    - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource / useInfiniteQueryResource read a plain TanStack query (e.g. a POST endpoint via fetchEndpoint) as a ResourceResult.
       - Web:
         - Uses: 21 symbols — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `primitives/networking` ×5
@@ -30608,7 +30610,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GateInput`
           - `HttpStaleDropReport`
           - `InfiniteQueryResourceOptions`
-          - `LeaderInfo`
           - `LiveStateSocketKind`
           - `MatchResourceHandlers`
           - `MissedFrame`
@@ -30630,6 +30631,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceStatus`
           - `ResourceViewProps`
           - `SlowResourceInfo`
+          - `TransportInfo`
           - `UpdateDelayInfo`
           - `WindowParams`
           - `WindowResourceDescriptor`
@@ -31179,23 +31181,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Uses: `primitives/latest-ref.useLatestRef`
         - Exports (types):
-          - `BroadcastChannelLike`
-          - `CrossTabElectionCallbacks`
           - `FetchWithRetryOptions`
           - `LockManagerLike`
-          - `MakeBroadcastChannel`
-          - `MakeWebSocket`
+          - `MakeSharedWorker`
+          - `MessagePortLike`
           - `NetDiagEvent`
+          - `PageLifecycleLike`
           - `ReconnectingEventSourceOptions`
           - `ReconnectingWsHandle`
           - `ReconnectingWsOptions`
           - `SharedWebSocketHooks`
+          - `SharedWorkerLike`
           - `UrlStatus`
-          - `WebSocketLike`
           - `WsStatus`
           - `WsStatusEvent`
         - Exports (values):
-          - `CrossTabElection`
           - `fetchWithRetry`
           - `probeUrlStatus`
           - `publishNetDiag`
@@ -31208,30 +31208,45 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wsUrl`
       - Cross-plugin:
         - Imported by:
+          - `apps/events/event-list`
+          - `apps/pages/page-tree`
+          - `conversations/all-conversations`
+          - `conversations/conversations-view/data-view/history`
           - `debug/logs`
           - `infra/endpoints`
           - `infra/health`
+          - `network/live`
           - `page/editor`
+          - `page/editor-collab`
           - `primitives/live-state`
           - `primitives/log-channels`
           - `primitives/optimistic-mutation`
           - `primitives/overlay/image-viewer`
           - `primitives/terminal`
+          - `shell/notifications`
+          - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from:
-          - `no-raw-websocket` — `web/shared-websocket.ts`, `web/use-reconnecting-ws.ts` (sanctioned)
+          - `no-raw-websocket` — `web/shared-ws.worker.ts`, `web/use-reconnecting-ws.ts` (sanctioned)
           - `no-raw-event-source` — `.` (sanctioned)
           - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
+      - Core:
+        - Exports (types):
+          - `WsTestControls`
+          - `WsTestEvent`
+          - `WsTestHook`
+        - Exports (values):
+          - `WS_TEST_HOOK_GLOBAL`
+          - `wsTestHook`
       - Test helpers:
         - Web: `@plugins/primitives/plugins/networking/web/testing`
-          - `createTransportHub` — Compose one server + bus + locks into a multi-tab transport.
-          - `FakeBroadcastChannel` — A single `BroadcastChannel` endpoint. `postMessage` fans out to every OTHER same-name channel (never self — the real API never echoes to the sender, and the election's hello/hb frames rely on that), asynchronously on the real microtask queue.
-          - `FakeBroadcastChannelBus` — A cross-tab BroadcastChannel fabric: `channel(name)` is the bound `makeBroadcastChannel` factory.
+          - `createTransportHub` — Compose one server + worker registry + lock manager into a multi-tab transport.
           - `FakeLockManager` — A `navigator.locks`-shaped exclusive lock, promise-based like the real API.
+          - `FakeMessagePort` — One end of an entangled `MessageChannel`. `postMessage` delivers a `structuredClone` to the other end on a REAL microtask.
+          - `FakePageLifecycle` — A page's `pagehide` / `pageshow` events, fired by hand.
+          - `FakeSharedWorkers` — The browser's SharedWorker registry: one REAL `createSharedWsHost` per worker name (the production worker's logic, in-process), shared by every tab; `make(name)` is the `makeSharedWorker` factory, connecting a fresh `MessageChannel` to that host like the worker's `connect` event.
           - `FakeWebSocket` — A `WebSocketLike` with no network.
           - `FakeWsServer` — A no-network WebSocket server: `connect` is the bound `makeWebSocket` factory; every socket it ever handed out is retained for introspection (`all`), and the currently-OPEN subset (`openSockets`) is derived live from `readyState` so it is the single source of truth for the one-socket invariant.
-          - `HUB_HEARTBEAT_MS`
-          - `HUB_TIMEOUT_MS`
           - Types: `FakeWsServerOptions`, `TabHandle`, `TransportHub`
     - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
       - Web:

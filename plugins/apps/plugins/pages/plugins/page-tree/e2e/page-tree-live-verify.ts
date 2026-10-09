@@ -45,6 +45,7 @@ import {
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 
 const OUT = arg("out") ?? "/tmp/page-tree-live";
 const TREE_KEY = pagesTree.key;
@@ -107,18 +108,16 @@ interface Frame {
   deletes?: string[];
 }
 
-/** Every live frame the page receives, parsed, in order. */
-function recordFrames(page: Page): Frame[] {
+/**
+ * Every live frame the page receives, parsed, in order. Through the shared
+ * socket's tap: the socket lives in a SharedWorker, out of `page.on("websocket")`'s
+ * reach. Call before the page's first navigation.
+ */
+async function recordFrames(page: Page): Promise<Frame[]> {
   const frames: Frame[] = [];
-  page.on("websocket", (ws) => {
-    ws.on("framereceived", (f) => {
-      if (typeof f.payload !== "string") return;
-      try {
-        frames.push(JSON.parse(f.payload) as Frame);
-      } catch (err) {
-        if (!(err instanceof SyntaxError)) throw err;
-      }
-    });
+  const tap = await tapSharedSocket(page);
+  tap.onFrame((f) => {
+    frames.push(JSON.parse(f.data) as Frame);
   });
   return frames;
 }
@@ -160,7 +159,7 @@ await withBrowser(async (h) => {
   r.note(`seeded R=${root.id} S1=${s1.id} S2=${s2.id} S3=${s3.id}`);
 
   const { page } = await h.session();
-  const frames = recordFrames(page);
+  const frames = await recordFrames(page);
   await boot(page, pathUrl(`/pages/page/${root.id}`), { settleMs: 1500 });
 
   // The sidebar subscribed the set (its sub-ack carries the seeded root).

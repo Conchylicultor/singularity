@@ -97,6 +97,7 @@ built on them — see
 - Cross-plugin:
   - Imported by:
     - `apps/events/event-list`
+    - `apps/pages/page-tree`
     - `conversations/all-conversations`
     - `conversations/conversations-view/data-view/history`
     - `debug/logs`
