@@ -4952,18 +4952,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.Home` "library" → `SongLibrary`
               - `sonataPlayerPane.Actions` "back" → `BackToLibrary`
               - `sonataPlayerPane.Actions` "display-picker" → `DisplayPicker`
+              - `sonataPlayerPane.Actions` "panels" → `PanelsToggle`
               - `Library.SongActions` "play" → `PlaySongAction`
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
             - Uses: 63 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `primitives/pane` ×10
-              - `primitives/css/ui-kit` ×6
               - `primitives/data-view` ×6
               - `apps/sonata/player` ×5
+              - `primitives/css/ui-kit` ×5
               - `apps/sonata/document` ×4
+              - `apps/sonata/shell` ×4
               - `network/live` ×4
-              - `apps/sonata/shell` ×3
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
               - `primitives/live-state` ×2
@@ -4993,6 +4994,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sonataPlayerPane`
               - `sonataSongLink`
               - `useCurrentSong`
+              - `useSectionPaneCollapsed`
               - `useSongLink`
           - Server:
             - Contributes:
@@ -5341,9 +5343,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pitchLayoutConfig`
           - Cross-plugin:
             - Imported by:
-              - `apps/sonata/rich/chord-list`
-              - `apps/sonata/rich/chord-readout`
               - `apps/sonata/rich/key-readout`
+              - `apps/sonata/rich/readout-keyboard`
         - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), and contributes Plays / Last-played fields (Library.Fields) so they appear on the library card, in the DataView's sort and filter pills, and as table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves them as the song library's `playback` columns (LiveColumns.Serve).
           - Web:
             - Contributes:
@@ -5485,6 +5486,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/latest-ref.useEventCallback`
                 - Exports (types):
                   - `KeyboardProps`
+                  - `KeyboardSizing`
                   - `KeyHighlight`
                   - `KeyRenderState`
                   - `LabelTone`
@@ -5495,9 +5497,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/chord/piano`
                   - `apps/sonata/piano-keyboard`
-                  - `apps/sonata/rich/chord-list`
-                  - `apps/sonata/rich/chord-readout`
-                  - `apps/sonata/rich/key-readout`
+                  - `apps/sonata/rich/readout-keyboard`
             - **`rhythm-circle`** — Generic rotating rhythm-necklace SVG: one concentric ring per track, a bead per pulse (index 0 at 12 o'clock, clockwise), filled beads for onsets, and a playhead needle. Imports nothing from Sonata — speaks only plain numbers. The spin is driven imperatively via setPhase(phase) and costs zero React renders; beads are optionally click-to-toggle.
               - Cross-plugin:
                 - Imported by: `apps/sonata/rich/rhythm-controls`
@@ -5507,6 +5507,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `RhythmCircleProps`
                   - `RhythmCircleTrack`
                 - Exports (values): `RhythmCircle`
+            - **`source-line`** — The one line that names a loaded source in Sonata's inspector (an Ultimate Guitar tab, a recording's video): a truncating title with an optional inline badge, a muted subtitle beneath, a trailing action centred across both lines, and an optional expanded area below (e.g. the Replace URL row).
+              - Web:
+                - Uses:
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/rigid.rigidClass`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                - Exports (types): `SourceLineProps`
+                - Exports (values): `SourceLine`
+              - Cross-plugin:
+                - Imported by:
+                  - `apps/sonata/sources/ultimate-guitar`
+                  - `apps/sonata/sources/ultimate-guitar/alignment`
             - **`toolbar-control`** — Shared chrome for Sonata's toolbar dial controls: a bordered pill with a leading muted category icon (with corner clearance), tooltip, and disabled dimming, wrapping caller-supplied segments; and the one hover-expand rule (hoverExpandHost + HoverExpandPanel) by which a collapsible toolbar control folds a part away at rest and opens it on hover, focus, press or hold. The jog wheels compose the pill; the volume control reuses the hover-expand rule.
               - Web:
                 - Uses:
@@ -5536,6 +5550,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/coords.pct`
                   - `primitives/css/coords.Placed`
                   - `primitives/css/layer.Layer`
+            - **`chords`** — Sonata progress marker: the chord lane — one chip per chord above the progression bar, sized by its duration and labelled in the shared chord-label mode, the chord under the playhead highlighted.
+              - Web:
+                - Contributes: `SonataProgress.Marker` "chords" → `ChordLane`
+                - Uses:
+                  - `apps/sonata/progress/scrubber.LANE_ABOVE_Y`
+                  - `apps/sonata/progress/scrubber.LANE_HEIGHT`
+                  - `apps/sonata/progress/scrubber.SonataProgress`
+                  - `apps/sonata/rich/chord-label.useChordDisplayMode`
+                  - `apps/sonata/session.useCursorSelector`
+                  - `primitives/css/clip.Clip`
+                  - `primitives/css/coords.pct`
+                  - `primitives/css/coords.Placed`
+                  - `primitives/css/layer.Layer`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.ControlSizeProvider`
             - **`keys`** — Sonata progress marker: key-signature change markers along the progression bar — a strong vertical bar at each key change captioned by a small neutral key chip (starting key + 'key' annotation changes).
               - Web:
                 - Contributes: `SonataProgress.Marker` "keys" → `KeyFlags`
@@ -5575,6 +5605,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Slots: `SonataProgress.Marker`
                 - Slot contributors:
                   - `SonataProgress.Marker` ← `apps.sonata.progress.bars`
+                  - `SonataProgress.Marker` ← `apps.sonata.progress.chords`
                   - `SonataProgress.Marker` ← `apps.sonata.progress.keys`
                   - `SonataProgress.Marker` ← `apps.sonata.progress.loop`
                   - `SonataProgress.Marker` ← `apps.sonata.progress.sections`
@@ -5591,12 +5622,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/text.Text`
                   - `primitives/slot-render.renderIsolated`
                 - Exports (values):
+                  - `LANE_ABOVE_Y`
+                  - `LANE_HEIGHT`
                   - `RAIL_BAND_Y`
                   - `RAIL_HEIGHT`
                   - `SonataProgress`
               - Cross-plugin:
                 - Imported by:
                   - `apps/sonata/progress/bars`
+                  - `apps/sonata/progress/chords`
                   - `apps/sonata/progress/keys`
                   - `apps/sonata/progress/loop`
                   - `apps/sonata/progress/sections`
@@ -5615,25 +5649,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/hover-reveal.hoverRevealGroup`
                   - `primitives/hover-reveal.hoverRevealTarget`
                   - `primitives/icon-button.IconButton`
-        - **`recording`** — Sonata recording: RecordingVideo — a song's YouTube video with its volume (on/off + slider) below it, for whoever shows the song's recording to render. When the open score is timed on that video (Score.meta.recording) it is registered as the session's transport driver while mounted and ready — the cursor, the synth and the A–B loop follow the video, its rate is the tempo — with a sync offset slider; otherwise it plays on its own with YouTube's controls, labelled not synced. The video's sound, level and the offset persist in the sonata.recording config. Owns the SonataRecording.Refused seam for whoever picked a video YouTube refuses to embed. Server registration of the Sonata recording mix config.
+        - **`recording`** — Sonata recording: RecordingVideo — a song's YouTube video with its volume (on/off, slider, level) below it, for whoever shows the song's recording to render. When the open score is timed on that video (Score.meta.recording) it is registered as the session's transport driver while mounted and ready — the cursor, the synth and the A–B loop follow the video, its rate is the tempo; otherwise it plays on its own with YouTube's controls under a “Not synced” badge. The video's sound, level and the sync offset (no control in the card; Settings → Config) persist in the sonata.recording config. Owns the SonataRecording.Refused seam for whoever picked a video YouTube refuses to embed. Server registration of the Sonata recording mix config.
           - Web:
             - Slots: `SonataRecording.Refused`
             - Slot contributors: `SonataRecording.Refused` ← `apps.sonata.sources.ultimate-guitar.alignment`
             - Contributes: `ConfigV2.WebRegister` "sonata.recording"
-            - Uses:
+            - Uses: 21 symbols — full list in [`plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/recording/REFERENCE.md)
+              - `integrations/youtube` ×6
+              - `config_v2` ×3
               - `apps/sonata/session.useSession`
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `config_v2.useSetConfig`
-              - `integrations/youtube.createMediaClock`
-              - `integrations/youtube.useYouTubePlayer`
-              - `integrations/youtube.useYouTubePlayerState`
-              - `integrations/youtube.YouTubePlayer`
-              - `integrations/youtube.YouTubePlayerController`
-              - `integrations/youtube.YouTubePlayerState`
               - `primitives/css/clip.Clip`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
+              - `primitives/css/pin.Pin`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/slider.Slider`
               - `primitives/css/spacing.Stack`
@@ -5671,6 +5699,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `toggleOnset`
         - **`rich`** — Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
           - Plugins:
+            - **`accompaniment`** — Sonata Section: Accompaniment — composes the chord-mode row ('Play the detected chords'), the groove (GrooveSwitch in the header, RhythmControls in the body) and the voicing rows (VoicingControls) into one section, available when chord mode can be offered or the song's chords are voiced.
+              - Web:
+                - Contributes: `Sonata.Section` "Accompaniment" → `AccompanimentSection`
+                - Uses:
+                  - `apps/sonata/document.useHasVoicedChords`
+                  - `apps/sonata/document.useLibrarySong`
+                  - `apps/sonata/rich/chord-mode.ChordModeRow`
+                  - `apps/sonata/rich/chord-mode.useChordModeAvailable`
+                  - `apps/sonata/rich/rhythm-controls.GrooveSwitch`
+                  - `apps/sonata/rich/rhythm-controls.RhythmControls`
+                  - `apps/sonata/rich/rhythm-controls.useGroove`
+                  - `apps/sonata/rich/voicing-controls.VoicingControls`
+                  - `apps/sonata/shell.Sonata`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/ui-kit.Separator`
             - **`chord-analyzer`** — Sonata Analyzer: derives chord annotations from the score's notes. Slices the score at every onset, runs interval-set chord detection over each window, and emits coalesced source:"derived" chord annotations.
               - Web:
                 - Contributes: `SonataDocument.Analyzer` "chord-analyzer"
@@ -5684,9 +5727,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/shell.Sonata`
                   - `config_v2.ConfigV2`
                   - `config_v2.useConfig`
+                  - `config_v2.useConfigResult`
+                  - `config_v2.useSetConfig`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/live-state.ResourceErrorInline`
+                  - `primitives/loading.Loading`
+                  - `primitives/overlay/tooltip.WithTooltip`
                 - Exports (types): `ChordBoxFace`
                 - Exports (values):
                   - `chordBoxFace`
+                  - `ChordLabelModeAction`
                   - `useChordDisplayMode`
               - Server:
                 - Contributes: `ConfigV2.Register` "config"
@@ -5694,6 +5744,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Imported by:
                   - `apps/sonata/chord-chart`
+                  - `apps/sonata/progress/chords`
                   - `apps/sonata/rich/chord-list`
                   - `apps/sonata/rich/chord-overlay`
                   - `apps/sonata/rich/chord-progression`
@@ -5703,12 +5754,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `apps/sonata/audio/live-play.useChordAudition`
                   - `apps/sonata/document.useHasChords`
-                  - `apps/sonata/pitch-layout.usePitchGeometry`
-                  - `apps/sonata/primitives/keyboard.Keyboard`
-                  - `apps/sonata/primitives/keyboard.useSonataKeySkin`
                   - `apps/sonata/rich/chord-label.chordBoxFace`
                   - `apps/sonata/rich/chord-label.ChordBoxFace`
                   - `apps/sonata/rich/chord-label.useChordDisplayMode`
+                  - `apps/sonata/rich/readout-keyboard.ReadoutKeyboard`
+                  - `apps/sonata/rich/readout-keyboard.useReadoutPlane`
                   - `apps/sonata/session.useCursorSelector`
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
@@ -5718,11 +5768,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/overlay.Overlay`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-            - **`chord-mode`** — Sonata Section: per-song chord mode. One On/Off chip in the 'Chords' card header: on, the song document voices the song's detected chords onto the Chords / Bass tracks (same voicing + rhythm options as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
+            - **`chord-mode`** — Sonata accompaniment part: per-song chord mode. Exports the 'Play the detected chords' switch row (ChordModeRow) and its gate (useChordModeAvailable) for the Accompaniment section to compose: on, the song document voices the song's detected chords onto the Chords / Bass tracks (same voicing + rhythm options as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
               - Web:
-                - Contributes:
-                  - `SonataDocument.SongSetting` "chord-mode-sync" → `ChordModeObserver`
-                  - `Sonata.Section` "Chords"
+                - Contributes: `SonataDocument.SongSetting` "chord-mode-sync" → `ChordModeObserver`
                 - Uses:
                   - `apps/sonata/document.chordModeSetting`
                   - `apps/sonata/document.SonataDocument`
@@ -5733,14 +5781,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/document.useSongSetting`
                   - `apps/sonata/document.useWriteSongSetting`
                   - `apps/sonata/session.useSession`
-                  - `apps/sonata/shell.Sonata`
                   - `apps/sonata/track-mixer.setTracksActive`
                   - `infra/endpoints.useEndpointMutation`
                   - `network/live.useLiveRow`
-                  - `primitives/css/toggle-chip.ToggleChip`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/switch.Switch`
+                  - `primitives/css/text.Text`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
-                - Exports (values): `useSaveChordMode`
+                  - `primitives/overlay/tooltip.WithTooltip`
+                - Exports (values):
+                  - `ChordModeRow`
+                  - `useChordModeAvailable`
+                  - `useSaveChordMode`
               - Server:
                 - Contributes: `resource.declare` "sonata-chord-mode:rows"
                 - Uses:
@@ -5753,6 +5806,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `songChordMode`
                 - Resources: `sonata-chord-mode:rows` (keyed, point)
                 - Routes: `POST /api/sonata/songs/:id/chord-mode`
+              - Cross-plugin:
+                - Imported by: `apps/sonata/rich/accompaniment`
             - **`chord-overlay`** — Sonata Overlay: labels chord annotations along the timeline. Requires the time-axis capability, so it renders on the piano roll and any future time-based display.
               - Web:
                 - Contributes: `Sonata.Overlay` "chord-overlay" → `ChordOverlay`
@@ -5767,28 +5822,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `Sonata.Section` "Progression" → `ChordProgression`
                 - Uses:
                   - `apps/sonata/document.useHasChords`
+                  - `apps/sonata/rich/chord-label.ChordLabelModeAction`
                   - `apps/sonata/rich/chord-label.useChordDisplayMode`
                   - `apps/sonata/session.useCursorSelector`
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.ToggleChip`
+                  - `primitives/css/ui-kit.Button`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/css/ui-kit.ControlSizeProvider`
                   - `primitives/dom/auto-scroll.scrollChildIntoView`
             - **`chord-readout`** — Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the session's Score + cursor (useSession).
               - Web:
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
                 - Uses:
                   - `apps/sonata/document.useHasChords`
-                  - `apps/sonata/pitch-layout.usePitchGeometry`
-                  - `apps/sonata/primitives/keyboard.Keyboard`
-                  - `apps/sonata/primitives/keyboard.useSonataKeySkin`
+                  - `apps/sonata/rich/readout-keyboard.KeyboardCaption`
+                  - `apps/sonata/rich/readout-keyboard.ReadoutKeyboard`
+                  - `apps/sonata/rich/readout-keyboard.useReadoutPlane`
                   - `apps/sonata/session.useCursorSelector`
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
+                  - `primitives/css/fill.Fill`
                   - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.SectionLabel`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
                   - `primitives/persistent-draft.useDraft`
@@ -5836,54 +5893,98 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `apps/sonata/rich/key-readout`
               - Exemptions:
                 - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)
-            - **`key-readout`** — Sonata Section: a current-key readout panel that lights the key's scale notes on a mini keyboard, tracking the playback cursor. Reads the session's Score + cursor (useSession).
+            - **`key-readout`** — Sonata Section: the current key — its name, relative key and source, the scale as dots on a one-octave keyboard plus note-name chips, and (Chords toggle) its seven diatonic chords on readout keyboards — tracking the playback cursor. Reads the session's Score + cursor (useSession).
               - Web:
                 - Contributes: `Sonata.Section` "Current key" → `KeyReadout`
-                - Uses:
-                  - `apps/sonata/document.keyAutoDetectSetting`
-                  - `apps/sonata/document.useLibrarySong`
-                  - `apps/sonata/document.useSongDocument`
-                  - `apps/sonata/document.useSongSetting`
-                  - `apps/sonata/document.useWriteSongSetting`
+                - Uses: 21 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/key-readout/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/key-readout/REFERENCE.md)
+                  - `apps/sonata/document` ×5
+                  - `apps/sonata/rich/readout-keyboard` ×3
+                  - `apps/sonata/session` ×2
                   - `apps/sonata/pitch-layout.usePitchGeometry`
-                  - `apps/sonata/primitives/keyboard.Keyboard`
-                  - `apps/sonata/primitives/keyboard.useSonataKeySkin`
                   - `apps/sonata/rich/key-mode.saveKeyAutoDetect`
-                  - `apps/sonata/session.useCursorSelector`
-                  - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/cluster.Cluster`
                   - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.SectionLabel`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
-            - **`rhythm-controls`** — Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Shown only for songs whose chords the song document voices: a symbol source (authored chords), or chord mode on. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves it as a per-song lookup collection.
+                  - `primitives/persistent-draft.useDraft`
+            - **`readout-keyboard`** — Sonata readout keyboard: useReadoutPlane (voicings octave-fitted into the two-octave readout window, laid in the active pitch layout), ReadoutKeyboard (proportional keys in Sonata's skin) and KeyboardCaption (lead · trail caption row, trail accented when current).
+              - Web:
+                - Uses:
+                  - `apps/sonata/pitch-layout.usePitchGeometry`
+                  - `apps/sonata/primitives/keyboard.Keyboard`
+                  - `apps/sonata/primitives/keyboard.KeyboardProps`
+                  - `apps/sonata/primitives/keyboard.useSonataKeySkin`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/text.Text`
+                - Exports (values):
+                  - `KeyboardCaption`
+                  - `ReadoutKeyboard`
+                  - `useReadoutPlane`
+              - Cross-plugin:
+                - Imported by:
+                  - `apps/sonata/rich/chord-list`
+                  - `apps/sonata/rich/chord-readout`
+                  - `apps/sonata/rich/key-readout`
+              - Core:
+                - Exports (types): `ReadoutWindow`
+                - Exports (values):
+                  - `fitVoicings`
+                  - `READOUT_WINDOW`
+            - **`rhythm-controls`** — Sonata accompaniment part: the per-song groove. Exports its on/off switch (GrooveSwitch) and its body (RhythmControls: a groove preset picker, a left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, and one pattern/rhythm row per hand) for the Accompaniment section to compose; contributes no section of its own. Persists the groove per song and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the global groove presets (config sonata groove-presets: useGroovePresets) and the per-song preset provenance useGroove carries. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern + the groove preset it was applied from). Serves it as a per-song lookup collection. Server registration of the global groove-presets config.
               - Web:
                 - Contributes:
+                  - `ConfigV2.WebRegister` "groove-presets"
                   - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
-                  - `Sonata.Section` "Rhythm" → `RhythmControls`
-                - Uses: 33 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
-                  - `apps/sonata/document` ×8
-                  - `primitives/css/ui-kit` ×6
-                  - `primitives/live-state` ×5
+                - Uses: 45 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/REFERENCE.md)
+                  - `primitives/css/ui-kit` ×9
+                  - `apps/sonata/document` ×7
+                  - `primitives/live-state` ×6
                   - `apps/sonata/primitives/rhythm-circle` ×3
+                  - `config_v2` ×3
                   - `apps/sonata/session` ×2
-                  - `apps/sonata/shell.Sonata`
+                  - `primitives/css/control-panel` ×2
                   - `infra/endpoints.useEndpointMutation`
                   - `network/live.useLiveRow`
+                  - `primitives/css/badge.Badge`
                   - `primitives/css/center.Center`
+                  - `primitives/css/fill.Fill`
                   - `primitives/css/spacing.Stack`
+                  - `primitives/css/status-dot.StatusDot`
+                  - `primitives/css/switch.Switch`
                   - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.ToggleChip`
                   - `primitives/icon-button.IconButton`
+                  - `primitives/latest-ref.useLatestRef`
                   - `primitives/loading.Loading`
-                - Exports (types): `RhythmGroove`
-                - Exports (values): `useSaveRhythm`
+                  - `ui/icons.Icon`
+                - Exports (types):
+                  - `Groove`
+                  - `GrooveContent`
+                  - `GrooveFields`
+                  - `GroovePreset`
+                  - `GroovePresetsController`
+                  - `GrooveState`
+                  - `RhythmGroove`
+                - Exports (values):
+                  - `grooveEquals`
+                  - `grooveSummary`
+                  - `GrooveSwitch`
+                  - `presetGroove`
+                  - `RhythmControls`
+                  - `useGroove`
+                  - `useGroovePresets`
+                  - `useSaveRhythm`
               - Server:
-                - Contributes: `resource.declare` "sonata-rhythm:rows"
+                - Contributes:
+                  - `resource.declare` "sonata-rhythm:rows"
+                  - `ConfigV2.Register` "groove-presets"
                 - Uses:
                   - `apps/sonata/library._songs`
+                  - `config_v2.ConfigV2`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
                   - `network/live.serveCollection`
@@ -5892,18 +5993,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `songRhythm`
                 - Resources: `sonata-rhythm:rows` (keyed, point)
                 - Routes: `POST /api/sonata/songs/:id/rhythm`
-            - **`voicing-controls`** — Sonata Section: chord-voicing controls (realistic voice-leading toggle, voicing-strategy picker, octave stepper) writing the global voicing config. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on.
+              - Cross-plugin:
+                - Imported by: `apps/sonata/rich/accompaniment`
+            - **`voicing-controls`** — Sonata accompaniment part: the chord-voicing rows (Voice-leading switch, Octave − C4 + stepper) writing the global voicing config. Contributes no section of its own — the Accompaniment section composes it, gated on the song document's useHasVoicedChords.
               - Web:
-                - Contributes: `Sonata.Section` "Voicing" → `VoicingControls`
                 - Uses:
-                  - `apps/sonata/document.useHasVoicedChords`
-                  - `apps/sonata/shell.Sonata`
                   - `config_v2.useConfig`
                   - `config_v2.useSetConfig`
                   - `primitives/css/spacing.Stack`
+                  - `primitives/css/switch.Switch`
                   - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.ToggleChip`
                   - `primitives/icon-button.IconButton`
+                  - `primitives/overlay/tooltip.WithTooltip`
+                - Exports (values): `VoicingControls`
+              - Cross-plugin:
+                - Imported by: `apps/sonata/rich/accompaniment`
         - **`score`**
           - Cross-plugin:
             - Imported by:
@@ -6021,8 +6125,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useCursorSelector`
               - `useSession`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
-              - `apps` ×30
+            - Imported by: 31 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
+              - `apps` ×31
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
           - Web:
             - Slots:
@@ -6035,8 +6139,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.Hud`
               - `Sonata.ViewOption`
               - `Sonata.Section`
-            - Slot contributors: 34 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
-              - `Sonata.Section` ×12
+            - Slot contributors: 32 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+              - `Sonata.Section` ×10
               - `Sonata.ViewOption` ×7
               - `Sonata.Effect` ×6
               - `Sonata.Hud` ×3
@@ -6065,14 +6169,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LaneInsetsProvider`
               - `Sonata`
               - `SonataSectionItem`
+              - `SonataSectionStack`
               - `useLaneInsets`
               - `useSonataApp`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `sonataApp`
           - Cross-plugin:
-            - Imported by: 29 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
-              - `apps` ×29
+            - Imported by: 27 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+              - `apps` ×27
         - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
           - Web:
             - Contributes: `SonataPlayer.Display` "Songsheet" → `Songsheet`
@@ -6112,8 +6217,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/shell.useSonataApp`
                   - `infra/endpoints.fetchEndpoint`
                   - `infra/endpoints.useEndpointMutation`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/cluster.Cluster`
+                  - `primitives/css/fill.Fill`
                   - `primitives/css/spacing.Stack`
+                  - `primitives/css/ui-kit.Button`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/persistent-draft.useDraft`
+                  - `primitives/syntax-highlight/overlay-textarea.OverlayTextarea`
                   - `ui/icons.Icon`
               - Server:
                 - Uses:
@@ -6255,14 +6366,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Library.Source` "ultimate-guitar"
                   - `Sonata.Section` "Ultimate Guitar" → `UltimateGuitarEditorSection`
                   - `Sonata.Effect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
-                - Uses: 26 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
-                  - `primitives/css/ui-kit` ×4
+                - Uses: 29 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
+                  - `primitives/css/ui-kit` ×5
                   - `apps/sonata/document` ×2
                   - `apps/sonata/library` ×2
                   - `apps/sonata/shell` ×2
                   - `infra/endpoints` ×2
+                  - `apps/sonata/primitives/source-line.SourceLine`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/fill.Fill`
+                  - `primitives/css/grow.growClass`
                   - `primitives/css/inline.Inline`
                   - `primitives/css/placeholder.Placeholder`
                   - `primitives/css/row.Row`
@@ -6315,25 +6428,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `UgFetchError`
                   - `UgSearchResultSchema`
               - Plugins:
-                - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section holding the song's YouTube video (the recording plugin's RecordingVideo with its volume — synced to the transport when the song plays on its alignment, a weak match included, else playing on its own) and following how it was found and aligned (finding a video, needs a video, aligning, aligned with score and transpose, weak match, failed, out of date), who picked it, the candidate videos tried (click one to switch), Find a video, and a link field to set one by hand; a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record) served as a lookup-only live collection, the sonata.ug-alignment.align supervised job (choose a video with findSongVideos and walk the best candidates when none was set; beat features → alignChords → record), the set-video / find-a-video / video-refused / re-align / get endpoints, and a trigger that starts choosing a video for a new UG song and re-aligns one whose sheet changes.
+                - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section holding the song's YouTube video (the recording plugin's RecordingVideo with its volume — synced to the transport when the song plays on its alignment, a weak match included, else playing on its own), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record) served as a lookup-only live collection, the sonata.ug-alignment.align supervised job (choose a video with findSongVideos and walk the best candidates when none was set; beat features → alignChords → record, its live phase written on the row; a user's Cancel stops it as cancelled), the set-video / find-a-video / video-refused / re-align (also resuming a cancelled or failed walk) / cancel / get endpoints, and a trigger that starts choosing a video for a new UG song and re-aligns one whose sheet changes.
                   - Web:
                     - Contributes:
                       - `Sonata.Section` "Recording" → `RecordingSection`
                       - `Sonata.Effect` "ug-alignment-sync" → `UgAlignmentSync`
                       - `SonataRecording.Refused` "ug-video-refused" → `ReportVideoRefused`
-                    - Uses: 21 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md)
-                      - `primitives/collapsible` ×4
+                    - Uses: 33 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md)
                       - `apps/sonata/recording` ×3
                       - `infra/endpoints` ×3
+                      - `primitives/css/spacing` ×3
+                      - `primitives/css/ui-kit` ×3
                       - `network/live` ×2
-                      - `primitives/css/ui-kit` ×2
+                      - `primitives/css/badge` ×2
+                      - `primitives/css/fill` ×2
+                      - `primitives/hover-reveal` ×2
                       - `apps/sonata/document.useSongDocument`
+                      - `apps/sonata/primitives/source-line.SourceLine`
                       - `apps/sonata/shell.Sonata`
-                      - `primitives/css/fill.Fill`
-                      - `primitives/css/inline.Inline`
-                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/clip.Clip`
+                      - `primitives/css/grid.Grid`
+                      - `primitives/css/line.Line`
+                      - `primitives/css/rigid.rigidClass`
+                      - `primitives/css/spinner.Spinner`
+                      - `primitives/css/surface.Surface`
                       - `primitives/css/text.Text`
+                      - `primitives/icon-button.IconButton`
                       - `primitives/loading.Loading`
+                      - `ui/icons.Icon`
                   - Server:
                     - Contributes:
                       - `resource.declare` "sonata-ug-alignment:rows"
@@ -6349,6 +6471,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `infra/events.Trigger`
                       - `infra/jobs.defineJob`
                       - `infra/jobs.isNonRetryableError`
+                      - `infra/jobs/supervised-job.cancelSupervisedJobByLock`
                       - `infra/jobs/supervised-job.defineSupervisedJob`
                       - `integrations/youtube/audio-fetch.isYouTubeAudioError`
                       - `integrations/youtube/song-videos.findSongVideos`
@@ -6366,6 +6489,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/realign`
                       - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/resolve`
                       - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/video-refused`
+                      - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/cancel`
                   - Core:
                     - Uses:
                       - `apps/sonata/sources/ultimate-guitar/tab.InferredSection`
@@ -6404,8 +6528,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `AlignmentSegmentSchema`
                       - `AlignmentStatusSchema`
                       - `appliedAlignment`
+                      - `cancelUgAlignment`
                       - `fitsSheet`
                       - `getUgAlignment`
+                      - `MAX_TRIES_PER_RUN`
                       - `realignUg`
                       - `refuseUgAlignmentVideo`
                       - `resolveUgAlignment`
@@ -6459,10 +6585,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ChordMatch`
               - `ChordTemplate`
               - `ChordWindow`
+              - `DiatonicChord`
             - Exports (values):
               - `CHORD_TEMPLATES`
               - `chordPitches`
+              - `chordVoicing`
               - `detectChordWindows`
+              - `diatonicChords`
               - `formatChordLabel`
               - `formatChordSymbol`
               - `formatChordSymbolWithBass`
@@ -6493,9 +6622,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `SonataDocument.SongSetting` "track-view-sync" → `TrackViewObserver`
               - `Sonata.Section` "Tracks" → `TrackMixerPanel`
-            - Uses: 39 symbols — full list in [`plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md)
+            - Uses: 40 symbols — full list in [`plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md)
               - `apps/sonata/document` ×8
               - `primitives/css/spacing` ×2
+              - `primitives/css/text` ×2
               - `primitives/css/ui-kit` ×2
               - `primitives/live-state` ×2
               - `primitives/optimistic-mutation` ×2
@@ -6513,7 +6643,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/row.Row`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/slider.Slider`
-              - `primitives/css/text.Text`
               - `primitives/css/yield.yieldClass`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
@@ -9395,8 +9524,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 82 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×82
+    - Slot contributors: 83 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×83
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -9548,8 +9677,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 102 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×23
+    - Imported by: 103 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×24
       - `debug` ×14
       - `backup` ×13
       - `conversations` ×12
@@ -19953,7 +20082,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/jobs/supervised-job.defineSupervisedJob`
           - `integrations/youtube/audio-fetch.fetchYouTubeAudio`
           - `primitives/log-channels.defineLogSink`
-        - Exports (types): `EnsureBeatFeaturesOptions`
+        - Exports (types):
+          - `EnsureBeatFeaturesOptions`
+          - `EnsurePhase`
         - Exports (values):
           - `ensureBeatFeatures`
           - `readBeatFeatures`
@@ -21725,6 +21856,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables-run-ended.ts`
               - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables.ts`
             - Exports (types):
+              - `CancelByLockResult`
               - `DefineSupervisedJobSpec`
               - `RunEndedPayload`
               - `RunStep`
@@ -21741,6 +21873,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `_supervisedJobRuns`
               - `_supervisedRunEndedTriggers`
               - `cancelSupervisedJob`
+              - `cancelSupervisedJobByLock`
               - `defineSupervisedJob`
               - `runEnded`
             - Register:
@@ -27475,11 +27608,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useCollapsibleContext`
           - `useExpandAll`
       - Cross-plugin:
-        - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `ui` ×9
           - `primitives` ×7
-          - `apps` ×6
           - `conversations` ×6
+          - `apps` ×5
           - `plugin-meta` ×4
           - `review` ×3
           - `debug` ×2
@@ -27638,9 +27771,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Badge`
               - `formatStatusLabel`
           - Cross-plugin:
-            - Imported by: 153 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 157 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+              - `apps` ×37
               - `debug` ×34
-              - `apps` ×33
               - `conversations` ×23
               - `reports` ×11
               - `plugin-meta` ×8
@@ -27735,11 +27868,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
-              - `apps` ×16
+            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+              - `apps` ×18
+              - `primitives` ×8
               - `conversations` ×7
               - `debug` ×7
-              - `primitives` ×7
               - `page` ×5
               - `fields` ×2
               - `review` ×2
@@ -27758,8 +27891,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
-              - `apps` ×18
+            - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+              - `apps` ×20
               - `debug` ×12
               - `conversations` ×6
               - `plugin-meta` ×6
@@ -27897,8 +28030,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useControlPanelHost`
               - `usePanelStack`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
-              - `apps` ×10
+            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+              - `apps` ×11
               - `page` ×5
               - `primitives` ×4
               - `config_v2` ×2
@@ -27930,8 +28063,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
-              - `apps` ×16
+            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+              - `apps` ×17
               - `primitives` ×7
               - `debug` ×3
               - `page` ×2
@@ -27950,8 +28083,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 144 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
-              - `apps` ×37
+            - Imported by: 149 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+              - `apps` ×42
               - `primitives` ×28
               - `conversations` ×23
               - `debug` ×16
@@ -27973,8 +28106,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `GridProps`
             - Exports (values): `Grid`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
-              - `apps` ×11
+            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
+              - `apps` ×12
               - `primitives` ×8
               - `ui` ×4
               - `conversations` ×2
@@ -27987,6 +28120,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/pages/page-tree`
+              - `apps/sonata/sources/ultimate-guitar`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `debug/profiling`
@@ -28020,9 +28154,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `debug` ×16
-              - `apps` ×15
+              - `apps` ×14
               - `reports` ×12
               - `conversations` ×9
               - `primitives` ×9
@@ -28056,6 +28190,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/keyboard`
               - `apps/sonata/progress/bars`
+              - `apps/sonata/progress/chords`
               - `apps/sonata/progress/keys`
               - `apps/sonata/progress/loop`
               - `apps/sonata/progress/scrubber`
@@ -28063,6 +28198,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/place/map-layer`
               - `primitives/css/color-picker`
               - `primitives/overlay/image-viewer`
+              - `primitives/syntax-highlight/overlay-textarea`
               - `primitives/tree`
         - **`layout-harness`** — Layout-primitive geometry harness, web half: the bare measurer page and the bun:test geometry suite that measure every geometry-gated exhibit across its width sweep.
           - Web:
@@ -28110,8 +28246,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 93 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
-              - `apps` ×22
+            - Imported by: 96 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+              - `apps` ×25
               - `primitives` ×16
               - `conversations` ×14
               - `debug` ×6
@@ -28184,9 +28320,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×17
-              - `apps` ×13
+              - `apps` ×14
               - `page` ×9
               - `conversations` ×7
               - `apps-core` ×2
@@ -28261,10 +28397,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 100 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 102 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `conversations` ×20
+              - `apps` ×17
               - `primitives` ×17
-              - `apps` ×15
               - `debug` ×10
               - `ui` ×6
               - `page` ×5
@@ -28406,8 +28542,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 379 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×93
+            - Imported by: 383 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×97
               - `conversations` ×62
               - `primitives` ×50
               - `debug` ×34
@@ -28450,6 +28586,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/sync-status`
               - `apps/pages/page-tree`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
               - `apps/website/improve`
               - `build`
               - `conversations/conversation-view/op-status`
@@ -28472,8 +28609,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `StatusDot`
               - `statusDotPaintClass`
           - Cross-plugin:
-            - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
-              - `apps` ×10
+            - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
+              - `apps` ×11
               - `conversations` ×8
               - `debug` ×6
               - `active-data` ×3
@@ -28546,8 +28683,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `SurfaceProps`
             - Exports (values): `Surface`
           - Cross-plugin:
-            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
-              - `apps` ×6
+            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
+              - `apps` ×7
               - `primitives` ×5
               - `page` ×4
               - `apps-core` ×2
@@ -28570,6 +28707,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/deploy/analytics/dashboard`
               - `apps/events/sources`
+              - `apps/sonata/rich/chord-mode`
+              - `apps/sonata/rich/rhythm-controls`
+              - `apps/sonata/rich/voicing-controls`
               - `apps/website/improve`
               - `config_v2/fields`
               - `primitives/css/control-panel`
@@ -28592,10 +28732,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 350 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×90
+            - Imported by: 355 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×94
               - `conversations` ×70
-              - `primitives` ×39
+              - `primitives` ×40
               - `debug` ×32
               - `page` ×20
               - `plugin-meta` ×14
@@ -28683,8 +28823,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SegmentedControl`
               - `ToggleChip`
           - Cross-plugin:
-            - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
-              - `apps` ×22
+            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+              - `apps` ×18
               - `primitives` ×8
               - `stats` ×5
               - `apps-core` ×3
@@ -28842,9 +28982,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 384 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×100
-              - `apps` ×70
+            - Imported by: 388 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×101
+              - `apps` ×73
               - `conversations` ×52
               - `page` ×24
               - `debug` ×23
@@ -30364,10 +30504,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+        - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
           - `page` ×8
+          - `apps` ×7
           - `primitives` ×7
-          - `apps` ×6
           - `ui` ×4
           - `apps-core/surface/floating`
           - `layouts/miller`
@@ -30387,8 +30527,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
-        - Imported by: 109 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×41
+        - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×42
           - `primitives` ×18
           - `conversations` ×14
           - `tasks` ×7
@@ -30470,9 +30610,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 64 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×31
-          - `apps` ×18
+          - `apps` ×19
           - `page` ×3
           - `apps-core` ×2
           - `conversations` ×2
@@ -30676,8 +30816,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 195 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×49
+        - Imported by: 196 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×50
           - `conversations` ×38
           - `ui` ×22
           - `tasks` ×18
@@ -30748,8 +30888,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoadingVariant`
         - Exports (values): `Loading`
       - Cross-plugin:
-        - Imported by: 176 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×58
+        - Imported by: 177 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×59
           - `ui` ×19
           - `primitives` ×17
           - `conversations` ×16
@@ -31674,9 +31814,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TooltipDoc`
               - `WithTooltip`
           - Cross-plugin:
-            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
+            - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
               - `primitives` ×15
-              - `apps` ×7
+              - `apps` ×10
               - `page` ×6
               - `conversations` ×5
               - `apps-core` ×3
@@ -32031,26 +32171,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `yieldToMain`
     - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
       - Cross-plugin:
-        - Imported by:
-          - `apps/agent-manager/welcome`
-          - `apps/chord/curriculum`
-          - `apps/file-explorer/browser`
-          - `apps/prototypes/canvas`
-          - `apps/sonata/library`
-          - `apps/sonata/rich/chord-readout`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
-          - `conversations/conversation-view/open-app`
-          - `conversations/conversation-view/prompt-input`
-          - `conversations/conversation-view/push-and-exit`
-          - `conversations/conversation-view/running-agents`
+        - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
+          - `apps` ×8
+          - `primitives` ×7
+          - `conversations` ×5
           - `page/editor`
-          - `primitives/css/color-picker`
-          - `primitives/detail-sections`
-          - `primitives/dom/auto-scroll`
-          - `primitives/launch`
-          - `primitives/metrics`
-          - `primitives/overlay/image-viewer`
-          - `primitives/usage-rank`
           - `tasks/task-draft-form`
       - Web:
         - Exports (types): `DraftOptions`
@@ -32372,7 +32497,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/row.SectionHeaderRow`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
-        - Exports (types): `SectionCardProps`
+        - Exports (types):
+          - `SectionCardProps`
+          - `SectionCardVariant`
         - Exports (values): `SectionCard`
       - Cross-plugin:
         - Imported by: `primitives/detail-sections`
@@ -32613,6 +32740,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/file-viewer/code`
           - `primitives/markdown`
           - `ui/theme-engine/theme-gallery`
+      - Plugins:
+        - **`overlay-textarea`** — Editable highlighted text: <OverlayTextarea> lays a transparent textarea (visible caret) exactly over an underlay <pre> rendering decorate(value), which sizes the box so the field grows as you type. Both layers share one metrics class, so glyphs, wrapping and the caret stay aligned.
+          - Web:
+            - Uses:
+              - `primitives/css/clip.Clip`
+              - `primitives/css/clip.clipClasses`
+              - `primitives/css/layer.layerClasses`
+              - `primitives/css/text.textVariantClass`
+              - `primitives/css/ui-kit.cn`
+            - Exports (types): `OverlayTextareaProps`
+            - Exports (values): `OverlayTextarea`
+          - Cross-plugin:
+            - Imported by: `apps/sonata/sources/chord-grid`
     - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
       - Web:
         - Uses:
@@ -36649,8 +36789,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 295 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×59
+        - Imported by: 297 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×61
           - `conversations` ×55
           - `primitives` ×40
           - `page` ×39
