@@ -6,6 +6,7 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
+import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   CANVAS_FRAME_ATTR,
@@ -163,6 +164,7 @@ function SourceBody({
         >
           <div
             // Laid out at the logical size, then scaled like a prototype frame.
+            className="relative"
             style={{
               width: layout.width,
               height: layout.height,
@@ -170,7 +172,13 @@ function SourceBody({
               transformOrigin: "top left",
             }}
           >
-            {resolution.render(layout.width, layout.height)}
+            {/* A source renders in this document, so its popups would portal
+                to <body> — over the whole canvas, unscaled, escaping the
+                screen's clip and the swipe divider. Drawn inside the frame
+                instead, they belong to it as an iframe's would. */}
+            <PortalHost>
+              {resolution.render(layout.width, layout.height)}
+            </PortalHost>
           </div>
         </PluginErrorBoundary>
       );
