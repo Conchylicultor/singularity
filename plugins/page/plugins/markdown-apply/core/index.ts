@@ -29,6 +29,6 @@ export {
 export type { PageTitleBannerParse } from "./page-title";
 
 export { pageMetaHeader, splitPageMeta } from "./page-meta";
-export type { PageMeta } from "./page-meta";
+export type { PageMeta, PageMetaTag, ParsedPageMeta } from "./page-meta";
 
 export type { StoredRow } from "./stored-row";

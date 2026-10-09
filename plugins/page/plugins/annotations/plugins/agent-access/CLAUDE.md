@@ -438,6 +438,34 @@ The section lives here rather than in `instructions` because it describes these
 three tools by name; `instructions` stays free of MCP, and the import stays one
 way (agent-access → instructions).
 
+## Tags: the header's one writable section (`server/internal/page-tags.ts`)
+
+A page's tags (`page/tags`) are its status and labels, drawn from one shared
+vocabulary. `read_page` states them first in the `<page-meta>` header
+(`<tags>` / `<tag name="…"/>`, `<tags/>` when none), and `edit_page` writes them:
+
+- **A change is the edited header's tag list differing from the read's** —
+  ordered names compared by key (`tagKey`), a `new` or `color` attribute counting
+  as a change. An edited header with no `<tags>` section, or no header, asks for
+  no change. Every OTHER header field stays read-only, and `page_meta_ignored`
+  fires only when one of those changed (`metaFactsChanged`).
+- **Resolved before anything is written.** `resolveTagNames` matches names case-
+  and whitespace-insensitively, collapses duplicates, and refuses an unknown name
+  that is not marked `new="true"` — 400 listing each with its closest names and
+  the whole vocabulary, nothing written, content included. That is the typo and
+  synonym guard: growing the vocabulary is one deliberate attribute.
+- **Written after the content apply** (`writeResolvedPageTags`: create the `new`
+  ones, then set the list, one transaction), on the page holding the scope root
+  — ANY page, the human's included: tags are metadata, not the author's prose,
+  so the authorship walk does not apply to them. The result carries `tags_set`
+  and, when any were made, `tags_created`.
+- **An old_string opening with this read's own header, byte for byte, is matched
+  as written** (header kept on both sides), so pasting the whole header to edit
+  its tags works; a header from another read is still dropped before matching.
+- **Status is a tag, never a `[…]` title prefix**: an agent-page rename to a
+  title opening with `[Something]` is refused with that pointer
+  (`BRACKET_STATUS_PREFIX`). `write_agent_note` does not touch tags.
+
 ## Stated bounds
 
 - **Absence is visible.** A read shows a gap where a private card was — no
@@ -488,11 +516,12 @@ Spec: `e2e/agent-access-verify.ts`.
 
 - Description: The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine.
 - Server:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/annotations/instructions` ×6
     - `page/markdown-apply` ×5
     - `page/editor` ×3
     - `database` ×2
+    - `page/tags` ×2
     - `infra/endpoints.HttpError`
     - `infra/mcp.Mcp`
     - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`

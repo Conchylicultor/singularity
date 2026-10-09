@@ -36,6 +36,7 @@
     - `debug/trace/engine`
     - `infra/claude-cli`
     - `infra/events`
+    - `page/tags`
     - `tasks/automations`
     - `tasks/tasks-core`
 

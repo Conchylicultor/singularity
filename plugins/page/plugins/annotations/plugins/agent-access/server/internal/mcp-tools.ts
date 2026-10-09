@@ -13,6 +13,11 @@ import {
   parsePageTitleBanner,
   splitPageMeta,
 } from "@plugins/page/plugins/markdown-apply/core";
+import {
+  resolveTagNames,
+  writeResolvedPageTags,
+} from "@plugins/page/plugins/tags/server";
+import { TAG_COLORS } from "@plugins/page/plugins/tags/core";
 import { renamePage } from "@plugins/page/plugins/editor/server";
 import {
   blockAuthorOf,
@@ -28,6 +33,12 @@ import {
   renderGlobalSection,
 } from "./instructions-gate";
 import { findEdits } from "./indent-match";
+import {
+  BRACKET_STATUS_PREFIX,
+  metaFactsChanged,
+  tagRefusal,
+  tagRequestsOf,
+} from "./page-tags";
 import {
   assertAgentAddressable,
   assertAgentAuthored,
@@ -235,6 +246,21 @@ function withoutPageMeta(text: string): string {
   return split.ok && split.meta !== null ? split.rest : text;
 }
 
+/**
+ * Whether `text` opens with exactly the header `readHeader` — the one this
+ * read emitted. Such an `old_string` is matched as written (header included),
+ * so an edit of the header's `<tags>` section through a whole pasted header
+ * lands; any OTHER header (another read's) is dropped before matching.
+ */
+function opensWithHeader(text: string, readHeader: string): boolean {
+  const split = splitPageMeta(text);
+  return (
+    split.ok &&
+    split.meta !== null &&
+    split.header.trimEnd() === readHeader.trimEnd()
+  );
+}
+
 export const readPageTool = Mcp.tool({
   name: "read_page",
   description: `Read a Singularity page — or any block within one — as markdown.
@@ -250,6 +276,9 @@ sub-blocks. A page's id gives the whole page, opening with a \`# Title\` line.
 comes from:
 
     <page-meta created="2026-07-14T09:12Z" edited="2026-10-07T18:02Z">
+      <tags>
+        <tag name="In progress"/>
+      </tags>
       <breadcrumb>
         <page id="…" title="Workspace"/>
         <page id="…" title="This page"/>
@@ -265,8 +294,12 @@ the other pages that link TO that page (a link block or an inline \`[[\` mention
 by title — \`<backlinks/>\` when none does; read one to see where and why it
 links here. Every id in the header is a \`block_id\` you can read. \`created\` and \`edited\` are UTC — \`edited\` is the
 latest change to the page or any block in it, so it tells you how stale a note
-or todo may be. The header is not part of the page and is READ-ONLY: hand it
-back unchanged or leave it out; an edit to it is ignored.
+or todo may be. \`<tags>\` lists the page's tags (\`<tags/>\` when it has
+none) — its status and labels, drawn from one shared vocabulary. The header is
+not part of the page, and apart from \`<tags>\` it is READ-ONLY: hand it back
+unchanged or leave it out; an edit to it is ignored. \`edit_page\` describes
+how to change the tags. A page's status ("In progress", "Done", …) is a TAG,
+never a \`[…]\` prefix in its title.
 
 Four things in the output are ADDRESSES, and all of them matter when you write
 back:
@@ -553,11 +586,40 @@ block that already exists:
 page); what is allowed is judged by what the resulting diff TOUCHED, not by which
 id you passed. Scoped to an agent page's own id, every block in it is yours.
 
-**The \`<page-meta>\` header** that opens every \`read_page\` output is read-only
-and not part of the page: an edit that changes it writes nothing there (the
-result then carries \`page_meta_ignored\`), and one that leaves it malformed is
-refused. Anchor \`old_string\` below it; a header leading \`old_string\` or
-\`new_string\` (say, a whole read pasted in) is dropped before matching.
+**The \`<page-meta>\` header** that opens every \`read_page\` output is not part
+of the page. Its \`<tags>\` section is the page's TAGS, and is writable; the
+rest of it is read-only: an edit that changes the rest writes nothing there (the
+result then carries \`page_meta_ignored\`), and one that leaves the header
+malformed is refused. Anchor \`old_string\` below it. A header leading
+\`old_string\` that is NOT exactly this read's (say, one pasted from another
+read) is dropped before matching, with the one leading \`new_string\`.
+
+**Tags.** A page's tags are its status and labels ("In progress", "Planned",
+"Done", …), drawn from ONE shared vocabulary. **Status belongs in tags, never in
+a \`[…]\` prefix in the title** — a rename to such a title is refused. To change
+a page's tags, edit its \`<tags>\` section like any other text — one
+\`<tag name="…"/>\` line per tag, in the order the page shows them;
+\`<tags/>\` when it has none:
+
+       edit_page(block_id:   "<page id>",
+                 old_string: "  <tags/>",
+                 new_string: "  <tags>\\n    <tag name=\\"In progress\\"/>\\n  </tags>")
+
+- Tags may be set on ANY page, the author's included — they are metadata, not
+  the author's prose. They land on the page holding \`block_id\` (the last
+  breadcrumb entry), whatever block you scoped the edit to.
+- A name matches an existing tag case- and whitespace-insensitively, and is
+  stored under that tag's spelling; a name listed twice counts once.
+- **A name that matches no existing tag is REFUSED**, with nothing written (your
+  content change included), and the refusal lists the closest names and the
+  whole vocabulary — use one of those. Only when you really mean a NEW tag, say
+  so on its line: \`<tag name="Blocked" new="true"/>\`, optionally with
+  \`color="red"\` (one of ${TAG_COLORS.join(", ")}; else one is picked from
+  the name). \`new\` and \`color\` are only for
+  creating; an existing tag keeps its color.
+- The tags are written after the rest of the edit succeeds. The result carries
+  \`tags_set\` (the page's tags as stored) and, when any were made,
+  \`tags_created\`.
 
 **The \`# Title\` line.** Scoped to a page's own id, the document opens (after
 the header) with the page's title as \`# Title\` and a blank line. It is not a
@@ -565,7 +627,8 @@ block of the page.
 
 - **On an agent page it IS the page's title, and editing it renames the page.**
   Change only the text after \`# \`, and keep it one \`# \` line followed by a
-  blank line; the result then carries \`renamed_to\`. A rename is an edit of
+  blank line; the result then carries \`renamed_to\`. A title opening with a
+  \`[…]\` prefix (\`[In progress] …\`) is refused: put the status in tags. A rename is an edit of
   that line ALONE — to also change the page's content, make that a second
   \`edit_page\` call. A title is plain text — no
   bold, code or links — written the way \`read_page\` would show it (a literal
@@ -736,22 +799,42 @@ the author's even when it sits in yours.`,
     // read root, so an old_string copied from ANOTHER read — a block's read,
     // pasted against its page — would otherwise never match, over lines the edit
     // cannot change anyway.
-    const oldBody = withoutPageMeta(oldString);
+    //
+    // An old_string opening with THIS read's header, byte for byte, is matched
+    // as written — that is a whole pasted header whose `<tags>` section the
+    // edit may be changing — and new_string keeps its header with it.
+    const readSplit = splitPageMeta(markdown);
+    if (!readSplit.ok) {
+      throw new Error(
+        `edit_page: the document read_page produced for ${blockId} has a malformed ` +
+          `<page-meta> header (${readSplit.reason})`,
+      );
+    }
+    const ownHeader = opensWithHeader(oldString, readSplit.header);
+    const oldBody = ownHeader ? oldString : withoutPageMeta(oldString);
     if (oldBody.trim() === "") {
       throw new HttpError(
         400,
-        `edit_page: old_string holds only the <page-meta> header, which is ` +
-          `read-only and not part of the page. Anchor old_string below it.`,
+        `edit_page: old_string holds only a <page-meta> header from another ` +
+          `read, which is not part of the page. Anchor old_string below it — ` +
+          `or, to change this page's tags, on its <tags> section.`,
       );
     }
-    const found = findEdits(
-      markdown,
-      oldBody,
-      dropBlankLinesBesideTags(
-        withoutPageMeta(newString),
-        serverMarkdownContext().handles,
-      ),
-    );
+    const tryFind = (withHeader: boolean) =>
+      findEdits(
+        markdown,
+        withHeader ? oldString : withoutPageMeta(oldString),
+        dropBlankLinesBesideTags(
+          withHeader ? newString : withoutPageMeta(newString),
+          serverMarkdownContext().handles,
+        ),
+      );
+    let found = tryFind(ownHeader);
+    // A BLOCK's read under the same page carries the very same header, yet its
+    // body sits at another depth than the page's: pasted whole against the page
+    // it cannot match with the header in front. Its header is then just the
+    // read-only header of another read, and is dropped like any other.
+    if (found.kind === "none" && ownHeader) found = tryFind(false);
     if (found.kind === "none") {
       throw new HttpError(
         400,
@@ -826,18 +909,24 @@ the author's even when it sits in yours.`,
     // an edit to it is ignored, and said to be. A header the edit left
     // malformed (a line it does not know, no closing tag) is refused instead,
     // because content written inside it would otherwise vanish.
-    const readSplit = splitPageMeta(markdown);
-    if (!readSplit.ok) {
-      throw new Error(
-        `edit_page: the document read_page produced for ${blockId} has a malformed ` +
-          `<page-meta> header (${readSplit.reason})`,
-      );
-    }
+    //
+    // The header's ONE writable section is `<tags>`: the page's tags, by name
+    // (see `./page-tags.ts`). Its change is resolved below, before anything is
+    // written, and written after the content apply. Every other field is still
+    // ignored, and said to be — judged with the tags taken out, so a tag edit
+    // is not reported as an ignored header edit.
     const nextSplit = splitPageMeta(next);
     if (!nextSplit.ok) {
       throw new HttpError(400, `edit_page: ${nextSplit.reason}.`);
     }
-    const metaIgnored = nextSplit.header !== readSplit.header;
+    const metaIgnored =
+      nextSplit.meta === null
+        ? nextSplit.header !== readSplit.header
+        : metaFactsChanged(readSplit.meta, nextSplit.meta);
+    const tagRequests = tagRequestsOf(readSplit.meta, nextSplit.meta);
+    if (tagRequests !== null && !tagRequests.ok) {
+      throw new HttpError(400, `edit_page: ${tagRequests.reason}`);
+    }
     const body = readSplit.rest;
     const nextBody = nextSplit.rest;
 
@@ -874,9 +963,29 @@ the author's even when it sits in yours.`,
               `because ${edit.reason}.`,
           );
         }
+        if (BRACKET_STATUS_PREFIX.test(edit.title)) {
+          throw new HttpError(
+            400,
+            `edit_page: not renamed, and nothing written: the new title ` +
+              `${JSON.stringify(edit.title)} opens with a […] prefix. A page's ` +
+              `status belongs in its TAGS, never in its title — keep the title ` +
+              `plain and put the status in the header's <tags> section ` +
+              `(<tag name="In progress"/>).`,
+          );
+        }
         document = edit.document;
         if (edit.title !== scope.title) renamedTo = edit.title;
       }
+    }
+
+    // A changed tag list is resolved BEFORE anything is written: an unknown
+    // name (not marked new="true") refuses the whole edit, content included.
+    // It is written AFTER the content apply, so a refused content edit writes
+    // no tags either.
+    const tagResolution =
+      tagRequests === null ? null : await resolveTagNames(tagRequests.requests);
+    if (tagResolution !== null && !tagResolution.ok) {
+      throw new HttpError(400, `edit_page: ${tagRefusal(tagResolution)}`);
     }
 
     let authored: string[] = [];
@@ -919,8 +1028,22 @@ the author's even when it sits in yours.`,
       await stampAuthors([scope.pageId], ctx.conversationId);
       if (!noteIds.includes(scope.pageId)) noteIds.push(scope.pageId);
     }
+    // Tags are the page's metadata, not the author's prose, so they are
+    // written on ANY page — the one holding the scope root.
+    const tagsWritten =
+      tagResolution === null
+        ? null
+        : await writeResolvedPageTags(scope.pageId, tagResolution.tags);
     return jsonResult({
       ...(applySummary(report, noteIds) as object),
+      ...(tagsWritten === null
+        ? {}
+        : {
+            tags_set: tagsWritten.names,
+            ...(tagsWritten.created.length === 0
+              ? {}
+              : { tags_created: tagsWritten.created }),
+          }),
       replaced: replaceAll ? matches : 1,
       // Said aloud rather than applied silently: the caller's snippet was at
       // another depth than the text it matched (the first match's shift; with
@@ -932,7 +1055,7 @@ the author's even when it sits in yours.`,
       ...(metaIgnored
         ? {
             page_meta_ignored:
-              "<page-meta> is read-only: your change to it was not written",
+              "<page-meta> is read-only outside its <tags> section: your change to the rest of it was not written",
           }
         : {}),
     });

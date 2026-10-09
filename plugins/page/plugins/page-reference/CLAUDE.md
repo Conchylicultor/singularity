@@ -85,16 +85,20 @@ carrying the same actions — a separate feature.
 
 ## Plugin reference
 
-- Description: The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, and the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip. Owns no reference, no action and no decoration of its own.
+- Description: The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip, and the additive PageReference.Trailing slot whose contributions (a page's tags, …) every reference renders right after the title. Owns no reference, no action and no decoration of its own.
 - Web:
   - Slots:
     - `PageReference.Actions`
     - `PageReference.Decoration`
+    - `PageReference.Trailing`
   - Slot contributors:
     - `PageReference.Actions` ← `page.page-reference.open-aside`
     - `PageReference.Decoration` ← `page.annotations.agent-notes.agent-page`
     - `PageReference.Decoration` ← `page.annotations.instructions.instructions-page`
+    - `PageReference.Trailing` ← `page.tags`
   - Uses:
+    - `primitives/css/inline.Inline`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.renderIsolated`
   - Exports (types):
@@ -106,6 +110,7 @@ carrying the same actions — a separate feature.
   - Exports (values):
     - `PageNavigationProvider`
     - `PageReference`
+    - `PageReferenceTrailing`
     - `usePageNavigation`
     - `usePageReferenceActions`
     - `usePageReferenceDecoration`
@@ -121,6 +126,7 @@ carrying the same actions — a separate feature.
     - `page/page-link`
     - `page/page-reference/open-aside`
     - `page/sub-page`
+    - `page/tags`
 - Sub-plugins:
   - **`open-aside`** — Open-in-side-pane action on a page reference: hovering a sub-page row or a link block reveals a button that opens the referenced page in a column beside the current one, leaving it on screen.…
 

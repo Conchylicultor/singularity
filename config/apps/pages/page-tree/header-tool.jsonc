@@ -1,4 +1,4 @@
-// @hash 2a95fb6269c9
+// @hash a0ec2b25674a
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -10,9 +10,13 @@
   // The hover row above the page title, read left to right: the cover first
   // (it sits above everything), then the icon — Add icon on a page without
   // one, Change icon on a page with one (each gated, so one of the two shows).
+  // Add tag comes last: it is about the page rather than its look, and it is
+  // offered only while the page has no tags (then the chips under the title
+  // take over).
   "items": [
     "apps.pages.page-tree:add-cover",
     "apps.pages.page-tree:add-icon",
-    "apps.pages.page-tree:change-icon"
+    "apps.pages.page-tree:change-icon",
+    "apps.pages.page-tags:add-tag"
   ]
 }

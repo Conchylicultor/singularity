@@ -146,17 +146,22 @@ it, so an id means the same thing wherever it is clicked.
     - `PageDetail.Overlay`
     - `PageTree.RowActions`
     - `PageTree.Fields`
+    - `PageTree.RowMarker`
     - `pageDetailPane.Actions`
     - `blockDetailPane.Actions`
     - `pagesTreePane.Actions`
   - Slot contributors:
+    - `PageDetail.HeaderTool` ← `apps.pages.page-tags`
     - `PageDetail.HeaderTool` ← `apps.pages.page-tree`
+    - `PageDetail.UnderTitle` ← `apps.pages.page-tags`
     - `PageDetail.UnderTitle` ← `apps.pages.page-tree`
     - `PageDetail.Overlay` ← `apps.pages.page-outline`
     - `PageTree.RowActions` ← `apps.pages.page-tree`
     - `PageTree.RowActions` ← `apps.pages.starred`
     - `PageTree.Fields` ← `apps.pages.agent-origin`
+    - `PageTree.Fields` ← `apps.pages.page-tags`
     - `PageTree.Fields` ← `apps.pages.starred`
+    - `PageTree.RowMarker` ← `apps.pages.page-tags`
     - `pageDetailPane.Actions` ← `apps.pages.copy-id`
     - `pageDetailPane.Actions` ← `apps.pages.history`
     - `pageDetailPane.Actions` ← `apps.pages.page-author`
@@ -176,7 +181,7 @@ it, so an id means the same thing wherever it is clicked.
     - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
     - `PageTree.RowActions` "delete" → `DeletePageAction`
     - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-  - Uses: 79 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×9
     - `page/editor` ×7
     - `primitives/data-view` ×5
@@ -204,6 +209,7 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
@@ -222,6 +228,7 @@ it, so an id means the same thing wherever it is clicked.
     - `ui/icons.Icon`
   - Exports (types):
     - `BlockTarget`
+    - `PageHeaderPartProps`
     - `PageSeedBlock`
   - Exports (values):
     - `blockDetailPane`
@@ -250,6 +257,7 @@ it, so an id means the same thing wherever it is clicked.
     - `apps/pages/history`
     - `apps/pages/page-author`
     - `apps/pages/page-outline`
+    - `apps/pages/page-tags`
     - `apps/pages/prompt-origin`
     - `apps/pages/starred`
     - `apps/pages/welcome/quick-create`

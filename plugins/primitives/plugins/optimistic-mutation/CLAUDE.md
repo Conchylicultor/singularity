@@ -541,6 +541,7 @@ ordering — is pinned by `web/__tests__/use-optimistic-resource.test.tsx`
     - `conversations/conversations-view/data-view/queue`
     - `conversations/conversations-view/queue`
     - `page/editor`
+    - `page/tags`
     - `reports/optimistic-divergence`
     - `reports/optimistic-rejection`
 - Exemptions:

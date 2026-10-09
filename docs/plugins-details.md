@@ -3864,6 +3864,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/editor.Editor`
               - `primitives/live-state.foldResource`
               - `primitives/outline/rail.OutlineRail`
+        - **`page-tags`** — Page tags in the Pages app: the chips under a page's title with their picker (an Add tag tool in the header's hover row while the page has none), a tags field in the sidebar DataView (filter and group by tag), and colored dots marking each tagged page's sidebar row.
+          - Web:
+            - Contributes:
+              - `PageDetail.UnderTitle` "tags" → `UnderTitleTags`
+              - `PageDetail.HeaderTool` "add-tag" → `AddTagTool`
+              - `PageTree.Fields` "tags" → `TagsField`
+              - `PageTree.RowMarker` "tags" → `TagDotsMarker`
+            - Uses:
+              - `apps/pages/page-tree.PageDetail`
+              - `apps/pages/page-tree.PageTree`
+              - `page/tags.PageTagsEditor`
+              - `page/tags.TagChipRow`
+              - `page/tags.TagDot`
+              - `page/tags.TagPicker`
+              - `page/tags.usePageTagIndex`
+              - `page/tags.usePageTags`
+              - `page/tags.usePageTagsEditor`
+              - `primitives/css/inline.Inline`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/live-state.foldResource`
+              - `ui/icons.Icon`
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) and the block-detail pane (one block of a page, opened as a page of its own) for the Pages app, with useBlockTarget — the one resolver of a bare block id to the pane that shows it.
           - Web:
             - Slots:
@@ -3873,17 +3895,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.Overlay`
               - `PageTree.RowActions`
               - `PageTree.Fields`
+              - `PageTree.RowMarker`
               - `pageDetailPane.Actions`
               - `blockDetailPane.Actions`
               - `pagesTreePane.Actions`
             - Slot contributors:
+              - `PageDetail.HeaderTool` ← `apps.pages.page-tags`
               - `PageDetail.HeaderTool` ← `apps.pages.page-tree`
+              - `PageDetail.UnderTitle` ← `apps.pages.page-tags`
               - `PageDetail.UnderTitle` ← `apps.pages.page-tree`
               - `PageDetail.Overlay` ← `apps.pages.page-outline`
               - `PageTree.RowActions` ← `apps.pages.page-tree`
               - `PageTree.RowActions` ← `apps.pages.starred`
               - `PageTree.Fields` ← `apps.pages.agent-origin`
+              - `PageTree.Fields` ← `apps.pages.page-tags`
               - `PageTree.Fields` ← `apps.pages.starred`
+              - `PageTree.RowMarker` ← `apps.pages.page-tags`
               - `pageDetailPane.Actions` ← `apps.pages.copy-id`
               - `pageDetailPane.Actions` ← `apps.pages.history`
               - `pageDetailPane.Actions` ← `apps.pages.page-author`
@@ -3903,7 +3930,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 79 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+            - Uses: 80 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
               - `primitives/pane` ×9
               - `page/editor` ×7
               - `primitives/data-view` ×5
@@ -3931,6 +3958,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/inline.Inline`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/spinner.Spinner`
@@ -3949,6 +3977,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
             - Exports (types):
               - `BlockTarget`
+              - `PageHeaderPartProps`
               - `PageSeedBlock`
             - Exports (values):
               - `blockDetailPane`
@@ -3977,6 +4006,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/history`
               - `apps/pages/page-author`
               - `apps/pages/page-outline`
+              - `apps/pages/page-tags`
               - `apps/pages/prompt-origin`
               - `apps/pages/starred`
               - `apps/pages/welcome/quick-create`
@@ -14036,9 +14066,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadKnownRelations`
       - `quotedRelationsIn`
   - Cross-plugin:
-    - Imported by: 106 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 107 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×29
-      - `page` ×14
+      - `page` ×15
       - `infra` ×12
       - `conversations` ×11
       - `tasks` ×8
@@ -17217,6 +17247,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli`
               - `infra/entity-extensions`
               - `infra/events`
+              - `page/tags`
               - `plugin-meta/plugin-health`
               - `tasks/automations`
               - `tasks/tasks-core`
@@ -17702,6 +17733,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/trace/engine`
               - `infra/claude-cli`
               - `infra/events`
+              - `page/tags`
               - `tasks/automations`
               - `tasks/tasks-core`
         - **`storage`** — JSON field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so a jsonField<T>'s shape is derived rather than asserted.
@@ -18243,7 +18275,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 22 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 23 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×7
               - `debug` ×3
               - `infra` ×3
@@ -18252,6 +18284,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×2
               - `apps-core/surface/floating/wallpaper`
               - `conversations/summary`
+              - `page/tags`
         - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "text"
@@ -19312,10 +19345,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 141 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 142 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×44
               - `primitives` ×24
-              - `page` ×22
+              - `page` ×23
               - `conversations` ×16
               - `apps-core` ×5
               - `debug` ×4
@@ -19862,8 +19895,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots:
       - `IdKinds.Kind`
       - `IdKinds.Presenter`
-    - Slot contributors: 33 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `IdKinds.Kind` ×24
+    - Slot contributors: 34 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `IdKinds.Kind` ×25
       - `IdKinds.Presenter` ×9
     - Exports (types):
       - `IdPresenter`
@@ -19913,17 +19946,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 29 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+    - Imported by: 30 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×9
       - `conversations` ×4
       - `primitives` ×3
       - `build` ×2
+      - `page` ×2
       - `release` ×2
       - `tasks` ×2
       - `active-data/id-chip`
       - `history/engine`
       - `infra/trash`
-      - `page/editor`
       - `plugin-meta/plugin-health`
       - `reports`
       - `shell/notifications`
@@ -20738,13 +20771,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isCodec`
           - `multipart`
       - Cross-plugin:
-        - Imported by: 227 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 228 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×59
           - `conversations` ×26
           - `debug` ×26
           - `infra` ×17
           - `tasks` ×17
-          - `page` ×13
+          - `page` ×14
           - `primitives` ×13
           - `build` ×9
           - `ui` ×6
@@ -20830,6 +20863,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli`
           - `infra/entity-extensions`
           - `infra/events`
+          - `page/tags`
           - `plugin-meta/plugin-health`
           - `tasks/tasks-core`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
@@ -20871,11 +20905,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×13
           - `tasks` ×8
           - `conversations` ×6
-          - `page` ×2
+          - `page` ×3
           - `plugin-meta/plugin-health`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger(). Contributes a BackgroundTriggerSource so the Background activity catalog names the events that start each job.
       - Server:
@@ -23658,13 +23692,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveValue`
           - `scopedLiveColumns`
       - Cross-plugin:
-        - Imported by: 177 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 178 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×51
           - `conversations` ×35
           - `tasks` ×21
           - `active-data` ×11
           - `infra` ×10
-          - `page` ×9
+          - `page` ×10
           - `debug` ×8
           - `build` ×6
           - `primitives` ×5
@@ -23975,11 +24009,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine.
           - Server:
-            - Uses: 21 symbols — full list in [`plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md`](../plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md)
+            - Uses: 23 symbols — full list in [`plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md`](../plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md)
               - `page/annotations/instructions` ×6
               - `page/markdown-apply` ×5
               - `page/editor` ×3
               - `database` ×2
+              - `page/tags` ×2
               - `infra/endpoints.HttpError`
               - `infra/mcp.Mcp`
               - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`
@@ -25001,8 +25036,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `xmlTextContentLength`
           - `xmlTextToRuns`
       - Cross-plugin:
-        - Imported by: 73 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
-          - `page` ×56
+        - Imported by: 74 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+          - `page` ×57
           - `apps` ×8
           - `reports` ×4
           - `active-data` ×3
@@ -25011,6 +25046,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/auto-icon` (table `editor_ext_auto_icon`)
           - `apps/pages/agent-origin` (table `editor_ext_origin`)
           - `apps/pages/starred` (table `editor_ext_starred`)
+          - `page/tags` (table `editor_ext_tags`)
           - `page/annotations/todo/task-link` (table `editor_ext_todo_task`)
         - Endpoint callers: `editor-collab`
       - Exemptions:
@@ -25425,6 +25461,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `network/live.useLive`
           - `page/editor.PageIcon`
+          - `page/page-reference.PageReferenceTrailing`
           - `page/page-reference.usePageNavigation`
           - `primitives/css/center.Center`
           - `primitives/css/clip.clipClasses`
@@ -25518,6 +25555,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.serializePageContent`
           - `page/editor.StoredBlock`
           - `page/links.loadBacklinkSources`
+          - `page/tags.loadPageTags`
         - Exports (types):
           - `ApplyBlockOptions`
           - `ApplyReport`
@@ -25543,7 +25581,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MarkdownApplyPlan`
           - `MarkdownApplyResult`
           - `PageMeta`
+          - `PageMetaTag`
           - `PageTitleBannerParse`
+          - `ParsedPageMeta`
           - `StoredRow`
           - `TouchedBlocks`
           - `TouchedHow`
@@ -25661,11 +25701,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary, and supplies the target page's title to the `<page>` tag an agent reads.
       - Web:
         - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
-        - Uses: 23 symbols — full list in [`plugins/page/plugins/page-link/REFERENCE.md`](../plugins/page/plugins/page-link/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/page/plugins/page-link/REFERENCE.md`](../plugins/page/plugins/page-link/REFERENCE.md)
           - `page/editor` ×6
+          - `page/page-reference` ×3
           - `primitives/live-state` ×3
           - `network/live` ×2
-          - `page/page-reference` ×2
           - `primitives/css/center.Center`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/row.Row`
@@ -25695,16 +25735,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.typeVar`
           - `ui/icons.symbol`
         - Exports (values): `pageLinkBlock`
-    - **`page-reference`** — The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, and the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip. Owns no reference, no action and no decoration of its own.
+    - **`page-reference`** — The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip, and the additive PageReference.Trailing slot whose contributions (a page's tags, …) every reference renders right after the title. Owns no reference, no action and no decoration of its own.
       - Web:
         - Slots:
           - `PageReference.Actions`
           - `PageReference.Decoration`
+          - `PageReference.Trailing`
         - Slot contributors:
           - `PageReference.Actions` ← `page.page-reference.open-aside`
           - `PageReference.Decoration` ← `page.annotations.agent-notes.agent-page`
           - `PageReference.Decoration` ← `page.annotations.instructions.instructions-page`
+          - `PageReference.Trailing` ← `page.tags`
         - Uses:
+          - `primitives/css/inline.Inline`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/slot-render.renderIsolated`
         - Exports (types):
@@ -25716,6 +25760,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `PageNavigationProvider`
           - `PageReference`
+          - `PageReferenceTrailing`
           - `usePageNavigation`
           - `usePageReferenceActions`
           - `usePageReferenceDecoration`
@@ -25731,6 +25776,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/page-link`
           - `page/page-reference/open-aside`
           - `page/sub-page`
+          - `page/tags`
       - Plugins:
         - **`open-aside`** — Open-in-side-pane action on a page reference: hovering a sub-page row or a link block reveals a button that opens the referenced page in a column beside the current one, leaving it on screen. Contributed into PageReference.Actions, and declared unavailable where the host has no second column to give — so a single-surface embed shows no affordance at all.
           - Web:
@@ -26010,6 +26056,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.PageIcon`
           - `page/editor.useCaretEscape`
           - `page/editor.useVoidCaret`
+          - `page/page-reference.PageReferenceTrailing`
           - `page/page-reference.usePageNavigation`
           - `page/page-reference.usePageReferenceActions`
           - `page/page-reference.usePageReferenceDecoration`
@@ -26068,6 +26115,120 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TableAlign`
           - `TableData`
         - Exports (values): `tableBlock`
+    - **`tags`** — Page tags, web half: the vocabulary and per-page reads (usePageTags, usePageTagIndex, the optimistic usePageTagsEditor), the soft TagChip / TagDot, the read-only PageTagChips, and the TagPicker popover (search or create, toggle, and per-tag rename / recolor / delete). Shows a page's tags after its title on every page reference (sub-page rows, link blocks, backlinks). Page tags, server half: the page_tags vocabulary and the page_blocks_ext_tags assignments (one ordered tag-id list per tagged page), both served live; the vocabulary CRUD and per-page PUT endpoints; and the reads/writes other plugins use — loadPageTags (the <page-meta> header), resolveTagNames (name → tag, refusing unknown names unless created explicitly) and writeResolvedPageTags / setPageTags.
+      - Web:
+        - Contributes:
+          - `IdKinds.Kind` "tag"
+          - `PageReference.Trailing` → `PageTagChips`
+        - Uses: 30 symbols — full list in [`plugins/page/plugins/tags/REFERENCE.md`](../plugins/page/plugins/tags/REFERENCE.md)
+          - `primitives/css/ui-kit` ×4
+          - `primitives/live-state` ×4
+          - `network/live` ×3
+          - `infra/endpoints` ×2
+          - `ids.IdKinds`
+          - `page/page-reference.PageReference`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/center.Center`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/row.Row`
+          - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/icon-button.IconButton`
+          - `primitives/optimistic-mutation.useOptimisticResource`
+          - `primitives/overlay/popover.InlinePopover`
+          - `primitives/search.SearchInput`
+          - `primitives/undo-redo.localUndoProps`
+          - `ui/icons.Icon`
+        - Exports (types): `PageTagsEditor`
+        - Exports (values):
+          - `TagChipRow`
+          - `TagDot`
+          - `TagPicker`
+          - `usePageTagIndex`
+          - `usePageTags`
+          - `usePageTagsEditor`
+      - Server:
+        - Contributes:
+          - `ids.kind` "tag"
+          - `resource.declare` "page-tags.assignments"
+          - `resource.declare` "page-tags.assignments:rows"
+          - `resource.declare` "page-tags.vocabulary"
+          - `resource.declare` "page-tags.vocabulary:rows"
+        - Uses:
+          - `database.db`
+          - `database.DbExecutor`
+          - `ids.IdKinds`
+          - `infra/endpoints.HttpError`
+          - `infra/endpoints.implement`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
+          - `infra/entity-extensions.defineExtension`
+          - `network/live.serveCollection`
+          - `page/editor._blocks`
+          - `page/editor.liveBlocks`
+          - `page/editor.PAGE_BLOCK_TYPE`
+        - DB schema: `plugins/page/plugins/tags/server/internal/tables.ts`
+        - Entity extension of: `page/editor` (table `editor_ext_tags`)
+        - Exports (types):
+          - `PageTag`
+          - `ResolvedTag`
+          - `TagRequest`
+          - `TagResolution`
+        - Exports (values):
+          - `loadPageTags`
+          - `resolveTagNames`
+          - `setPageTags`
+          - `writeResolvedPageTags`
+        - Resources:
+          - `page-tags.assignments` (keyed)
+          - `page-tags.assignments:rows` (keyed, point)
+          - `page-tags.vocabulary` (keyed)
+          - `page-tags.vocabulary:rows` (keyed, point)
+        - Routes:
+          - `PUT /api/pages/:pageId/tags`
+          - `POST /api/page-tags`
+          - `PATCH /api/page-tags/:tagId`
+          - `DELETE /api/page-tags/:tagId`
+      - Core:
+        - Uses:
+          - `fields/date/config.dateField`
+          - `fields/json/config.jsonField`
+          - `fields/text/config.enumTextField`
+          - `fields/text/config.textField`
+          - `ids.defineIdKind`
+          - `ids.idKindField`
+          - `infra/entities.wireSchema`
+          - `infra/entity-extensions.defineExtensionShape`
+          - `network/live.liveCollection`
+        - Exports (types):
+          - `PageTagAssignmentRow`
+          - `PageTagRow`
+          - `TagColor`
+        - Exports (values):
+          - `closestTagNames`
+          - `defaultTagColor`
+          - `normalizeTagName`
+          - `PAGE_TAG_SERVER_ONLY`
+          - `PageTagAssignmentRowSchema`
+          - `pageTagAssignments`
+          - `pageTagAssignmentShape`
+          - `pageTagFields`
+          - `pageTagIdKind`
+          - `PageTagRowSchema`
+          - `pageTagVocabulary`
+          - `TAG_COLORS`
+          - `TAG_NAME_MAX`
+          - `TagColorSchema`
+          - `tagKey`
+          - `TagNameSchema`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/pages/page-tags`
+          - `page/annotations/agent-access`
+          - `page/markdown-apply`
     - **`text`** — Plain-text block type for the page editor. Plain-text block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "text" → `BlockTextRenderer`
@@ -27773,7 +27934,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Badge`
               - `formatStatusLabel`
           - Cross-plugin:
-            - Imported by: 157 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 158 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×37
               - `debug` ×34
               - `conversations` ×23
@@ -27784,10 +27945,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×5
               - `review` ×4
               - `fields` ×3
+              - `page` ×3
               - `apps-core` ×2
               - `auth` ×2
               - `infra` ×2
-              - `page` ×2
               - `runs` ×2
               - `backup/runs-arm`
               - `config_v2/settings`
@@ -27841,10 +28002,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×27
               - `primitives` ×24
-              - `page` ×17
+              - `page` ×18
               - `debug` ×8
               - `conversations` ×7
               - `ui` ×6
@@ -28085,12 +28246,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 149 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 150 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×42
               - `primitives` ×28
               - `conversations` ×23
               - `debug` ×16
-              - `page` ×9
+              - `page` ×10
               - `ui` ×9
               - `tasks` ×5
               - `plugin-meta` ×3
@@ -28156,13 +28317,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 84 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `debug` ×16
-              - `apps` ×14
+              - `apps` ×15
               - `reports` ×12
               - `conversations` ×9
               - `primitives` ×9
-              - `page` ×5
+              - `page` ×7
               - `build` ×3
               - `plugin-meta` ×3
               - `tasks` ×3
@@ -28399,13 +28560,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 102 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 105 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `conversations` ×20
-              - `apps` ×17
+              - `apps` ×18
               - `primitives` ×17
               - `debug` ×10
+              - `page` ×7
               - `ui` ×6
-              - `page` ×5
               - `tasks` ×5
               - `plugin-meta` ×4
               - `review` ×4
@@ -28441,11 +28602,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Row`
               - `SectionHeaderRow`
           - Cross-plugin:
-            - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+            - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
               - `apps` ×15
               - `ui` ×11
+              - `page` ×9
               - `primitives` ×9
-              - `page` ×8
               - `conversations` ×5
               - `plugin-meta` ×3
               - `tasks` ×3
@@ -28471,13 +28632,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Scroll`
               - `scrollClasses`
           - Cross-plugin:
-            - Imported by: 88 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 89 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×25
               - `apps` ×18
               - `debug` ×12
               - `primitives` ×12
+              - `page` ×4
               - `build` ×3
-              - `page` ×3
               - `plugin-meta` ×3
               - `infra` ×2
               - `review` ×2
@@ -28544,13 +28705,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 383 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 384 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×97
               - `conversations` ×62
               - `primitives` ×50
               - `debug` ×34
               - `ui` ×28
-              - `page` ×23
+              - `page` ×24
               - `plugin-meta` ×15
               - `apps-core` ×10
               - `fields` ×9
@@ -28734,12 +28895,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 355 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 356 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×94
               - `conversations` ×70
               - `primitives` ×40
               - `debug` ×32
-              - `page` ×20
+              - `page` ×21
               - `plugin-meta` ×14
               - `ui` ×14
               - `tasks` ×11
@@ -28984,11 +29145,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 388 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 390 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×101
-              - `apps` ×73
+              - `apps` ×74
               - `conversations` ×52
-              - `page` ×24
+              - `page` ×25
               - `debug` ×23
               - `ui` ×23
               - `apps-core` ×13
@@ -30529,13 +30690,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
-        - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×42
           - `primitives` ×18
           - `conversations` ×14
+          - `page` ×7
           - `tasks` ×7
           - `debug` ×6
-          - `page` ×6
           - `config_v2` ×3
           - `infra` ×3
           - `apps-core` ×2
@@ -30818,13 +30979,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 196 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×50
+        - Imported by: 198 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×51
           - `conversations` ×38
           - `ui` ×22
           - `tasks` ×18
+          - `page` ×12
           - `debug` ×11
-          - `page` ×11
           - `primitives` ×9
           - `active-data` ×6
           - `infra` ×6
@@ -31424,6 +31585,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversations-view/data-view/queue`
           - `conversations/conversations-view/queue`
           - `page/editor`
+          - `page/tags`
           - `reports/optimistic-divergence`
           - `reports/optimistic-rejection`
       - Exemptions:
@@ -31746,9 +31908,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlinePopoverProps`
             - Exports (values): `InlinePopover`
           - Cross-plugin:
-            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
+            - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
+              - `page` ×6
               - `conversations` ×5
-              - `page` ×5
               - `primitives` ×5
               - `apps` ×4
               - `fields` ×2
@@ -32486,6 +32648,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/dependencies`
           - `debug/read-set`
           - `page/page-link`
+          - `page/tags`
           - `primitives/data-view`
           - `primitives/tree`
           - `search/quick-find`
@@ -33293,6 +33456,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/page-link`
           - `page/place`
           - `page/table`
+          - `page/tags`
           - `primitives/text-editor`
     - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort — and useRecentUsage() lists a namespace's most recently used keys (a bounded window), for a Recent row with no candidate set to rank. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set, and swept by a nightly 1-year retention job.
       - Server:
@@ -33578,8 +33742,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 230 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×230
+    - Contributes: 232 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×232
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -33604,8 +33768,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 229 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×229
+    - Contributes: 231 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×231
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -36791,11 +36955,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 297 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×61
+        - Imported by: 299 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×62
           - `conversations` ×55
+          - `page` ×40
           - `primitives` ×40
-          - `page` ×39
           - `fields` ×30
           - `debug` ×17
           - `ui` ×9

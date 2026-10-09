@@ -27,6 +27,7 @@
     - `infra/claude-cli`
     - `infra/entity-extensions`
     - `infra/events`
+    - `page/tags`
     - `plugin-meta/plugin-health`
     - `tasks/automations`
     - `tasks/tasks-core`

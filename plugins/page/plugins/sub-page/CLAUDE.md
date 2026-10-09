@@ -35,6 +35,7 @@ page's own prose.
     - `page/editor.PageIcon`
     - `page/editor.useCaretEscape`
     - `page/editor.useVoidCaret`
+    - `page/page-reference.PageReferenceTrailing`
     - `page/page-reference.usePageNavigation`
     - `page/page-reference.usePageReferenceActions`
     - `page/page-reference.usePageReferenceDecoration`

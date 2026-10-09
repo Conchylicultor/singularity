@@ -269,6 +269,7 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
     - `infra/claude-cli`
     - `infra/entity-extensions`
     - `infra/events`
+    - `page/tags`
     - `plugin-meta/plugin-health`
     - `tasks/tasks-core`
 

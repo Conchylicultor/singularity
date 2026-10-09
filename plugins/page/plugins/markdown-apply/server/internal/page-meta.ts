@@ -7,6 +7,7 @@ import {
   readPageEditedAt,
 } from "@plugins/page/plugins/editor/server";
 import { loadBacklinkSources } from "@plugins/page/plugins/links/server";
+import { loadPageTags } from "@plugins/page/plugins/tags/server";
 import type { PageMeta } from "../../core";
 
 const ChainRowSchema = z.object({
@@ -18,8 +19,8 @@ const ChainRowSchema = z.object({
 
 /**
  * The facts a `<page-meta>` header states about `pageId` (`core/page-meta.ts`):
- * its ancestry, root first and ending with the page itself, and its created and
- * edited times, and the pages linking to it.
+ * its ancestry, root first and ending with the page itself, its created and
+ * edited times, the pages linking to it, and its tags.
  *
  * The chain walks `page_blocks.page_id` upward — a page row's `page_id` is the
  * page it is DISPLAYED in, i.e. its parent page — the server twin of the Pages
@@ -29,7 +30,8 @@ const ChainRowSchema = z.object({
  * `edited` is the editor's own `readPageEditedAt`, the value behind the page's
  * "Edited" label, so the header and the UI cannot state two different times.
  * `backlinks` is the backlinks index's own read (`page/links`), the same edges
- * the page's Backlinks panel lists.
+ * the page's Backlinks panel lists. `tags` is `page/tags`' own read, in the
+ * page's order — names only: what a writer edits is the name list.
  */
 export async function loadPageMeta(
   pageId: string,
@@ -65,5 +67,9 @@ export async function loadPageMeta(
     edited: edited.editedAt,
     breadcrumb: rows.map((r) => ({ id: r.id, title: r.title ?? "" })),
     backlinks: await loadBacklinkSources(pageId, executor),
+    tags: (await loadPageTags(pageId, executor)).map((t) => ({
+      name: t.name,
+      attrs: {},
+    })),
   };
 }

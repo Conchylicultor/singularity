@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   useCurrentPane,
@@ -72,6 +74,7 @@ export function PagesSidebar() {
   const openPane = useOpenPane();
   const tintOf = usePageReferenceTint();
   const selectedId = pageDetailPane.useRouteEntry()?.params.pageId;
+  const hasMarkers = PageTree.RowMarker.useContributions().length > 0;
   // Where a page opens depends on WHICH host is showing this tree, and the tree
   // can read that off its own position instead of being told:
   //
@@ -150,6 +153,12 @@ export function PagesSidebar() {
         // over the row, so it composes with hover and selection instead of
         // replacing them. Tint only: the sidebar has no room for a chip, and
         // a row of no decorated kind paints no layer at all.
+        // What other plugins mark a page with (its tags' dots, …), flush with
+        // the row's right edge. Only while something contributes: with no
+        // marker at all, the rows keep their whole width for the title.
+        trailing: hasMarkers
+          ? (b: PageRow) => <RowMarkers page={b} />
+          : undefined,
         rowAccent: (b: PageRow) => {
           const tint = tintOf(pageData(b));
           return tint === undefined ? null : (
@@ -168,7 +177,7 @@ export function PagesSidebar() {
         labelClassName: activeLabel,
       },
     };
-  }, [tintOf, selectedId]);
+  }, [tintOf, selectedId, hasMarkers]);
 
   const creators = useMemo<CreateOption[]>(() => {
     const createRootPage = async () => {
@@ -316,5 +325,16 @@ export function PagesSidebar() {
         />
       </div>
     </Scroll>
+  );
+}
+
+/** Every `PageTree.RowMarker` contribution for one row, in one rigid cluster. */
+function RowMarkers({ page }: { page: PageRow }) {
+  return (
+    <Inline gap="2xs" className={rigidClass()}>
+      <PageTree.RowMarker.Render>
+        {(item) => <item.component page={page} />}
+      </PageTree.RowMarker.Render>
+    </Inline>
   );
 }

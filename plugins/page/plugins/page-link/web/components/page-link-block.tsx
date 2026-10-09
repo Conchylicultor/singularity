@@ -30,6 +30,7 @@ import {
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
 import {
+  PageReferenceTrailing,
   usePageNavigation,
   usePageReferenceActions,
 } from "@plugins/page/plugins/page-reference/web";
@@ -277,6 +278,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
         <span className="truncate font-medium underline-offset-2 hover:underline">
           {targetData?.title || "Untitled"}
         </span>
+        <PageReferenceTrailing pageId={pageId} />
       </Row>
     </div>
   );

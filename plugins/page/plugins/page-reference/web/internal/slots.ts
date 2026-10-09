@@ -89,4 +89,20 @@ export const PageReference = {
    * or `usePageReferenceTint`, never by walking the contributions.
    */
   Decoration: defineSlot<PageReferenceDecorationContribution>(),
+  /**
+   * What a reference shows right after the referenced page's title, always
+   * visible — the page's tags, say. Additive, unlike `Decoration`: every
+   * contribution renders, in the slot's configured order, so two plugins each
+   * describing something ABOUT the page sit side by side rather than racing
+   * for one place.
+   *
+   * A contribution with nothing to say for a page renders nothing: the host
+   * gives the slot no box of its own, so an empty contribution costs the row
+   * nothing. The host renders it inside its title line, where the title
+   * truncates first — a contribution should stay compact (the host declares
+   * the `xs` control density around it).
+   */
+  Trailing: defineRenderSlot<{
+    component: ComponentType<PageReferenceChipProps>;
+  }>({ controlSize: "xs" }),
 };

@@ -606,6 +606,10 @@
       "name": "@singularity/plugin-apps-pages-page-outline",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages/plugins/page-tags": {
+      "name": "@singularity/plugin-apps-pages-page-tags",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages/plugins/page-tree": {
       "name": "@singularity/plugin-apps-pages-page-tree",
       "version": "0.0.1",
@@ -4091,6 +4095,10 @@
       "name": "@singularity/plugin-page-table",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/tags": {
+      "name": "@singularity/plugin-page-tags",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/text": {
       "name": "@singularity/plugin-page-text",
       "version": "0.0.1",
@@ -6721,6 +6729,8 @@
 
     "@singularity/plugin-apps-pages-page-outline": ["@singularity/plugin-apps-pages-page-outline@workspace:plugins/apps/plugins/pages/plugins/page-outline"],
 
+    "@singularity/plugin-apps-pages-page-tags": ["@singularity/plugin-apps-pages-page-tags@workspace:plugins/apps/plugins/pages/plugins/page-tags"],
+
     "@singularity/plugin-apps-pages-page-tree": ["@singularity/plugin-apps-pages-page-tree@workspace:plugins/apps/plugins/pages/plugins/page-tree"],
 
     "@singularity/plugin-apps-pages-prompt-origin": ["@singularity/plugin-apps-pages-prompt-origin@workspace:plugins/apps/plugins/pages/plugins/prompt-origin"],
@@ -8376,6 +8386,8 @@
     "@singularity/plugin-page-sub-page": ["@singularity/plugin-page-sub-page@workspace:plugins/page/plugins/sub-page"],
 
     "@singularity/plugin-page-table": ["@singularity/plugin-page-table@workspace:plugins/page/plugins/table"],
+
+    "@singularity/plugin-page-tags": ["@singularity/plugin-page-tags@workspace:plugins/page/plugins/tags"],
 
     "@singularity/plugin-page-text": ["@singularity/plugin-page-text@workspace:plugins/page/plugins/text"],
 

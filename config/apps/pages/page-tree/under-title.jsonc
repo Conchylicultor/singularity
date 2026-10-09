@@ -1,4 +1,4 @@
-// @hash c6db4b9fe7fd
+// @hash a5ea105d105c
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -7,8 +7,10 @@
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
-  // Rows under the page title, top to bottom: the pages linking here.
+  // Rows under the page title, top to bottom: the page's tags (the mockup's
+  // chips right under the title), then the pages linking here.
   "items": [
+    "apps.pages.page-tags:tags",
     "apps.pages.page-tree:backlinks"
   ]
 }

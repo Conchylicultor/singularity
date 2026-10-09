@@ -111,4 +111,19 @@ export const PageDetail = {
 export const PageTree = {
   RowActions: defineItemActions<PageRow>(),
   Fields: defineFieldExtensions<PageRow>(),
+  /**
+   * A small always-visible mark at a page-tree row's trailing edge — what
+   * something says ABOUT the page at a glance (its tags, as colored dots). The
+   * sidebar is the app's narrowest surface, so a marker is a glyph or two,
+   * never a chip with words: it takes width from the title on every row.
+   *
+   * Every contribution renders, in this slot's configured order, as one rigid
+   * cluster flush with the row's right edge (so the marks of every row form a
+   * column). A contribution with nothing to mark on a page renders nothing.
+   * The row's hover actions are pinned over the same edge with a scrim, so on
+   * hover the actions cover the marker rather than crowding the title.
+   */
+  RowMarker: defineRenderSlot<{
+    component: ComponentType<{ page: PageRow }>;
+  }>({ docLabel: (p) => p.id }),
 };

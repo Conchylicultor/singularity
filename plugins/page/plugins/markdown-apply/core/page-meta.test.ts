@@ -13,6 +13,10 @@ const META: PageMeta = {
     { id: "block-roadmap", title: "Roadmap" },
     { id: "block-log", title: "Log" },
   ],
+  tags: [
+    { name: "In progress", attrs: {} },
+    { name: 'Say "hi"', attrs: {} },
+  ],
 };
 
 const DOC =
@@ -23,6 +27,10 @@ describe("pageMetaHeader", () => {
     expect(pageMetaHeader(META)).toBe(
       [
         '<page-meta created="2026-07-14T09:12Z" edited="2026-10-07T18:02Z">',
+        "  <tags>",
+        '    <tag name="In progress"/>',
+        '    <tag name="Say \\"hi\\""/>',
+        "  </tags>",
         "  <breadcrumb>",
         '    <page id="block-root" title="Singularity"/>',
         '    <page id="block-mid" title="Say \\"hi\\" \\\\ <now>"/>',
@@ -58,6 +66,78 @@ describe("splitPageMeta", () => {
     expect(split.meta?.backlinks).toEqual(
       META.backlinks.map((c) => ({ ...c })),
     );
+    expect(split.meta?.tags).toEqual(META.tags.map((t) => ({ ...t })));
+  });
+
+  test("no tags is stated as an empty <tags/>, first in the header", () => {
+    const header = pageMetaHeader({ ...META, tags: [] });
+    expect(header).toContain(
+      'edited="2026-10-07T18:02Z">\n  <tags/>\n  <breadcrumb>',
+    );
+    const split = splitPageMeta(header + DOC);
+    expect(split.ok && split.rest).toBe(DOC);
+    expect(split.ok && split.meta?.tags).toEqual([]);
+  });
+
+  test("a header with no <tags> section reads tags as null, not []", () => {
+    const old = pageMetaHeader(META).replace(/  <tags>\n[\s\S]*<\/tags>\n/, "");
+    const split = splitPageMeta(old + DOC);
+    expect(split.ok && split.rest).toBe(DOC);
+    expect(split.ok && split.meta?.tags).toBeNull();
+  });
+
+  test("a tag line may carry new and color, read back unjudged", () => {
+    const edited = pageMetaHeader(META).replace(
+      "  </tags>",
+      '    <tag name="Blocked" new="true" color="red"/>\n  </tags>',
+    );
+    const split = splitPageMeta(edited + DOC);
+    expect(split.ok && split.rest).toBe(DOC);
+    expect(split.ok && split.meta?.tags?.at(-1)).toEqual({
+      name: "Blocked",
+      attrs: { new: "true", color: "red" },
+    });
+  });
+
+  test("a tags section emitted with attributes splits back to them", () => {
+    const tags = [{ name: "Blocked", attrs: { new: "true" } }];
+    const split = splitPageMeta(pageMetaHeader({ ...META, tags }) + DOC);
+    expect(split.ok && split.meta?.tags).toEqual(tags);
+  });
+
+  test("a tag line with any other attribute is refused, naming it", () => {
+    const edited = pageMetaHeader(META).replace(
+      "  </tags>",
+      '    <tag name="Blocked" colour="red"/>\n  </tags>',
+    );
+    const split = splitPageMeta(edited + DOC);
+    expect(split.ok).toBe(false);
+    if (split.ok) return;
+    expect(split.reason).toContain('"colour"');
+  });
+
+  test("a tag line without a name is refused", () => {
+    const edited = pageMetaHeader(META).replace(
+      "  </tags>",
+      '    <tag color="red"/>\n  </tags>',
+    );
+    expect(splitPageMeta(edited + DOC).ok).toBe(false);
+  });
+
+  test("a tag line outside <tags> is refused", () => {
+    const edited = pageMetaHeader({ ...META, tags: [] }).replace(
+      "</page-meta>",
+      '<tag name="x"/>\n</page-meta>',
+    );
+    expect(splitPageMeta(edited + DOC).ok).toBe(false);
+  });
+
+  test("a crumb inside <tags> is refused", () => {
+    const edited = pageMetaHeader(META).replace(
+      "  </tags>",
+      '    <page id="a" title="b"/>\n  </tags>',
+    );
+    expect(splitPageMeta(edited + DOC).ok).toBe(false);
   });
 
   test("no backlinks is stated as an empty <backlinks/>, and splits back", () => {

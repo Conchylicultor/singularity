@@ -21,7 +21,7 @@ import { AddPageBelowAction } from "./components/add-page-below-action";
 import { PageDetail, PageTree } from "./slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
-export { PageDetail, PageTree } from "./slots";
+export { PageDetail, PageTree, type PageHeaderPartProps } from "./slots";
 export { blockDetailPane, pageDetailPane, pagesTreePane } from "./panes";
 export {
   useBlockTarget,

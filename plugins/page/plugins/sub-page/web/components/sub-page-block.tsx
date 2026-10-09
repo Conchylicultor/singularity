@@ -19,6 +19,7 @@ import {
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
 import {
+  PageReferenceTrailing,
   usePageNavigation,
   usePageReferenceActions,
   usePageReferenceDecoration,
@@ -143,6 +144,9 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
         <Text className="font-medium underline-offset-2 hover:underline">
           {title || "Untitled"}
         </Text>
+        {/* What other plugins say ABOUT the page (its tags, …), right after
+            the title and always visible; the title truncates first. */}
+        <PageReferenceTrailing pageId={block.id} />
       </Row>
     </Inset>
   );

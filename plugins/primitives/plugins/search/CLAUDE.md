@@ -54,6 +54,7 @@
     - `conversations/conversation-view/dependencies`
     - `debug/read-set`
     - `page/page-link`
+    - `page/tags`
     - `primitives/data-view`
     - `primitives/tree`
     - `search/quick-find`

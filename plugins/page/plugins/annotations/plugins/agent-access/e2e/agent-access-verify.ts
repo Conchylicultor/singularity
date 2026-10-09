@@ -68,6 +68,14 @@
 //      — as a `<todo>` card's does), still matches: the result says `reindented`,
 //      and the new line lands as the nested line's child. The reverse — copied
 //      from the parent's read, edited through the page — works the same way. Text that matches at two depths is refused, writing nothing.
+// P-tags. **Page tags** (`research/2026-10-09-page-tags.md`). `read_page`'s header
+//      opens with `<tags/>` on an untagged page; `edit_page` replacing it with
+//      `<tag name="…"/>` lines writes the page's tags, resolved against the
+//      workspace vocabulary (case-insensitive, stored canonically — `tags_set`).
+//      An unknown name is refused 400 with the closest name and writes nothing;
+//      `new="true" color="…"` creates it (`tags_created`). A tag edit and a
+//      content edit in one call write both. `page_meta_ignored` is reported for
+//      an edit to another header part, never for a tag-only edit.
 //
 // Engine, through the notes-only surface:
 //  E1. Every prose block on the page keeps its id across a write — which is what
@@ -1901,6 +1909,137 @@ await withBrowser(async (h) => {
     snapshotDiff(beforeTwin, await snapshot(agentPageId)).length === 0,
     JSON.stringify(snapshotDiff(beforeTwin, await snapshot(agentPageId))),
   );
+
+  // --- P-tags. a page's tags are written through the <page-meta> header ------
+  {
+    const uniq = `E2E tag ${Date.now().toString(36)}`;
+    const vocab = async (): Promise<
+      { id: string; name: string; color: string }[]
+    > => {
+      const res = await agentFetch("/api/resources/page-tags.vocabulary");
+      if (!res.ok) throw new Error(`page-tags.vocabulary: HTTP ${res.status}`);
+      return (
+        (await res.json()) as {
+          value: { id: string; name: string; color: string }[];
+        }
+      ).value;
+    };
+    if (!(await vocab()).some((t) => t.name === "In progress")) {
+      const made = await agentFetch("/api/page-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "In progress", color: "blue" }),
+      });
+      if (!made.ok)
+        return await bail("P-tags: seed vocabulary", await made.text());
+    }
+    const tagPage = agentPageId;
+    const tagRead = () => mustCall("read_page", { block_id: tagPage });
+
+    const read0 = await tagRead();
+    r.ok(
+      "P-tags: an untagged page reads <tags/>",
+      read0.includes("<tags/>"),
+      read0.slice(0, 400),
+    );
+    const tagsLine = read0.split("\n").find((l) => l.includes("<tags/>")) ?? "";
+    const indent = tagsLine.slice(
+      0,
+      tagsLine.length - tagsLine.trimStart().length,
+    );
+
+    const set = (await mustWrite("edit_page", {
+      block_id: tagPage,
+      old_string: "<tags/>",
+      new_string: `<tags>\n${indent}  <tag name="in PROGRESS"/>\n${indent}</tags>`,
+    })) as ApplySummary & { tags_set?: string[]; tags_created?: string[] };
+    r.eq(
+      "P-tags: a tag name resolves case-insensitively to its canonical spelling",
+      set.tags_set,
+      ["In progress"],
+    );
+    r.ok(
+      "P-tags: …and the re-read shows it",
+      (await tagRead()).includes('<tag name="In progress"/>'),
+    );
+    r.ok(
+      "P-tags: a tag-only edit reports no page_meta_ignored",
+      set.page_meta_ignored === undefined,
+      JSON.stringify(set),
+    );
+
+    const typo = await callTool("edit_page", {
+      block_id: tagPage,
+      old_string: '<tag name="In progress"/>',
+      new_string: '<tag name="Inprogres"/>',
+    });
+    r.ok(
+      "P-tags: an unknown name is refused, suggesting the closest tag",
+      !typo.ok &&
+        /400/.test(typo.text + "400") &&
+        typo.text.includes("In progress"),
+      typo.text,
+    );
+    r.ok(
+      "P-tags: …and nothing changed",
+      (await tagRead()).includes('<tag name="In progress"/>'),
+    );
+
+    const made = (await mustWrite("edit_page", {
+      block_id: tagPage,
+      old_string: '<tag name="In progress"/>',
+      new_string: `<tag name="In progress"/>\n${indent}  <tag name="${uniq}" new="true" color="red"/>`,
+    })) as ApplySummary & { tags_set?: string[]; tags_created?: string[] };
+    const created = (await vocab()).find((t) => t.name === uniq);
+    r.ok(
+      "P-tags: new=true creates the tag, with its colour",
+      made.tags_created?.includes(uniq) === true && created?.color === "red",
+      JSON.stringify({ made, created }),
+    );
+
+    // Tag edit + content edit in ONE call: one old/new pair spanning the header's
+    // tag list through a body line.
+    const contentLine = "indent grandchild, revised";
+    const read2 = await tagRead();
+    const from = read2.indexOf("<tags>");
+    const to = read2.indexOf(contentLine) + contentLine.length;
+    const span = read2.slice(from, to);
+    const both2 = (await mustWrite("edit_page", {
+      block_id: tagPage,
+      old_string: span,
+      new_string: span
+        .replace(new RegExp(`\\s*<tag name="${uniq}"[^>]*/>`), "")
+        .replace(contentLine, `${contentLine} and tagged`),
+    })) as ApplySummary & { tags_set?: string[] };
+    r.ok(
+      "P-tags: a tag edit and a content edit in one call write both",
+      JSON.stringify(both2.tags_set) === JSON.stringify(["In progress"]) &&
+        both2.text_edited === 1 &&
+        (await fetchBlocks(tagPage)).some(
+          (b) => rowText(b) === `${contentLine} and tagged`,
+        ),
+      JSON.stringify(both2),
+    );
+
+    const crumb = readParts(await tagRead()).breadcrumb.at(-1);
+    const crumbEdit = await mustWrite("edit_page", {
+      block_id: tagPage,
+      old_string: `title="${crumb?.title}"`,
+      new_string: 'title="Renamed crumb"',
+    });
+    r.ok(
+      "P-tags: editing a breadcrumb title reports page_meta_ignored",
+      crumbEdit.page_meta_ignored !== undefined,
+      JSON.stringify({ crumb, crumbEdit }),
+    );
+
+    if (created) {
+      const del = await agentFetch(`/api/page-tags/${created.id}`, {
+        method: "DELETE",
+      });
+      r.ok("P-tags: cleanup deletes the e2e tag", del.ok, String(del.status));
+    }
+  }
 
   await snap(page, out, "after-notes");
   await r.finish();

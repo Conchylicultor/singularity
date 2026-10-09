@@ -65,13 +65,13 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `Rigid`
     - `rigidClass`
 - Cross-plugin:
-  - Imported by: 102 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 105 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×20
-    - `apps` ×17
+    - `apps` ×18
     - `primitives` ×17
     - `debug` ×10
+    - `page` ×7
     - `ui` ×6
-    - `page` ×5
     - `tasks` ×5
     - `plugin-meta` ×4
     - `review` ×4

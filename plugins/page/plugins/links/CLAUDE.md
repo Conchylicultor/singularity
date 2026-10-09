@@ -114,6 +114,7 @@ a steady-state reboot writes nothing).
   - Uses:
     - `network/live.useLive`
     - `page/editor.PageIcon`
+    - `page/page-reference.PageReferenceTrailing`
     - `page/page-reference.usePageNavigation`
     - `primitives/css/center.Center`
     - `primitives/css/clip.clipClasses`

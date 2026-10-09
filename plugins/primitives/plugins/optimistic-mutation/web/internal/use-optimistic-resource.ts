@@ -16,7 +16,7 @@ import type {
   ResourceError,
 } from "@plugins/primitives/plugins/live-state/core";
 import type {
-  LiveCollection,
+  LiveRowsCollection,
   LiveValue,
 } from "@plugins/network/plugins/live/core";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
@@ -247,9 +247,11 @@ export function useOptimisticResource<
 /**
  * Optimistic read of an explicit id set of a `liveCollection` (its `:rows`
  * point sibling — the same read as `useLive(c, { ids })`). Rows are unordered.
+ * Any collection has the sibling — a window, `all` or lookup-only one — so any
+ * collection takes it, exactly as `useLive(c, { ids })` does.
  */
-export function useOptimisticResource<Row, F, S extends string, Vars>(
-  collection: LiveCollection<Row, F, S>,
+export function useOptimisticResource<Row, Vars>(
+  collection: LiveRowsCollection<Row>,
   query: OptimisticIdsQuery,
   options: OptimisticOptions<Row[], Vars>,
 ): OptimisticResult<Row[], Vars>;
@@ -293,7 +295,7 @@ function resolveForm<Data, Vars>(
   }
   // A collection's `{ ids }` read: the `:rows` point sibling at the canonical
   // encoding of the id set.
-  const rows = (source as LiveCollection<unknown, unknown, string>).rows;
+  const rows = (source as LiveRowsCollection<unknown>).rows;
   return {
     resource: rows as unknown as ResourceDescriptor<
       Data,

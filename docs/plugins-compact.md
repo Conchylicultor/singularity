@@ -17,7 +17,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`file-explorer`** [4 sub-plugins] — File explorer app.
     - **`home`** [3 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`mail`** [12 sub-plugins] — Mail — a Gmail-class client.
-    - **`pages`** [exempt] [15 sub-plugins] — Notion-like pages app.
+    - **`pages`** [exempt] [16 sub-plugins] — Notion-like pages app.
     - **`prototypes`** [11 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [test helpers] [exempt] [76 sub-plugins] — Sonata — extensible piano and music app.
@@ -194,7 +194,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`wall-clock`** — Wall clock ↔ UTC instant for an IANA zone, without a timezone database: a wall time's candidate instants are enumerated from the offsets either side of it and each verified against Intl, so a clock…
     - **`zod-parser`** — ZodParser<T> — the type of a schema that parses untrusted input into a T — and its enforcing lint rule (no-narrow-zodtype), which bans the one-argument ZodType<T> whose Input silently defaults to…
 
-- **`page`** [test helpers] [exempt] [68 sub-plugins] — Block-based page editor.
+- **`page`** [test helpers] [exempt] [69 sub-plugins] — Block-based page editor.
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:

@@ -1,4 +1,4 @@
-// @hash 2a95fb6269c9
+// @hash a0ec2b25674a
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "apps.pages.page-tags:add-tag",
     "apps.pages.page-tree:add-icon",
     "apps.pages.page-tree:change-icon",
     "apps.pages.page-tree:add-cover"

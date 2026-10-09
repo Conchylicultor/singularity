@@ -1014,13 +1014,13 @@ worker (`framework/tooling/exempt`), so a stale one cannot linger.
     - `liveValue`
     - `scopedLiveColumns`
 - Cross-plugin:
-  - Imported by: 177 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 178 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×51
     - `conversations` ×35
     - `tasks` ×21
     - `active-data` ×11
     - `infra` ×10
-    - `page` ×9
+    - `page` ×10
     - `debug` ×8
     - `build` ×6
     - `primitives` ×5

@@ -4584,8 +4584,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `xmlTextContentLength`
     - `xmlTextToRuns`
 - Cross-plugin:
-  - Imported by: 73 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page` ×56
+  - Imported by: 74 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page` ×57
     - `apps` ×8
     - `reports` ×4
     - `active-data` ×3
@@ -4594,6 +4594,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `apps/pages/auto-icon` (table `editor_ext_auto_icon`)
     - `apps/pages/agent-origin` (table `editor_ext_origin`)
     - `apps/pages/starred` (table `editor_ext_starred`)
+    - `page/tags` (table `editor_ext_tags`)
     - `page/annotations/todo/task-link` (table `editor_ext_todo_task`)
   - Endpoint callers: `editor-collab`
 - Exemptions:

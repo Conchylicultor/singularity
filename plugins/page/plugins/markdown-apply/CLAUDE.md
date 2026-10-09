@@ -104,6 +104,9 @@ just a page — with a header stating where it comes from:
 
 ```
 <page-meta created="2026-07-14T09:12Z" edited="2026-10-07T18:02Z">
+  <tags>                             ← `<tags/>` when the page has none
+    <tag name="In progress"/>
+  </tags>
   <breadcrumb>
     <page id="…" title="Singularity"/>
     <page id="…" title="Hosted"/>     ← the page holding the root, always last
@@ -120,9 +123,18 @@ just a page — with a header stating where it comes from:
 - **Recognised by STRUCTURE, values ignored** — where the banner is matched by
   byte-identity. Its fields are facts held elsewhere (ancestry, timestamps), so
   they are read-only like a tag's annotated attributes, and a document read a
-  minute ago still applies after `edited` moved. A future WRITABLE field (tags)
-  is read off `splitPageMeta`'s `meta` by the caller that owns it, as
-  `edit_page` owns the rename.
+  minute ago still applies after `edited` moved.
+- **`<tags>` is the one WRITABLE section, and this module gives it no
+  meaning.** It comes first, emitted from `PageMeta.tags` (`{name, attrs}`,
+  `page/tags`' `loadPageTags` via `loadPageMeta`), and is parsed back into
+  `ParsedPageMeta.tags` — `null` when the header has no `<tags>` section at all
+  (that states nothing), `[]` for `<tags/>`. A `<tag>` line takes `name` plus
+  only `new` and `color`, carried unjudged in `attrs`; any other attribute, or
+  a line with no name, is a refusal like any unknown line. What a changed list
+  MEANS — resolving names against the vocabulary, `new="true"` creating a tag —
+  is read off `splitPageMeta`'s `meta` by the caller that owns the write,
+  `agent-access`'s `edit_page`, as it owns the rename. The engine never writes
+  tags.
 - **A malformed header is refused, never skipped** (`applyToScope`'s
   `planOf`): an unknown line inside it could be content an agent wrote there.
 - **Opt-in**, because its `edited` time changes on every edit: instructions
@@ -488,6 +500,7 @@ annotation in the key would make every status change look like a new block.
     - `page/editor.serializePageContent`
     - `page/editor.StoredBlock`
     - `page/links.loadBacklinkSources`
+    - `page/tags.loadPageTags`
   - Exports (types):
     - `ApplyBlockOptions`
     - `ApplyReport`
@@ -513,7 +526,9 @@ annotation in the key would make every status change look like a new block.
     - `MarkdownApplyPlan`
     - `MarkdownApplyResult`
     - `PageMeta`
+    - `PageMetaTag`
     - `PageTitleBannerParse`
+    - `ParsedPageMeta`
     - `StoredRow`
     - `TouchedBlocks`
     - `TouchedHow`

@@ -18,7 +18,10 @@ import type {
   HostedToolbarParts,
 } from "@plugins/primitives/plugins/data-view/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
-import { usePageNavigation } from "@plugins/page/plugins/page-reference/web";
+import {
+  PageReferenceTrailing,
+  usePageNavigation,
+} from "@plugins/page/plugins/page-reference/web";
 import { pageBacklinks } from "../../core";
 import type { BacklinkRow, BacklinkSnippet } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -155,11 +158,12 @@ function BacklinkBody({ row }: { row: BacklinkRow }) {
           <Center as="span" className="size-4 text-muted-foreground">
             <PageIcon icon={row.icon} fallback={linkIcon} className="size-4" />
           </Center>
-          <Fill>
-            <Text variant="body" tone="strong" className="font-medium">
-              {row.title || "Untitled"}
-            </Text>
-          </Fill>
+          <Text variant="body" tone="strong" className="font-medium">
+            {row.title || "Untitled"}
+          </Text>
+          <PageReferenceTrailing pageId={row.id} />
+          {/* Pushes the place in the tree to the line's end. */}
+          <Fill />
           {row.path.length > 0 && (
             <Text variant="caption" tone="faint" side="start">
               {row.path.join(PATH_SEPARATOR)}
