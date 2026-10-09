@@ -1,3 +1,5 @@
+import type { ParentLifeline } from "@plugins/packages/plugins/flock/core";
+
 // Every child this primitive starts runs with git's optional locks OFF.
 //
 // A git READ is not lock-free by default: `git status`, `git diff` and friends
@@ -19,10 +21,16 @@ const GIT_READS_TAKE_NO_LOCK = { GIT_OPTIONAL_LOCKS: "0" } as const;
 /**
  * The child's environment: the caller's `env` (a FULL replacement, as with
  * `Bun.spawn`) or, when none is given, the parent's — plus
- * `GIT_OPTIONAL_LOCKS=0`.
+ * `GIT_OPTIONAL_LOCKS=0` and the path of the lifeline this spawn holds for it
+ * (`holdParentLifeline`, read by the child's `exitWithParent`).
  */
 export function childEnv(
   env: Record<string, string | undefined> | undefined,
+  lifeline: ParentLifeline,
 ): Record<string, string | undefined> {
-  return { ...(env ?? process.env), ...GIT_READS_TAKE_NO_LOCK };
+  return {
+    ...(env ?? process.env),
+    ...GIT_READS_TAKE_NO_LOCK,
+    ...lifeline.env,
+  };
 }

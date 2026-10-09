@@ -8,8 +8,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/core";
 import { childEnv } from "./child-env";
+import { trackLiveChild } from "./live-children";
 import { readResourceUsage } from "./resource-usage";
 import type { ChildResourceUsage, SpawnOptions, SpawnResult } from "./types";
 
@@ -121,6 +123,11 @@ export async function spawnCaptured(
     let deadlineTimer: ReturnType<typeof setTimeout> | undefined;
     let killTimer: ReturnType<typeof setTimeout> | undefined;
     let onAbort: (() => void) | undefined;
+    let untrack: (() => void) | undefined;
+    // Held until the child is reaped; the kernel drops it if WE die first, and a
+    // child that called `exitWithParent()` dies with it. The tmpdir is private
+    // to this spawn, so the lock cannot be contended.
+    const lifeline = holdParentLifeline(dir);
     try {
       if (opts.stdin !== undefined) {
         const inPath = join(dir, "in");
@@ -131,12 +138,13 @@ export async function spawnCaptured(
       errFd = opts.mergeStderr ? outFd : openSync(errPath, "w");
       const child = Bun.spawn(opts.background ? backgroundArgv(argv) : argv, {
         cwd: opts.cwd,
-        env: childEnv(opts.env),
+        env: childEnv(opts.env, lifeline),
         stdin: inFd ?? "ignore",
         stdout: outFd,
         stderr: errFd,
       });
       proc = child;
+      untrack = trackLiveChild(child);
       // ONE escalation, shared by the deadline and the abort. The
       // `killTimer === undefined` guard is load-bearing rather than tidy: with
       // both a `timeoutMs` and a `signal` set, each path would otherwise schedule
@@ -198,6 +206,8 @@ export async function spawnCaptured(
         timedOut = false;
       }
     } finally {
+      untrack?.();
+      lifeline.release();
       if (onAbort !== undefined) signal?.removeEventListener("abort", onAbort);
       // Close our copies of the fds regardless of spawn/exit outcome; the
       // child held its own dups. mergeStderr aliases errFd to outFd.

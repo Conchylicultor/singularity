@@ -22504,7 +22504,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/secrets/list`
     - **`spawn`** — Wedge-proof child-process primitive: spawnCaptured/spawnExpectOk capture stdout/stderr via temp-file fds (no piped stdio, so bun 1.3.13's exit-during-stream-pull race has nothing to wedge), spawnPassthrough inherits the parent's streams, and getWorktreeRoot/getMainRepoRoot are the memoized canonical git-root helpers. Node-only (no db/jobs) so a CLI process can import it; the spawn-safety lint rule routes every raw Bun.spawn here.
       - Core:
-        - Uses: `packages/spawn-priority.backgroundArgv`
+        - Uses:
+          - `packages/flock.holdParentLifeline`
+          - `packages/spawn-priority.backgroundArgv`
         - Exports (types):
           - `ChildResourceUsage`
           - `SpawnBaseOptions`
@@ -23646,6 +23648,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2). The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
       - Cross-plugin:
         - Imported by:
+          - `infra/spawn`
           - `infra/worktree`
           - `packages/host-semaphore`
       - Server:
@@ -23653,9 +23656,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `flockRelease`
           - `flockTry`
       - Core:
+        - Exports (types): `ParentLifeline`
         - Exports (values):
+          - `exitWithParent`
           - `flockRelease`
           - `flockTry`
+          - `holdParentLifeline`
+          - `PARENT_LIFELINE_ENV`
     - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
       - Server:
         - Uses: `packages/flock.flockTry`

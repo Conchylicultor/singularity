@@ -157,6 +157,8 @@ export const RUNTIME_WITHHELD_ENV = {
     "agent-session identity; the tmux runtime delivers it into that agent's own pane with `tmux -e`, where the commit hook and op-log read it",
   SINGULARITY_PARENT_HOST:
     "the host an agent's MCP client dials back to; delivered into that agent's own pane with `tmux -e`",
+  SINGULARITY_PARENT_LIFELINE:
+    "the lock file one spawn holds for the child it starts, set by infra/spawn for that child only (packages/flock lifeline.ts)",
   SINGULARITY_HOST_GRANT:
     "a host CPU admission grant, set by a grant holder for the subprocess it spawns (infra/host/host-admission grant.ts)",
   SINGULARITY_LANE:

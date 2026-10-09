@@ -1,5 +1,10 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { holdParentLifeline } from "@plugins/packages/plugins/flock/core";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/core";
 import { childEnv } from "./child-env";
+import { trackLiveChild } from "./live-children";
 import { readResourceUsage } from "./resource-usage";
 import type { SpawnPassthroughOptions, SpawnPassthroughResult } from "./types";
 
@@ -17,18 +22,36 @@ export async function spawnPassthrough(
   argv: string[],
   opts: SpawnPassthroughOptions = {},
 ): Promise<SpawnPassthroughResult> {
-  const proc = Bun.spawn(opts.background ? backgroundArgv(argv) : argv, {
-    cwd: opts.cwd,
-    env: childEnv(opts.env),
-    stdin: opts.stdin ?? "ignore",
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-  opts.onSpawn?.({ pid: proc.pid, kill: (signal) => proc.kill(signal) });
-  const exitCode = await proc.exited;
-  return {
-    exitCode,
-    signalCode: proc.signalCode,
-    resourceUsage: readResourceUsage(proc),
-  };
+  // The same two guarantees `spawnCaptured` gives: the child is SIGTERMed if
+  // we exit first (live-children), and dies on its own if we are SIGKILLed and
+  // it called `exitWithParent()` (the lifeline, in a dir private to this spawn).
+  const dir = mkdtempSync(join(tmpdir(), "sg-spawn-"));
+  try {
+    const lifeline = holdParentLifeline(dir);
+    try {
+      const proc = Bun.spawn(opts.background ? backgroundArgv(argv) : argv, {
+        cwd: opts.cwd,
+        env: childEnv(opts.env, lifeline),
+        stdin: opts.stdin ?? "ignore",
+        stdout: "inherit",
+        stderr: "inherit",
+      });
+      const untrack = trackLiveChild(proc);
+      try {
+        opts.onSpawn?.({ pid: proc.pid, kill: (signal) => proc.kill(signal) });
+        const exitCode = await proc.exited;
+        return {
+          exitCode,
+          signalCode: proc.signalCode,
+          resourceUsage: readResourceUsage(proc),
+        };
+      } finally {
+        untrack();
+      }
+    } finally {
+      lifeline.release();
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }

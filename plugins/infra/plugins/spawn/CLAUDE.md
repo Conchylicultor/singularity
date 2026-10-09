@@ -36,6 +36,33 @@ on top of whatever `env` it gets. Don't remove it: otherwise a `git status` in
 main's checkout (main's auto-build) takes `.git/index.lock` and a concurrent
 push's merge into main fails. Real writes still lock.
 
+## Children die with their parent
+
+A child started here cannot outlive the process that started it. Before
+2026-10-09 nothing tied the two together: a `./singularity check` killed with
+SIGTERM ran its exit hooks and left its ~16 GB type-check worker running,
+reparented to pid 1, with nobody left to read its result
+(`research/2026-10-09-infra-spawn-children-die-with-parent.md`). Two layers,
+both automatic for every `spawnCaptured` / `spawnPassthrough` call:
+
+- **Parent side: the exit reaper** (`core/internal/live-children.ts`). Each
+  child is registered from spawn until reap; one `process.on("exit")` hook
+  SIGTERMs whatever is still registered. Every graceful death ends there: op
+  CLIs turn TERM/INT/HUP/QUIT into `process.exit`, and an uncaught throw or a
+  plain exit gets there anyway. SIGTERM rather than SIGKILL so a child that is
+  itself an op CLI runs its own exit hooks, and its own reaper, in turn.
+- **Child side: the lifeline** (`holdParentLifeline` / `exitWithParent`,
+  `packages/flock`). Each spawn holds an exclusive flock on `lifeline` in its
+  private tmpdir and hands the path down as `SINGULARITY_PARENT_LIFELINE`. The
+  kernel drops that lock when the parent dies, SIGKILL and OOM included, so a
+  child that called `exitWithParent()` dies at that moment even while its main
+  thread is busy. Opt-in, because only a child we wrote can call it. Today the
+  type-check worker does, as the heavyweight one. Any bun script we spawn that
+  is costly to orphan should add the one line.
+
+Supervised and detached children (`defineDaemon`) spawn outside these two
+functions on purpose: they are meant to outlive any one call.
+
 ## API (`@plugins/infra/plugins/spawn/core`)
 
 - **`spawnCaptured(argv, opts) → Promise<SpawnResult>`** — capture-shaped
@@ -195,7 +222,9 @@ presence only — **no re-exports**; import from `core/`.
 
 - Description: Wedge-proof child-process primitive: spawnCaptured/spawnExpectOk capture stdout/stderr via temp-file fds (no piped stdio, so bun 1.3.13's exit-during-stream-pull race has nothing to wedge), spawnPassthrough inherits the parent's streams, and getWorktreeRoot/getMainRepoRoot are the memoized canonical git-root helpers. Node-only (no db/jobs) so a CLI process can import it; the spawn-safety lint rule routes every raw Bun.spawn here.
 - Core:
-  - Uses: `packages/spawn-priority.backgroundArgv`
+  - Uses:
+    - `packages/flock.holdParentLifeline`
+    - `packages/spawn-priority.backgroundArgv`
   - Exports (types):
     - `ChildResourceUsage`
     - `SpawnBaseOptions`

@@ -16,10 +16,11 @@
  * never hit the argv limit). stdout is one JSON result object. A nonzero exit
  * means the worker itself crashed (the orchestrator records no PASSes for it).
  */
-import { readFileSync, unlinkSync } from "fs";
+import { readFileSync, unlinkSync, writeSync } from "fs";
 import { dirname, relative } from "path";
 import ts from "typescript";
 import { Linter } from "eslint";
+import { exitWithParent } from "@plugins/packages/plugins/flock/core";
 import {
   buildLintConfig,
   lintExemptions,
@@ -193,6 +194,12 @@ async function run(job: Job): Promise<Result> {
   return { name: job.name, tscErrors, lintViolations, failedLintFiles };
 }
 
+// A ~16 GB process whose only reader is the check that spawned it: when that
+// check dies — even by SIGKILL — this must die too, not run on reparented to
+// pid 1 with nobody left to read its result (2026-10-09, see
+// research/2026-10-09-infra-spawn-children-die-with-parent.md).
+exitWithParent();
+
 const jobPath = process.argv[2];
 if (!jobPath) {
   console.error("type-check worker: missing job file argument");
@@ -205,4 +212,9 @@ try {
 } catch (err) {
   if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
 }
-process.stdout.write(JSON.stringify(result));
+// Synchronous, because the exit below follows at once: an async stream write
+// could still be buffered when the process ends.
+writeSync(1, JSON.stringify(result));
+// Explicit: `exitWithParent`'s lifeline thread parks in a blocking FFI flock,
+// which an emptied event loop must not wait on.
+process.exit(0);
