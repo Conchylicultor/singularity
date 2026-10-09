@@ -3,7 +3,8 @@
  *
  * Triple-clicks the last paragraph of an agent reply, checks the
  * toolbar appears with Quote and the configured quick answers, screenshots it,
- * then clicks Quote and checks the prompt editor now holds a `> ` quote. Never
+ * hovers the quick-answer ✎ and screenshots the panel of every answer, then
+ * clicks Quote and checks the prompt editor now holds a `> ` quote. Never
  * clicks a ➤ — that would send a turn to the conversation.
  *
  *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/selection-actions/e2e/selection-toolbar.ts \
@@ -59,6 +60,25 @@ await withBrowser(async (h) => {
   r.note(`quick-answer send halves: ${sends}`);
   await snap(page, out, "toolbar");
   if (!shown) return r.finish();
+
+  const trigger = page
+    .locator("[data-ui-owner^='Actions@']")
+    .getByRole("button", { name: "All templates" });
+  await trigger.hover();
+  const panelOpen = await page
+    .getByRole("dialog", { name: "All templates" })
+    .waitFor({ state: "visible", timeout: 3000 })
+    .then(() => true)
+    .catch((err: unknown) => {
+      if (!(err instanceof Error)) throw err;
+      return false;
+    });
+  r.ok("✎ opens the panel of every quick answer", panelOpen);
+  r.ok(
+    "selection survives the hover",
+    await page.evaluate(() => (window.getSelection()?.toString() ?? "") !== ""),
+  );
+  await snap(page, out, "panel");
 
   await quote.click();
   const text = await page

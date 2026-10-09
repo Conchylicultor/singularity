@@ -1,12 +1,10 @@
 import { useCallback, useMemo } from "react";
 import {
   Button,
-  ButtonGroup,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { FloatingSurface } from "@plugins/primitives/plugins/overlay/plugins/floating-surface/web";
-import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -16,9 +14,11 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { eventKey } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import {
+  conversationPane,
   usePromptComposer,
   type PromptComposer,
 } from "@plugins/conversations/plugins/conversation-view/web";
+import { TemplateChipBar } from "@plugins/conversations/plugins/conversation-view/plugins/prompt-templates/web";
 import { selectionAnswersConfig } from "../../shared/config";
 import { quoteMarkdown, quotedAnswer } from "../internal/quote";
 import {
@@ -27,8 +27,6 @@ import {
 } from "../internal/use-transcript-selection";
 
 const quoteIcon = symbol("format-quote");
-const editIcon = symbol("edit");
-const sendIcon = symbol("send");
 
 /** Every button keeps the transcript selection alive while it is pressed. */
 const keepSelection = (e: React.MouseEvent) => e.preventDefault();
@@ -82,12 +80,8 @@ function Actions({
   selection: TranscriptSelection;
   composer: PromptComposer;
 }) {
-  const { answers } = useConfig(selectionAnswersConfig);
-
-  const act = (run: () => void) => () => {
-    run();
-    clearSelection();
-  };
+  const { convId } = conversationPane.useParams();
+  const { answers, pinnedCount } = useConfig(selectionAnswersConfig);
 
   return (
     <ControlSizeProvider size="xs">
@@ -95,42 +89,31 @@ function Actions({
         <Button
           variant="ghost"
           onMouseDown={keepSelection}
-          onClick={act(() =>
-            composer.insert(`${quoteMarkdown(selection.text)}\n\n`),
-          )}
+          onClick={() => {
+            composer.insert(`${quoteMarkdown(selection.text)}\n\n`);
+            clearSelection();
+          }}
         >
           <Icon icon={quoteIcon} className="size-3" />
           <span>Quote</span>
         </Button>
-        {answers.map((a) => (
-          <ButtonGroup key={a.id}>
-            <Button
-              variant="outline"
-              onMouseDown={keepSelection}
-              onClick={act(() =>
-                composer.insert(quotedAnswer(selection.text, a.prompt)),
-              )}
-            >
-              <Icon icon={editIcon} className="size-3" />
-              <span>{a.title}</span>
-            </Button>
-            {/* eslint-disable-next-line icon-button/prefer-icon-button -- the send half of a split answer chip, not a standalone action: it shares the chip's outline seam, as the prompt-template chips do */}
-            <Button
-              variant="outline"
-              aria-label={`Send: ${a.title}`}
-              onMouseDown={keepSelection}
-              onClick={act(() =>
-                composer.send(quotedAnswer(selection.text, a.prompt)),
-              )}
-              className="px-split-arrow text-muted-foreground"
-            >
-              <Icon icon={sendIcon} className="size-3" />
-            </Button>
-          </ButtonGroup>
-        ))}
-        <ConfigGearButton
-          descriptor={selectionAnswersConfig}
-          label="Configure: Selection quick answers"
+        <TemplateChipBar
+          templates={answers}
+          pinnedCount={pinnedCount}
+          usageNamespace="selection-answers"
+          freezeKey={convId}
+          onInsert={(a) => {
+            composer.insert(quotedAnswer(selection.text, a.prompt));
+            clearSelection();
+          }}
+          onSend={(a) => {
+            composer.send(quotedAnswer(selection.text, a.prompt));
+            clearSelection();
+          }}
+          canSend={composer.canSend}
+          host="floating"
+          config={selectionAnswersConfig}
+          configLabel="Configure: Selection quick answers"
         />
       </Stack>
     </ControlSizeProvider>

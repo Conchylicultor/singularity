@@ -6,7 +6,7 @@ import { selectionAnswersConfig } from "../shared/config";
 
 export default {
   description:
-    "Selecting text in an agent's reply pops a toolbar above it: Quote puts the selection in the prompt as a quote, and each quick answer (Go, Explain — a setting of its own) is a split chip like the prompt templates: its name quotes the selection and puts the answer in the prompt to edit, ➤ sends both right away.",
+    "Selecting text in an agent's reply pops a toolbar above it: Quote puts the selection in the prompt as a quote, and the quick answers (Go, Explain — a setting of its own) are the prompt templates' chip bar — the most-used pinned, every one in the panel that opens from ✎: a chip's name quotes the selection and puts the answer in the prompt to edit, ➤ sends both right away.",
   contributions: [
     JsonlViewer.Overlay({
       id: "selection-actions",

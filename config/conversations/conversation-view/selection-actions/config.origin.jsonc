@@ -1,6 +1,8 @@
-// @hash c19388a08f63
+// @hash 2deaa564981c
 {
-  // Buttons shown when you select text in an agent's reply. Each one quotes the selection: its name puts the quote and the prompt in the prompt field to edit, ➤ sends them right away.
+  // Number of quick answers shown as chips in the selection toolbar; every one is in the panel that opens from its ✎.
+  "pinnedCount": 2,
+  // Buttons shown when you select text in an agent's reply. The most-used ones are pinned as chips, the rest open from ✎. Each one quotes the selection: its name puts the quote and the prompt in the prompt field to edit, ➤ sends them right away.
   "answers": [
     {
       "title": "Go",

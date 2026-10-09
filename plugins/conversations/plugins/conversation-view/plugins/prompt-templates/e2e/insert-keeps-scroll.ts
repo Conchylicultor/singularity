@@ -98,7 +98,7 @@ await withBrowser(async (h) => {
 
   if (flag("panel")) {
     await page
-      .locator("[data-ui-owner^='FloatingTemplateChips@'] .group\\/fa")
+      .locator("[data-ui-owner^='TemplateChipBar@'] .group\\/fa")
       .first()
       .hover();
     await page.waitForTimeout(700);

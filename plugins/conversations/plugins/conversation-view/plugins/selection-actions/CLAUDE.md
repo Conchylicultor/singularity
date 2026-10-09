@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Selecting text in an agent's reply pops a toolbar above it: Quote puts the selection in the prompt as a quote, and each quick answer (Go, Explain — a setting of its own) is a split chip like the prompt templates: its name quotes the selection and puts the answer in the prompt to edit, ➤ sends both right away. Registers the selection quick-answer list (Go, Explain, …) for Settings → Config.
+- Description: Selecting text in an agent's reply pops a toolbar above it: Quote puts the selection in the prompt as a quote, and the quick answers (Go, Explain — a setting of its own) are the prompt templates' chip bar — the most-used pinned, every one in the panel that opens from ✎: a chip's name quotes the selection and puts the answer in the prompt to edit, ➤ sends both right away. Registers the selection quick-answer list (Go, Explain, …) for Settings → Config.
 - Web:
   - Contributes:
     - `JsonlViewer.Overlay` "selection-actions" → `SelectionToolbar`
@@ -12,15 +12,15 @@
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
-    - `config_v2/config-link.ConfigGearButton`
+    - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view.PromptComposer`
     - `conversations/conversation-view.usePromptComposer`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer.paneScrollScope`
     - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
+    - `conversations/conversation-view/prompt-templates.TemplateChipBar`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.ButtonGroup`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/dom/dom-selection.selectionRange`
     - `primitives/overlay/floating-surface.FloatingSurface`

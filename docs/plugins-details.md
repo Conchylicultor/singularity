@@ -9355,7 +9355,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-preprompt`
           - `conversations/conversation-view/launch-prompts`
           - `conversations/conversation-view/prompt-templates`
-          - `conversations/conversation-view/selection-actions`
           - `conversations/preprompts`
           - `stats/commits`
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
@@ -12321,12 +12320,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `conversations/conversation-view/push-and-exit`
               - `conversations/conversation-view/rewind`
-        - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Named template chips that prepend text to the conversation prompt editor for editing before sending.
+        - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
           - Web:
             - Contributes:
               - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
               - `ConfigV2.WebRegister` "config"
-            - Uses: 21 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md)
+            - Uses: 22 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md)
               - `primitives/css/ui-kit` ×4
               - `config_v2` ×2
               - `primitives/css/spacing` ×2
@@ -12339,11 +12338,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/adaptive-bar.AdaptiveBar`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/scroll.Scroll`
+              - `primitives/overlay/hover-popover.HoverPopover`
               - `primitives/prompt-editor.PromptEditorSlots`
               - `ui/icons.Icon`
+            - Exports (types):
+              - `TemplateChipBarProps`
+              - `TemplateChipItem`
+            - Exports (values): `TemplateChipBar`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
+          - Cross-plugin:
+            - Imported by: `conversations/conversation-view/selection-actions`
           - Shared:
             - Exports (values): `promptTemplatesConfig`
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
@@ -12500,7 +12506,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/persistent-draft.useDraft`
               - `primitives/relative-time.ElapsedTime`
               - `ui/icons.Icon`
-        - **`selection-actions`** — Selecting text in an agent's reply pops a toolbar above it: Quote puts the selection in the prompt as a quote, and each quick answer (Go, Explain — a setting of its own) is a split chip like the prompt templates: its name quotes the selection and puts the answer in the prompt to edit, ➤ sends both right away. Registers the selection quick-answer list (Go, Explain, …) for Settings → Config.
+        - **`selection-actions`** — Selecting text in an agent's reply pops a toolbar above it: Quote puts the selection in the prompt as a quote, and the quick answers (Go, Explain — a setting of its own) are the prompt templates' chip bar — the most-used pinned, every one in the panel that opens from ✎: a chip's name quotes the selection and puts the answer in the prompt to edit, ➤ sends both right away. Registers the selection quick-answer list (Go, Explain, …) for Settings → Config.
           - Web:
             - Contributes:
               - `JsonlViewer.Overlay` "selection-actions" → `SelectionToolbar`
@@ -12508,15 +12514,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
-              - `config_v2/config-link.ConfigGearButton`
+              - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view.PromptComposer`
               - `conversations/conversation-view.usePromptComposer`
               - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
               - `conversations/conversation-view/jsonl-viewer.paneScrollScope`
               - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
+              - `conversations/conversation-view/prompt-templates.TemplateChipBar`
               - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.ButtonGroup`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/dom/dom-selection.selectionRange`
               - `primitives/overlay/floating-surface.FloatingSurface`
@@ -30833,7 +30839,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HoverPopoverProps`
             - Exports (values): `HoverPopover`
           - Cross-plugin:
-            - Imported by: `apps-core/app-launcher`
+            - Imported by:
+              - `apps-core/app-launcher`
+              - `conversations/conversation-view/prompt-templates`
           - Core:
             - Exports (types):
               - `HoverIntent`

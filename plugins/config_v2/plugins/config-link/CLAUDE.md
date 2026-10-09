@@ -80,7 +80,6 @@ and the editor.
     - `conversations/conversation-preprompt`
     - `conversations/conversation-view/launch-prompts`
     - `conversations/conversation-view/prompt-templates`
-    - `conversations/conversation-view/selection-actions`
     - `conversations/preprompts`
     - `stats/commits`
 

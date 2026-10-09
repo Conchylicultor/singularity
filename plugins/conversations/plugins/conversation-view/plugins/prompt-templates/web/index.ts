@@ -4,9 +4,15 @@ import { ConfigV2 } from "@plugins/config_v2/web";
 import { FloatingTemplateChips } from "./components/prompt-template-chips";
 import { promptTemplatesConfig } from "../shared/config";
 
+export { TemplateChipBar } from "./components/template-chip-bar";
+export type {
+  TemplateChipBarProps,
+  TemplateChipItem,
+} from "./components/template-chip-bar";
+
 export default {
   description:
-    "Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates.",
+    "Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear) for other template-like surfaces.",
   contributions: [
     PromptEditorSlots.FloatingAction({
       id: "prompt-templates",
