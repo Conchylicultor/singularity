@@ -8,6 +8,7 @@ import {
   opRowToFoldState,
   type OpRow,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
+import type { SleepNow } from "@plugins/infra/plugins/host/plugins/machine-sleep/core";
 import { OP_KINDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
 import { formatElapsed } from "@plugins/primitives/plugins/relative-time/web";
 
@@ -57,22 +58,30 @@ export function opsOfSlug(rows: readonly OpRow[], slug: string): OpRow[] {
     );
 }
 
-/** Waited vs worked at `now`, off the reducer's one derivation. */
-export function timesOf(row: OpRow, now: number): OpLiveTimes {
-  return liveTimes(opRowToFoldState(row), now);
+/**
+ * Waited vs worked vs asleep at `now`, off the reducer's one derivation.
+ * `sleepNow` is the machine's sleep clock (`useSleepNowForFold`; `null` =
+ * unknown): with it, a nap since the op's last event is asleep, never worked.
+ */
+export function timesOf(
+  row: OpRow,
+  now: number,
+  sleepNow: SleepNow,
+): OpLiveTimes {
+  return liveTimes(opRowToFoldState(row), now, sleepNow);
 }
 
 /**
  * The one state line: `Build — held: host under duress (loadRatio) · requeue #6
- * · 12:03` while parked in a wait (the clock is that wait's own), `Build —
- * Building` while working.
+ * · 12:03` while parked in a wait (the clock is that wait's own, a nap inside
+ * it excluded), `Build — Building` while working.
  */
-export function stateLine(row: OpRow, now: number): string {
+export function stateLine(row: OpRow, now: number, sleepNow: SleepNow): string {
   const { label, progressive } = OP_KINDS[row.kind];
   const wait = row.openWait;
   if (!wait) return `${label} — ${progressive}`;
   const requeue = wait.cycle > 0 ? ` · requeue #${wait.cycle}` : "";
-  const clock = formatElapsed(timesOf(row, now).openWaitMs);
+  const clock = formatElapsed(timesOf(row, now, sleepNow).openWaitMs);
   return `${label} — ${WAIT_KINDS[wait.kind].sentence(wait.reason)}${requeue} · ${clock}`;
 }
 

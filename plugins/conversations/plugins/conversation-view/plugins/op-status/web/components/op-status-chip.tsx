@@ -4,6 +4,7 @@ import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
+import { useSleepNowForFold } from "@plugins/infra/plugins/host/plugins/machine-sleep/web";
 import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import type { OpKind } from "@plugins/infra/plugins/worktree/core";
 import type { OpRow } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
@@ -34,7 +35,8 @@ const OP_ICON: Record<OpKind, IconRef> = {
 // a list of chips runs no clock until one is hovered.
 function StateLineTooltip({ op }: { op: OpRow }) {
   const now = useNow(1000);
-  return <>{stateLine(op, now)}</>;
+  const sleepNow = useSleepNowForFold();
+  return <>{stateLine(op, now, sleepNow)}</>;
 }
 
 // Sidebar row indicator surfacing a worktree's in-flight op as a single muted

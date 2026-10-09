@@ -7,7 +7,7 @@ import type { OpRecord, OpWaitSpan, RawOpRecord } from "./internal/types";
 // stream is covered in fold-v2.test.ts.
 
 const foldOpRecords = (raw: RawOpRecord[], now: number): OpRecord[] =>
-  toOpRecords(foldOpLines(raw).values(), now);
+  toOpRecords(foldOpLines(raw).values(), now, null);
 
 /** A wait's geometry only — legacy lines carry no reason / cycle / result. */
 const spans = (ws: readonly (OpWaitSpan | undefined)[]): OpWaitSpan[] =>

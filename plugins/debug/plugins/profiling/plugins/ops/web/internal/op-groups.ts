@@ -2,6 +2,7 @@ import {
   toOpRecord,
   type OpRecord,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import type { SleepNow } from "@plugins/infra/plugins/host/plugins/machine-sleep/core";
 import {
   opRowToFoldState,
   type OpRow,
@@ -14,8 +15,10 @@ import type {
 
 // The Gantt's projection of stored ops, computed in the browser off the live
 // `opsHistory` rows: each row becomes the reducer's read-model record at `now`
-// (an open wait clocked to `now`, an in-flight op's span growing with it),
-// grouped per worktree, with offsets from the earliest op's request.
+// (an open wait clocked to `now`, an in-flight op's span growing with it, and
+// — given the machine's `sleepNow` — the nap since its last event counted as
+// asleep, never as work), grouped per worktree, with offsets from the earliest
+// op's request.
 
 export const FIVE_MINUTES = 5 * 60 * 1000;
 export const TWENTY_MINUTES = 20 * 60 * 1000;
@@ -48,11 +51,18 @@ export function worktreeOf(r: {
 const startMsOf = (r: OpRecord): number => Date.parse(r.requestedAt);
 const endMsOf = (r: OpRecord): number => startMsOf(r) + r.totalMs;
 
-/** The stored rows as read-model records at `now`, oldest request first. */
-export function recordsAt(rows: readonly OpRow[], now: number): OpRecord[] {
+/**
+ * The stored rows as read-model records at `now` and `sleepNow` (the machine's
+ * sleep clock; `null` = unknown, so no live tail sleep), oldest request first.
+ */
+export function recordsAt(
+  rows: readonly OpRow[],
+  now: number,
+  sleepNow: SleepNow,
+): OpRecord[] {
   const out: OpRecord[] = [];
   for (const row of rows) {
-    const rec = toOpRecord(opRowToFoldState(row), now);
+    const rec = toOpRecord(opRowToFoldState(row), now, sleepNow);
     if (rec) out.push(rec);
   }
   return out.sort((a, b) => startMsOf(a) - startMsOf(b));
@@ -110,6 +120,7 @@ export function groupOps(
       startMs: startMsOf(r) - originMs,
       totalMs: r.totalMs,
       waits: r.waits,
+      sleeps: r.sleeps,
       holdMs: r.holdMs,
       outcome: r.outcome,
       interrupted: r.interrupted,

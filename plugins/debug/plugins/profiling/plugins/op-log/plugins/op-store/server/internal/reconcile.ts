@@ -6,6 +6,8 @@ import {
   type OpFoldState,
   type OpIdentity,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import { readSleepNow } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
+import type { SleepNow } from "@plugins/infra/plugins/host/plugins/machine-sleep/core";
 import {
   listWorktreeOps,
   probeWorktreeOp,
@@ -36,6 +38,11 @@ export interface ReconcileDeps {
   /** Append one event to the op log (main only). */
   append: (event: OpEvent) => void;
   now?: () => number;
+  /**
+   * The machine's sleep clock, stamped on each closing event so the op's last
+   * nap is on record. Defaults to the real clock; injectable for tests.
+   */
+  sleepNow?: () => SleepNow;
 }
 
 export interface ReconcileResult {
@@ -57,6 +64,7 @@ export async function reconcileOps(
   deps: ReconcileDeps,
 ): Promise<ReconcileResult> {
   const now = deps.now ?? Date.now;
+  const sleepNow = deps.sleepNow ?? readSleepNow;
   const cursor = deps.main ? null : await readCursor(deps.db);
   const gapAt = cursor?.gapAt ?? null;
   // A non-main backend closes nothing unless its ingest lost bytes.
@@ -82,7 +90,7 @@ export async function reconcileOps(
   for (const candidate of orphanedOps(rows.map(opRowToFoldState))) {
     if (await deps.isLive(candidate)) continue;
     if (deps.main) {
-      deps.append(reconcilerCompletedEvent(candidate, now()));
+      deps.append(reconcilerCompletedEvent(candidate, now(), sleepNow()));
       appended++;
       continue;
     }

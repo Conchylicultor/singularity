@@ -147,6 +147,8 @@ export function stateToRow(s: OpFoldState): OpInsert | null {
     totalMs: s.totalMs,
     steps: s.steps,
     lastSeq: s.lastSeq,
+    sleeps: s.sleeps,
+    sleepStamp: s.sleepStamp,
   };
 }
 
@@ -157,7 +159,7 @@ const UPSERT_SET = Object.fromEntries(
     .map(([key, col]) => [key, sql.raw(`excluded."${col.name}"`)]),
 );
 
-/** Rows per INSERT: 24 columns each, far under Postgres' 65535 bind params. */
+/** Rows per INSERT: 26 columns each, far under Postgres' 65535 bind params. */
 const UPSERT_CHUNK = 500;
 /** Ids per `IN (…)` lookup. */
 const LOOKUP_CHUNK = 1000;

@@ -25,19 +25,10 @@
  *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/op-status/e2e/op-status-waits.ts \
  *     --conv <a conversation whose worktree is this checkout> [--out /tmp/op-status] [--main-reconciles]
  */
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Page } from "playwright";
-import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 import {
   arg,
   flag,
@@ -49,102 +40,26 @@ import {
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  LIVE_TIMEOUT_MS,
+  closeSynthetic,
+  startSynthetic,
+  waitBanner,
+  type Synthetic,
+} from "./synthetic";
 
 const USAGE =
   "op-status-waits.ts --conv <conversationId> [--out <prefix>] [--main-reconciles]";
 // A contended host: first paint has been seen past 60 s.
 const NAV_TIMEOUT_MS = 180_000;
-// Log append → watcher → ingest → change feed → push → render.
-const LIVE_TIMEOUT_MS = 30_000;
 // The reconciler tick is 30 s; a SIGKILL leaves no filesystem event.
 const RECONCILE_TIMEOUT_MS = 40_000;
 
-const HELPER = join(import.meta.dir, "..", "scripts", "synthetic-op.ts");
-const BANNER = '[data-ui-owner^="OpStatusBanner@"]';
 const CHIP = '[data-ui-owner^="OpStatusChip@"]';
 const HOURGLASS = 'use[href$="-hourglass-empty"]';
 // The sidebar row of the conversation on screen.
 const ACTIVE_ROW =
   'button[aria-current="true"]:has([data-ui-owner^="ConversationItem@"])';
-
-interface Synthetic {
-  opId: string;
-  /** Resolves when the helper exits. */
-  exited: Promise<unknown>;
-  /** Ask the helper to advance to step `n` (it watches its control file). */
-  advance: (n: number) => void;
-  kill: () => void;
-  /** Wait until the helper has performed step `n`. */
-  step: (n: number) => Promise<boolean>;
-}
-
-function startSynthetic(root: string, slug: string, tag: string): Synthetic {
-  const opId = `e2e-synthetic-${tag}-${crypto.randomUUID()}`;
-  const dir = join(root, tag);
-  mkdirSync(dir, { recursive: true });
-  const ready = join(dir, "ready.json");
-  let kill: ((s: NodeJS.Signals) => void) | undefined;
-  const exited = spawnPassthrough(
-    [
-      process.execPath,
-      HELPER,
-      "run",
-      "--slug",
-      slug,
-      "--op-id",
-      opId,
-      "--dir",
-      dir,
-    ],
-    {
-      onSpawn: (c) => {
-        kill = (s) => c.kill(s);
-      },
-    },
-  );
-  const readStep = async (): Promise<number> =>
-    existsSync(ready)
-      ? (JSON.parse(readFileSync(ready, "utf8")) as { step: number }).step
-      : -1;
-  return {
-    opId,
-    exited,
-    advance: (n) => {
-      // Whole-file via rename, so the helper never reads a torn write.
-      const tmp = join(dir, "control.json.tmp");
-      writeFileSync(tmp, JSON.stringify({ step: n }));
-      renameSync(tmp, join(dir, "control.json"));
-    },
-    kill: () => kill?.("SIGKILL"),
-    step: async (n) =>
-      (await waitFor(readStep, (s) => s >= n, { timeoutMs: 20_000 })).ok,
-  };
-}
-
-async function closeSynthetic(opId: string): Promise<void> {
-  const res = await spawnPassthrough([
-    process.execPath,
-    HELPER,
-    "close",
-    "--op-id",
-    opId,
-  ]);
-  if (res.exitCode !== 0)
-    throw new Error(`synthetic-op close ${opId} exited ${res.exitCode}`);
-}
-
-async function bannerText(page: Page): Promise<string> {
-  const n = await page.locator(BANNER).count();
-  return n === 0 ? "" : await page.locator(BANNER).first().innerText();
-}
-
-async function waitBanner(
-  page: Page,
-  ok: (text: string) => boolean,
-  timeoutMs = LIVE_TIMEOUT_MS,
-) {
-  return waitFor(() => bannerText(page), ok, { timeoutMs });
-}
 
 async function detailText(page: Page, opId: string): Promise<string> {
   await page.goto(pathUrl(`/debug/profiling/op-profile/${opId}`), {

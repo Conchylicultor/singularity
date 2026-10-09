@@ -19,7 +19,9 @@ every CLI process. **Never import this plugin's `server` barrel from CLI code.**
 Both serve `OpRowSchema`: the reducer's `OpFoldState` flattened onto columns plus
 `closedWaitMs` (sum of the closed waits). The open wait's elapsed time is not
 stored — it grows with `now`; compute it with
-`liveTimes(opRowToFoldState(row), now)` from `op-log/core`.
+`liveTimes(opRowToFoldState(row), now, sleepNow)` from `op-log/core`. `sleeps` /
+`sleepStamp` persist the reducer's sleep fold (`[]` / `null` for an op written
+without sleep stamps, and for rows stored before the columns existed).
 
 **In flight is `closedBy === null`, not `completedAt === null`**: a reconciler
 close has no real end, so its `completedAt` stays null. `closedBy` adds
@@ -100,6 +102,7 @@ filesystem event; the 30 s tick is what notices it.
     - `database/sql-column.parsedText`
     - `debug/profiling/op-log.appendOpLog`
     - `debug/profiling/op-log.OP_LOG_FILE`
+    - `debug/profiling/op-log.readSleepNow`
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/retention.defineRetention`
@@ -122,6 +125,8 @@ filesystem event; the 30 s tick is what notices it.
   - Uses:
     - `debug/profiling/op-log.OpenWait`
     - `debug/profiling/op-log.OpFoldState`
+    - `debug/profiling/op-log.OpSleep`
+    - `debug/profiling/op-log.OpSleepStamp`
     - `debug/profiling/op-log.OpStep`
     - `debug/profiling/op-log.OpWait`
     - `debug/profiling/op-log.TerminalOutcome`

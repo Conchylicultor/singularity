@@ -18,12 +18,15 @@ import {
 } from "@plugins/infra/plugins/worktree/core";
 import {
   WAIT_KINDS,
+  type OpSleep,
   type OpWait,
   type WaitKind,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import {
   formatDuration,
   GanttContainer,
+  HATCH_CLASS,
+  HATCH_STYLE,
   minBarSize,
   SpanDetail,
   useGanttContainerContext,
@@ -55,6 +58,12 @@ export interface OpEntry {
    * reader's `now`.
    */
   waits: OpWait[];
+  /**
+   * Every nap inside the span, on the wall axis (`startMs` relative to THIS
+   * op's start), drawn hatched over the bar — time that was neither work nor a
+   * wait. An in-flight op's live tail is included.
+   */
+  sleeps: OpSleep[];
   holdMs: number;
   outcome: string;
   interrupted: boolean;
@@ -104,7 +113,14 @@ export interface OpGanttProps {
 // and one op may carry SEVERAL waits of the same kind (a build re-queues for the
 // host grant across duress requeue cycles). So: N segments at arbitrary offsets,
 // and `sum(waits) + holdMs` is generally LESS than `totalMs`. The gaps are the
-// op actually working.
+// op actually working — unless the machine slept through them: each `sleeps[]`
+// entry is painted hatched on top (over a wait, too: a nap is never a wait).
+//
+// The bar's axis is the WALL clock (`requestedAt → +totalMs`), so a wait is
+// placed by its wall fields (`atMs`/`wallMs`) when it has them; its
+// `startMs`/`durationMs` are on the monotonic clock, which pauses while the
+// machine sleeps and would sit too early after a nap. A legacy wait has only
+// those, and is placed by them as before.
 
 // ── Visual language ─────────────────────────────────────────────────────────
 // Three orthogonal channels so a bar is never ambiguous:
@@ -150,6 +166,26 @@ const WAIT_FILL: Record<WaitKind, string> = {
   "host-grant": "bg-categorical-4",
   "duress-valve": "bg-categorical-8",
 };
+
+/** Where a wait sits on its op's wall-clock bar: its wall fields, else (legacy) its monotonic ones. */
+export function waitPlacement(wait: OpWait): {
+  startMs: number;
+  durationMs: number;
+} {
+  return {
+    startMs: wait.atMs ?? wait.startMs,
+    durationMs: wait.wallMs ?? wait.durationMs,
+  };
+}
+
+/**
+ * A nap's hover label. Its length is always exact; its position is a guess
+ * (`approx`) when no wake instant fell inside the gap it was found in.
+ */
+export function sleepLabel(sleep: OpSleep): string {
+  const label = `Asleep ${formatDuration(sleep.durationMs)}`;
+  return sleep.approx ? `${label} (position approximate)` : label;
+}
 
 /** The fill a kind's base bar uses — for consumers rendering the same op elsewhere. */
 export function opFillClass(kind: OpKind): string {
@@ -275,12 +311,14 @@ function OpLegend({
   const entries = useMemo(() => {
     const kinds = new Set<OpKind>();
     const waits = new Set<WaitKind>();
+    let asleep = false;
     for (const group of groups) {
       for (const op of group.ops) {
         kinds.add(op.kind);
         for (const wait of op.waits) {
-          if (wait.durationMs > 0) waits.add(wait.kind);
+          if (waitPlacement(wait).durationMs > 0) waits.add(wait.kind);
         }
+        if (op.sleeps.some((sl) => sl.durationMs > 0)) asleep = true;
       }
     }
     return [
@@ -288,12 +326,17 @@ function OpLegend({
         key: `kind:${k}`,
         label: k,
         fill: TYPE_FILL[k],
+        hatched: false,
       })),
       ...[...waits].map((w) => ({
         key: `wait:${w}`,
         label: `${w} wait`,
         fill: WAIT_FILL[w],
+        hatched: false,
       })),
+      ...(asleep
+        ? [{ key: "asleep", label: "Asleep", fill: HATCH_CLASS, hatched: true }]
+        : []),
     ];
   }, [groups]);
 
@@ -303,7 +346,16 @@ function OpLegend({
     <Cluster gap="md" className="border-b px-lg py-xs">
       {entries.map((entry) => (
         <Stack key={entry.key} direction="row" align="center" gap="2xs">
-          <StatusDot colorClass={entry.fill} />
+          {entry.hatched ? (
+            // The nap swatch: the bars' own hatch, in a box big enough for
+            // its stripes to read (a dot-sized one would be a grey smudge).
+            <span
+              className={cn("inline-block size-3 rounded-sm", entry.fill)}
+              style={HATCH_STYLE}
+            />
+          ) : (
+            <StatusDot colorClass={entry.fill} />
+          )}
           <Text as="span" variant="caption" className="text-muted-foreground">
             {entry.label}
           </Text>
@@ -478,9 +530,10 @@ function OpBar({
     durationMs: op.totalMs,
   };
 
-  // Zero-length waits would paint nothing (`minBarSize` declines to floor an
-  // empty span), so they are dropped rather than emitted as empty boxes.
-  const waits = op.waits.filter((w) => w.durationMs > 0);
+  // Zero-length waits and naps would paint nothing (`minBarSize` declines to
+  // floor an empty span), so they are dropped rather than emitted as empty boxes.
+  const waits = op.waits.filter((w) => waitPlacement(w).durationMs > 0);
+  const sleeps = op.sleeps.filter((sl) => sl.durationMs > 0);
 
   return (
     <>
@@ -503,22 +556,23 @@ function OpBar({
         {...interactions}
       />
       {waits.map((wait, i) => {
-        // startMs is relative to the op's own start — waits are painted at their
-        // true offsets inside the span, never packed head-to-tail.
+        // Relative to the op's own start — waits are painted at their true
+        // offsets inside the span, never packed head-to-tail.
+        const at = waitPlacement(wait);
         const waitSpan: Span = {
           id: `wait:${op.opId}:${i}`,
           phase: worktree,
           label: waitLabel(wait),
-          startMs: op.startMs + wait.startMs,
-          durationMs: wait.durationMs,
+          startMs: op.startMs + at.startMs,
+          durationMs: at.durationMs,
         };
         return (
           <Placed
             key={waitSpan.id}
             x={{
               start: pct(toLeftFraction(waitSpan.startMs, totalMs)),
-              size: pct(toWidthFraction(wait.durationMs, totalMs)),
-              minSize: minBarSize(wait.durationMs),
+              size: pct(toWidthFraction(at.durationMs, totalMs)),
+              minSize: minBarSize(at.durationMs),
             }}
             y="fill"
             className={cn(
@@ -528,6 +582,38 @@ function OpBar({
               clickable && "cursor-pointer",
             )}
             onMouseEnter={() => setHovered(waitSpan)}
+            onMouseLeave={() => setHovered(null)}
+            {...interactions}
+          />
+        );
+      })}
+      {sleeps.map((sleep, i) => {
+        // Painted LAST, over any wait it overlaps, and opaque: the stretch was
+        // neither work nor a wait, whatever the op was doing when it began.
+        const sleepSpan: Span = {
+          id: `sleep:${op.opId}:${i}`,
+          phase: worktree,
+          label: sleepLabel(sleep),
+          startMs: op.startMs + sleep.startMs,
+          durationMs: sleep.durationMs,
+        };
+        return (
+          <Placed
+            key={sleepSpan.id}
+            title={sleepSpan.label}
+            x={{
+              start: pct(toLeftFraction(sleepSpan.startMs, totalMs)),
+              size: pct(toWidthFraction(sleep.durationMs, totalMs)),
+              minSize: minBarSize(sleep.durationMs),
+            }}
+            y="fill"
+            className={cn(
+              "rounded-sm bg-background",
+              HATCH_CLASS,
+              clickable && "cursor-pointer",
+            )}
+            style={HATCH_STYLE}
+            onMouseEnter={() => setHovered(sleepSpan)}
             onMouseLeave={() => setHovered(null)}
             {...interactions}
           />

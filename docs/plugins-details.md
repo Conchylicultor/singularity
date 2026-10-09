@@ -12207,7 +12207,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Conversation.AbovePromptInput` → `OpStatusBanner`
               - `Item.Chips` → `OpStatusChip`
               - `queue-actions` "open-conversation" → `OpenConversationAction`
-            - Uses: 32 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md)
+            - Uses: 33 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md)
               - `primitives/data-view` ×5
               - `primitives/live-state` ×4
               - `conversations/conversation-view` ×2
@@ -12216,6 +12216,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/relative-time` ×2
               - `conversations/conversation-ui/item.Item`
               - `debug/profiling/ops.opDetailPane`
+              - `infra/host/machine-sleep.useSleepNowForFold`
               - `network/live.useLive`
               - `primitives/css/clip.Clip`
               - `primitives/css/inline.Inline`
@@ -14545,6 +14546,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/background/timer.defineTimer`
           - `infra/endpoints.implement`
           - `infra/host/host-read-pool.heavyReadQueueDepth`
+          - `infra/host/machine-sleep.publishSleepReading`
           - `infra/paths.listWorktreeDirs`
           - `infra/paths.worktreeDataDir`
           - `primitives/log-channels.defineLogSink`
@@ -14995,6 +14997,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ProfilingContextValue`
           - `Span`
           - `SpanBar`
+          - `SpanOverlay`
           - `ZoomWindow`
         - Exports (values):
           - `DragSelection`
@@ -15002,6 +15005,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GanttContainer`
           - `GanttSection`
           - `groupByPhase`
+          - `HATCH_CLASS`
+          - `HATCH_STYLE`
           - `MIN_BAR_FRACTION`
           - `minBarSize`
           - `MultiSpanLane`
@@ -15118,17 +15123,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `OpLiveTimes`
               - `OpOutcome`
               - `OpRecord`
+              - `OpSleep`
+              - `OpSleepStamp`
               - `OpStep`
               - `OpSummary`
               - `OpWait`
               - `OpWaitSpan`
               - `OutcomeByKind`
               - `RawOpRecord`
+              - `SleepStamp`
               - `TerminalOutcome`
               - `WaitKind`
               - `WaitKindMeta`
               - `WaitResult`
             - Exports (values):
+              - `advanceSleeps`
               - `applyOpEvent`
               - `emptyOpState`
               - `foldOpLines`
@@ -15154,6 +15163,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readOpenWait`
               - `readOpRecords`
               - `readOpStates`
+              - `readSleepNow`
           - Plugins:
             - **`op-store`** — Op-store web presence: eagerly registers the boot-critical op-store.in-flight live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the host-global op-log.jsonl (and its rotations) into its own op_log_ops table behind a durable (inode, offset) cursor committed with the rows, reconciles in-flight ops whose process is gone (main appends a reconciler terminal to the log; a worktree closes locally only after an ingest gap), and serves the rows as the opsInFlight and opsHistory live collections, with a 30-day retention sweep.
               - Server:
@@ -15171,6 +15181,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `database/sql-column.parsedText`
                   - `debug/profiling/op-log.appendOpLog`
                   - `debug/profiling/op-log.OP_LOG_FILE`
+                  - `debug/profiling/op-log.readSleepNow`
                   - `infra/file-watcher.defineFileWatcher`
                   - `infra/file-watcher.FileWatcher`
                   - `infra/retention.defineRetention`
@@ -15193,6 +15204,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `debug/profiling/op-log.OpenWait`
                   - `debug/profiling/op-log.OpFoldState`
+                  - `debug/profiling/op-log.OpSleep`
+                  - `debug/profiling/op-log.OpSleepStamp`
                   - `debug/profiling/op-log.OpStep`
                   - `debug/profiling/op-log.OpWait`
                   - `debug/profiling/op-log.TerminalOutcome`
@@ -15226,9 +15239,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Profiling.Section` → `OpSection`
               - `Pane.Register` "debug-profiling-op-detail"
-            - Uses: 36 symbols — full list in [`plugins/debug/plugins/profiling/plugins/ops/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/ops/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/debug/plugins/profiling/plugins/ops/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/ops/REFERENCE.md)
               - `debug/profiling` ×8
-              - `debug/profiling/ops/op-gantt` ×4
+              - `debug/profiling/ops/op-gantt` ×6
               - `primitives/pane` ×4
               - `network/live` ×2
               - `primitives/css/badge` ×2
@@ -15237,6 +15250,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view.conversationPane`
               - `conversations.useConversationTitleBySlug`
               - `debug/profiling/build.buildProfileDetailPane`
+              - `infra/host/machine-sleep.useSleepNowForFold`
               - `primitives/css/clip.Clip`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/placeholder.Placeholder`
@@ -15254,11 +15268,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/op-status`
               - `conversations/conversation-view/push-profiling`
           - Plugins:
-            - **`op-gantt`** — Reusable op (build / push / check) Gantt: one kind-colored bar per op with each wait painted as an overlay segment at its true in-span offset.
+            - **`op-gantt`** — Reusable op (build / push / check) Gantt: one kind-colored bar per op with each wait painted as an overlay segment at its true in-span offset (wall clock), and each nap the machine slept through painted hatched as Asleep.
               - Web:
                 - Uses:
                   - `debug/profiling.formatDuration`
                   - `debug/profiling.GanttContainer`
+                  - `debug/profiling.HATCH_CLASS`
+                  - `debug/profiling.HATCH_STYLE`
                   - `debug/profiling.minBarSize`
                   - `debug/profiling.Span`
                   - `debug/profiling.SpanDetail`
@@ -15279,8 +15295,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `opFillClass`
                   - `OpGantt`
+                  - `sleepLabel`
                   - `waitFillClass`
                   - `waitLabel`
+                  - `waitPlacement`
               - Cross-plugin:
                 - Imported by: `debug/profiling/ops`
         - **`runtime`** — Runtime HTTP/DB/loader profiling tables in the Gantt debug pane.
@@ -16013,8 +16031,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`timeline`** — Timeline tab for the Slow Events pane: the unified cross-worktree wall-clock Gantt — per-worktree lanes of traces / slow-ops / reports / builds / boots with health heat strips and cross-worktree incident bands, streamed pull-only from the timeline endpoint. Cross-worktree unified timeline endpoint: fans out over every live worktree DB fork (traces, slow-op samples, reports, builds) plus the per-worktree disk logs (boot events, health series), normalizes everything to wall-clock TimelineEvents, and streams them as NDJSON — pull-only, never live or polled.
       - Web:
         - Contributes: `SlowEvents.View` "Timeline" → `TimelineView`
-        - Uses: 35 symbols — full list in [`plugins/debug/plugins/timeline/REFERENCE.md`](../plugins/debug/plugins/timeline/REFERENCE.md)
-          - `debug/profiling` ×5
+        - Uses: 37 symbols — full list in [`plugins/debug/plugins/timeline/REFERENCE.md`](../plugins/debug/plugins/timeline/REFERENCE.md)
+          - `debug/profiling` ×7
           - `debug/trace/pane` ×5
           - `primitives/css/coords` ×2
           - `primitives/css/spacing` ×2
@@ -20788,6 +20806,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review/plugin-changes`
               - `tasks/attempt-work`
               - `tasks/tasks-core`
+        - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. Serves the machine.sleep live value (this box's sleep clock: boot, cumulative asleepMs, last wake) and publishSleepReading(), which re-reads the clock and pushes only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own.
+          - Server:
+            - Contributes: `resource.declare` "machine.sleep"
+            - Uses: `network/live.serveValue`
+            - Exports (values): `publishSleepReading`
+            - Resources: `machine.sleep` (push)
+          - Web:
+            - Uses:
+              - `network/live.useLive`
+              - `primitives/live-state.foldResource`
+            - Exports (values):
+              - `useSleepNow`
+              - `useSleepNowForFold`
+          - Core:
+            - Uses: `network/live.liveValue`
+            - Exports (types): `SleepNow`
+            - Exports (values):
+              - `machineSleep`
+              - `SleepNowSchema`
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/conversation-view/op-status`
+              - `debug/health-monitor`
+              - `debug/profiling/ops`
     - **`host-account`** — Host account, read: useHostAccount() — the OS account this backend runs as (login name and full name), loading until the value arrives. Host account: serves the host-account value — the OS account this backend runs as (login name, and its full name read once through spawnCaptured: macOS `id -F`, the passwd GECOS field elsewhere).
       - Server:
         - Contributes: `resource.declare` "host-account"
@@ -22969,11 +23011,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveValue`
           - `scopedLiveColumns`
       - Cross-plugin:
-        - Imported by: 163 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 164 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×48
           - `conversations` ×34
           - `tasks` ×21
-          - `infra` ×9
+          - `infra` ×10
           - `debug` ×8
           - `build` ×6
           - `page` ×6
@@ -23231,9 +23273,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`sleep-clock`** — How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell.
       - Core:
         - Exports (types):
+          - `SleepClockReading`
           - `SleepMeter`
           - `SleepReading`
-        - Exports (values): `createSleepMeter`
+        - Exports (values):
+          - `createSleepMeter`
+          - `readSleepClock`
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts, type-check workers) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
       - Cross-plugin:
         - Imported by:
@@ -30071,7 +30116,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 195 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 196 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×50
           - `conversations` ×38
           - `ui` ×22
@@ -30080,7 +30125,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×11
           - `primitives` ×9
           - `active-data` ×6
-          - `infra` ×5
+          - `infra` ×6
           - `auth` ×4
           - `build` ×4
           - `plugin-meta` ×3

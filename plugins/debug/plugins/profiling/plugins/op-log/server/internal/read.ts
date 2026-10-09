@@ -7,6 +7,7 @@ import {
   type OpRecord,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import { opLogSink } from "./jsonl";
+import { readSleepNow } from "./sleep-now";
 
 /**
  * Read the live op log through its own sink's bounded reader.
@@ -36,11 +37,12 @@ export function readOpStates(): Map<string, OpFoldState> {
  * Every op the host knows about, folded from the live op log into read-model
  * records.
  *
- * `Date.now()` is read ONCE here and injected into the fold, so all in-flight
- * bars on one read share a single clock (and so the fold stays pure/testable).
+ * `Date.now()` and the sleep clock are read ONCE here and injected into the
+ * fold, so all in-flight bars on one read share a single clock (and so the fold
+ * stays pure/testable).
  */
 export function readOpRecords(): OpRecord[] {
-  return toOpRecords(readOpStates().values(), Date.now());
+  return toOpRecords(readOpStates().values(), Date.now(), readSleepNow());
 }
 
 /**

@@ -4,6 +4,8 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
+  HATCH_CLASS,
+  HATCH_STYLE,
   minBarSize,
   useGanttContainerContext,
 } from "@plugins/debug/plugins/profiling/web";
@@ -103,12 +105,6 @@ export function WallclockAxis({
   );
 }
 
-// A dark (no-data) segment is a distinct visual class, not a severity color:
-// a diagonal hatch drawn from currentColor so it stays theme-driven, visually
-// unambiguous from both a transparent (healthy) track and a heat tint.
-const DARK_HATCH =
-  "repeating-linear-gradient(45deg, currentColor 0, currentColor 2px, transparent 2px, transparent 6px)";
-
 /**
  * Thin health heat strip under a lane group: background segments bucketed by
  * event-loop p99 (backend lanes) or the host pressure score (load +
@@ -150,12 +146,9 @@ export function HeatStrip({
             minSize: minBarSize(seg.endMs - seg.startMs),
           }}
           y="fill"
-          className={
-            seg.kind === "dark" ? "text-muted-foreground/60" : seg.colorClass
-          }
-          style={
-            seg.kind === "dark" ? { backgroundImage: DARK_HATCH } : undefined
-          }
+          // A dark (no-data) segment is the shared hatch, not a severity color.
+          className={seg.kind === "dark" ? HATCH_CLASS : seg.colorClass}
+          style={seg.kind === "dark" ? HATCH_STYLE : undefined}
         />
       ))}
     />

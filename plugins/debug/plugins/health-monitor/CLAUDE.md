@@ -132,6 +132,7 @@ measured overhead on a real worktree workload is still an open task.
     - `infra/background/timer.defineTimer`
     - `infra/endpoints.implement`
     - `infra/host/host-read-pool.heavyReadQueueDepth`
+    - `infra/host/machine-sleep.publishSleepReading`
     - `infra/paths.listWorktreeDirs`
     - `infra/paths.worktreeDataDir`
     - `primitives/log-channels.defineLogSink`

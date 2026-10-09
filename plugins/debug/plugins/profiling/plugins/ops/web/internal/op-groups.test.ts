@@ -36,6 +36,8 @@ function row(over: Partial<OpRow> & { opId: string }): OpRow {
     totalMs: 60_000,
     steps: [],
     lastSeq: 5,
+    sleeps: [],
+    sleepStamp: null,
     ...over,
   };
 }
@@ -71,7 +73,7 @@ describe("op-groups", () => {
         cycle: 2,
       },
     });
-    const [rec] = recordsAt([live], T0 + 70_000);
+    const [rec] = recordsAt([live], T0 + 70_000, null);
     expect(rec?.totalMs).toBe(70_000);
     expect(rec?.outcome).toBe("waiting");
     expect(rec?.waits.at(-1)).toMatchObject({
@@ -80,6 +82,54 @@ describe("op-groups", () => {
       reason: "loadRatio",
       cycle: 2,
     });
+  });
+
+  test("an in-flight op's nap since its last event is asleep, not work, and reaches the Gantt entry", () => {
+    const live = row({
+      opId: "napper",
+      closedBy: null,
+      completedAt: null,
+      outcome: null,
+      totalMs: 0,
+      // Last event at +60 s, with 5 s asleep since boot.
+      sleepStamp: { boot: "boot-1", asleepMs: 5_000, atMs: T0 + 60_000 },
+    });
+    // Now +3 h; the box slept 2 h of it and woke 10 min ago.
+    const now = T0 + 3 * 3_600_000;
+    const sleepNow = {
+      boot: "boot-1",
+      asleepMs: 5_000 + 2 * 3_600_000,
+      wakeAtMs: now - 600_000,
+    };
+    const [rec] = recordsAt([live], now, sleepNow);
+    expect(rec?.asleepMs).toBe(2 * 3_600_000);
+    expect(rec?.sleeps).toEqual([
+      {
+        startMs: now - 600_000 - 2 * 3_600_000 - T0,
+        durationMs: 2 * 3_600_000,
+        approx: false,
+      },
+    ]);
+    // Unknown clock: no tail, as before.
+    expect(recordsAt([live], now, null)[0]?.asleepMs).toBe(0);
+    // A reading from another boot is never sleep.
+    expect(
+      recordsAt([live], now, { ...sleepNow, boot: "boot-2" })[0]?.asleepMs,
+    ).toBe(0);
+
+    const data = groupOps(rec ? [rec] : [], {});
+    expect(data.groups[0]?.ops[0]?.sleeps).toEqual(rec?.sleeps);
+  });
+
+  test("a closed op carries its stored sleeps, whatever the reader's clock", () => {
+    const sleeps = [{ startMs: 10_000, durationMs: 20_000, approx: true }];
+    const [rec] = recordsAt([row({ opId: "slept", sleeps })], 0, {
+      boot: "boot-1",
+      asleepMs: 999_999_999,
+      wakeAtMs: null,
+    });
+    expect(rec?.sleeps).toEqual(sleeps);
+    expect(rec?.asleepMs).toBe(20_000);
   });
 
   test("groups per worktree, offsets from the earliest request, titles by slug", () => {
@@ -93,6 +143,7 @@ describe("op-groups", () => {
         row({ opId: "early", conversationId: "conv-a" }),
       ],
       0,
+      null,
     );
     const data = groupOps(records, { "att-a": "Fix the thing" });
     expect(data.totalMs).toBe(90_000);
@@ -112,6 +163,7 @@ describe("op-groups", () => {
         row({ opId: "b", requestedAt: new Date(T0 + 600_000) }),
       ],
       0,
+      null,
     );
     expect(spanOf(records)).toEqual({ startMs: T0, endMs: T0 + 660_000 });
     expect(spanOf([])).toBeNull();

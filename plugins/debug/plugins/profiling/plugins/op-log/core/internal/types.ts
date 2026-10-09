@@ -84,6 +84,50 @@ export interface OpWait extends OpWaitSpan {
   cycle: number;
   /** How it ended; `null` for a legacy line (which never said). */
   result: WaitResult | null;
+  /**
+   * The wait on the WALL axis: its start, ms after `requestedAt`, and its wall
+   * length. `startMs`/`durationMs` are on the monotonic `t` clock, which pauses
+   * while the machine sleeps, so after a nap they sit too early and run too
+   * short; these two are where the wait really was. Absent on a legacy line or
+   * a headless op's wait (place it by `startMs`, as before).
+   */
+  atMs?: number;
+  wallMs?: number;
+}
+
+/**
+ * One reading of the machine's sleep clock, stamped on an event: which boot,
+ * and how long the machine had been asleep in total since that boot. Two stamps
+ * of one boot differ in `asleepMs` by exactly the sleep between them.
+ * `wakeAtMs` is the wall instant (epoch ms) of the last wake, when known — it
+ * places the most recent of those sleeps exactly.
+ */
+export interface SleepStamp {
+  boot: string;
+  asleepMs: number;
+  wakeAtMs?: number;
+}
+
+/**
+ * One interval the machine slept through while the op ran, on the WALL axis:
+ * `startMs` is ms after `requestedAt`. `approx` when its position is a guess
+ * (pinned to the end of the gap between two events) — its LENGTH is always
+ * exact.
+ */
+export interface OpSleep {
+  startMs: number;
+  durationMs: number;
+  approx: boolean;
+}
+
+/**
+ * The last sleep stamp a fold saw: the reading plus the wall instant (epoch
+ * ms) it was taken at, which is where the next sleep's gap starts.
+ */
+export interface OpSleepStamp {
+  boot: string;
+  asleepMs: number;
+  atMs: number;
 }
 
 /** One named work step, relative to `grantedAt` (mirrors the legacy push steps). */
@@ -172,6 +216,11 @@ export interface OpSummary extends OpIdentity {
   /** True for an op hard-killed mid-flight and closed by the reconciler. */
   interrupted: boolean;
   steps: OpStep[];
+  /**
+   * Every sleep the writer saw — authoritative, since it saw every event.
+   * Absent from an older writer's summary (the fold keeps its own then).
+   */
+  sleeps?: OpSleep[];
 }
 
 // ── v2 wire: change-only events ─────────────────────────────────────────────
@@ -189,6 +238,11 @@ interface OpEventBase {
   at: string;
   /** Monotonic ms since the op's `requested` (performance.now()-based). */
   t: number;
+  /**
+   * The machine's sleep clock at `at`. Absent on an older writer's line and on
+   * a platform that cannot tell — which means "unknown", never "awake".
+   */
+  sleep?: SleepStamp;
 }
 
 export type OpEvent = OpEventBase &
@@ -294,6 +348,10 @@ export interface OpFoldState {
   holdMs: number;
   totalMs: number;
   steps: OpStep[];
+  /** Sleeps folded so far, merged, in order. */
+  sleeps: OpSleep[];
+  /** The last sleep stamp applied; `null` before any (or on a legacy op). */
+  sleepStamp: OpSleepStamp | null;
 }
 
 /**
@@ -322,7 +380,11 @@ export interface OpRecord {
    * what made build stalls unattributable.
    */
   waits: OpWait[];
-  /** DERIVED: `sum(waits.durationMs)`. The scalar the stats panes still want. */
+  /**
+   * DERIVED: time spent blocked, from the one breakdown `liveTimes` uses — the
+   * waits' wall extent minus any sleep inside them, clipped to the op's span.
+   * `totalMs − waitMs − asleepMs` is the work, exactly.
+   */
   waitMs: number;
   /** The wait the op is parked in right now; always `null` once terminal. */
   openWait: OpenWait | null;
@@ -339,12 +401,26 @@ export interface OpRecord {
   /** Who closed it; `null` while in flight. */
   closedBy: OpClosedBy | null;
   steps: OpStep[];
+  /**
+   * Every sleep inside the op's span (wall axis, merged, clipped) — for an
+   * in-flight op including the tail since its last event, derived from the
+   * reader's `sleepNow`.
+   */
+  sleeps: OpSleep[];
+  /** DERIVED: the union of `sleeps`. Never counted as work. */
+  asleepMs: number;
 }
 
-/** Waited vs worked, at `now` — the ONE place these are computed. */
+/**
+ * Waited vs worked vs asleep at `now` — the ONE place these are computed.
+ * `waitingMs + workingMs + asleepMs === elapsedMs`, by construction.
+ */
 export interface OpLiveTimes {
   elapsedMs: number;
   waitingMs: number;
   workingMs: number;
+  /** Time the machine slept through, waits included (a nap is never a wait). */
+  asleepMs: number;
+  /** The open wait's share of `waitingMs` (sleep inside it excluded). */
   openWaitMs: number;
 }

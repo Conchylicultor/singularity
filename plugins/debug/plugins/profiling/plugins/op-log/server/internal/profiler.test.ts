@@ -1,14 +1,17 @@
-import { describe, expect, spyOn, test } from "bun:test";
-import type {
-  OpEvent,
-  OpSummary,
+import { describe, expect, setSystemTime, test } from "bun:test";
+import {
+  foldOpLines,
+  liveTimes,
+  type OpEvent,
+  type OpSummary,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import type { SleepClockReading } from "@plugins/packages/plugins/sleep-clock/core";
 import { createOpProfiler, type OpProfiler } from "./profiler";
 
 // These tests drive `createOpProfiler` against an in-memory sink instead of the
-// real `~/.singularity/logs/op-log/op-log.jsonl`, so the profiler's record shape — and the
-// one subtle clock-pairing invariant it maintains — has a regression test that
-// never touches the user's real op log.
+// real `~/.singularity/logs/op-log/op-log.jsonl`, so the profiler's record shape — its
+// step clock and its sleep stamps — has a regression test that never touches
+// the user's real op log.
 
 const baseOpts = { opId: "op-test", branch: "feature", opSlug: "wt-test" };
 
@@ -41,44 +44,30 @@ describe("createOpProfiler — injectable sink", () => {
   });
 });
 
-describe("recordStep — grantedAt-relative offset via the perf pairing", () => {
-  // The invariant under test: `markGranted` samples the wall clock (`grantedAt`)
-  // and `performance.now()` (`grantedPerfMs`) as a PAIR at one instant, and
-  // `recordStep` converts a `performance.now()`-relative start onto a
-  // `grantedAt`-relative `OpStep.startMs` by subtracting against `grantedPerfMs`
-  // — a plain monotonic subtraction with NO cross-clock arithmetic. A future
-  // "simplification" to `Date.now()` inside `recordStep` would reintroduce the
-  // ~6ms-under-load clock skew this pairing exists to avoid; these assertions
-  // fail under that regression.
-  test("startMs is the monotonic delta from the performance.now() sampled at markGranted", () => {
+describe("recordStep — one wall clock for every step", () => {
+  // `recordStep` takes a WALL start (epoch ms), offset from the wall-clock
+  // `grantedAt` — the same clock as `stepStart`/`stepEnd` and the op's whole
+  // axis. It used to take a `performance.now()` reading, which pauses while
+  // the machine sleeps: after a nap every later step sat too early.
+  test("startMs is the wall delta from grantedAt", () => {
     const records: OpEvent[] = [];
-    // Pin the monotonic clock so `markGranted` samples a KNOWN `grantedPerfMs`.
-    // The value is deliberately unrelated to any wall-clock ms: a `Date.now()`
-    // reimplementation could not reproduce these offsets.
-    const perf = spyOn(performance, "now").mockReturnValue(10_000.5);
+    const T = Date.parse("2026-10-08T12:00:00.000Z");
+    setSystemTime(new Date(T));
     try {
       const p = createOpProfiler("check", {
         ...baseOpts,
         sink: (r) => records.push(r),
       });
       p.markRequested();
-      p.markGranted(); // grantedPerfMs = 10_000.5
-
-      // A check reports a COMPLETED unit post-hoc: it hands the monotonic instant
-      // its work started (an absolute `performance.now()` reading) plus the
-      // measured duration. Two steps at different perf instants prove the offset
-      // tracks the PERF delta — if `recordStep` read the wall clock instead, both
-      // would collapse to ≈the same tiny number, not 200 and 900.
-      p.recordStep("early", 10, 10_200.5); // 200ms after grant
-      p.recordStep("late", 10, 10_900.5); //  900ms after grant
-      // Fractional monotonic readings round onto the same integer-ms grid as the
-      // waits: 10_500.5 - 10_000.5 = exactly 500.
-      p.recordStep("rounds", 120, 10_500.5);
-
+      p.markGranted(); // grantedAt = T
+      p.recordStep("early", 10, T + 200);
+      p.recordStep("late", 10, T + 900);
+      p.recordStep("rounds", 120, T + 500.4); // onto the integer-ms grid
+      // A perf-clock start would be a tiny number, far before the grant.
       p.complete("success");
       p.write();
     } finally {
-      perf.mockRestore();
+      setSystemTime();
     }
 
     expect(summaryOf(records).steps).toEqual([
@@ -95,15 +84,91 @@ describe("recordStep — grantedAt-relative offset via the perf pairing", () => 
       sink: (r) => records.push(r),
     });
 
-    // No `markGranted` — there is no reference instant, so the offset is 0 rather
-    // than a subtraction against an undefined `grantedPerfMs`.
-    p.recordStep("orphan", 30, 12_345.6);
+    // No `markGranted` — there is no reference instant, so the offset is 0.
+    p.recordStep("orphan", 30, Date.now());
     p.complete("success");
     p.write();
 
     expect(summaryOf(records).steps).toEqual([
       { name: "orphan", startMs: 0, durationMs: 30 },
     ]);
+  });
+});
+
+describe("createOpProfiler — sleep stamps", () => {
+  const T = Date.parse("2026-10-08T12:00:00.000Z");
+  const HOUR = 3_600_000;
+  const SLEPT = HOUR - 10_000;
+
+  test("every event is stamped; the summary carries the sleeps and wall waits", () => {
+    const records: OpEvent[] = [];
+    let reading: SleepClockReading = {
+      supported: true,
+      boot: "boot-A",
+      asleepMs: 1_000.4,
+      wakeAtMs: null,
+    };
+    setSystemTime(new Date(T));
+    try {
+      const p = createOpProfiler("push", {
+        ...baseOpts,
+        sink: (r) => records.push(r),
+        readSleep: () => reading,
+      });
+      p.markRequested();
+      setSystemTime(new Date(T + 1_000));
+      p.waitStart("push-mutex");
+      // The lid closes for an hour, mid-queue.
+      setSystemTime(new Date(T + HOUR + 1_000));
+      reading = {
+        supported: true,
+        boot: "boot-A",
+        asleepMs: 1_000.4 + SLEPT,
+        wakeAtMs: T + HOUR,
+      };
+      p.markGranted(); // closes the wait
+      setSystemTime(new Date(T + HOUR + 21_000));
+      p.complete("success");
+      p.write();
+    } finally {
+      setSystemTime();
+    }
+
+    for (const r of records) expect(r.sleep?.boot).toBe("boot-A");
+    expect(records[0]!.sleep).toEqual({ boot: "boot-A", asleepMs: 1_000 });
+    const s = summaryOf(records);
+    expect(s.sleeps).toEqual([
+      { startMs: 10_000, durationMs: SLEPT, approx: false },
+    ]);
+    expect(s.totalMs).toBe(HOUR + 21_000);
+    expect(s.waits[0]).toMatchObject({ atMs: 1_000, wallMs: HOUR });
+
+    // A reader folding the stream agrees with the writer.
+    const state = foldOpLines(records).get("op-test")!;
+    expect(state.sleeps).toEqual(s.sleeps!);
+    const t = liveTimes(state, T + 9e9, null);
+    expect(t).toEqual({
+      elapsedMs: HOUR + 21_000,
+      waitingMs: HOUR - SLEPT,
+      workingMs: 21_000,
+      asleepMs: SLEPT,
+      openWaitMs: 0,
+    });
+  });
+
+  test("an unsupported platform stamps nothing and records no sleep", () => {
+    const records: OpEvent[] = [];
+    const p = createOpProfiler("build", {
+      ...baseOpts,
+      sink: (r) => records.push(r),
+      readSleep: () => ({ supported: false }),
+    });
+    p.markRequested();
+    p.markGranted();
+    p.complete("success");
+    p.write();
+    for (const r of records) expect("sleep" in r).toBe(false);
+    expect(summaryOf(records).sleeps).toEqual([]);
   });
 });
 

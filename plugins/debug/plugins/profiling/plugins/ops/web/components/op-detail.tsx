@@ -10,8 +10,10 @@ import {
 } from "@plugins/debug/plugins/profiling/web";
 import {
   opFillClass,
+  sleepLabel,
   waitFillClass,
   waitLabel,
+  waitPlacement,
 } from "@plugins/debug/plugins/profiling/plugins/ops/plugins/op-gantt/web";
 import {
   toOpRecord,
@@ -27,6 +29,8 @@ import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
+import { useSleepNowForFold } from "@plugins/infra/plugins/host/plugins/machine-sleep/web";
+import type { SleepNow } from "@plugins/infra/plugins/host/plugins/machine-sleep/core";
 import { stripAttemptBranchPrefix } from "@plugins/infra/plugins/worktree/core";
 import {
   Badge,
@@ -78,10 +82,12 @@ function Stat({
 
 /**
  * The op's full span with every wait at its true in-span offset — the detail
- * twin of the Gantt bar, on the op's OWN time axis (origin = `requestedAt`).
- * MultiSpanLane's overlays are exactly this model: absolute, bar-relative, free
- * to gap (the op working between its waits) and to repeat a kind (a build
- * re-queuing for the host grant across duress requeue cycles).
+ * twin of the Gantt bar, on the op's OWN wall-clock axis (origin =
+ * `requestedAt`). MultiSpanLane's overlays are exactly this model: absolute,
+ * bar-relative, free to gap (the op working between its waits) and to repeat a
+ * kind (a build re-queuing for the host grant across duress requeue cycles).
+ * Every nap the machine slept through is a hatched Asleep overlay on top — over
+ * a wait too, since a nap is never a wait.
  */
 function OpTimeline({ op }: { op: OpRecord }): ReactElement {
   const bars = useMemo(
@@ -95,11 +101,22 @@ function OpTimeline({ op }: { op: OpRecord }): ReactElement {
           op.outcome === "waiting" || op.outcome === "running"
             ? ("pulse" as const)
             : ("solid" as const),
-        overlays: op.waits.map((w) => ({
-          startMs: w.startMs,
-          ms: w.durationMs,
-          colorClass: waitFillClass(w.kind),
-        })),
+        overlays: [
+          ...op.waits.map((w) => {
+            const at = waitPlacement(w);
+            return {
+              startMs: at.startMs,
+              ms: at.durationMs,
+              colorClass: waitFillClass(w.kind),
+            };
+          }),
+          ...op.sleeps.map((sl) => ({
+            startMs: sl.startMs,
+            ms: sl.durationMs,
+            hatched: true as const,
+            title: sleepLabel(sl),
+          })),
+        ],
       },
     ],
     [op],
@@ -113,7 +130,10 @@ function OpTimeline({ op }: { op: OpRecord }): ReactElement {
   // which is the whole reason to keep them.
   const axisMs = Math.max(
     op.totalMs,
-    ...op.waits.map((w) => w.startMs + w.durationMs),
+    ...op.waits.map((w) => {
+      const at = waitPlacement(w);
+      return at.startMs + at.durationMs;
+    }),
     1,
   );
 
@@ -211,22 +231,32 @@ export function OpDetailBody(): ReactElement {
       ) : result.row.closedBy === null ? (
         <LiveOpDetail row={result.row} />
       ) : (
-        <OpDetailView row={result.row} now={0} />
+        <OpDetailView row={result.row} now={0} sleepNow={null} />
       )}
     </PaneChrome>
   );
 }
 
-// An in-flight op's span, open wait and hold grow with `now`; a closed op's
-// record does not depend on it, so only the in-flight view ticks.
+// An in-flight op's span, open wait and hold grow with `now`, and a nap since
+// its last event shows only through the machine's sleep clock; a closed op's
+// record depends on neither, so only the in-flight view ticks and reads it.
 function LiveOpDetail({ row }: { row: OpRow }): ReactElement {
   const now = useNow(1000);
-  return <OpDetailView row={row} now={now} />;
+  const sleepNow = useSleepNowForFold();
+  return <OpDetailView row={row} now={now} sleepNow={sleepNow} />;
 }
 
-function OpDetailView({ row, now }: { row: OpRow; now: number }): ReactElement {
+function OpDetailView({
+  row,
+  now,
+  sleepNow,
+}: {
+  row: OpRow;
+  now: number;
+  sleepNow: SleepNow;
+}): ReactElement {
   const openPane = useOpenPane();
-  const data = toOpRecord(opRowToFoldState(row), now);
+  const data = toOpRecord(opRowToFoldState(row), now, sleepNow);
   if (!data) return <Placeholder tone="muted">Op not found.</Placeholder>;
   const branchShort = stripAttemptBranchPrefix(data.branch);
   return (
@@ -252,11 +282,15 @@ function OpDetailView({ row, now }: { row: OpRow; now: number }): ReactElement {
         {data.interrupted && <Badge variant="destructive">interrupted</Badge>}
       </Cluster>
 
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 3-column hairline stat grid: the 1px (gap-px) gaps reveal the bg-border as cell separators, a hairline technique the Grid gap ramp can't express */}
-      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border bg-border">
-        {/* Wait is the DERIVED sum of every wait; Work is the rest of the
-                span. Wait + Work == Total exactly, for every kind, because the
-                waits are disjoint intervals inside the span.
+      <div
+        // eslint-disable-next-line layout/no-adhoc-layout -- fixed 3- or 4-column hairline stat grid: the 1px (gap-px) gaps reveal the bg-border as cell separators, a hairline technique the Grid gap ramp can't express
+        className={`grid ${data.asleepMs > 0 ? "grid-cols-4" : "grid-cols-3"} gap-px overflow-hidden rounded-md border bg-border`}
+      >
+        {/* Wait, Asleep and Work come from the reducer's ONE breakdown: Wait
+                is the waits' wall extent minus any nap inside them, Asleep the
+                union of the naps (shown only when there was one), and Work the
+                rest of the span. Wait + Work + Asleep == Total exactly, for
+                every kind — a nap is never counted as a wait or as work.
 
                 Deliberately NOT `holdMs`: it is `completedAt - grantedAt`, and a
                 build grants at the build lock ~1ms in, so its later host-grant /
@@ -265,7 +299,11 @@ function OpDetailView({ row, now }: { row: OpRow; now: number }): ReactElement {
                 build's real work by the whole queue time. `holdMs` is still on
                 the wire for anyone who wants the entry-ticket hold. */}
         <Stat label="Wait" value={data.waitMs} />
-        <Stat label="Work" value={Math.max(0, data.totalMs - data.waitMs)} />
+        <Stat
+          label="Work"
+          value={Math.max(0, data.totalMs - data.waitMs - data.asleepMs)}
+        />
+        {data.asleepMs > 0 && <Stat label="Asleep" value={data.asleepMs} />}
         <Stat label="Total" value={data.totalMs} />
       </div>
 
@@ -279,7 +317,7 @@ function OpDetailView({ row, now }: { row: OpRow; now: number }): ReactElement {
               <Badge
                 key={`${w.kind}:${i}`}
                 colorClass={`${waitFillClass(w.kind)}/15`}
-                title={`${waitLabel(w)} · +${formatDuration(w.startMs)} into the op`}
+                title={`${waitLabel(w)} · +${formatDuration(waitPlacement(w).startMs)} into the op`}
               >
                 {formatStatusLabel(w.kind)} {formatDuration(w.durationMs)}
                 {w.cycle > 0 && ` · #${w.cycle}`}

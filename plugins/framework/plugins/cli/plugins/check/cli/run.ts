@@ -247,16 +247,20 @@ const run: CliAction<
         // stamp the check's end as its start).
         //
         // CLOCK. `wallStartMs` is a `performance.now()` reading (runner.ts)
-        // despite the name — monotonic, NOT a `Date.now()` epoch. It is passed
-        // through untouched because `recordStep` takes that clock by contract:
-        // it pairs `performance.now()` with `grantedAt` at the grant instant,
-        // so the step's offset is an exact monotonic subtraction. Converting
-        // here (`performance.timeOrigin + wallStartMs`) would look equivalent
-        // and would instead bake in `timeOrigin`'s process-start capture error
-        // — ~6ms under the load where this profiler earns its keep.
+        // despite the name — monotonic, NOT a `Date.now()` epoch — while
+        // `recordStep` takes a WALL instant (the op's one axis; the monotonic
+        // clock pauses while the machine sleeps). It is converted here, paired
+        // at THIS instant: wall now minus the monotonic time since the start.
+        // Not `performance.timeOrigin + wallStartMs`, which would bake in
+        // `timeOrigin`'s process-start capture error (~6ms under load) and
+        // every nap since the process started.
         onCheckDone: profiler
           ? (id, durationMs, wallStartMs) =>
-              profiler.recordStep(id, durationMs, wallStartMs)
+              profiler.recordStep(
+                id,
+                durationMs,
+                Date.now() - (performance.now() - wallStartMs),
+              )
           : undefined,
         noCache: opts.cache === false,
         // Commander hands every `<n>` option through as a string, so the

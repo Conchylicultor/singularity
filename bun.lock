@@ -3443,6 +3443,10 @@
       "name": "@singularity/plugin-infra-host-host-read-pool",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/host/plugins/machine-sleep": {
+      "name": "@singularity/plugin-infra-host-machine-sleep",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/html-decode": {
       "name": "@singularity/plugin-infra-html-decode",
       "version": "0.0.1",
@@ -8008,6 +8012,8 @@
     "@singularity/plugin-infra-host-host-admission": ["@singularity/plugin-infra-host-host-admission@workspace:plugins/infra/plugins/host/plugins/host-admission"],
 
     "@singularity/plugin-infra-host-host-read-pool": ["@singularity/plugin-infra-host-host-read-pool@workspace:plugins/infra/plugins/host/plugins/host-read-pool"],
+
+    "@singularity/plugin-infra-host-machine-sleep": ["@singularity/plugin-infra-host-machine-sleep@workspace:plugins/infra/plugins/host/plugins/machine-sleep"],
 
     "@singularity/plugin-infra-html-decode": ["@singularity/plugin-infra-html-decode@workspace:plugins/infra/plugins/html-decode"],
 

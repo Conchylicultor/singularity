@@ -32,6 +32,8 @@ import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip
 import { WAIT_KINDS } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import type { OpRow } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
 import { OP_KINDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
+import { useSleepNowForFold } from "@plugins/infra/plugins/host/plugins/machine-sleep/web";
+import type { SleepNow } from "@plugins/infra/plugins/host/plugins/machine-sleep/core";
 import {
   formatElapsed,
   useNow,
@@ -110,7 +112,7 @@ const PHASE_LABEL: Record<RowPhase, string> = {
 
 const TIME_CELL = "font-mono tabular-nums";
 
-/** A waited / worked cell: a faint dash under a second, dimmed when `dim`. */
+/** A waited / worked / asleep cell: a faint dash under a second, dimmed when `dim`. */
 function TimeCell({ ms, dim }: { ms: number; dim: boolean }) {
   if (ms < 1000)
     return <span className={cn(TIME_CELL, "text-muted-foreground/30")}>—</span>;
@@ -126,14 +128,22 @@ function TimeCell({ ms, dim }: { ms: number; dim: boolean }) {
   );
 }
 
-function RowTooltip({ item, now }: { item: QueueRow; now: number }) {
-  const times = timesOf(item.row, now);
+/** The machine's sleep clock and the presentational tick, for every clock cell. */
+interface Clocks {
+  now: number;
+  sleepNow: SleepNow;
+}
+
+// "worked" never counts a nap; the asleep part shows only when there was one.
+function RowTooltip({ item, clocks }: { item: QueueRow; clocks: Clocks }) {
+  const times = timesOf(item.row, clocks.now, clocks.sleepNow);
   return (
     <Stack gap="2xs">
-      <span>{stateLine(item.row, now)}</span>
+      <span>{stateLine(item.row, clocks.now, clocks.sleepNow)}</span>
       <span className="text-muted-foreground">
         waited {formatElapsed(times.waitingMs)} · worked{" "}
         {formatElapsed(times.workingMs)}
+        {times.asleepMs > 0 && ` · asleep ${formatElapsed(times.asleepMs)}`}
       </span>
     </Stack>
   );
@@ -143,14 +153,17 @@ function RowTooltip({ item, now }: { item: QueueRow; now: number }) {
 function TitleCell({
   item,
   title,
-  now,
+  clocks,
 }: {
   item: QueueRow;
   title: string | undefined;
-  now: number;
+  clocks: Clocks;
 }) {
   return (
-    <WithTooltip content={<RowTooltip item={item} now={now} />} side="left">
+    <WithTooltip
+      content={<RowTooltip item={item} clocks={clocks} />}
+      side="left"
+    >
       <span
         className={cn(
           "block truncate",
@@ -196,7 +209,7 @@ export function OpenConversationAction({
  */
 interface BannerChrome {
   op: OpRow;
-  now: number;
+  clocks: Clocks;
   others: number;
   expanded: boolean;
   toggle: () => void;
@@ -218,9 +231,9 @@ function useBannerChrome(): BannerChrome {
  * come back as `body`, drawn only while expanded.
  */
 function OpStatusCard({ options, body }: HostedToolbarParts) {
-  const { op, now, others, expanded, toggle } = useBannerChrome();
+  const { op, clocks, others, expanded, toggle } = useBannerChrome();
   const waiting = op.openWait !== null;
-  const times = timesOf(op, now);
+  const times = timesOf(op, clocks.now, clocks.sleepNow);
   return (
     <Clip
       className={`rounded-md border ${
@@ -244,7 +257,7 @@ function OpStatusCard({ options, body }: HostedToolbarParts) {
           >
             <StateIcon waiting={waiting} />
             <Fill as="span" className="truncate">
-              {stateLine(op, now)}
+              {stateLine(op, clocks.now, clocks.sleepNow)}
             </Fill>
             {others > 0 && (
               <span className={cn("text-muted-foreground", rigidClass())}>
@@ -290,13 +303,17 @@ const CARD_TOOLBAR: HostedToolbar = { kind: "hosted", frame: OpStatusCard };
  * The expanded list's schema: one table row per in-flight op, grouped by
  * section (op kind). Only the two clocks are labelled — once, on the first
  * section header (`columnHeader: "first-group"`); the glyph, position, title
- * and held columns read from their cells.
+ * and held columns read from their cells. The asleep clock is hidden by
+ * default (a nap is rare and the row tooltip already names it) and revealed
+ * from the list's Properties.
  */
 function queueFields(
   sectionOptions: { value: OpKind; label: string }[],
   titleBySlug: Readonly<Record<string, string>>,
-  now: number,
+  clocks: Clocks,
 ): FieldDef<QueueTableRow>[] {
+  const times = (r: QueueTableRow) =>
+    timesOf(r.row, clocks.now, clocks.sleepNow);
   return [
     {
       id: "section",
@@ -346,7 +363,9 @@ function queueFields(
       primary: true,
       value: (r) => titleBySlug[r.slug] ?? r.slug,
       width: "minmax(0,1fr)",
-      cell: (r) => <TitleCell item={r} title={titleBySlug[r.slug]} now={now} />,
+      cell: (r) => (
+        <TitleCell item={r} title={titleBySlug[r.slug]} clocks={clocks} />
+      ),
     },
     {
       id: "held",
@@ -370,29 +389,38 @@ function queueFields(
       label: "Waited",
       header: "waited",
       type: "number",
-      value: (r) => timesOf(r.row, now).waitingMs,
+      value: (r) => times(r).waitingMs,
       // Content-sized: one grid, so every section's clock lines up with the
       // widest cell or the label (+ its sort icon) on the first header.
       width: "auto",
       align: "end",
-      cell: (r) => <TimeCell ms={timesOf(r.row, now).waitingMs} dim />,
+      cell: (r) => <TimeCell ms={times(r).waitingMs} dim />,
     },
     {
       id: "worked",
       label: "Worked",
       header: "worked",
       type: "number",
-      value: (r) => timesOf(r.row, now).workingMs,
+      value: (r) => times(r).workingMs,
       // Content-sized: one grid, so every section's clock lines up with the
       // widest cell or the label (+ its sort icon) on the first header.
       width: "auto",
       align: "end",
       cell: (r) => (
-        <TimeCell
-          ms={timesOf(r.row, now).workingMs}
-          dim={phaseOf(r.row) === "queued"}
-        />
+        <TimeCell ms={times(r).workingMs} dim={phaseOf(r.row) === "queued"} />
       ),
+    },
+    {
+      id: "asleep",
+      label: "Asleep",
+      header: "asleep",
+      type: "number",
+      value: (r) => times(r).asleepMs,
+      // Hidden until a user turns it on from the list's Properties.
+      visible: false,
+      width: "auto",
+      align: "end",
+      cell: (r) => <TimeCell ms={times(r).asleepMs} dim />,
     },
   ];
 }
@@ -413,8 +441,11 @@ export function OpStatusBanner({
   const result = useOpsInFlight();
   const titleBySlug = useConversationTitleBySlug();
   const openPane = useOpenPane();
-  // A presentational 1 s ticker for the clocks; the op state itself is pushed.
+  // A presentational 1 s ticker for the clocks; the op state itself is pushed,
+  // and so is the machine's sleep clock (it changes only on a wake).
   const now = useNow(1000);
+  const sleepNow = useSleepNowForFold();
+  const clocks = useMemo<Clocks>(() => ({ now, sleepNow }), [now, sleepNow]);
   const [expanded, setExpanded] = useState(false);
 
   const selfSlug = slugOf(conversation.worktreePath);
@@ -426,13 +457,13 @@ export function OpStatusBanner({
       op && data
         ? {
             op,
-            now,
+            clocks,
             others: data.length - 1,
             expanded,
             toggle: () => setExpanded((v) => !v),
           }
         : null,
-    [op, data, now, expanded],
+    [op, data, clocks, expanded],
   );
 
   // buildSections is the order authority (self section first, global push
@@ -452,8 +483,8 @@ export function OpStatusBanner({
   }, [data, selfSlug]);
 
   const fields = useMemo(
-    () => queueFields(sectionOptions, titleBySlug, now),
-    [sectionOptions, titleBySlug, now],
+    () => queueFields(sectionOptions, titleBySlug, clocks),
+    [sectionOptions, titleBySlug, clocks],
   );
 
   if (result.status === "loading") return null;

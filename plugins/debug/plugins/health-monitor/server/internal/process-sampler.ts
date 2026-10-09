@@ -26,6 +26,7 @@ import {
   createSleepMeter,
   type SleepMeter,
 } from "@plugins/packages/plugins/sleep-clock/core";
+import { publishSleepReading } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
 
 // Per-backend health sampler. Installed in the server plugin's `onReady` and
 // torn down in `onShutdown`. It samples this process's own event-loop lag, GC
@@ -149,6 +150,11 @@ function tick(): void {
       ? slept.sleptMs
       : undefined;
   if (wallJumpMs !== undefined || sleptMs !== undefined) histogram.reset();
+  // The machine.sleep live value rides this tick: the sampler is already the
+  // periodic observer of this process, so a wake reaches the browser within one
+  // SAMPLE_INTERVAL_MS (≤10 s) without a poller of its own (no-polling rule).
+  // It pushes only when the reading changed, i.e. after a wake.
+  publishSleepReading();
   const mem = process.memoryUsage();
   const meter = getSelfMeter();
   const proc = procMemory();
@@ -237,6 +243,8 @@ export function startProcessSampler(): void {
   lastMonitorMs = meter.totalMs;
   lastTickAt = Date.now();
   sleepMeter = createSleepMeter();
+  // Known from boot, not from the first tick 10 s later.
+  publishSleepReading();
   // Arm the on-stall stack-trace flight recorder. Main: always, at boot (the
   // UX-critical backend). Worktree backends: arm-on-elevated in tick() — see
   // the STALL_ARM_* constants.

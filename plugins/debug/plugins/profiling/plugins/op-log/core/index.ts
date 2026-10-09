@@ -11,6 +11,8 @@ export type {
   OpLiveTimes,
   OpOutcome,
   OpRecord,
+  OpSleep,
+  OpSleepStamp,
   OpStep,
   OpSummary,
   OpWait,
@@ -18,6 +20,7 @@ export type {
   OpenWait,
   OutcomeByKind,
   RawOpRecord,
+  SleepStamp,
   TerminalOutcome,
   WaitKind,
   WaitKindMeta,
@@ -25,6 +28,7 @@ export type {
 } from "./internal/types";
 export { WAIT_KINDS } from "./internal/types";
 export {
+  advanceSleeps,
   applyOpEvent,
   emptyOpState,
   foldOpLines,

@@ -38,7 +38,8 @@ export { DragSelection } from "./components/drag-selection";
 export type { DragState } from "./components/drag-selection";
 export { WaitWorkRow } from "./components/wait-work-row";
 export { MultiSpanLane } from "./components/multi-span-lane";
-export type { SpanBar } from "./components/multi-span-lane";
+export type { SpanBar, SpanOverlay } from "./components/multi-span-lane";
+export { HATCH_CLASS, HATCH_STYLE } from "./components/hatch";
 
 export default {
   description: "Gantt chart of build steps and server startup phases.",

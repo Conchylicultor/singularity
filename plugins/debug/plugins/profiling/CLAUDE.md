@@ -47,6 +47,7 @@
     - `ProfilingContextValue`
     - `Span`
     - `SpanBar`
+    - `SpanOverlay`
     - `ZoomWindow`
   - Exports (values):
     - `DragSelection`
@@ -54,6 +55,8 @@
     - `GanttContainer`
     - `GanttSection`
     - `groupByPhase`
+    - `HATCH_CLASS`
+    - `HATCH_STYLE`
     - `MIN_BAR_FRACTION`
     - `minBarSize`
     - `MultiSpanLane`

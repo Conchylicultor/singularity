@@ -52,9 +52,9 @@ since `requested`, the clock every wait offset is on).
 
 `core/internal/fold.ts` is the ONE reducer every reader uses —
 `applyOpEvent(state, line)` / `foldOpLines(lines)` → `OpFoldState` (plain data
-that maps onto a DB row), `toOpRecord(state, now)` → the read model, and
-`liveTimes(state, now)` → waited vs worked. Rules: a terminal wins and every
-line after it is ignored; a non-terminal event applies only when
+that maps onto a DB row), `toOpRecord(state, now, sleepNow)` → the read model,
+and `liveTimes(state, now, sleepNow)` → waited vs worked vs asleep. Rules: a
+terminal wins and every line after it is ignored; a non-terminal event applies only when
 `seq > lastSeq` (re-ingest is idempotent); an op whose `requested` was clipped
 away is *headless* and renders nothing until its self-contained terminal.
 
@@ -101,6 +101,26 @@ post-`granted` waits came to be dropped in the first place.
 `toOpRecord` and `liveTimes` take `now` as a **parameter**; they never read the
 clock. That is what makes the live synthesis testable (`core/fold.test.ts` for
 legacy lines, `core/fold-v2.test.ts` for the event stream).
+
+## Sleep: a nap is neither work nor waiting
+
+`t` is `performance.now()`, which **pauses while the machine sleeps**; `at`,
+`totalMs` and the live tail are wall clock. So every event also carries `sleep`
+— the machine's sleep clock (`packages/sleep-clock`: boot id + cumulative
+`asleepMs` since boot + last wake). Two stamps of one boot differ by exactly the
+sleep between them; `advanceSleeps` (the ONE rule, shared by the reducer, the
+writer's running fold, the reconciler's close and the reader's live tail) turns
+that into an `OpSleep` on the wall axis — exact when the stamp's `wakeAtMs` falls
+in the gap, else pinned to the gap's end (`approx`). A new boot resets the stamp
+and invents nothing; a line without a stamp leaves it untouched (a legacy op folds
+with `sleeps: []`). Each wait also carries its wall extent (`atMs`/`wallMs`).
+
+`sleepNow` (the reader's current reading, `null` = unknown) is a **required**
+parameter so no call site silently drops the live tail. The read model's split
+is ONE helper (`breakdown`): asleep = union of sleeps; waiting = the waits' wall
+extent minus sleep; working = the rest — so `waitingMs + workingMs + asleepMs ===
+elapsedMs` by construction, and `OpRecord.waitMs`/`asleepMs` come from it. Plan:
+[`research/2026-10-08-global-op-sleep-accounting.md`](../../../../../../research/2026-10-08-global-op-sleep-accounting.md).
 
 ## One identity field: `opSlug`
 
@@ -166,17 +186,21 @@ a `SyntaxError` is skipped, anything else rethrows.
     - `OpLiveTimes`
     - `OpOutcome`
     - `OpRecord`
+    - `OpSleep`
+    - `OpSleepStamp`
     - `OpStep`
     - `OpSummary`
     - `OpWait`
     - `OpWaitSpan`
     - `OutcomeByKind`
     - `RawOpRecord`
+    - `SleepStamp`
     - `TerminalOutcome`
     - `WaitKind`
     - `WaitKindMeta`
     - `WaitResult`
   - Exports (values):
+    - `advanceSleeps`
     - `applyOpEvent`
     - `emptyOpState`
     - `foldOpLines`
@@ -202,6 +226,7 @@ a `SyntaxError` is skipped, anything else rethrows.
     - `readOpenWait`
     - `readOpRecords`
     - `readOpStates`
+    - `readSleepNow`
 - Sub-plugins:
   - **`op-store`** — Op-store web presence: eagerly registers the boot-critical op-store.in-flight live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the…
 

@@ -34,6 +34,7 @@ import type {
   OpSummary,
   OpLine,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import { opRowToFoldState } from "../../core/internal/schemas";
 import { drainOpLog } from "./ingest";
 import { reconcileOps } from "./reconcile";
 import { OP_LOG_SOURCE, readCursor } from "./store";
@@ -328,6 +329,52 @@ describe("drainOpLog", () => {
   });
 });
 
+describe("sleep columns", () => {
+  const HOUR = 3_600_000;
+  const zz = (asleepMs: number, wakeAtMs?: number) =>
+    wakeAtMs === undefined
+      ? { boot: "boot-A", asleepMs }
+      : { boot: "boot-A", asleepMs, wakeAtMs };
+
+  test("stamped events round-trip sleeps and the last stamp", async () => {
+    writeFileSync(
+      path,
+      line({ ...requested("op-nap"), sleep: zz(1_000) }) +
+        line({
+          ...waitStart("op-nap", 2, 100),
+          at: iso(HOUR + 100),
+          sleep: zz(1_000 + HOUR - 10_000, T0 + HOUR),
+        }),
+    );
+    await drain();
+    const r = await row("op-nap");
+    expect(r?.sleeps).toEqual([
+      { startMs: 10_000, durationMs: HOUR - 10_000, approx: false },
+    ]);
+    expect(r?.sleepStamp).toEqual({
+      boot: "boot-A",
+      asleepMs: 1_000 + HOUR - 10_000,
+      atMs: T0 + HOUR + 100,
+    });
+    // …and back into the reducer, so the next line continues the fold.
+    const state = opRowToFoldState(r!);
+    expect(state.sleeps).toEqual(r!.sleeps);
+    expect(state.sleepStamp).toEqual(r!.sleepStamp);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test("a row stored before the columns existed reads as no sleep", async () => {
+    await t.db.execute(sql`
+      INSERT INTO op_log_ops (op_id, kind, branch, requested_at, waits, steps)
+      VALUES ('op-old', 'push', 'b', ${iso(0)}, '[]'::jsonb, '[]'::jsonb)
+    `);
+    const r = await row("op-old");
+    expect(r?.sleeps).toEqual([]);
+    expect(r?.sleepStamp).toBeNull();
+    expect(opRowToFoldState(r!).sleeps).toEqual([]);
+  });
+});
+
 describe("reconcileOps", () => {
   test("main appends a reconciler terminal for a dead op, which then ingests", async () => {
     writeFileSync(
@@ -347,6 +394,7 @@ describe("reconcileOps", () => {
         appendFileSync(path, line(ev));
       },
       now: () => T0 + 5_000,
+      sleepNow: () => ({ boot: "boot-A", asleepMs: 7, wakeAtMs: null }),
     });
     expect(r).toEqual({ appended: 1, closedLocally: 0 });
     expect(appended[0]).toMatchObject({
@@ -354,6 +402,8 @@ describe("reconcileOps", () => {
       e: "completed",
       by: "reconciler",
       seq: 3,
+      // The closing event carries the reconciler's own sleep reading.
+      sleep: { boot: "boot-A", asleepMs: 7 },
     });
     await drain();
     expect(await row("op-dead")).toMatchObject({

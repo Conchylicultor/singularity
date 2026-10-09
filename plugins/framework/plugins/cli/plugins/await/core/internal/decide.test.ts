@@ -34,6 +34,8 @@ function record(opId: string, outcome: OpRecord["outcome"]): OpRecord {
     interrupted: false,
     closedBy: null,
     steps: [],
+    sleeps: [],
+    asleepMs: 0,
   };
 }
 

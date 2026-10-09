@@ -1,6 +1,8 @@
 import { useMemo, type ReactElement, type ReactNode } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
+import { useSleepNowForFold } from "@plugins/infra/plugins/host/plugins/machine-sleep/web";
+import type { SleepNow } from "@plugins/infra/plugins/host/plugins/machine-sleep/core";
 import { useConversationTitleBySlug } from "@plugins/conversations/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
@@ -28,9 +30,12 @@ interface LiveOpGanttProps {
 // rows themselves are pushed.
 const TICK_MS = 5000;
 
+// The machine's sleep clock rides with `now`: only an in-flight op's tail can
+// hold a nap no event has recorded yet.
 function TickingGantt(props: LiveOpGanttProps): ReactElement {
   const now = useNow(TICK_MS);
-  return <GanttAt {...props} now={now} />;
+  const sleepNow = useSleepNowForFold();
+  return <GanttAt {...props} now={now} sleepNow={sleepNow} />;
 }
 
 function GanttAt({
@@ -39,19 +44,20 @@ function GanttAt({
   highlightWorktree,
   empty,
   now,
-}: LiveOpGanttProps & { now: number }): ReactElement {
+  sleepNow,
+}: LiveOpGanttProps & { now: number; sleepNow: SleepNow }): ReactElement {
   const titleBySlug = useConversationTitleBySlug();
   const openPane = useOpenPane();
   const onOpClick = useOpClick();
   const data = useMemo(() => {
-    const records = recordsAt(rows, now);
+    const records = recordsAt(rows, now, sleepNow);
     return groupOps(
       span
         ? overlapping(records, span.startMs, span.endMs ?? Infinity)
         : records,
       titleBySlug,
     );
-  }, [rows, now, span, titleBySlug]);
+  }, [rows, now, sleepNow, span, titleBySlug]);
 
   if (data.groups.length === 0) return <>{empty}</>;
   return (
@@ -79,14 +85,14 @@ function GanttAt({
 /**
  * The op Gantt over live `opsHistory` rows: projected to read-model records in
  * the browser, grouped per worktree, labelled with conversation titles. Ticks
- * only while something is in flight — a closed op's record does not depend on
- * `now`, so a settled chart renders once.
+ * (and reads the machine's sleep clock) only while something is in flight — a
+ * closed op's record depends on neither, so a settled chart renders once.
  */
 export function LiveOpGantt(props: LiveOpGanttProps): ReactElement {
   const inFlight = props.rows.some((r) => r.closedBy === null);
   return inFlight ? (
     <TickingGantt {...props} />
   ) : (
-    <GanttAt {...props} now={0} />
+    <GanttAt {...props} now={0} sleepNow={null} />
   );
 }

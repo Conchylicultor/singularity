@@ -3,14 +3,22 @@ import type {
   Lane,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { OpKind } from "@plugins/infra/plugins/worktree/core";
-import type {
-  OpEvent,
-  OpStep,
-  OpSummary,
-  OpWait,
-  OutcomeByKind,
-  WaitKind,
-  WaitResult,
+import {
+  readSleepClock,
+  type SleepClockReading,
+} from "@plugins/packages/plugins/sleep-clock/core";
+import {
+  advanceSleeps,
+  type OpEvent,
+  type OpSleep,
+  type OpSleepStamp,
+  type OpStep,
+  type OpSummary,
+  type OpWait,
+  type OutcomeByKind,
+  type SleepStamp,
+  type WaitKind,
+  type WaitResult,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import { appendOpLog } from "./jsonl";
 
@@ -22,7 +30,12 @@ import { appendOpLog } from "./jsonl";
 //
 // Every event carries a per-op `seq` (so re-ingest is idempotent), the wall
 // instant `at`, and `t` — monotonic ms since `requested`, the clock every wait
-// offset is measured on so a wall-clock step cannot bend a duration.
+// offset is measured on so a wall-clock step cannot bend a duration — and, when
+// the platform has one, `sleep`: the machine's sleep clock at `at`. The writer
+// folds those stamps itself (through the reducer's own `advanceSleeps`) and
+// puts the sleeps in the summary, and every wait carries its WALL extent
+// (`atMs`/`wallMs`) beside its `t` one: `t` pauses while the machine sleeps, so
+// only the wall axis puts a wait where it really was.
 //
 // Every method is a closure, never a `this`-dependent method: the push command
 // passes `profiler.markLockRequested`-style bare references around, so a
@@ -55,6 +68,11 @@ export interface OpProfilerOptions {
    * assert the event stream without touching the user's real log.
    */
   sink?: (event: OpEvent) => void;
+  /**
+   * The machine's sleep clock. Defaults to `readSleepClock`; injectable so a
+   * test can drive naps without sleeping the machine.
+   */
+  readSleep?: () => SleepClockReading;
 }
 
 export interface OpProfiler<K extends OpKind> {
@@ -96,33 +114,39 @@ export interface OpProfiler<K extends OpKind> {
    * through `stepStart`/`stepEnd` (which both read `Date.now()` themselves)
    * would stamp `startMs` = the check's END and `durationMs` ≈ 0 — fabricated.
    *
-   * `startedAtPerfMs` is a `performance.now()` reading — the MONOTONIC clock,
-   * not `Date.now()`. That is deliberate, and it is what makes the offset exact:
-   * `OpStep.startMs` is a *duration* from `grantedAt`, and measuring a duration
-   * requires both instants on one clock. This profiler samples `performance.now()`
-   * alongside `grantedAt` in `markGranted`, so the offset is a plain monotonic
-   * subtraction with NO cross-clock conversion in it.
-   *
-   * Converting via `performance.timeOrigin` instead would look equivalent and
-   * isn't: `timeOrigin` is a wall≈monotonic snapshot taken once at process start,
-   * so its capture error (measured at ~1ms idle, ~6ms under load average 20 —
-   * exactly when this profiler matters most) is baked into every step for the
-   * life of the process. Pairing the clocks at the reference instant has no such
-   * error, and keeps the mapping in ONE place instead of at every call site.
+   * `startedAtMs` is a WALL instant (epoch ms, `Date.now()`'s clock) — the same
+   * clock as `grantedAt`, `stepStart`/`stepEnd` and the op's whole axis. Steps
+   * used to be offset on `performance.now()`, which pauses while the machine
+   * sleeps: after a nap every later step sat too early on the wall-clock bar.
+   * One clock for every offset; a monotonic caller converts at its call site.
    */
-  recordStep(name: string, durationMs: number, startedAtPerfMs: number): void;
+  recordStep(name: string, durationMs: number, startedAtMs: number): void;
   /** Record the terminal outcome. `write()` is what lands it. */
   complete(outcome: OutcomeByKind[K]): void;
   /** Append the self-contained terminal `completed` event. Idempotent. */
   write(): void;
 }
 
-/** The open wait, in the writer's own terms (`startT` on the monotonic clock). */
+/**
+ * The open wait, in the writer's own terms: `startT` on the monotonic clock,
+ * `startWallMs` the same instant on the wall clock.
+ */
 interface OpenWaitState {
   kind: WaitKind;
   startT: number;
+  startWallMs: number;
   reason: string | null;
   cycle: number;
+}
+
+/** A sleep-clock reading as an event stamp, or `undefined` where unsupported. */
+function stampOf(reading: SleepClockReading): SleepStamp | undefined {
+  if (!reading.supported) return undefined;
+  // Whole ms, the grid every other offset is on.
+  const asleepMs = Math.round(reading.asleepMs);
+  return reading.wakeAtMs === null
+    ? { boot: reading.boot, asleepMs }
+    : { boot: reading.boot, asleepMs, wakeAtMs: Math.round(reading.wakeAtMs) };
 }
 
 export function createOpProfiler<K extends OpKind>(
@@ -131,9 +155,12 @@ export function createOpProfiler<K extends OpKind>(
 ): OpProfiler<K> {
   const conversationId = process.env.SINGULARITY_CONVERSATION_ID ?? null;
   const sink = opts.sink ?? ((event: OpEvent) => appendOpLog(event));
+  const readSleep = opts.readSleep ?? readSleepClock;
 
   const requestedAt = new Date();
   const requestedMs = requestedAt.getTime();
+  /** The sleep clock at `requestedAt`, stamped on the `requested` event. */
+  const requestedSleep = stampOf(readSleep());
   /** The monotonic reading paired with `requestedAt` — `t`'s zero. */
   const requestedPerfMs = performance.now();
   /** Monotonic ms since `requested`, on the integer grid every offset uses. */
@@ -141,13 +168,6 @@ export function createOpProfiler<K extends OpKind>(
     Math.max(0, Math.round(performance.now() - requestedPerfMs));
 
   let grantedAt: Date | undefined;
-  /**
-   * `performance.now()` sampled at the same instant as `grantedAt`. The two are
-   * a PAIR — the one reference point, read on both clocks — which is what lets
-   * `recordStep` express a monotonic caller's start as an exact offset from a
-   * wall-clock `grantedAt`. Only ever set together with `grantedAt`.
-   */
-  let grantedPerfMs: number | undefined;
   let completedAt: Date | undefined;
   let outcome: OutcomeByKind[K] | undefined;
   let requestedWritten = false;
@@ -158,21 +178,22 @@ export function createOpProfiler<K extends OpKind>(
   const waits: OpWait[] = [];
   let openWait: OpenWaitState | null = null;
 
+  // The writer's running sleep fold — the reducer's own rule, over every stamp
+  // this profiler emits, so the summary's `sleeps` are what a reader folding
+  // the whole stream would get.
+  let sleeps: OpSleep[] = [];
+  let sleepStamp: OpSleepStamp | null = null;
+
   const steps: OpStep[] = [];
   const stepStarts = new Map<string, number>();
 
   // `OpStep.startMs` is an offset from `grantedAt` (see core/internal/types.ts).
   // Before `markGranted` there is no reference instant yet, so the step pins to
   // 0; not clamped otherwise, because a genuinely-negative offset is a real
-  // signal. Rounded onto the same integer-ms grid as the waits.
-
-  /** For `stepEnd`, whose instants are `Date.now()` — same clock as `grantedAt`. */
-  const stepOffsetWall = (startedAtMs: number): number =>
+  // signal. Rounded onto the same integer-ms grid as the waits. Every step
+  // instant is wall clock — the same clock as `grantedAt`.
+  const stepOffset = (startedAtMs: number): number =>
     grantedAt ? Math.round(startedAtMs - grantedAt.getTime()) : 0;
-
-  /** For `recordStep`, whose instants are `performance.now()`. */
-  const stepOffsetPerf = (startedAtPerfMs: number): number =>
-    grantedPerfMs != null ? Math.round(startedAtPerfMs - grantedPerfMs) : 0;
 
   const identity = () => ({
     kind,
@@ -190,18 +211,33 @@ export function createOpProfiler<K extends OpKind>(
       : never
     : never;
 
+  /** Fold a stamp taken at `atMs` into the running sleeps. */
+  const foldSleep = (sleep: SleepStamp | undefined, atMs: number): void => {
+    if (sleep === undefined) return;
+    ({ sleeps, stamp: sleepStamp } = advanceSleeps(
+      sleeps,
+      sleepStamp,
+      sleep,
+      atMs,
+      requestedMs,
+    ));
+  };
+
   const emit = (
     body: Body,
     t: number = tNow(),
     at: Date = new Date(),
+    sleep: SleepStamp | undefined = stampOf(readSleep()),
   ): void => {
     seq++;
+    foldSleep(sleep, at.getTime());
     sink({
       v: 2,
       opId: opts.opId,
       seq,
       at: at.toISOString(),
       t,
+      ...(sleep === undefined ? {} : { sleep }),
       ...body,
     } as OpEvent);
   };
@@ -209,7 +245,12 @@ export function createOpProfiler<K extends OpKind>(
   const markRequested = (): void => {
     if (requestedWritten) return;
     requestedWritten = true;
-    emit({ e: "requested", ...identity(), pid: process.pid }, 0, requestedAt);
+    emit(
+      { e: "requested", ...identity(), pid: process.pid },
+      0,
+      requestedAt,
+      requestedSleep,
+    );
   };
 
   /** Every non-requested event goes through here, so identity always lands first. */
@@ -230,6 +271,8 @@ export function createOpProfiler<K extends OpKind>(
       reason: open.reason,
       cycle: open.cycle,
       result,
+      atMs: open.startWallMs - requestedMs,
+      wallMs: Math.max(0, Date.now() - open.startWallMs),
     };
     waits.push(closed);
     emitAfterRequested({
@@ -250,7 +293,13 @@ export function createOpProfiler<K extends OpKind>(
     // An unclosed previous wait would otherwise be lost; close it rather than
     // silently dropping the interval.
     closeOpenWait("aborted");
-    openWait = { kind: waitKind, startT: tNow(), reason, cycle };
+    openWait = {
+      kind: waitKind,
+      startT: tNow(),
+      startWallMs: Date.now(),
+      reason,
+      cycle,
+    };
     emitAfterRequested({ e: "wait-start", wait: waitKind, reason, cycle });
   };
 
@@ -303,6 +352,8 @@ export function createOpProfiler<K extends OpKind>(
           reason: null,
           cycle,
           result: "acquired",
+          atMs: Math.max(0, Date.now() - requestedMs - durationMs),
+          wallMs: durationMs,
         };
         waits.push(closed);
         emitAfterRequested({
@@ -319,10 +370,7 @@ export function createOpProfiler<K extends OpKind>(
 
     markGranted: () => {
       closeOpenWait("acquired");
-      // Both clocks, one instant — see `grantedPerfMs`. Kept adjacent so they
-      // cannot drift apart.
       grantedAt = new Date();
-      grantedPerfMs = performance.now();
       emitAfterRequested({ e: "granted" });
     },
 
@@ -336,17 +384,13 @@ export function createOpProfiler<K extends OpKind>(
       stepStarts.delete(name);
       steps.push({
         name,
-        startMs: stepOffsetWall(start),
+        startMs: stepOffset(start),
         durationMs: Date.now() - start,
       });
     },
 
-    recordStep: (name: string, durationMs: number, startedAtPerfMs: number) => {
-      steps.push({
-        name,
-        startMs: stepOffsetPerf(startedAtPerfMs),
-        durationMs,
-      });
+    recordStep: (name: string, durationMs: number, startedAtMs: number) => {
+      steps.push({ name, startMs: stepOffset(startedAtMs), durationMs });
     },
 
     complete: (o: OutcomeByKind[K]) => {
@@ -363,6 +407,10 @@ export function createOpProfiler<K extends OpKind>(
       markRequested();
 
       const completed = completedAt ?? new Date();
+      // The terminal's own stamp closes the sleep fold BEFORE the summary is
+      // built, so a nap between the last event and the end is in `sleeps`.
+      const completedSleep = stampOf(readSleep());
+      foldSleep(completedSleep, completed.getTime());
       // An op that ended before `markGranted` never held anything: hold is 0.
       const summary: OpSummary = {
         ...identity(),
@@ -378,8 +426,15 @@ export function createOpProfiler<K extends OpKind>(
         outcome: outcome ?? "error",
         interrupted: false,
         steps: [...steps],
+        sleeps: [...sleeps],
       };
-      emit({ e: "completed", by: "self", summary }, tNow(), completed);
+      // `emit` folds the same stamp again: a zero delta, so a no-op.
+      emit(
+        { e: "completed", by: "self", summary },
+        tNow(),
+        completed,
+        completedSleep,
+      );
     },
   };
 }

@@ -3,8 +3,10 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export {
   OpGantt,
   opFillClass,
+  sleepLabel,
   waitFillClass,
   waitLabel,
+  waitPlacement,
   type OpGanttProps,
   type OpData,
   type OpEntry,
@@ -13,6 +15,6 @@ export {
 
 export default {
   description:
-    "Reusable op (build / push / check) Gantt: one kind-colored bar per op with each wait painted as an overlay segment at its true in-span offset.",
+    "Reusable op (build / push / check) Gantt: one kind-colored bar per op with each wait painted as an overlay segment at its true in-span offset (wall clock), and each nap the machine slept through painted hatched as Asleep.",
   contributions: [],
 } satisfies PluginDefinition;

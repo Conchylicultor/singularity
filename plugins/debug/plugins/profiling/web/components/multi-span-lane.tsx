@@ -10,6 +10,7 @@ import { type ReactElement, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useGanttContainerContext } from "./gantt-container";
+import { HATCH_CLASS, HATCH_STYLE } from "./hatch";
 
 /**
  * One bar on a MultiSpanLane track. Fill (`colorClass`) answers "what is this?"
@@ -28,8 +29,22 @@ export interface SpanBar {
   colorClass: string;
   treatment?: "solid" | "pulse";
   /** Bar-relative, absolutely positioned. May gap and overlap. Painted OVER the work bar. */
-  overlays?: { startMs: number; ms: number; colorClass: string }[];
+  overlays?: SpanOverlay[];
 }
+
+/**
+ * One overlay on a SpanBar: a solid fill (`colorClass`, e.g. a wait's hue), or
+ * the shared hatch (`hatched`) for a stretch that was neither work nor a wait
+ * — the machine asleep. A hatched overlay is opaque, so the work bar's fill
+ * never shows through it. `title` is its hover label; an overlay with one
+ * takes the pointer (and forwards a click to the bar), one without is purely
+ * decorative.
+ */
+export type SpanOverlay = {
+  startMs: number;
+  ms: number;
+  title?: string;
+} & ({ colorClass: string; hatched?: false } | { hatched: true });
 
 /**
  * A generic Gantt lane hosting N absolute bars on one track. Mirrors SpanRow's
@@ -129,19 +144,39 @@ function Bar({
             : undefined
         }
       />
-      {/* Overlays at their true bar-relative offsets. pointer-events-none so a
-          click on an overlay still lands on the work bar beneath it. */}
+      {/* Overlays at their true bar-relative offsets. An untitled one is
+          decorative (pointer-events-none), so a click still lands on the work
+          bar beneath it; a titled one takes the hover and forwards the click. */}
       {overlays.map((o, i) => (
         <Placed
           key={`${bar.id}:o:${i}`}
-          decorative
+          decorative={o.title === undefined}
+          title={o.title}
           x={{
             start: pct(toLeftFraction(bar.startMs + o.startMs, totalMs)),
             size: pct(toWidthFraction(o.ms, totalMs)),
             minSize: minBarSize(o.ms),
           }}
           y="fill"
-          className={cn("rounded-md", o.colorClass)}
+          className={cn(
+            "rounded-md",
+            o.hatched ? cn("bg-background", HATCH_CLASS) : o.colorClass,
+            clickable && o.title !== undefined && "cursor-pointer",
+          )}
+          style={o.hatched ? HATCH_STYLE : undefined}
+          onPointerDown={
+            clickable && o.title !== undefined
+              ? (e) => e.stopPropagation()
+              : undefined
+          }
+          onClick={
+            clickable && o.title !== undefined
+              ? (e) => {
+                  e.stopPropagation();
+                  onBarClick(bar.id);
+                }
+              : undefined
+          }
         />
       ))}
     </>

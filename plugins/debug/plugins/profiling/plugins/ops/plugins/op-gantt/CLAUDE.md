@@ -9,7 +9,18 @@ vocabulary without a fill here is a type error.
 
 An op is **one bar** spanning `startMs → startMs + totalMs`, colored by `kind`,
 with each `waits[]` entry painted as an overlay segment at its own **true offset
-inside that span** (`OpWait.startMs` is relative to the op's own start).
+inside that span**, relative to the op's own start. The bar is on the **wall
+clock**, so a wait is placed by `waitPlacement(wait)`: its wall fields
+(`atMs`/`wallMs`) when present, else (a legacy line) its monotonic
+`startMs`/`durationMs` — which pause while the machine sleeps, so after a nap
+they would sit too early.
+
+Each `sleeps[]` entry (`OpEntry.sleeps`, wall axis) is painted **last**, opaque
+and hatched (the shared `HATCH_STYLE` / `HATCH_CLASS` from `debug/profiling/web`),
+over any wait it overlaps: a nap is neither work nor a wait. Its hover label is
+`sleepLabel(sleep)` — `Asleep 3h 40m`, plus `(position approximate)` when no
+wake instant placed it (its length is always exact). The legend gains an
+**Asleep** swatch when any op on screen slept.
 
 This is deliberately **not** the old `[wait][hold]` head-to-tail split:
 
@@ -76,11 +87,13 @@ kind dispatch.
 
 ## Plugin reference
 
-- Description: Reusable op (build / push / check) Gantt: one kind-colored bar per op with each wait painted as an overlay segment at its true in-span offset.
+- Description: Reusable op (build / push / check) Gantt: one kind-colored bar per op with each wait painted as an overlay segment at its true in-span offset (wall clock), and each nap the machine slept through painted hatched as Asleep.
 - Web:
   - Uses:
     - `debug/profiling.formatDuration`
     - `debug/profiling.GanttContainer`
+    - `debug/profiling.HATCH_CLASS`
+    - `debug/profiling.HATCH_STYLE`
     - `debug/profiling.minBarSize`
     - `debug/profiling.Span`
     - `debug/profiling.SpanDetail`
@@ -101,8 +114,10 @@ kind dispatch.
   - Exports (values):
     - `opFillClass`
     - `OpGantt`
+    - `sleepLabel`
     - `waitFillClass`
     - `waitLabel`
+    - `waitPlacement`
 - Cross-plugin:
   - Imported by: `debug/profiling/ops`
 

@@ -20,6 +20,8 @@ import {
 import {
   LaneSchema,
   OpKindSchema,
+  OpSleepSchema,
+  OpSleepStampSchema,
   OpStepSchema,
   OpWaitSchema,
   OpenWaitSchema,
@@ -67,6 +69,12 @@ export const _opLogOps = deriveUpdatedAt(
       totalMs: doublePrecision("total_ms").notNull().default(0),
       steps: parsedJson("steps", z.array(OpStepSchema)).notNull(),
       lastSeq: integer("last_seq").notNull().default(0),
+      // Wall-axis sleeps and the last sleep-clock stamp (see `OpFoldState`).
+      // The default reads a row stored before the column as "no sleep seen".
+      sleeps: parsedJson("sleeps", z.array(OpSleepSchema))
+        .notNull()
+        .default([]),
+      sleepStamp: parsedJson("sleep_stamp", OpSleepStampSchema),
       updatedAt: timestamp("updated_at", { withTimezone: true })
         .defaultNow()
         .notNull(),
@@ -107,6 +115,8 @@ export const _opLogOps = deriveUpdatedAt(
       totalMs: true,
       steps: true,
       lastSeq: true,
+      sleeps: true,
+      sleepStamp: true,
     },
   },
 );

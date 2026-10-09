@@ -2,6 +2,8 @@ import { z } from "zod";
 import {
   WAIT_KINDS,
   type OpFoldState,
+  type OpSleep,
+  type OpSleepStamp,
   type OpStep,
   type OpWait,
   type OpenWait,
@@ -74,6 +76,9 @@ export const OpWaitSchema = z.object({
   reason: z.string().nullable(),
   cycle: z.number(),
   result: WaitResultSchema.nullable(),
+  // The wall extent; absent on a legacy wait.
+  atMs: z.number().optional(),
+  wallMs: z.number().optional(),
 });
 
 export const OpenWaitSchema = z.object({
@@ -88,6 +93,18 @@ export const OpStepSchema = z.object({
   name: z.string(),
   startMs: z.number(),
   durationMs: z.number(),
+});
+
+export const OpSleepSchema = z.object({
+  startMs: z.number(),
+  durationMs: z.number(),
+  approx: z.boolean(),
+});
+
+export const OpSleepStampSchema = z.object({
+  boot: z.string(),
+  asleepMs: z.number(),
+  atMs: z.number(),
 });
 
 /**
@@ -131,6 +148,14 @@ export const OpRowSchema = z.object({
   steps: z.array(OpStepSchema),
   /** Highest v2 `seq` applied; 0 for a legacy op. */
   lastSeq: z.number().int(),
+  /**
+   * Sleeps folded so far (wall axis, ms after `requestedAt`); `[]` for an op
+   * from a writer without sleep stamps — and for every row stored before the
+   * column existed (its DB default).
+   */
+  sleeps: z.array(OpSleepSchema),
+  /** The last sleep stamp applied — where the next sleep's gap starts. */
+  sleepStamp: OpSleepStampSchema.nullable(),
 });
 export type OpRow = z.infer<typeof OpRowSchema>;
 
@@ -140,6 +165,10 @@ export type _PinOpenWait = Assert<
   Equal<z.infer<typeof OpenWaitSchema>, OpenWait>
 >;
 export type _PinStep = Assert<Equal<z.infer<typeof OpStepSchema>, OpStep>>;
+export type _PinSleep = Assert<Equal<z.infer<typeof OpSleepSchema>, OpSleep>>;
+export type _PinSleepStamp = Assert<
+  Equal<z.infer<typeof OpSleepStampSchema>, OpSleepStamp>
+>;
 export type _PinOutcome = Assert<
   Equal<(typeof TERMINAL_OUTCOMES)[number], TerminalOutcome>
 >;
@@ -186,5 +215,7 @@ export function opRowToFoldState(row: OpRow): OpFoldState {
     holdMs: row.holdMs,
     totalMs: row.totalMs,
     steps: row.steps,
+    sleeps: row.sleeps,
+    sleepStamp: row.sleepStamp,
   };
 }

@@ -4,6 +4,7 @@ export { OP_LOG_FILE, appendOpLog } from "./internal/jsonl";
 export { createOpProfiler } from "./internal/profiler";
 export type { OpProfiler, OpProfilerOptions } from "./internal/profiler";
 export { readOpenWait, readOpRecords, readOpStates } from "./internal/read";
+export { readSleepNow } from "./internal/sleep-now";
 // The pure types + fold live in `../core` (both runtimes share them); consumers
 // import them from there. Only the fs/process-touching writer and reader live
 // here; the orphan reconciler is the `op-store` child's (it reads the DB rows).
