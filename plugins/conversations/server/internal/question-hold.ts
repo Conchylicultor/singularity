@@ -33,6 +33,13 @@ export interface QuestionHoldSource {
    * write is the source's own.
    */
   reap(ids: readonly string[]): Promise<void>;
+  /**
+   * Hand the open holds of `ids` back to the CLI, which then draws its own
+   * menu: the user is sending a message instead of answering, and that menu is
+   * what the send dismisses (`sendTurn`). The write is the source's own; a
+   * conversation with nothing open is left alone.
+   */
+  release(ids: readonly string[]): Promise<void>;
 }
 
 const sources = new Set<QuestionHoldSource>();
@@ -69,4 +76,12 @@ export async function readQuestionHolds(
 export async function reapQuestionHolds(ids: readonly string[]): Promise<void> {
   if (ids.length === 0) return;
   for (const source of sources) await source.reap(ids);
+}
+
+/** Hand every source's open holds of `ids` back to the CLI's own menu. */
+export async function releaseQuestionHolds(
+  ids: readonly string[],
+): Promise<void> {
+  if (ids.length === 0) return;
+  for (const source of sources) await source.release(ids);
 }

@@ -10055,6 +10055,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `RewindRefusal`
     - Exports (values):
       - `BackgroundWorkSchema`
+      - `canSendTurn`
       - `closeConversation`
       - `conversationRoute`
       - `CONVERSATIONS_CATEGORY_ID`
@@ -10073,6 +10074,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ListTurnsQuerySchema`
       - `postConversationTurn`
       - `PostTurnBodySchema`
+      - `QUESTION_WAITING_FOR`
       - `ResumeBlockedReasonSchema`
       - `ResumeOutcomeSchema`
       - `RewindOutcomeSchema`

@@ -246,12 +246,14 @@ export async function getConversationRuntime(id: string): Promise<{
   status: Conversation["status"];
   runtime: string;
   claudeSessionId: string | null;
+  waitingFor: string | null;
 } | null> {
   const [row] = await db
     .select({
       status: _conversations.status,
       runtime: _conversations.runtime,
       claudeSessionId: _conversations.claudeSessionId,
+      waitingFor: _conversations.waitingFor,
     })
     .from(_conversations)
     .where(eq(_conversations.id, id))

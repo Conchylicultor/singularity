@@ -10,6 +10,8 @@ import {
   type Turn,
 } from "./claude-transcript";
 import { ensureResumed, ResumeBlockedError } from "./lifecycle";
+import { QUESTION_WAITING_FOR } from "../../core/turn-gate";
+import { releaseQuestionHolds } from "./question-hold";
 
 export type { Turn };
 
@@ -181,7 +183,19 @@ export async function sendTurn(id: string, text: string): Promise<void> {
   }
   const row = await getConversationRuntime(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
-  await Runtime.get(row.runtime).send(id, text);
+  const runtime = Runtime.get(row.runtime);
+  // A turn sent while a question waits skips the question: the user chose to
+  // say something else. Typed into the live menu, it would pick an option and
+  // fabricate an answer instead. So the question is dismissed first, as Escape
+  // in the terminal would — a held one is handed back to the CLI, which draws
+  // its menu — and the turn goes in its place (answerPrompt waits for that menu,
+  // Escapes it and types the turn once the input is idle again).
+  if (row.waitingFor === QUESTION_WAITING_FOR) {
+    await releaseQuestionHolds([id]);
+    await runtime.answerPrompt(id, text);
+    return;
+  }
+  await runtime.send(id, text);
 }
 
 export async function interruptConversation(id: string): Promise<void> {

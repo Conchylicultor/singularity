@@ -1,6 +1,7 @@
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
+import { canSendTurn } from "@plugins/conversations/core";
 import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { promptTemplatesConfig } from "../../shared/config";
@@ -16,14 +17,8 @@ export function FloatingTemplateChips({
   const { templates, pinnedCount } = useConfig(promptTemplatesConfig);
 
   // The same gate the prompt input applies to Enter — a template send IS a turn
-  // send, so the two must open and close together. In particular `working` stays
-  // sendable: the server queues the turn exactly as it does for a typed one, and
-  // so does `starting`: the server holds it until the agent can take it.
-  const canSend =
-    !!live &&
-    live.status !== "gone" &&
-    live.status !== "done" &&
-    !live.waitingFor;
+  // send, so the two must open and close together (canSendTurn).
+  const canSend = !!live && canSendTurn(live);
 
   // No in-flight state, no error toast: sendConversationTurn owns the echo
   // card, the retry affordance and the delivery report. The template goes in

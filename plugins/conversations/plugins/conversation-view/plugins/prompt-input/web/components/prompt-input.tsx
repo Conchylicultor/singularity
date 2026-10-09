@@ -7,6 +7,7 @@ import {
   useRegisterPromptComposer,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { useLiveConversation } from "@plugins/conversations/web";
+import { canSendTurn, QUESTION_WAITING_FOR } from "@plugins/conversations/core";
 import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
@@ -27,12 +28,10 @@ export function PromptInput({
     },
   );
 
-  // `starting` stays sendable: the server holds a turn that arrives before the
-  // agent can take it, and delivers it the moment the agent can (as its launch
-  // message when the pane does not exist yet). See the conversations server's
-  // held-turns.ts.
-  const disabled =
-    live.status === "gone" || live.status === "done" || !!live.waitingFor;
+  // The gate every turn-sending surface shares (canSendTurn): `starting` and
+  // `working` stay sendable (the server holds or queues the turn), and so does a
+  // waiting question — sending dismisses it and the message goes in its place.
+  const disabled = !canSendTurn(live);
 
   const insertRef = useRef<((text: string) => void) | null>(null);
 
@@ -77,11 +76,13 @@ export function PromptInput({
         : live.status === "done"
           ? "Conversation is done"
           : "Conversation is disconnected"
-    : live.status === "starting"
-      ? "Agent starting — send now, it gets your message when ready"
-      : live.status === "working"
-        ? "Queue a message — Enter to queue, Shift+Enter for newline"
-        : "Send a message — Enter to send, Shift+Enter for newline";
+    : live.waitingFor === QUESTION_WAITING_FOR
+      ? "Answer above, or send a message to skip the question"
+      : live.status === "starting"
+        ? "Agent starting — send now, it gets your message when ready"
+        : live.status === "working"
+          ? "Queue a message — Enter to queue, Shift+Enter for newline"
+          : "Send a message — Enter to send, Shift+Enter for newline";
 
   return (
     <PromptEditor

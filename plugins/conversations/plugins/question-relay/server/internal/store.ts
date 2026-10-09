@@ -184,3 +184,20 @@ export async function abandonDeadHolds(
     )
     .returning({ toolUseId: t.toolUseId });
 }
+
+/**
+ * Release every open question of `conversationIds` (the user is sending a
+ * message instead of answering). Returns the released rows (to wake their
+ * awaits).
+ */
+export async function releaseOpenHolds(
+  conversationIds: readonly string[],
+): Promise<{ toolUseId: string }[]> {
+  return db
+    .update(t)
+    .set({ state: "released", resolvedAt: sql`now()` })
+    .where(
+      and(inArray(t.conversationId, [...conversationIds]), eq(t.state, "open")),
+    )
+    .returning({ toolUseId: t.toolUseId });
+}

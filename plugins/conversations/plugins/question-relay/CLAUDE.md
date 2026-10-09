@@ -17,7 +17,8 @@ with no correlation and no hidden turns.
 ```
 open ──answer (web)──────────▶ answered   relay prints the allow + answer, exit 0
      ──release ("Answer in     released   relay exits silently → the CLI draws its menu
-        terminal")───────────▶
+        terminal", or a
+        message sent instead)─▶
      ──relay gone────────────▶ abandoned  Escape SIGTERMs the relay (it POSTs abandon);
                                           a relay pid found dead on reconcile, too
 ```
@@ -29,6 +30,13 @@ open ──answer (web)──────────▶ answered   relay prints
   in-process by the write that resolves the question (`waiters.ts`). No timer
   loop; at the cap it re-reads the row, so a write that landed on another
   backend (a hot swap mid-hold) is still seen.
+- **A message sent instead of an answer** skips the question. The conversations
+  server's `sendTurn` sees `waitingFor: "question"`, releases the hold through the
+  question-hold seam (`QuestionHoldSource.release`), and types the turn with the
+  runtime's `answerPrompt` — which waits for the menu the release lets the CLI
+  draw, Escapes it, and sends the turn into the idle input, exactly what Escape +
+  typing does in the terminal. The prompt input stays enabled for a waiting
+  question (`canSendTurn` in conversations core).
 - **The transcript is the authority.** The row is only the early copy of the
   question: once the CLI writes the `tool_use` and its result, the transcript
   says what happened.

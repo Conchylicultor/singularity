@@ -150,6 +150,7 @@
     - `RewindRefusal`
   - Exports (values):
     - `BackgroundWorkSchema`
+    - `canSendTurn`
     - `closeConversation`
     - `conversationRoute`
     - `CONVERSATIONS_CATEGORY_ID`
@@ -168,6 +169,7 @@
     - `ListTurnsQuerySchema`
     - `postConversationTurn`
     - `PostTurnBodySchema`
+    - `QUESTION_WAITING_FOR`
     - `ResumeBlockedReasonSchema`
     - `ResumeOutcomeSchema`
     - `RewindOutcomeSchema`
