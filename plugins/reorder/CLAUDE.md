@@ -152,25 +152,18 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
 - Web:
   - Contributes: 230 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `ConfigV2.WebRegister` ×230
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
-    - `config_v2.useSetConfig`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reorder/editor` ×5
+    - `config_v2` ×3
+    - `primitives/dom/layout-host` ×2
+    - `primitives/slot-render` ×2
     - `primitives/css/badge.Badge`
     - `primitives/css/ui-kit.Button`
     - `primitives/dom/element-size.useResizeObserver`
-    - `primitives/dom/layout-host.flowAxis`
-    - `primitives/dom/layout-host.layoutHost`
     - `primitives/edit-mode-signal.useEditMode`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/overlay/popover.InlinePopover`
-    - `primitives/slot-render.registerSlotItemMiddleware`
-    - `primitives/slot-render.registerSlotListMiddleware`
     - `primitives/sortable-list.rectSortingStrategy`
-    - `reorder/editor.ReorderAreaContext`
-    - `reorder/editor.ReorderEditor`
-    - `reorder/editor.ReorderEntry`
-    - `reorder/editor.SortableReorderItem`
     - `reorder/node-types.useReorderNodeTypes`
     - `ui/icons.Icon`
   - Exports (types):

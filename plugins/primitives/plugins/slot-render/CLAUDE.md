@@ -38,6 +38,15 @@ semantics you want:
   menus, ordered pickers) read that order through the reorder read hook — the
   slot itself renders pure dispatch.
 
+## Density: declared by the slot, picked by the host
+
+`defineRenderSlot({ controlSize })` makes a slot size-owning: `.Render` wraps
+its whole contribution list in one `ControlSizeProvider`, so every contributed
+control shares one height. That value is the slot's **default**. A host that
+draws the same slot at another density passes `<Slot.Render controlSize="md"/>`,
+which overrides it for the **whole** slot — never per item, so the one-height
+guarantee holds. A contribution's explicit `size` still wins (escape hatch).
+
 ## Single-line discipline for horizontal slots
 
 `.Render` detects whether its host is a **flex row** at runtime (via a
@@ -255,14 +264,14 @@ the outcome too, with no separate code path.
     - `SlotItemLayout`
     - `useDispatchOutcome`
 - Cross-plugin:
-  - Imported by: 80 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 81 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×26
     - `conversations` ×13
     - `primitives` ×13
     - `ui` ×5
+    - `shell` ×4
     - `tasks` ×4
     - `apps-core` ×3
-    - `shell` ×3
     - `config_v2` ×2
     - `debug` ×2
     - `page` ×2

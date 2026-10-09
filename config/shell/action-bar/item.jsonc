@@ -3,7 +3,7 @@
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
 //   Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
-//   Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items stacked above and below it (a sidebar's footer rows).
+//   Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items either side of it, turned to the slot's flow (flat in a column such as a sidebar's footer rows, upright in a row such as a toolbar).
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 // Arrange "items" for how this slot ACTUALLY renders — a sidebar is a
@@ -17,21 +17,22 @@
 // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 // At most one spacer per slot.
 {
-  // Horizontal bar, read left → right: the utilities first (notifications, the
-  // theme popover, the gear), then the two actions that act ON the app — Build
-  // and the Improve pill — grouped at the right edge, after the gap. Picking a
-  // UI element is a segment of the Improve pill, not its own button. Light/dark
-  // is a switch INSIDE the palette popover; the surface mode, browser
-  // fullscreen and edit-layout controls live in the gear's popover (the
+  // Horizontal bar, read left → right: notifications, a hairline divider, the
+  // utilities (the theme popover, the gear) and Build, then a second divider
+  // before the Improve pill — the one labelled action that acts ON the app.
+  // Picking a UI element is a segment of the Improve pill, not its own button.
+  // Light/dark is a switch INSIDE the palette popover; the surface mode,
+  // browser fullscreen and edit-layout controls live in the gear's popover (the
   // `view-option` slot).
   "items": [
     "shell.notifications:notifications",
+    { "type": "divider", "id": "divider-1" },
     { "item": "screenshot:screenshot", "hidden": true },
     { "item": "screenshot.draw-on-app:draw-on-app", "hidden": true },
     "ui.theme-engine.quick-theme:quick-theme",
     "shell.global-action-bar:view-options",
-    { "type": "spacer", "id": "spacer-1" },
     "build:build",
+    { "type": "divider", "id": "divider-2" },
     "improve:improve"
   ]
 }

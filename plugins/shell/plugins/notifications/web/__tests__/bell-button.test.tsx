@@ -73,15 +73,18 @@ describe("BellButton — unread badge", () => {
       screen.getByRole("button", { name: "Notifications, 253 unread" }),
     ).toBeTruthy();
     const badge = screen.getByText("9+");
-    expect(badge.className).toContain("bg-destructive");
+    // The solid fill (deep red, light figures in the chrome), not the bright
+    // `destructive` the chrome keeps for text.
+    expect(badge.className).toContain("bg-destructive-solid");
+    expect(badge.className).toContain("text-destructive-solid-foreground");
   });
 
-  it("is orange when only warnings are unread", () => {
+  it("is amber (the solid warning fill) when only warnings are unread", () => {
     mount(settled({ errors: 0, warnings: 2 }));
     expect(
       screen.getByRole("button", { name: "Notifications, 2 unread" }),
     ).toBeTruthy();
-    expect(screen.getByText("2").className).toContain("bg-warning");
+    expect(screen.getByText("2").className).toContain("bg-warning-solid");
   });
 
   it("shows no badge at zero", () => {

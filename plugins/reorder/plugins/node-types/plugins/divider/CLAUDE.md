@@ -1,12 +1,22 @@
 # divider
 
 The `divider` reorder node type — a leaf node (no payload, no members) that
-renders as a hairline rule between the items stacked above and below it, via
-the editor's `DividerReorderItem` primitive: on the region's rail
-(`rail-follow`), with a 6px gap on each side (`xs` + `2xs` of the density
-ramp). It is the vertical-stack sibling of `spacer`: where a spacer pushes the
-items after it to the far end of a row, a divider separates two runs of items
-in a column (the Pages sidebar's tree from its New page / Trash footer).
+renders as a hairline rule between the items either side of it, via the
+editor's `DividerReorderItem` primitive, turned to the area's flow (read off
+`ReorderAreaContext.orientation`, which the list middleware measures from the
+host's flex direction):
+
+- **In a column** — a flat rule on the region's rail (`rail-follow`), with a
+  6px gap above and below. It separates two runs of items (the Pages sidebar's
+  tree from its New page / Trash footer).
+- **In a row** — an upright 1px rule with the same 6px gap either side, about
+  0.56× the ambient control height tall (so it follows the slot's density). It
+  groups a toolbar's buttons (the global action bar: bell | utilities and Build
+  | Improve).
+
+The 6px is `xs` + `2xs` of the density ramp. Where a spacer pushes the items
+after it to the far end of a row, a divider only separates — it takes no
+slack.
 
 Declares an `insert` ("Add Divider") so the reorder editor offers it in the
 insert popover, and contributes one `ReorderNodes.NodeType(...)` to the
@@ -17,7 +27,7 @@ insert popover, and contributes one `ReorderNodes.NodeType(...)` to the
 
 ## Plugin reference
 
-- Description: Divider reorder node type: a hairline rule between stacked slot items (leaf), with an 'Add Divider' insert affordance.
+- Description: Divider reorder node type: a hairline rule between the slot items either side of it, flat in a column and upright in a row (leaf), with an 'Add Divider' insert affordance.
 - Web:
   - Contributes: `ReorderNodes.NodeType` "divider"
   - Uses:

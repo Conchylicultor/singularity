@@ -150,6 +150,12 @@ export interface RenderSlotConfig<P> {
    * consistent size across opaque contributions — declaring it here IS the
    * enforcement; a host cannot forget. Items should omit `size`; an explicit
    * `size` on a contribution still wins (escape hatch).
+   *
+   * This is the slot's DEFAULT density. A host that draws the same slot at a
+   * different density (a roomier floating bar vs a compact docked strip) passes
+   * `controlSize` to `.Render`, which overrides it for the WHOLE slot — every
+   * item still shares one height, so the enforcement holds; only who picks the
+   * height moves to the host that owns the surface.
    */
   controlSize?: ControlSize;
   /**
@@ -221,6 +227,12 @@ function renderContributionIsolated(
 interface RenderProps<P> {
   children?: (item: P) => ReactNode;
   subId?: string;
+  /**
+   * The density this host draws the slot at, overriding the slot's declared
+   * `controlSize` for EVERY contribution (one height for the whole slot, never
+   * per item). An explicit `size` on a contribution still wins.
+   */
+  controlSize?: ControlSize;
 }
 
 export interface RenderSlot<P> extends Slot<
@@ -254,12 +266,15 @@ export function defineRenderSlot<P>(
     reorderable: true,
     partOfComponent: config?.partOfComponent === true,
   };
-  const controlSize = config?.controlSize;
+  const declaredControlSize = config?.controlSize;
 
   renderSlot.Render = function SlotRender({
     children,
     subId,
+    controlSize: hostControlSize,
   }: RenderProps<P & { id: string }>) {
+    // The host's density wins over the slot's declared default.
+    const controlSize = hostControlSize ?? declaredControlSize;
     const ctx = useContext(PluginRuntimeContext);
     if (!ctx) {
       throw new Error("SlotRender must be used within PluginProvider");
@@ -358,7 +373,8 @@ export function defineRenderSlot<P>(
     );
 
     // Size-owning slot: one provider wraps the whole contribution list so every
-    // item inherits the declared density (see `controlSize` config).
+    // item inherits one density — the host's (`.Render controlSize`) or else
+    // the slot's declared default (see `controlSize` config).
     const withDensity =
       controlSize !== undefined ? (
         <ControlSizeProvider size={controlSize}>

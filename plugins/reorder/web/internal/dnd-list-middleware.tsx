@@ -18,7 +18,9 @@ import type {
   ReorderTree,
 } from "@plugins/fields/plugins/reorder-tree/core";
 import {
+  ReorderAreaContext,
   ReorderEditor,
+  type ReorderAreaCtxValue,
   type ReorderEntry,
 } from "@plugins/reorder/plugins/editor/web";
 import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
@@ -642,17 +644,28 @@ function ReorderInner({
     <div ref={sentinelRef} style={{ display: "none" }} aria-hidden />
   );
 
+  // The popover regime's inline render is outside any `ReorderEditor`, so it
+  // provides the area itself: the nodes it draws (a divider turning its rule
+  // upright in a row) read the orientation off the area, and without this they
+  // would read an enclosing area's — or none, and default to vertical.
+  const inlineArea = useMemo<ReorderAreaCtxValue>(
+    () => ({ orientation, onHide: hideItem, onRemoveNode }),
+    [orientation, hideItem, onRemoveNode],
+  );
+
   if (regime === "popover") {
     return (
       <>
         {sentinel}
         {/* Inline: the live contributions in DISPLAY mode (override forces every
             item/node non-draggable, no chrome, no SortableContext). */}
-        <ReorderEffectiveEditModeContext.Provider value={false}>
-          {entries.map((e) => (
-            <Fragment key={e.id}>{e.node}</Fragment>
-          ))}
-        </ReorderEffectiveEditModeContext.Provider>
+        <ReorderAreaContext.Provider value={inlineArea}>
+          <ReorderEffectiveEditModeContext.Provider value={false}>
+            {entries.map((e) => (
+              <Fragment key={e.id}>{e.node}</Fragment>
+            ))}
+          </ReorderEffectiveEditModeContext.Provider>
+        </ReorderAreaContext.Provider>
         {/* Editing happens in a roomy vertical popover — the only drag surface. */}
         <InlinePopover
           resetOnClose

@@ -32,6 +32,50 @@ Both hosts wear the app chrome's fixed theme (`apps-core/chrome-theme`): the
 docked strip by living in the tab bar, the floating one through its own
 boundary.
 
+## The floating capsule
+
+The floating host is one glass capsule (`FloatingAction variant="glass"
+shape="pill" pad="xs"`): a hairline ring, a translucent ground under a
+saturated blur and a deep floating shadow, there **collapsed and open alike** —
+collapsed it is a small capsule around the dot (and any glance chip), open the
+same capsule widened around the whole row. The ring is a box-shadow, so the
+capsule is exactly padding + controls tall: 4px + 32px + 4px = 40px. Items sit
+2px apart (`gap-2xs`), with no tail padding — the capsule's own padding is the
+edge. Collapsed, nothing invisible may take a gap: the panel itself has no gap
+(the reveal strip, a zero-width flex item while closed, opens its own 2px lead
+with `pl-2xs` only when open), and the glance slot renders under
+`SlotItemLayout orientation="host-owned"` so a glance with nothing to show
+generates no box — the idle / building capsule is exactly the 40px circle.
+
+Both hosts set one resting tone on their row (`BAR_TONE`, the muted
+foreground): every ghost control inherits it and brightens to the text colour
+on hover, so the bar's icons sit quietly until pointed at. Only the pieces that
+read as words — the Improve label, the Build tray's status — set
+`text-foreground` themselves. Never colour an item's icon at the contribution.
+
+## Density — the host picks it
+
+`ActionBar.Item` and `ActionBar.Glance` declare `controlSize: "sm"`, the slot
+default. Each host passes its own density to the slots' `.Render`
+(`controlSize`, which slot-render applies to the WHOLE slot, so every item
+still shares one height) and to the health dot (`HealthItem size`):
+
+- **floating** — `md` (`FLOATING_SIZE`): the chrome's 32px control, centred in
+  the 40px capsule;
+- **docked** — `sm` (`DOCKED_SIZE`): inside the 36px tab bar.
+
+Never size an item at the contribution: an item renders at whatever its host
+says.
+
+## Separators are divider nodes in the order config
+
+The bar draws no separator itself and names no contributor. Groups are split
+by `{ "type": "divider", "id": … }` nodes in the slot's order file
+(`config/shell/action-bar/item.jsonc`) — today: bell | utilities and Build |
+Improve. The divider node (`reorder/node-types/divider`) reads the area's
+orientation, so in this horizontal row it draws an upright hairline about
+0.56× the control height, with 6px either side.
+
 The two hosts are mutually exclusive (the surface mode), which is what keeps exactly one
 `HealthReportButton` — and so one set of health probes — mounted at a time.
 
@@ -59,6 +103,7 @@ tab bar, which an embed does not paint.
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Stack`
     - `primitives/css/theme-boundary.Theme`
+    - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/embed.isChromelessDocument`
@@ -66,6 +111,7 @@ tab bar, which an embed does not paint.
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/floating-action.FloatingAction`
     - `primitives/overlay/floating-action.FloatingActionFadeIn`
+    - `primitives/slot-render.SlotItemLayout`
     - `shell/action-bar.ActionBar`
     - `shell/health-report.HealthReportButton`
 - Server:

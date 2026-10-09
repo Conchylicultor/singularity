@@ -53,7 +53,23 @@ export interface FloatingActionProps extends Omit<
   ComponentProps<"div">,
   "className"
 > {
-  variant?: "outlined" | "ghost";
+  /**
+   * The panel's card:
+   * - `outlined` — a hairline border, a translucent blurred ground and a soft
+   *   shadow, all present while collapsed and deepening when open.
+   * - `ghost` — no card while collapsed; the outlined card appears on open.
+   * - `glass` — a frosted capsule that is the same collapsed and open: a
+   *   hairline RING (a box-shadow, so it adds no size — the panel is exactly
+   *   pad + content tall), a more translucent ground under a stronger,
+   *   saturated blur, and a deeper floating shadow. For a bar that floats
+   *   over arbitrary app content and must read as one surface at rest.
+   */
+  variant?: "outlined" | "ghost" | "glass";
+  /**
+   * The panel's corners: `rounded` (the default, the `md` radius) or `pill`
+   * (fully rounded ends — a capsule around a single row of controls).
+   */
+  shape?: "rounded" | "pill";
   className?: string;
   /**
    * SIZING ONLY — the panel's collapsed→open morph (`max-w-*` / `max-h-*` /
@@ -121,6 +137,7 @@ function FloatingActionPanel({
   gap,
   pad,
   variant = "outlined",
+  shape = "rounded",
   closeDelay,
   anchor = "bottom-right",
   trigger,
@@ -214,7 +231,14 @@ function FloatingActionPanel({
           // `flex-col` / `items-*` in them and correctly stops calling this a
           // single-line text row.
           className={cn(
-            "flex overflow-hidden rounded-md",
+            "flex overflow-hidden",
+            // A pill capsule's controls echo its ends: every control inside
+            // rounds fully (the shape group's control radius, re-read here),
+            // so a hovered button is a pill inside the pill, never a
+            // rounded-rect patch in a capsule.
+            shape === "pill"
+              ? "rounded-full [--radius-control:calc(infinity*1px)]"
+              : "rounded-md",
             FLOW_CLASS[direction][triggerAt],
             align && ALIGN_CLASS[align],
             gap && rampClass("gap", gap),
@@ -228,6 +252,25 @@ function FloatingActionPanel({
             variant === "ghost" && [
               "border border-transparent group-data-open/fa:border-border/60",
               "group-data-open/fa:bg-background/90 group-data-open/fa:shadow-md group-data-open/fa:backdrop-blur",
+            ],
+            // Glass is its own surface over whatever app is behind it, so
+            // every tone is a translucent mix rather than an opaque step:
+            // - ground: the background at 72% under an 18px, 1.6× saturated
+            //   blur, so the app shows through, softened;
+            // - ring: a hairline of the foreground at 9% (≈ 8% white on the
+            //   chrome), lighter than the content behind it by the same
+            //   step on light and dark apps alike, plus a 4% top highlight;
+            // - shadow: the theme's floating tier (`2xl`);
+            // - `--hover-fill`: a ghost control hovers to the foreground at
+            //   8% (≈ 7% white) OVER the glass — an opaque hover step would
+            //   paint a dark patch on a light app showing through;
+            // - `--chrome-mask`: what a cut-out ring (the bell badge's)
+            //   draws in, the ground's own tone.
+            variant === "glass" && [
+              "ring-1 ring-foreground/9 inset-shadow-2xs inset-shadow-foreground/4",
+              "bg-background/72 backdrop-blur-[18px] backdrop-saturate-[1.6]",
+              "shadow-2xl",
+              "[--hover-fill:color-mix(in_oklab,var(--foreground)_8%,transparent)] [--chrome-mask:var(--background)]",
             ],
             panelClassName,
           )}

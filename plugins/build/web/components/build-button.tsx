@@ -1,6 +1,6 @@
 import {
   Button,
-  ButtonGroup,
+  cn,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -20,7 +20,8 @@ import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { buildHistory, buildRoute } from "@plugins/build/core";
 import { isMainCompositionBuild, type BuildRun } from "../../shared";
 import { useReloadAdvice, type ReloadAdvice } from "../hooks/use-reload-advice";
-import { ReloadSegment } from "./reload-segment";
+import { ReloadButton } from "./reload-button";
+import { BuildTray } from "./build-tray";
 import { latestRunState } from "../internal/latest-run-state";
 import { BuildPopoverContent } from "./build-popover-content";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -56,14 +57,14 @@ function BuildButtonInner({
     advice.kind === "outdated" ||
     (advice.kind === "broken" && advice.stale);
 
-  // The label and the Reload segment answer different questions. The label is
-  // about the SERVER (what the build is doing); the segment is about THIS TAB
+  // The label and the Reload pill answer different questions. The label is
+  // about the SERVER (what the build is doing); the pill is about THIS TAB
   // (whether it needs a reload), so a plugin that failed to load mid-build still
   // shows the red Reload beside "Building".
   //
-  // Priority: an active build wins the label, since the Reload segment already
+  // Priority: an active build wins the label, since the Reload pill already
   // says the tab is stale — so a stale tab mid-build shows the spinner AND the
-  // Reload segment side by side. With no build running, a stale tab reads
+  // Reload pill side by side. With no build running, a stale tab reads
   // "Server updated"; otherwise the last outcome.
   const status: "idle" | "building" | "restarting" | "updated" | "failed" =
     building && wsStatus !== "open"
@@ -122,25 +123,25 @@ function BuildButtonInner({
   // The look IS the state. At rest, with nothing to say, the control is one
   // quiet icon like the bar's other utilities. Anything to report — a build
   // running, the server updated under this tab, a failed build, a tab that
-  // needs a reload — turns it into a framed pill that says it in words, and
-  // a due reload joins it as the pill's own Reload segment.
+  // needs a reload — turns it into the tray: the status in words as a ghost
+  // button, and a due reload nested at its end as the filled Reload pill.
   const quiet = status === "idle" && advice.kind === "none";
+  const reloadDue = advice.kind !== "none";
   const trigger = quiet ? (
     <IconButton icon={buildIcon} label="Builds" />
   ) : (
     <Button
-      variant="frame"
+      variant="ghost"
       aspect={status === "idle" ? "icon" : "text"}
       aria-label={status === "idle" ? "Builds" : undefined}
-      // A failed build tints the pill's frame; its words stay in the text colour.
-      className={
-        status === "failed"
-          ? "border-destructive/50 dark:border-destructive/50"
-          : undefined
-      }
+      // Its leading mark (spinner, dot) sits at the tray's start, so that end
+      // keeps the plain control padding; only a label that ENDS the tray takes
+      // the pill's extra room there. With the Reload pill nested after it, both
+      // ends are plain.
+      className={cn("rounded-full", !reloadDue && "pill-end")}
     >
-      {spinning && <Spinner spinning className="size-4" />}
-      {status === "failed" && <StatusDot colorClass="bg-destructive" />}
+      {spinning && <Spinner shape="ring" className="size-3.5" />}
+      {status === "failed" && <StatusDot colorClass="bg-destructive-solid" />}
       {status === "idle" ? <Icon icon={buildIcon} className="size-4" /> : label}
       {status === "building" && latestRun && (
         <ElapsedTime
@@ -196,10 +197,10 @@ function BuildButtonInner({
 
   if (quiet) return popover;
   return (
-    <ButtonGroup shape="pill" className="text-foreground">
+    <BuildTray failed={status === "failed"}>
       {popover}
-      <ReloadSegment advice={advice} />
-    </ButtonGroup>
+      <ReloadButton advice={advice} />
+    </BuildTray>
   );
 }
 
@@ -223,7 +224,7 @@ export function BuildButton() {
   // Two states, never one: still LOADING is the neutral wrench, inert; a read
   // that FAILED is the live error wrench whose click retries (or reloads, when
   // this tab is out of date) — a disabled wrench would read as "loading"
-  // forever. Either way the Reload segment stays: whether this tab needs a
+  // forever. Either way the Reload pill stays: whether this tab needs a
   // reload is independent of the history read (and an out-of-date tab is
   // exactly when that read fails).
   let wrench: ReactNode;
@@ -255,9 +256,9 @@ export function BuildButton() {
   }
   if (advice.kind === "none") return wrench;
   return (
-    <ButtonGroup shape="pill" className="text-foreground">
+    <BuildTray>
       {wrench}
-      <ReloadSegment advice={advice} />
-    </ButtonGroup>
+      <ReloadButton advice={advice} />
+    </BuildTray>
   );
 }

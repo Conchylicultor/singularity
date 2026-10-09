@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
+- Description: Spinner for loading states: the spinning refresh glyph (default) or, with shape="ring", a thin ring (hover-tone track, current-colour arc). Always spinning by default; spinning={false} pauses.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`

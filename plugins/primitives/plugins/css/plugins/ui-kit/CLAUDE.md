@@ -72,7 +72,6 @@ The global UI kit — one cohesive design-system unit. It owns:
   own: like `ghost` it wears the surface it sits on and hovers to
   `--hover-fill`. Use it for a framed control on anything but the page canvas —
   `outline` paints the canvas (or `input/30` in dark mode) behind its label.
-  The app chrome's Improve and Build pills are `frame`.
 - **`Button variant="floating"`** is the button that floats over content (a
   zoom chip on a canvas, "Dismiss all" under the toasts, jump-to-bottom). It
   paints the solid overlay fill (`bg-popover`) and carries its own shadow. Every

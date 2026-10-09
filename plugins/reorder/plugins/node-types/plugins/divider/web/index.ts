@@ -4,6 +4,6 @@ import { dividerNodeType } from "./internal/node-type";
 
 export default {
   description:
-    "Divider reorder node type: a hairline rule between stacked slot items (leaf), with an 'Add Divider' insert affordance.",
+    "Divider reorder node type: a hairline rule between the slot items either side of it, flat in a column and upright in a row (leaf), with an 'Add Divider' insert affordance.",
   contributions: [ReorderNodes.NodeType({ nodeType: dividerNodeType })],
 } satisfies PluginDefinition;

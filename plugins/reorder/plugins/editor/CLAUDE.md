@@ -109,8 +109,10 @@ prop (middleware auto-detects; field is always `"vertical"`).
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.Input`
+    - `primitives/css/ui-kit.useControlSize`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`

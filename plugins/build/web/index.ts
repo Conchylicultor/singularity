@@ -5,7 +5,7 @@ import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { buildConfig } from "../shared/config";
 import { BuildButton } from "./components/build-button";
-import { ReloadChip } from "./components/reload-chip";
+import { ReloadGlance } from "./components/reload-button";
 import { useBuildActivity } from "./hooks/use-build-activity";
 import { buildPane, buildDetailPane } from "./panes";
 import { BuildDetail } from "./slots";
@@ -29,10 +29,10 @@ export default {
       component: BuildButton,
     }),
     // The collapsed floating bar hides the Build button; these keep a running /
-    // failed build (a ring around the health dot) and a due reload (a chip
-    // beside it) visible anyway.
+    // failed build (a ring around the health dot) and a due reload (the Build
+    // tray holding only its Reload pill, beside it) visible anyway.
     ActionBar.Activity({ id: "build", useActivity: useBuildActivity }),
-    ActionBar.Glance({ id: "reload", component: ReloadChip }),
+    ActionBar.Glance({ id: "reload", component: ReloadGlance }),
     Pane.Register({ pane: buildPane }),
     Pane.Register({ pane: buildDetailPane }),
     // Build panes live in the Debug app (`/debug/build`), alongside the other

@@ -3,9 +3,8 @@ import type { ReloadAdvice } from "../hooks/use-reload-advice";
 export type ShownAdvice = Exclude<ReloadAdvice, { kind: "none" }>;
 
 /**
- * What a Reload control says about why — its tooltip and accessible name. The
- * one copy the Build pill's Reload segment and the collapsed bar's Reload chip
- * share.
+ * What the Reload pill says about why — its tooltip and accessible name, the
+ * same in the Build tray and alone in the collapsed bar's glance.
  */
 export function reloadMessageFor(advice: ShownAdvice): string {
   if (advice.kind === "stale") {

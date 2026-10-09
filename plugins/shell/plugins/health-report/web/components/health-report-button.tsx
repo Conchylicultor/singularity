@@ -94,6 +94,7 @@ function HealthReportTrigger({
           <ControlSizeProvider size="md">
             <ActivityRing state={ringOf(activities)}>
               <HealthDot
+                halo
                 level={view.state}
                 pulsing={view.pending || view.transitioning}
               />
@@ -114,7 +115,7 @@ function HealthReportTrigger({
  * The health report's button: one dot merging every `HealthReport.Row`.
  *
  * - all ok → a green dot, nothing else;
- * - some rows need a look → an amber / red dot plus how many, on a tinted pill;
+ * - some rows need a look → an amber / red dot plus how many, in tinted figures;
  * - not known yet → a grey dot, pulsing, until every row has reported;
  * - the dot also pulses while a row is transitioning (reconnecting).
  *

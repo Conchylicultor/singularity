@@ -21,8 +21,9 @@ fields.
   sortable primitives:
   - `plugins/spacer` — leaf node type (blank draggable gap), with an "Add Spacer"
     insert.
-  - `plugins/divider` — leaf node type (a hairline rule between stacked items,
-    on the region's rail), with an "Add Divider" insert.
+  - `plugins/divider` — leaf node type (a hairline rule between the items
+    either side of it — flat in a column, upright in a row), with an "Add
+    Divider" insert.
   - `plugins/header` — a container node type (labeled, collapsible box that
     renders its pre-rendered members as children). Container creation is
     config-only — no `insert`.
@@ -69,7 +70,7 @@ fields.
     - `ReorderNodeRenderProps`
     - `ReorderNodeType`
 - Sub-plugins:
-  - **`divider`** — Divider reorder node type: a hairline rule between stacked slot items (leaf), with an 'Add Divider' insert affordance.
+  - **`divider`** — Divider reorder node type: a hairline rule between the slot items either side of it, flat in a column and upright in a row (leaf), with an 'Add Divider' insert affordance.
   - **`header`** — Header reorder node type: the one container type — a labeled, collapsible box rendering its pre-rendered members. Owns the label/collapsed payload schema; collapse toggles via onPatch.
   - **`overflow`** — Overflow reorder node type: a container whose authored members all relocate behind one ⋯ panel, via AdaptiveBar.Collapsed — each rendering the form it declared, so a plain action becomes a labelled…
   - **`spacer`** — Spacer reorder node type: a blank draggable gap (leaf), with an 'Add Spacer' insert affordance.

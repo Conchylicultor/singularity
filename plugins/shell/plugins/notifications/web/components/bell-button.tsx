@@ -8,7 +8,10 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import {
+  Placed,
+  pct,
+} from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { recentClientIds } from "../internal/toast";
 import { notifications, notificationsUnread } from "../../shared/resources";
@@ -101,11 +104,14 @@ export function BellButton() {
   const { errors, warnings } = both.data.unread;
   const unreadCount = errors + warnings;
   // Match the badge color to the most severe unread item: red only when a crash
-  // (error) is present, otherwise orange for warning-only noise (e.g. slow ops).
+  // (error) is present, otherwise amber for warning-only noise (e.g. slow ops).
+  // Both wear the SOLID fills (a deep oxblood / deep amber with light figures in
+  // the chrome theme), not `destructive` / `warning`, which the chrome keeps
+  // bright for text.
   const badgeColor =
     errors > 0
-      ? "bg-destructive text-destructive-foreground"
-      : "bg-warning text-warning-foreground";
+      ? "bg-destructive-solid text-destructive-solid-foreground"
+      : "bg-warning-solid text-warning-solid-foreground";
 
   function onOpenChange(next: boolean) {
     if (next) {
@@ -124,29 +130,37 @@ export function BellButton() {
       trigger={
         <span className="relative inline-block">
           <IconButton
+            // Always the outline bell: the badge says there is something
+            // unread, so the glyph does not fill as well.
             icon={notificationsIcon}
-            active={unreadCount > 0}
             // The exact count: the visible badge caps at "9+".
             label={
               unreadCount > 0
                 ? `Notifications, ${unreadCount} unread`
                 : "Notifications"
             }
-            className={unreadCount > 0 ? undefined : "text-muted-foreground"}
           />
           {unreadCount > 0 && (
-            <Pin
-              to="top-right"
-              outset
+            // Hangs off the glyph's top-right corner rather than covering it:
+            // its top-left sits 2/32 down and 17/32 across the button, as a
+            // fraction so it lands the same at every control height (the
+            // docked sm strip and the floating md capsule). The 2px ring in
+            // the surface's own ground cuts it out of the bell.
+            <Placed
+              x={{ start: pct(17 / 32) }}
+              y={{ start: pct(2 / 32) }}
+              layer="raised"
               decorative
-              style={{ top: "-0.125rem", right: "-0.125rem" }}
             >
               <Center
-                className={`size-4 rounded-full ${badgeColor} text-3xs font-bold tabular-nums`}
+                // A 16px pill: as wide as tall for one figure, growing with
+                // 4px either side for "9+" rather than squeezing it. Its
+                // figures are the count-chip role (`tag-compact`, strong).
+                className={`h-4 min-w-4 rounded-full px-xs ring-2 ring-chrome-mask ${badgeColor} text-tag-compact font-tag-strong tabular-nums`}
               >
                 {unreadCount > 9 ? "9+" : unreadCount}
               </Center>
-            </Pin>
+            </Placed>
           )}
         </span>
       }

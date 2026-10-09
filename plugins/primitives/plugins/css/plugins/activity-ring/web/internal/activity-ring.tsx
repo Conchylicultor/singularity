@@ -20,18 +20,20 @@ export interface ActivityRingProps {
   children: ReactNode;
 }
 
-/** Ring diameter per density tier: 2.5× the status dot of the same tier. */
+/** Ring box per density tier: 2.75× the status dot of the same tier (22px
+ * around the md tier's 8px dot). */
 const SIZE_MAP: Record<ControlSize, string> = {
-  xs: "size-[calc(var(--status-dot-xs)*2.5)]",
-  sm: "size-[calc(var(--status-dot-sm)*2.5)]",
-  md: "size-[calc(var(--status-dot-md)*2.5)]",
-  lg: "size-[calc(var(--status-dot-lg)*2.5)]",
+  xs: "size-[calc(var(--status-dot-xs)*2.75)]",
+  sm: "size-[calc(var(--status-dot-sm)*2.75)]",
+  md: "size-[calc(var(--status-dot-md)*2.75)]",
+  lg: "size-[calc(var(--status-dot-lg)*2.75)]",
 };
 
-// Drawn on a 20-unit grid; the stroke sits inside the box.
-const R = 8.6;
-const STROKE = 1.8;
-const CIRCUMFERENCE = 2 * Math.PI * R;
+// Drawn on a 22-unit grid (one unit = 1px at the md tier); the stroke sits
+// inside the box.
+const C = 11;
+const R = 9.5;
+const STROKE = 1.6;
 
 /**
  * A ring around `children` (a status dot), centred on it. The ring is an
@@ -50,8 +52,10 @@ export function ActivityRing({ state, children }: ActivityRingProps) {
       )}
     >
       <svg
-        viewBox="0 0 20 20"
+        viewBox="0 0 22 22"
         aria-hidden
+        fill="none"
+        strokeWidth={STROKE}
         className={cn(
           "absolute inset-0 size-full",
           state === "running" && "animate-spin motion-reduce:animate-none",
@@ -59,37 +63,23 @@ export function ActivityRing({ state, children }: ActivityRingProps) {
       >
         {state === "running" ? (
           <>
-            <circle
-              cx="10"
-              cy="10"
-              r={R}
-              fill="none"
-              strokeWidth={STROKE}
-              className="stroke-muted-foreground/30"
-            />
-            <circle
-              cx="10"
-              cy="10"
-              r={R}
-              fill="none"
-              strokeWidth={STROKE}
+            {/* The track: the surface's hover tone, faint against the bar. */}
+            <circle cx={C} cy={C} r={R} className="stroke-hover-fill" />
+            {/* A quarter arc from twelve o'clock, in the text colour. */}
+            <path
+              d={`M${C} ${C - R}a${R} ${R} 0 0 1 ${R} ${R}`}
               strokeLinecap="round"
-              strokeDasharray={`${CIRCUMFERENCE * 0.28} ${CIRCUMFERENCE}`}
-              transform="rotate(-90 10 10)"
               className="stroke-foreground"
             />
           </>
         ) : (
+          // Broken: short butt-ended dashes all the way round.
           <circle
-            cx="10"
-            cy="10"
+            cx={C}
+            cy={C}
             r={R}
-            fill="none"
-            strokeWidth={STROKE}
-            strokeLinecap="round"
-            strokeDasharray={`${CIRCUMFERENCE / 8 - 2.4} 2.4`}
-            transform="rotate(-90 10 10)"
-            className="stroke-destructive"
+            strokeDasharray="3.2 2.6"
+            className="stroke-destructive-solid"
           />
         )}
       </svg>

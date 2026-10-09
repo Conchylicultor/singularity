@@ -24,7 +24,9 @@ export const LUCIDE_MAP = {
   add: "plus",
   "add-circle": "circle-plus",
   adjust: "circle-dot",
-  "ads-click": "mouse-pointer-click",
+  // The element picker's glyph everywhere: Lucide's mouse-pointer-click reads
+  // as "click", not as "pick an element on screen", so it keeps ads_click.
+  "ads-click": MATERIAL_ONLY,
   air: "wind",
   album: "disc-3",
   "all-inclusive": "infinity",

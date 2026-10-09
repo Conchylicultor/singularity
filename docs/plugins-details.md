@@ -8745,12 +8745,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `IdKinds.Kind` "build"
       - `ActionBar.Item` → `BuildButton`
       - `ActionBar.Activity` "build"
-      - `ActionBar.Glance` → `ReloadChip`
+      - `ActionBar.Glance` → `ReloadGlance`
       - `Pane.Register` "build"
       - `Pane.Register` "build-detail"
       - `DebugApp.Sidebar` "Builds"
       - `ConfigV2.WebRegister` "config"
-    - Uses: 35 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
+    - Uses: 36 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
       - `primitives/css/ui-kit` ×4
       - `primitives/live-state` ×4
       - `infra/endpoints` ×2
@@ -8762,6 +8762,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `config_v2.ConfigV2`
       - `ids.IdKinds`
       - `network/live.useLive`
+      - `primitives/css/line.Line`
       - `primitives/css/scroll.Scroll`
       - `primitives/css/spacing.Stack`
       - `primitives/css/spinner.Spinner`
@@ -27795,12 +27796,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
               - `apps` ×16
               - `primitives` ×7
               - `debug` ×3
               - `page` ×2
               - `screenshot` ×2
+              - `shell/notifications`
         - **`fill`** — Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.
           - Web:
             - Uses:
@@ -27974,7 +27976,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 92 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 93 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×22
               - `primitives` ×16
               - `conversations` ×14
@@ -27985,9 +27987,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review` ×4
               - `tasks` ×4
               - `apps-core` ×2
+              - `build` ×2
               - `reorder` ×2
               - `shell` ×2
-              - `build/deployment`
               - `code-explorer/commit-detail`
               - `infra/background/catalog`
               - `map`
@@ -28048,7 +28050,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×17
               - `apps` ×13
               - `page` ×9
@@ -28059,7 +28061,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/logs`
               - `reorder/editor`
               - `screenshot/draw-on-app`
-              - `shell/notifications`
         - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -28302,7 +28303,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `music/chord-box`
               - `reports/launch-fix`
               - `search/quick-find`
-        - **`spinner`** — Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
+        - **`spinner`** — Spinner for loading states: the spinning refresh glyph (default) or, with shape="ring", a thin ring (hover-tone track, current-colour arc). Always spinning by default; spinning={false} pauses.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
@@ -32358,14 +32359,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotItemLayout`
           - `useDispatchOutcome`
       - Cross-plugin:
-        - Imported by: 80 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 81 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×26
           - `conversations` ×13
           - `primitives` ×13
           - `ui` ×5
+          - `shell` ×4
           - `tasks` ×4
           - `apps-core` ×3
-          - `shell` ×3
           - `config_v2` ×2
           - `debug` ×2
           - `page` ×2
@@ -33294,25 +33295,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Web:
     - Contributes: 230 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `ConfigV2.WebRegister` ×230
-    - Uses:
-      - `config_v2.ConfigV2`
-      - `config_v2.useConfig`
-      - `config_v2.useSetConfig`
+    - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `reorder/editor` ×5
+      - `config_v2` ×3
+      - `primitives/dom/layout-host` ×2
+      - `primitives/slot-render` ×2
       - `primitives/css/badge.Badge`
       - `primitives/css/ui-kit.Button`
       - `primitives/dom/element-size.useResizeObserver`
-      - `primitives/dom/layout-host.flowAxis`
-      - `primitives/dom/layout-host.layoutHost`
       - `primitives/edit-mode-signal.useEditMode`
       - `primitives/latest-ref.useLatestRef`
       - `primitives/overlay/popover.InlinePopover`
-      - `primitives/slot-render.registerSlotItemMiddleware`
-      - `primitives/slot-render.registerSlotListMiddleware`
       - `primitives/sortable-list.rectSortingStrategy`
-      - `reorder/editor.ReorderAreaContext`
-      - `reorder/editor.ReorderEditor`
-      - `reorder/editor.ReorderEntry`
-      - `reorder/editor.SortableReorderItem`
       - `reorder/node-types.useReorderNodeTypes`
       - `ui/icons.Icon`
     - Exports (types):
@@ -33367,8 +33361,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.ControlSize`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.Input`
+          - `primitives/css/ui-kit.useControlSize`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/sortable-list.SortableItem`
           - `primitives/sortable-list.SortableList`
@@ -33418,7 +33414,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReorderNodeRenderProps`
           - `ReorderNodeType`
       - Plugins:
-        - **`divider`** — Divider reorder node type: a hairline rule between stacked slot items (leaf), with an 'Add Divider' insert affordance.
+        - **`divider`** — Divider reorder node type: a hairline rule between the slot items either side of it, flat in a column and upright in a row (leaf), with an 'Add Divider' insert affordance.
           - Web:
             - Contributes: `ReorderNodes.NodeType` "divider"
             - Uses:
@@ -34436,6 +34432,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/control-panel.ControlPanelPopover`
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
+          - `primitives/css/ui-kit.ControlSize`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/dom/element-size.useResizeObserver`
           - `primitives/embed.isChromelessDocument`
@@ -34443,6 +34440,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/floating-action.FloatingAction`
           - `primitives/overlay/floating-action.FloatingActionFadeIn`
+          - `primitives/slot-render.SlotItemLayout`
           - `shell/action-bar.ActionBar`
           - `shell/health-report.HealthReportButton`
       - Server:
@@ -34521,8 +34519,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `IdKinds.Kind` "notif"
           - `ActionBar.Item` → `BellButton`
-        - Uses: 27 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Uses: 28 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `infra/endpoints` ×2
+          - `primitives/css/coords` ×2
           - `primitives/cursor-pagination` ×2
           - `primitives/live-state` ×2
           - `apps-core/tabs.navigate`
@@ -34532,7 +34531,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
-          - `primitives/css/pin.Pin`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`

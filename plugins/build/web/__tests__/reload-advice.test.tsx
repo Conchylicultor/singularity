@@ -30,10 +30,10 @@ import {
   type DeploymentState,
 } from "@plugins/build/plugins/deployment/core";
 import { useReloadAdvice, type ReloadAdvice } from "../hooks/use-reload-advice";
-import { ReloadSegment } from "../components/reload-segment";
+import { ReloadButton } from "../components/reload-button";
 
 /**
- * The Reload segment of the Build pill, and the one signal behind it.
+ * The Reload pill of the Build tray, and the one signal behind it.
  *
  * `useReloadAdvice` reads two things: the deployment resource (is the server
  * serving a different frontend than this tab runs?) and the page-global
@@ -214,9 +214,9 @@ const BOTH =
 const OUTDATED =
   "This tab is out of date and can't load some data — reload to fix";
 
-describe("ReloadSegment", () => {
+describe("ReloadButton", () => {
   it("renders nothing when no reload is needed", () => {
-    const { container } = render(<ReloadSegment advice={{ kind: "none" }} />);
+    const { container } = render(<ReloadButton advice={{ kind: "none" }} />);
     expect(container.textContent).toBe("");
   });
 
@@ -231,66 +231,64 @@ describe("ReloadSegment", () => {
       name: "stale only → blue, rebuilt copy",
       advice: { kind: "stale" },
       message: STALE_ONLY,
-      tint: "text-info",
-      notTint: "text-destructive",
+      tint: "bg-info-solid",
+      notTint: "bg-destructive-solid",
     },
     {
       name: "failed only → red, didn't-load copy",
       advice: { kind: "broken", stale: false, failedCount: 3 },
       message: BROKEN_ONLY,
-      tint: "text-destructive",
-      notTint: "text-info",
+      tint: "bg-destructive-solid",
+      notTint: "bg-info-solid",
     },
     {
       name: "outdated → red, can't-load copy",
       advice: { kind: "outdated", stale: true, count: 1 },
       message: OUTDATED,
-      tint: "text-destructive",
-      notTint: "text-info",
+      tint: "bg-destructive-solid",
+      notTint: "bg-info-solid",
     },
     {
       name: "failed and stale → red, copy names both",
       advice: { kind: "broken", stale: true, failedCount: 1 },
       message: BOTH,
-      tint: "text-destructive",
-      notTint: "text-info",
+      tint: "bg-destructive-solid",
+      notTint: "bg-info-solid",
     },
   ];
 
   for (const c of cases) {
     it(c.name, () => {
-      const { getByRole } = render(<ReloadSegment advice={c.advice} />);
+      const { getByRole } = render(<ReloadButton advice={c.advice} />);
       // The accessible name carries the whole message: colour and a hover
       // tooltip are otherwise the only difference between the two states.
-      const segment = getByRole("button", { name: c.message });
-      expect(segment.textContent).toBe("Reload");
-      expect(segment.className).toContain(c.tint);
-      expect(segment.className).not.toContain(c.notTint);
+      const pill = getByRole("button", { name: c.message });
+      expect(pill.textContent).toBe("Reload");
+      expect(pill.className).toContain(c.tint);
+      expect(pill.className).not.toContain(c.notTint);
     });
   }
 
   it("is a real <button> of its own, not nested in the Build button", () => {
     const { getByRole } = render(
-      <ReloadSegment
+      <ReloadButton
         advice={{ kind: "broken", stale: false, failedCount: 1 }}
       />,
     );
-    const segment = getByRole("button", { name: BROKEN_ONLY });
-    expect(segment.tagName).toBe("BUTTON");
-    expect(segment.parentElement?.closest("button")).toBeNull();
+    const pill = getByRole("button", { name: BROKEN_ONLY });
+    expect(pill.tagName).toBe("BUTTON");
+    expect(pill.parentElement?.closest("button")).toBeNull();
   });
 
   it("shows its message as a tooltip on hover", async () => {
     const { getByRole, findByText } = render(
-      <ReloadSegment
-        advice={{ kind: "broken", stale: true, failedCount: 1 }}
-      />,
+      <ReloadButton advice={{ kind: "broken", stale: true, failedCount: 1 }} />,
     );
-    const segment = getByRole("button", { name: BOTH });
-    fireEvent.pointerEnter(segment, { pointerType: "mouse" });
-    fireEvent.mouseEnter(segment);
-    fireEvent.focus(segment);
-    // The tooltip popup, not the segment's own aria-label.
+    const pill = getByRole("button", { name: BOTH });
+    fireEvent.pointerEnter(pill, { pointerType: "mouse" });
+    fireEvent.mouseEnter(pill);
+    fireEvent.focus(pill);
+    // The tooltip popup, not the pill's own aria-label.
     expect(
       await findByText(BOTH, { selector: "*:not([role=button]):not(button)" }),
     ).not.toBeNull();
@@ -316,9 +314,7 @@ describe("ReloadSegment", () => {
     });
 
     it("reloads the tab", () => {
-      const { getByRole } = render(
-        <ReloadSegment advice={{ kind: "stale" }} />,
-      );
+      const { getByRole } = render(<ReloadButton advice={{ kind: "stale" }} />);
       fireEvent.click(getByRole("button", { name: STALE_ONLY }));
       expect(reload).toHaveBeenCalledTimes(1);
     });

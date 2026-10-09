@@ -35,6 +35,19 @@ open extent is a per-call-site measurement. It is typed `ClassName`, so its valu
 comes out of `cn()` and `no-adhoc-layout` reads its tokens: a layout class
 written there is a lint error, not a silent override.
 
+## The `glass` variant and the `pill` shape
+
+`variant="glass"` is a frosted capsule, identical collapsed and open, made of
+translucent mixes because it floats over whatever app is behind it: the
+background at 72% under an 18px 1.6× saturated blur, a 1px ring of the
+foreground at 9% plus a 4% top highlight, and the theme's `shadow-2xl`. It is
+its own surface, so it re-publishes `--hover-fill` (the foreground at 8% —
+translucent, so a hover never paints an opaque patch on a light app showing
+through) and `--chrome-mask` (its ground, for cut-out rings such as a badge's).
+
+`shape="pill"` rounds the panel fully and sets `--radius-control` to full
+inside it, so every `md` control in the capsule is a pill too.
+
 ## A popup opened inside holds the panel open
 
 A popover, menu or select opened from the panel's content is drawn outside the

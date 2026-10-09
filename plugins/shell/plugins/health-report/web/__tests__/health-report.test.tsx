@@ -238,7 +238,9 @@ describe("activities", () => {
 
   it("a failed one alone breaks the ring, without spinning", () => {
     renderReport([ok], [{ state: "failed", label: "Build failed" }]);
-    expect(button().querySelector("svg .stroke-destructive")).not.toBeNull();
+    expect(
+      button().querySelector("svg .stroke-destructive-solid"),
+    ).not.toBeNull();
     expect(button().querySelector("svg.animate-spin")).toBeNull();
   });
 });

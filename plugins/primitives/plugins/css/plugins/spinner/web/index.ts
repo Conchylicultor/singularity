@@ -4,6 +4,6 @@ export { Spinner, type SpinnerProps } from "./internal/spinner";
 
 export default {
   description:
-    "Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.",
+    'Spinner for loading states: the spinning refresh glyph (default) or, with shape="ring", a thin ring (hover-tone track, current-colour arc). Always spinning by default; spinning={false} pauses.',
   contributions: [],
 } satisfies PluginDefinition;

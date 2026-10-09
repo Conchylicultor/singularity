@@ -59,6 +59,16 @@
     --color-warning-foreground: var(--warning-foreground);
     --color-info: var(--info);
     --color-info-foreground: var(--info-foreground);
+    /* The solid fill role (color-palette): a small status control's fill with
+       light text on it — `bg-info-solid`, `bg-destructive-solid`,
+       `bg-warning-solid`. Defaults to
+       the status colour; a theme deepens it without touching the text tone. */
+    --color-info-solid: var(--info-solid);
+    --color-info-solid-foreground: var(--info-solid-foreground);
+    --color-destructive-solid: var(--destructive-solid);
+    --color-destructive-solid-foreground: var(--destructive-solid-foreground);
+    --color-warning-solid: var(--warning-solid);
+    --color-warning-solid-foreground: var(--warning-solid-foreground);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);

@@ -201,6 +201,37 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     default: "color-mix(in oklab, var(--border) 60%, transparent)",
     label: "Message card border",
   },
+  // The "solid" fill role: the fill a small saturated status control wears at
+  // rest, with light text on it (a filled Reload pill, the bell's badge, a
+  // failed build's dot). Kept apart from `info` / `destructive` / `warning`,
+  // which double as TEXT colours — a theme can deepen the fill (the app
+  // chrome's navy, oxblood and deep amber) without making every status label
+  // on the same surface unreadable. Default = the status colour itself, so a theme that leaves
+  // them out paints exactly as before.
+  infoSolid: {
+    default: "var(--info)",
+    label: "Info fill",
+  },
+  infoSolidForeground: {
+    default: "var(--info-foreground)",
+    label: "On info fill",
+  },
+  destructiveSolid: {
+    default: "var(--destructive)",
+    label: "Destructive fill",
+  },
+  destructiveSolidForeground: {
+    default: "var(--destructive-foreground)",
+    label: "On destructive fill",
+  },
+  warningSolid: {
+    default: "var(--warning)",
+    label: "Warning fill",
+  },
+  warningSolidForeground: {
+    default: "var(--warning-foreground)",
+    label: "On warning fill",
+  },
   // A collapsible transcript card: a tool call, a thinking block, a hook row.
   threadCard: {
     default: "color-mix(in oklab, var(--muted) 20%, transparent)",

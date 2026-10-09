@@ -3,8 +3,12 @@ import {
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/overlay/plugins/floating-action/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  type ControlSize,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
+import { SlotItemLayout } from "@plugins/primitives/plugins/slot-render/web";
 import { useConfig } from "@plugins/config_v2/web";
 import type { ReactNode } from "react";
 import { isChromelessDocument } from "@plugins/primitives/plugins/embed/web";
@@ -18,12 +22,37 @@ import { useBarActivities } from "../internal/use-bar-activities";
 import type { Activity } from "@plugins/primitives/plugins/css/plugins/activity-ring/web";
 
 /**
- * The always-visible leading item: the health report's dot, at the bar's `sm`
- * density (the density `ActionBar.Item` gives every other button in the bar).
+ * The density each host draws the bar at. The slots declare `sm` (the docked
+ * strip's, inside the 36px tab bar); the floating capsule picks `md` — the
+ * chrome's 32px control inside its 40px capsule. Every item of a host shares
+ * its one height: the host passes it to each slot's `.Render` and to the
+ * health dot, never per item.
  */
-function HealthItem({ activities }: { activities?: readonly Activity[] }) {
+const FLOATING_SIZE: ControlSize = "md";
+const DOCKED_SIZE: ControlSize = "sm";
+
+/**
+ * The bar's resting tone, set once on each host's row: every ghost control in
+ * it inherits the muted foreground and brightens to the text colour on hover
+ * (ghost's `hover:text-foreground`), so the icons sit quietly until pointed
+ * at. The few pieces that read as words — the Improve label, the Build tray's
+ * status — set `text-foreground` themselves.
+ */
+const BAR_TONE = "text-muted-foreground";
+
+/**
+ * The always-visible leading item: the health report's dot, at its host's
+ * density (the one the host gives every other button in the bar).
+ */
+function HealthItem({
+  size,
+  activities,
+}: {
+  size: ControlSize;
+  activities?: readonly Activity[];
+}) {
   return (
-    <ControlSizeProvider size="sm">
+    <ControlSizeProvider size={size}>
       <HealthReportButton activities={activities} />
     </ControlSizeProvider>
   );
@@ -46,8 +75,19 @@ function FloatingTrigger({ open }: { open: boolean }) {
   return (
     <Stack direction="row" gap="2xs" align="center">
       {probes}
-      <HealthItem activities={open ? undefined : activities} />
-      {open ? null : <ActionBar.Glance.Render />}
+      <HealthItem
+        size={FLOATING_SIZE}
+        activities={open ? undefined : activities}
+      />
+      {open ? null : (
+        // Each glance draws its own box (the Reload tray), so the row's flex
+        // items are the chips themselves: a glance that has nothing to show
+        // (no reload due) generates no box at all and takes no gap — the
+        // collapsed capsule stays the 40px circle around the dot.
+        <SlotItemLayout orientation="host-owned">
+          <ActionBar.Glance.Render controlSize={FLOATING_SIZE} />
+        </SlotItemLayout>
+      )}
     </Stack>
   );
 }
@@ -72,7 +112,7 @@ function FloatingBand({ children }: { children: ReactNode }) {
     <div
       ref={ref}
       // eslint-disable-next-line layout/no-adhoc-layout -- viewport-edge fixed band anchored to the surface-edge header (outside any transformed ancestor)
-      className="floating-bar-band fixed right-3 z-popover flex flex-col"
+      className={`floating-bar-band fixed right-3 z-popover flex flex-col ${BAR_TONE}`}
     >
       {children}
     </div>
@@ -101,7 +141,9 @@ export function FloatingActionBarHost() {
   return (
     // The bar is chrome wherever it is mounted: floating over the app it still
     // wears the chrome's fixed theme, exactly as the docked strip does inside
-    // the tab bar. `none` because the floating panel paints its own card.
+    // the tab bar. `none` because the floating panel paints its own card: a
+    // glass capsule (pill, `xs` = 4px padding around the 32px `md` controls,
+    // so 40px tall) that is there collapsed and open alike.
     <Theme name={chromeThemeScope} surface="none">
       <FloatingBand>
         <FloatingAction
@@ -111,15 +153,22 @@ export function FloatingActionBarHost() {
           // eslint-disable-next-line layout/no-adhoc-layout -- positioning box of the floating hitbox inside its anchored band (centring + no-squash mechanics, not a layout role)
           className="relative my-auto shrink-0"
           anchor="top-right"
-          variant="ghost"
-          // The collapsed mark and the action row are different heights; centering
-          // them keeps the dot on the row's centre line as the panel widens.
+          variant="glass"
+          shape="pill"
+          pad="xs"
+          // No gap between the trigger and the reveal strip: the strip is a
+          // zero-width flex item while collapsed, and a gap would still widen
+          // the capsule by its width. The strip opens its own 2px lead instead.
+          gap="none"
+          // Every control is the same `md` height, so centring keeps each one on
+          // the capsule's centre line — the dot, the glance chips and the row's
+          // items alike — as the panel widens.
           align="center"
           trigger={(open) => <FloatingTrigger open={open} />}
         >
           {/* eslint-disable-next-line layout/no-adhoc-layout -- animated max-width hover-reveal strip (clipped while collapsed) */}
-          <FloatingActionFadeIn className="flex max-w-0 items-center gap-sm overflow-hidden whitespace-nowrap pr-sm transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]">
-            <ActionBar.Item.Render />
+          <FloatingActionFadeIn className="flex max-w-0 items-center gap-2xs overflow-hidden group-data-open/fa:pl-2xs whitespace-nowrap transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]">
+            <ActionBar.Item.Render controlSize={FLOATING_SIZE} />
           </FloatingActionFadeIn>
         </FloatingAction>
       </FloatingBand>
@@ -139,10 +188,15 @@ export function DockedActionBarHost() {
   if (!enabled || !pinned) return null;
 
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- rigid leaf of the tab bar's flex (must not compress as tabs scroll under it)
-    <Stack direction="row" gap="2xs" align="center" className="shrink-0 pl-sm">
-      <HealthItem />
-      <ActionBar.Item.Render />
+    <Stack
+      direction="row"
+      gap="2xs"
+      align="center"
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid leaf of the tab bar's flex (must not compress as tabs scroll under it)
+      className={`shrink-0 pl-sm ${BAR_TONE}`}
+    >
+      <HealthItem size={DOCKED_SIZE} />
+      <ActionBar.Item.Render controlSize={DOCKED_SIZE} />
     </Stack>
   );
 }

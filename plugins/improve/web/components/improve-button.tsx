@@ -16,14 +16,21 @@ import { ImproveSlots } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const autoAwesomeIcon = symbol("auto-awesome");
+// The single four-point spark — `flare`, whose Lucide counterpart is
+// `sparkle` — rather than `auto-awesome` (the cluster of three, Lucide
+// `sparkles`), the app's canonical "agent" glyph: Improve is the bar's one
+// labelled action, and the lone spark reads as it at the bar's size.
+const sparkIcon = symbol("flare");
 
 /**
  * The Improve pill: the Improve button (opening the draft popover) joined with
  * every contributed `ImproveSlots.Segment` — companion actions that feed the
- * same draft, such as picking a UI element — as one split capsule. Only the
- * Improve label is in the text colour; the companions keep the bar's quieter
- * tone, like its other icons, and brighten on hover.
+ * same draft, such as picking a UI element — as one split capsule. Every
+ * segment is a ghost: a quiet bar button, no fill and no outline, so the pill
+ * reads as one labelled action rather than a framed box inside the bar's own
+ * capsule. Only the Improve label is in the text colour; the icons (its sparkle
+ * and the companions) keep the bar's quieter tone, like its other icons, and
+ * brighten on hover.
  */
 export function ImproveButton() {
   const { open, insert } = useSyncExternalStore(
@@ -38,8 +45,11 @@ export function ImproveButton() {
         open={open}
         onOpenChange={setImproveOpen}
         trigger={
-          <Button variant="frame" className="text-foreground">
-            <Icon icon={autoAwesomeIcon} />
+          <Button variant="ghost" className="text-foreground">
+            <Icon
+              icon={sparkIcon}
+              className="text-muted-foreground transition-colors group-hover/button:text-foreground group-aria-expanded/button:text-foreground"
+            />
             Improve
           </Button>
         }

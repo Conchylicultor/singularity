@@ -13,9 +13,11 @@ import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
  * stay in sync automatically.
  */
 export const ActionBar = {
-  // Size-owning: both surfaces (agent-manager toolbar + floating bar) render this
-  // slot, so declaring `sm` here keeps every action button one consistent height.
-  // Contributions should omit `size` and inherit.
+  // Size-owning: both surfaces (the docked tab-bar strip + the floating bar)
+  // render this slot, so declaring `sm` here keeps every action button one
+  // consistent height. `sm` is the DEFAULT: a host may pick another density for
+  // the whole slot (`<ActionBar.Item.Render controlSize="md"/>` — the floating
+  // capsule does). Contributions should omit `size` and inherit.
   Item: defineRenderSlot<{ component: ComponentType }>({
     controlSize: "sm",
   }),
@@ -51,6 +53,7 @@ export const ActionBar = {
    * user should act on even while the bar is closed (Reload). A contribution
    * renders `null` when it has nothing to say. Unmounted while the bar is open:
    * the expanded row shows the full items, which carry the same action.
+   * Like `Item`, `sm` is the default and the host may pass its own density.
    */
   Glance: defineRenderSlot<{ component: ComponentType }>({
     controlSize: "sm",
