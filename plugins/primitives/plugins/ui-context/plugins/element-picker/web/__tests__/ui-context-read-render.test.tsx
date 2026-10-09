@@ -48,7 +48,9 @@ describe("ui-context renders as a chip on read surfaces", () => {
 
   it("renders the matched tag as the chip (label visible, tag text gone)", () => {
     const { container } = render(<div>{renderInlineChip(tag)}</div>);
-    expect(container.textContent).toContain("div — Track mixer");
+    // The human label, never the markup descriptor the agent reads.
+    expect(container.textContent).toContain("Track mixer");
+    expect(container.textContent).not.toContain("div —");
     expect(container.textContent).not.toContain("<ui-context");
     // The chip's trigger is a button.
     expect(container.querySelector("button")).not.toBeNull();

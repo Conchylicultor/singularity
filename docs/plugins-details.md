@@ -33412,15 +33412,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types):
           - `ContributionNode`
+          - `ElementDescriptor`
           - `LineageNode`
           - `RegionNode`
           - `UiContextField`
+          - `UiContextLabel`
           - `UiContextMeta`
           - `UiContextProvenance`
           - `UiContextSegment`
         - Exports (values):
+          - `formatElementDescriptor`
           - `formatLineageNode`
           - `formatLineagePath`
+          - `parseElementDescriptor`
           - `parseLineageNode`
           - `parseLineagePath`
           - `parseUiContext`
@@ -33428,6 +33432,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `splitUiContext`
           - `UI_CONTEXT_FIELDS`
           - `UI_CONTEXT_RE`
+          - `uiContextLabel`
           - `UiContextMetaSchema`
       - Test helpers:
         - Web: `@plugins/primitives/plugins/ui-context/web/testing`

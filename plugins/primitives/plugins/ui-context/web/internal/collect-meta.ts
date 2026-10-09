@@ -1,4 +1,8 @@
-import { formatLineagePath, type UiContextMeta } from "../../core";
+import {
+  formatElementDescriptor,
+  formatLineagePath,
+  type UiContextMeta,
+} from "../../core";
 import { collectLineage } from "./collect-lineage";
 import { isBoxlessMarker, nearestOwner, nearestSource } from "./marker-walk";
 
@@ -20,20 +24,24 @@ function ownText(el: Element): string {
   return s.trim();
 }
 
-/** A human label for the element: tag (+ role) + the best available accessible text. */
+/** The element's descriptor: tag (+ role, + an input/button `type`) + the best
+ * available accessible text. Spelled by the shared core formatter, so the chip
+ * can parse it back into a human label. */
 function describeElement(el: Element): string {
-  const tag = el.tagName.toLowerCase();
-  const role = el.getAttribute("role");
-  const head = role ? `${tag}[role=${role}]` : tag;
-  const label =
+  const name =
     el.getAttribute("aria-label") ||
     (el as HTMLElement).title ||
     el.getAttribute("placeholder") ||
     ownText(el) ||
     el.textContent ||
     "";
-  const trimmed = truncate(label);
-  return trimmed ? `${head} — ${trimmed}` : head;
+  return formatElementDescriptor({
+    tag: el.tagName.toLowerCase(),
+    role: el.getAttribute("role") || undefined,
+    type:
+      el.tagName === "INPUT" ? el.getAttribute("type") || undefined : undefined,
+    name: truncate(name) || undefined,
+  });
 }
 
 /** One selector segment: prefer a stable, unique anchor (id, then test id) and

@@ -169,6 +169,19 @@ tags in order, each tag with its raw text and parsed meta. A match
 `parseUiContext` refuses (no `url` or no label) is its own `malformed` arm, not
 prose, so the caller decides what it means.
 
+### The element label: one structure, two readings
+
+The body label (`element`) is an **element descriptor** —
+`tag[role=…][type=…] — name`, e.g. `button — Attach UI element` — spelled by
+`formatElementDescriptor` and read back by `parseElementDescriptor`
+(`core/internal/element.ts`, side by side like the lineage formatter/parser).
+The markup head is for the agent (it locates the node); a person never sees it.
+`uiContextLabel(meta)` turns the same structure into what the chip shows: the
+element's name with its kind ("Attach UI element" · Button), else what its
+markup says it is ("Checkbox"), else the owning component ("Spread wheel"),
+else the innermost lineage node ("Element picker"), else "Element". A body that
+is not a descriptor (a crash token's free-text "slot / label") is shown as-is.
+
 ### Provenance
 
 `serializeUiContext(meta, provenance)`'s second argument (`"picked" | "crash"`)
@@ -242,15 +255,19 @@ marker is *additive* alongside it; nothing here reads or writes it.
 - Core:
   - Exports (types):
     - `ContributionNode`
+    - `ElementDescriptor`
     - `LineageNode`
     - `RegionNode`
     - `UiContextField`
+    - `UiContextLabel`
     - `UiContextMeta`
     - `UiContextProvenance`
     - `UiContextSegment`
   - Exports (values):
+    - `formatElementDescriptor`
     - `formatLineageNode`
     - `formatLineagePath`
+    - `parseElementDescriptor`
     - `parseLineageNode`
     - `parseLineagePath`
     - `parseUiContext`
@@ -258,6 +275,7 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `splitUiContext`
     - `UI_CONTEXT_FIELDS`
     - `UI_CONTEXT_RE`
+    - `uiContextLabel`
     - `UiContextMetaSchema`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/ui-context/web/testing`

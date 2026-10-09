@@ -23,3 +23,9 @@ export {
 } from "./internal/token";
 export type { UiContextSegment } from "./internal/split";
 export { splitUiContext } from "./internal/split";
+export type { ElementDescriptor, UiContextLabel } from "./internal/element";
+export {
+  formatElementDescriptor,
+  parseElementDescriptor,
+  uiContextLabel,
+} from "./internal/element";

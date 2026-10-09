@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   UI_CONTEXT_FIELDS,
+  uiContextLabel,
   type UiContextField,
   type UiContextMeta,
 } from "@plugins/primitives/plugins/ui-context/core";
@@ -68,6 +69,10 @@ function DetailRow({
 /** The compact inline chip representing a captured UI element. Clicking it opens
  * a popover with the full captured metadata. */
 export function UiContextChip({ meta }: { meta: UiContextMeta }) {
+  // What a person calls the element ("Attach UI element", a Button) — never
+  // the markup descriptor the token carries for the agent, which stays one
+  // click away as the popover's Element row.
+  const label = uiContextLabel(meta);
   // The SAME chip every other inline token renders as. This one used to build
   // its own shell, and it was the better-looking of the two — so rather than
   // restyle it into the family, the family moved to it: the outlined tile that
@@ -75,8 +80,8 @@ export function UiContextChip({ meta }: { meta: UiContextMeta }) {
   //
   // No `onClick`: the popover clones this element with the handler that opens
   // the panel (see `LinkChipProps.onClick`). `max-w-40` is the one thing it does
-  // not share — an element label is an arbitrary selector-ish string, so it is
-  // capped and ellipsized by Badge's own truncating label span.
+  // not share — an element's name is arbitrary text, so it is capped and
+  // ellipsized by Badge's own truncating label span (the tooltip holds it whole).
   const trigger = (
     <LinkChip
       contentEditable={false}
@@ -88,12 +93,16 @@ export function UiContextChip({ meta }: { meta: UiContextMeta }) {
         />
       }
     >
-      {meta.element}
+      {label.title}
     </LinkChip>
   );
 
   return (
-    <InlinePopover trigger={trigger} width="2xl" tooltip="UI element context">
+    <InlinePopover
+      trigger={trigger}
+      width="2xl"
+      tooltip={label.kind ? `${label.kind}: ${label.title}` : label.title}
+    >
       <Inset pad="sm">
         <Stack gap="sm">
           <Stack direction="row" gap="2xs" align="center">
@@ -104,12 +113,28 @@ export function UiContextChip({ meta }: { meta: UiContextMeta }) {
             <Text
               as="span"
               variant="label"
-              className={cn(fillClasses("x"), "break-all")}
+              className={cn(fillClasses("x"), "break-words")}
             >
-              {meta.element}
+              {label.title}
             </Text>
+            {label.kind && (
+              <Text
+                as="span"
+                variant="caption"
+                tone="muted"
+                className={rigidClass()}
+              >
+                {label.kind}
+              </Text>
+            )}
           </Stack>
           <Stack gap="2xs">
+            {/* The raw descriptor the agent reads, kept for precision. */}
+            <DetailRow label="Element">
+              <Text as="span" variant="caption" className="break-all">
+                {meta.element}
+              </Text>
+            </DetailRow>
             {/* Every field is rendered straight from the shared registry, so the
                 popover can never silently drop a field the tag carries — adding a
                 field to UI_CONTEXT_FIELDS surfaces it here automatically. */}
