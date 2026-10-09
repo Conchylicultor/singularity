@@ -3,6 +3,7 @@ import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { iconField } from "@plugins/fields/plugins/icon/plugins/config/core";
 import { variantField } from "@plugins/fields/plugins/variant/plugins/config/core";
 
 /**
@@ -82,6 +83,8 @@ export function viewsDescriptor(
           stableIdentity: true,
           itemFields: {
             name: textField({ label: "Name" }),
+            // The switcher glyph; null (the default) = the view-type's icon.
+            icon: iconField({ label: "Icon" }),
             view: variantField({ label: "View" }),
           },
         }),

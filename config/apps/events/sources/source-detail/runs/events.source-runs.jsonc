@@ -7,10 +7,11 @@
   // a broken source. `Failures` is the triage view, `Detail` the tabular
   // account with the per-run counts and duration.
   "views": [
-    { "id": "all", "name": "All", "view": { "type": "list" } },
+    { "id": "all", "name": "All", "icon": "format-list-bulleted", "view": { "type": "list" } },
     {
       "id": "failures",
       "name": "Failures",
+      "icon": "error",
       "view": {
         "type": "list",
         "filter": {
@@ -32,6 +33,7 @@
     {
       "id": "detail",
       "name": "Detail",
+      "icon": "table-rows",
       "view": {
         "type": "table",
         "sort": [{ "fieldId": "startedAt", "direction": "desc" }]

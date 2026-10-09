@@ -7,6 +7,8 @@
     {
       "id": "all",
       "name": "All",
+      "icon": "bolt",
+      "icon": "bolt",
       "view": { "type": "list", "sort": [{ "fieldId": "label", "direction": "asc" }] }
     }
   ],

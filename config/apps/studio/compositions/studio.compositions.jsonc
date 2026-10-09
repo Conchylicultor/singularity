@@ -4,6 +4,7 @@
     {
       "id": "by-category",
       "name": "By category",
+      "icon": "category",
       "view": {
         "type": "list",
         "groupBy": "category",

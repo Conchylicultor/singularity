@@ -9,6 +9,7 @@
   - Imported by:
     - `conversations/agents`
     - `fields/avatar/config`
+    - `fields/icon/config`
     - `page/callout`
     - `primitives/icon-picker`
 - Core:

@@ -1,12 +1,15 @@
 import { describe, expect, it } from "bun:test";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "./resolve-instances";
 import { resolveActiveId } from "./resolve-active-id";
 
+const LIST_ICON = symbol("view-list");
+
 // Only `instance.id` is read, so the viewType is a stand-in.
 function inst(id: string): ResolvedViewInstance<ViewTypeMeta> {
   return {
-    instance: { id, name: id, type: "list" },
+    instance: { id, name: id, icon: LIST_ICON, pickedIcon: null, type: "list" },
     viewType: {} as ResolvedViewInstance<ViewTypeMeta>["viewType"],
   } as ResolvedViewInstance<ViewTypeMeta>;
 }

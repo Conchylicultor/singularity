@@ -9,6 +9,7 @@
     {
       "id": "upcoming",
       "name": "Upcoming",
+      "icon": "schedule",
       "view": {
         "type": "list",
         // Sections relative to today, coarsening with distance — Today,
@@ -39,6 +40,7 @@
     {
       "id": "all",
       "name": "All",
+      "icon": "table-rows",
       "view": {
         "type": "table",
         "sort": [{ "fieldId": "startsAt", "direction": "desc" }]
@@ -47,6 +49,7 @@
     {
       "id": "by-category",
       "name": "By category",
+      "icon": "category",
       "view": {
         "type": "list",
         "groupBy": "category",
@@ -56,6 +59,7 @@
     {
       "id": "gallery",
       "name": "Gallery",
+      "icon": "grid-view",
       // The card-grid reading of the SAME forward window `Upcoming` shows: the
       // filter and sort are deliberately identical, so the two views are one
       // question asked in two densities — scan-a-list vs. browse-by-eye — rather

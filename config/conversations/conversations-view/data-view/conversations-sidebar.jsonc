@@ -4,6 +4,7 @@
     {
       "id": "queue",
       "name": "Queue",
+      "icon": "format-list-numbered",
       "source": "queue",
       "view": {
         "type": "list",
@@ -36,6 +37,7 @@
     {
       "id": "view-92bbab5a-1225-4b01-b081-3ead3383954b",
       "name": "Models",
+      "icon": "neurology",
       "source": "history",
       "view": {
         "type": "list",
@@ -59,6 +61,7 @@
     {
       "id": "history",
       "name": "History",
+      "icon": "history",
       "source": "history",
       "view": { "type": "list", "sort": [{ "fieldId": "createdAt", "direction": "desc" }] }
     }

@@ -4,6 +4,7 @@
     {
       "id": "list",
       "name": "Attempts",
+      "icon": "rocket-launch",
       "view": { "type": "list", "sort": [{ "fieldId": "started", "direction": "desc" }] }
     }
   ]

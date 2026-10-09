@@ -4,6 +4,8 @@
     {
       "id": "queue",
       "name": "Queue",
+      "icon": "pending",
+      "icon": "pending",
       // One compact table grouped by op kind (the section holding this
       // worktree's op first). Unsorted: rows keep the queue order buildSections
       // makes — global push positions, then working → held → queued.

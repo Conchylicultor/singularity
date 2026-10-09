@@ -4,11 +4,13 @@
     {
       "id": "all",
       "name": "All",
+      "icon": "table-rows",
       "view": { "type": "table", "sort": [{ "fieldId": "id", "direction": "asc" }] }
     },
     {
       "id": "list",
       "name": "List",
+      "icon": "format-list-bulleted",
       "view": { "type": "list", "sort": [{ "fieldId": "id", "direction": "asc" }] }
     }
   ],

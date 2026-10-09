@@ -56,6 +56,8 @@ import { defineDataViewSources } from "../internal/define-data-view-sources";
 import { MergedDataView } from "../components/merged-data-view";
 import { DataViewSlots } from "../slots";
 
+const LIST_ICON = symbol("view-list");
+
 const STORAGE_KEY = "test-merged-sidebar" as DataViewId;
 
 const Conv = z.object({
@@ -129,6 +131,8 @@ function model(state: ViewState) {
         instance: {
           id: "history",
           name: "History",
+          icon: LIST_ICON,
+          pickedIcon: null,
           type: "list",
           source: "history",
         },
@@ -154,6 +158,7 @@ function model(state: ViewState) {
       availableSources: [],
       addView: noop,
       renameView: noop,
+      setViewIcon: noop,
       duplicateView: noop,
       deleteView: noop,
       reorderView: noop,

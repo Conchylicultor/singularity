@@ -4,6 +4,7 @@
     {
       "id": "all",
       "name": "All",
+      "icon": "warning",
       "view": { "type": "table", "sort": { "fieldId": "risk", "direction": "desc" } }
     }
   ]

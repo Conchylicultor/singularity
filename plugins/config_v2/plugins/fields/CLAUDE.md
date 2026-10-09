@@ -70,9 +70,9 @@ the config-only templates to mirror.
   - Slots:
     - `Fields.Renderer`
     - `Fields.Sample`
-  - Slot contributors: 38 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Fields.Renderer` ×19
-    - `Fields.Sample` ×19
+  - Slot contributors: 40 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Fields.Renderer` ×20
+    - `Fields.Sample` ×20
   - Uses:
     - `primitives/css/cluster.Cluster`
     - `primitives/css/control-panel.ControlPanel`
@@ -97,8 +97,8 @@ the config-only templates to mirror.
     - `useFieldSamples`
     - `useLocalValue`
 - Cross-plugin:
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×19
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×20
     - `apps` ×3
     - `config_v2/settings`
     - `primitives/data-view/view-core`

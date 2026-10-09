@@ -2348,6 +2348,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ids.IdKinds`
     - `primitives/data-view/view-core.buildViewConfigRegistrations`
     - `primitives/data-view/view-core.viewsDescriptor`
+    - `ui/icons/sprites.defineSavedIconSource`
   - Exports (values):
     - `readDataViewConfigDoc`
     - `watchDataViewConfigDoc`

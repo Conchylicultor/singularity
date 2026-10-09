@@ -1,4 +1,4 @@
-import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import type { IconRef, SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
@@ -36,6 +36,13 @@ export interface ViewInstance {
   id: string;
   /** Switcher display label. Default-instances use the view-type `title`. */
   name: string;
+  /** Switcher glyph: the row's own `icon` when it picked one, else the
+   *  view-type's `icon`. Resolved once in `buildInstanceFromRow`, so every
+   *  switcher reads this and none re-derives the fallback. */
+  icon: IconRef;
+  /** The row's own picked glyph (what the settings picker edits), or `null`
+   *  when the instance falls back to the view-type's icon. */
+  pickedIcon: SavedSymbolName | null;
   /** Registry id (`ViewTypeMeta.type`) this instance renders. */
   type: string;
   /** Opaque source key this instance binds to (`ViewSourceEntry.id`). Absent =
@@ -56,6 +63,10 @@ export interface ViewInstance {
 export interface ViewConfigRow {
   id: string;
   name: string;
+  /** The user-picked switcher glyph. Absent = the view-type's own icon. Carried
+   *  by conditional spread like `source`, so an icon-less row's JSON stays
+   *  byte-identical. */
+  icon?: SavedSymbolName;
   view: VariantValue;
   /** Opaque source key (`ViewSourceEntry.id`) this row binds to. Absent = the
    *  implicit sole source. Carried verbatim through every read/write —

@@ -24,6 +24,9 @@ import {
   type DataViewControlsContextValue,
 } from "../components/controls/controls-context";
 import type { ViewModel } from "../internal/use-data-view-model";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const LIST_ICON = symbol("view-list");
 
 /**
  * The hosted toolbar: no band, the surface's frame places the parts. The shell
@@ -165,7 +168,7 @@ describe("hosted toolbar — options trigger", () => {
 /** Two authored views, settled — enough for the shell to build a switcher. */
 function readyModel(): ViewModel {
   const inst = (id: string) => ({
-    instance: { id, name: id, type: "list" },
+    instance: { id, name: id, icon: LIST_ICON, pickedIcon: null, type: "list" },
     viewType: { icon: () => null },
   });
   return {

@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
+import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
 import type {
   AddableSource,
@@ -34,6 +35,8 @@ export interface ViewActionsCore {
   variantsFor: (id: string) => Map<string, VariantEntry>;
   addView: (type: string, sourceId?: string) => void;
   renameView: (id: string, name: string) => void;
+  /** Set the switcher glyph; `null` reverts to the view-type's own icon. */
+  setViewIcon: (id: string, icon: SavedSymbolName | null) => void;
   duplicateView: (id: string) => void;
   deleteView: (id: string) => void;
   reorderView: (id: string, toIndex: number) => void;
@@ -165,6 +168,7 @@ export function useViewModel<T extends ViewTypeMeta>(
         setActiveView(cfg.addView(type, sourceId));
       },
       renameView: cfg.renameView,
+      setViewIcon: cfg.setViewIcon,
       duplicateView: (id) => {
         setActiveView(cfg.duplicateView(id));
       },

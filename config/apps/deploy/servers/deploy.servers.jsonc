@@ -1,10 +1,12 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "id": "all", "name": "All", "view": { "type": "list" } },
+    { "id": "all", "name": "All", "icon": "dns", "icon": "dns", "view": { "type": "list" } },
     {
       "id": "online",
       "name": "Online",
+      "icon": "cloud-done",
+      "icon": "cloud-done",
       "view": {
         "type": "list",
         "filter": {

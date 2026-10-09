@@ -2,6 +2,8 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { IdKinds } from "@plugins/ids/server";
 import { dataViewConfigRegistrations } from "./internal/config-registrations";
 import { filterNodeIdKind, presetIdKind } from "../core";
+// Registers the view-icons saved-icon source (module eval).
+import "./internal/saved-icons";
 
 export {
   readDataViewConfigDoc,

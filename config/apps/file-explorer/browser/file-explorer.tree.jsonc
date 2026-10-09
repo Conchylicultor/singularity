@@ -10,6 +10,7 @@
     {
       "id": "tree",
       "name": "Tree",
+      "icon": "folder",
       "view": { "type": "tree" }
     }
   ],

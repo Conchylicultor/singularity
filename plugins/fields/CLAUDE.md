@@ -102,12 +102,12 @@ tokens, so anything that imports the barrels back would cycle.
 - Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 - Web:
   - Slots: `Fields.Identity`
-  - Slot contributors: 24 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Fields.Identity` ×24
+  - Slot contributors: 25 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Fields.Identity` ×25
   - Exports (values): `Fields`
 - Cross-plugin:
-  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×45
+  - Imported by: 66 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×47
     - `apps` ×7
     - `debug` ×3
     - `infra` ×3
@@ -144,6 +144,7 @@ tokens, so anything that imports the barrels back would cycle.
   - **`dynamic-flags`** [1 sub-plugin] — Dynamic flags (toggles) field type: identity only. Options and their defaults are resolved at config-render time via the plugins/config sub-plugin's slot.
   - **`enum`** [6 sub-plugins] — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
   - **`float`** [2 sub-plugins] — Float field type: identity only, extends number — reuses number's cell and filter via the extends chain.
+  - **`icon`** [1 sub-plugin] — Icon field type: identity only. The config-render capability and the iconField factory live in the plugins/config sub-plugin.
   - **`image`** [1 sub-plugin] — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).
   - **`int`** [2 sub-plugins] — Integer field type: identity only, extends number — reuses number's cell and filter via the extends chain.
   - **`json`** [2 sub-plugins] — JSON field type: identity only. The config-render capability and the jsonField factory live in the plugins/config sub-plugin.

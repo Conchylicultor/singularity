@@ -4,11 +4,13 @@
     {
       "id": "all",
       "name": "All",
+      "icon": "forum",
       "view": { "type": "table", "sort": [{ "fieldId": "createdAt", "direction": "desc" }] }
     },
     {
       "id": "fable",
       "name": "Fable",
+      "icon": "auto-awesome",
       "view": {
         "type": "table",
         "visibleFields": ["title", "status", "createdAt", "endedAt", "model"],

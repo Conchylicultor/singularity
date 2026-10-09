@@ -20,6 +20,8 @@
     {
       "id": "inbox",
       "name": "Inbox",
+      "icon": "inbox",
+      "icon": "inbox",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
@@ -42,6 +44,8 @@
     {
       "id": "starred",
       "name": "Starred",
+      "icon": "star",
+      "icon": "star",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
@@ -64,6 +68,8 @@
     {
       "id": "important",
       "name": "Important",
+      "icon": "label-important",
+      "icon": "label-important",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
@@ -86,6 +92,8 @@
     {
       "id": "sent",
       "name": "Sent",
+      "icon": "send",
+      "icon": "send",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
@@ -108,6 +116,8 @@
     {
       "id": "drafts",
       "name": "Drafts",
+      "icon": "draft",
+      "icon": "draft",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
@@ -132,6 +142,8 @@
       // negations rather than a positive label, because there is no "all" label.
       "id": "all",
       "name": "All Mail",
+      "icon": "mail",
+      "icon": "mail",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
@@ -161,6 +173,8 @@
     {
       "id": "spam",
       "name": "Spam",
+      "icon": "report",
+      "icon": "report",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],
@@ -183,6 +197,8 @@
     {
       "id": "trash",
       "name": "Trash",
+      "icon": "delete",
+      "icon": "delete",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }],

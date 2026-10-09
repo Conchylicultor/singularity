@@ -91,6 +91,7 @@ host owns its own inset, through `className`.
 - Cross-plugin:
   - Imported by:
     - `fields/avatar/config`
+    - `fields/icon/config`
     - `page/callout`
     - `primitives/avatar`
 

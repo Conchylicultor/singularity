@@ -1,4 +1,5 @@
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
+import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import type { ViewConfigRow } from "../../core";
 
 /**
@@ -13,6 +14,8 @@ import type { ViewConfigRow } from "../../core";
 export interface RawViewRow {
   id?: string;
   name: string;
+  /** `null` is the descriptor's healed default — "no icon picked". */
+  icon?: SavedSymbolName | null;
   view: VariantValue;
   source?: string;
 }
@@ -33,9 +36,10 @@ function slugify(name: string): string {
  * source — there is no code synthesis. Duplicate derived ids are disambiguated
  * with an index suffix so each row stays addressable.
  *
- * `source` is carried via **conditional spread** so a source-less row's JSON
- * stays byte-identical (`{ id, name, view }`, no `source` key) — the
- * JSON-identity reconcile in `useViewsConfig` depends on that.
+ * `source` and `icon` are carried via **conditional spread** so a row without
+ * them stays byte-identical (`{ id, name, view }`, no extra key) — the
+ * JSON-identity reconcile in `useViewsConfig` depends on that. A `null` icon
+ * (the descriptor's healed default) normalizes to absent.
  */
 export function normalizeRows(raw: RawViewRow[]): ViewConfigRow[] {
   const seenIds = new Set<string>();
@@ -47,6 +51,7 @@ export function normalizeRows(raw: RawViewRow[]): ViewConfigRow[] {
     return {
       id,
       name: row.name,
+      ...(row.icon != null ? { icon: row.icon } : {}),
       view: row.view,
       ...(row.source !== undefined ? { source: row.source } : {}),
     };

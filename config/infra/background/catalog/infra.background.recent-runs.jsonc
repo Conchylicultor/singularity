@@ -6,6 +6,7 @@
     {
       "id": "recent",
       "name": "Recent",
+      "icon": "history",
       "view": { "type": "list", "sort": [{ "fieldId": "startedAt", "direction": "desc" }] }
     }
   ],

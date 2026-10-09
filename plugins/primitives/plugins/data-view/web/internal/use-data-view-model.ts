@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
+import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import { useViewModel } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type {
@@ -35,6 +36,7 @@ export interface ViewActions {
   variantsFor: (id: string) => Map<string, VariantEntry>;
   addView: (type: string, sourceId?: string) => void;
   renameView: (id: string, name: string) => void;
+  setViewIcon: (id: string, icon: SavedSymbolName | null) => void;
   duplicateView: (id: string) => void;
   deleteView: (id: string) => void;
   reorderView: (id: string, toIndex: number) => void;
@@ -378,6 +380,7 @@ export function useDataViewModel(
       variantsFor: core.actions.variantsFor,
       addView: core.actions.addView,
       renameView: core.actions.renameView,
+      setViewIcon: core.actions.setViewIcon,
       duplicateView: core.actions.duplicateView,
       deleteView: core.actions.deleteView,
       reorderView: core.actions.reorderView,

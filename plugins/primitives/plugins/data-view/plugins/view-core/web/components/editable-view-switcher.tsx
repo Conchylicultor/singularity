@@ -79,9 +79,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
       <SortableList items={ids} onMove={onMove} orientation="horizontal">
         <Stack direction="row" align="center" gap="xs">
           {instances.map((r) => {
-            // `r.viewType.icon` is the generic `T["icon"]`; widen to the
-            // concrete `ViewTypeMeta` icon shape so JSX accepts `<Icon />`.
-            const icon: ViewTypeMeta["icon"] = r.viewType.icon;
+            const icon = r.instance.icon;
             const id = r.instance.id;
             const isActive = id === activeId;
             const chip = (

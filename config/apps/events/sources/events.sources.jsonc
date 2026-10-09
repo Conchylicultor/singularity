@@ -20,10 +20,11 @@
   // it in a list titled `Needs attention` is nagging about a decision already
   // made. Its history is untouched and `All` still shows it.
   "views": [
-    { "id": "all", "name": "All", "view": { "type": "list" } },
+    { "id": "all", "name": "All", "icon": "format-list-bulleted", "view": { "type": "list" } },
     {
       "id": "needs-attention",
       "name": "Needs attention",
+      "icon": "warning",
       "view": {
         "type": "list",
         "filter": {
@@ -52,6 +53,7 @@
     {
       "id": "by-type",
       "name": "By type",
+      "icon": "category",
       "view": { "type": "list", "groupBy": "type" }
     }
   ],

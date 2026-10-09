@@ -31,6 +31,7 @@
       // the question the toolbar button is already being pressed to answer.
       "id": "active",
       "name": "Active",
+      "icon": "play-circle",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "startedAt", "direction": "desc" }],
@@ -55,6 +56,7 @@
       // answer the four separate ledgers could never give.
       "id": "recent",
       "name": "Recent",
+      "icon": "history",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "startedAt", "direction": "desc" }]
@@ -63,6 +65,7 @@
     {
       "id": "builds",
       "name": "Builds",
+      "icon": "construction",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "startedAt", "direction": "desc" }],
@@ -85,6 +88,7 @@
     {
       "id": "backups",
       "name": "Backups",
+      "icon": "backup",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "startedAt", "direction": "desc" }],
@@ -109,6 +113,7 @@
       // steps, so they share a tab rather than each getting a thin one.
       "id": "shipping",
       "name": "Shipping",
+      "icon": "rocket-launch",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "startedAt", "direction": "desc" }],
@@ -133,6 +138,7 @@
       // something that needs looking at, which is what this tab is for.
       "id": "failed",
       "name": "Failed",
+      "icon": "error",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "startedAt", "direction": "desc" }],

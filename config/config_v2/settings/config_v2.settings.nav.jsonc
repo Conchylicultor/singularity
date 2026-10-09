@@ -4,6 +4,8 @@
     {
       "id": "tree",
       "name": "Configs",
+      "icon": "settings",
+      "icon": "settings",
       "view": {
         "type": "tree",
         "visibleFields": ["label", "modified", "conflict", "source"],
@@ -26,6 +28,8 @@
     {
       "id": "conflicts",
       "name": "Conflicts",
+      "icon": "warning",
+      "icon": "warning",
       "view": {
         "type": "tree",
         "filter": {
@@ -47,6 +51,8 @@
     {
       "id": "reorder",
       "name": "Reorder",
+      "icon": "swap-vert",
+      "icon": "swap-vert",
       "view": {
         "type": "tree",
         "visibleFields": ["label", "modified", "conflict", "source"],
@@ -69,6 +75,8 @@
     {
       "id": "views",
       "name": "DataView",
+      "icon": "table-rows",
+      "icon": "table-rows",
       "view": {
         "type": "tree",
         "filter": {

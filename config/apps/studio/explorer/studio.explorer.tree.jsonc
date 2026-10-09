@@ -1,11 +1,12 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "id": "tree", "name": "Tree", "view": { "type": "tree", "visibleFields": ["name"] } },
-    { "id": "table", "name": "Table", "view": { "type": "table" } },
+    { "id": "tree", "name": "Tree", "icon": "account-tree", "view": { "type": "tree", "visibleFields": ["name"] } },
+    { "id": "table", "name": "Table", "icon": "table-rows", "view": { "type": "table" } },
     {
       "id": "load-bearing",
       "name": "Load-bearing",
+      "icon": "layers",
       "view": {
         "type": "table",
         "filter": {

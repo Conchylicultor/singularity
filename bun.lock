@@ -2525,6 +2525,14 @@
       "name": "@singularity/plugin-fields-float-storage",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/icon": {
+      "name": "@singularity/plugin-fields-icon",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/icon/plugins/config": {
+      "name": "@singularity/plugin-fields-icon-config",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/image": {
       "name": "@singularity/plugin-fields-image",
       "version": "0.0.1",
@@ -7662,6 +7670,10 @@
     "@singularity/plugin-fields-float-config": ["@singularity/plugin-fields-float-config@workspace:plugins/fields/plugins/float/plugins/config"],
 
     "@singularity/plugin-fields-float-storage": ["@singularity/plugin-fields-float-storage@workspace:plugins/fields/plugins/float/plugins/storage"],
+
+    "@singularity/plugin-fields-icon": ["@singularity/plugin-fields-icon@workspace:plugins/fields/plugins/icon"],
+
+    "@singularity/plugin-fields-icon-config": ["@singularity/plugin-fields-icon-config@workspace:plugins/fields/plugins/icon/plugins/config"],
 
     "@singularity/plugin-fields-image": ["@singularity/plugin-fields-image@workspace:plugins/fields/plugins/image"],
 

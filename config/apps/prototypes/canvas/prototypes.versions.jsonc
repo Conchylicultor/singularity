@@ -8,6 +8,7 @@
     {
       "id": "all",
       "name": "All versions",
+      "icon": "history",
       "view": { "type": "list", "sort": [{ "fieldId": "n", "direction": "desc" }] }
     }
   ]

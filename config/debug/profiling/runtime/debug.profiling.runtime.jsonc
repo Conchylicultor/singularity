@@ -1,10 +1,11 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "id": "all", "name": "All", "view": { "type": "table", "sort": { "fieldId": "maxMs", "direction": "desc" } } },
+    { "id": "all", "name": "All", "icon": "speed", "view": { "type": "table", "sort": { "fieldId": "maxMs", "direction": "desc" } } },
     {
       "id": "http",
       "name": "HTTP",
+      "icon": "public",
       "view": {
         "type": "table",
         "sort": { "fieldId": "maxMs", "direction": "desc" },
@@ -21,6 +22,7 @@
     {
       "id": "db",
       "name": "DB",
+      "icon": "storage",
       "view": {
         "type": "table",
         "sort": { "fieldId": "maxMs", "direction": "desc" },
@@ -37,6 +39,7 @@
     {
       "id": "loaders",
       "name": "Loaders",
+      "icon": "sync",
       "view": {
         "type": "table",
         "sort": { "fieldId": "maxMs", "direction": "desc" },

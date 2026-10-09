@@ -5,6 +5,8 @@
     {
       "id": "recent",
       "name": "Recent",
+      "icon": "history",
+      "icon": "history",
       "view": { "type": "list", "sort": [{ "fieldId": "filedAt", "direction": "desc" }] }
     }
   ],

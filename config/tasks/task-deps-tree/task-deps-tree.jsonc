@@ -4,6 +4,8 @@
     {
       "id": "deps",
       "name": "Dependencies",
+      "icon": "account-tree",
+      "icon": "account-tree",
       "source": "deps",
       "view": {
         "type": "tree"
@@ -12,6 +14,8 @@
     {
       "id": "created",
       "name": "Created",
+      "icon": "schedule",
+      "icon": "schedule",
       "source": "created",
       "view": {
         "type": "tree",

@@ -1,7 +1,7 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "id": "history", "name": "History", "view": { "type": "list",  "sort": [{ "fieldId": "startedAt", "direction": "desc" }] } },
-    { "id": "all",     "name": "All",     "view": { "type": "table", "sort": [{ "fieldId": "startedAt", "direction": "desc" }] } }
+    { "id": "history", "name": "History", "icon": "history", "view": { "type": "list",  "sort": [{ "fieldId": "startedAt", "direction": "desc" }] } },
+    { "id": "all",     "name": "All", "icon": "table-rows",     "view": { "type": "table", "sort": [{ "fieldId": "startedAt", "direction": "desc" }] } }
   ]
 }

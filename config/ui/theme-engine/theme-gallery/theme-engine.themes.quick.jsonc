@@ -13,6 +13,8 @@
     {
       "id": "mine",
       "name": "My themes",
+      "icon": "palette",
+      "icon": "palette",
       "view": {
         "type": "list",
         "filter": {
@@ -34,6 +36,8 @@
     {
       "id": "community",
       "name": "Community",
+      "icon": "public",
+      "icon": "public",
       "view": {
         "type": "list",
         "filter": {
@@ -55,6 +59,8 @@
     {
       "id": "curated",
       "name": "Curated",
+      "icon": "star",
+      "icon": "star",
       "view": {
         "type": "list",
         "filter": {

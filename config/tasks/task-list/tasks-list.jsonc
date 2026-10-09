@@ -4,6 +4,8 @@
     {
       "id": "tree",
       "name": "Tree",
+      "icon": "account-tree",
+      "icon": "account-tree",
       "view": {
         "type": "tree",
         "groupBy": "category",
@@ -24,10 +26,12 @@
         }
       }
     },
-    { "id": "recent", "name": "Recent", "view": { "type": "list", "sort": { "fieldId": "updatedAt", "direction": "desc" } } },
+    { "id": "recent", "name": "Recent", "icon": "history", "icon": "history", "view": { "type": "list", "sort": { "fieldId": "updatedAt", "direction": "desc" } } },
     {
       "id": "attempted",
       "name": "Attempted",
+      "icon": "play-circle",
+      "icon": "play-circle",
       "view": {
         "type": "tree",
         "filter": {

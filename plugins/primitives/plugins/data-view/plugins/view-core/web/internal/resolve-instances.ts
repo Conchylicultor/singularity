@@ -1,4 +1,5 @@
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
+import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
 import type {
   ViewInstance,
   ViewConfigRow,
@@ -28,6 +29,8 @@ export interface ResolvedViewInstance<T extends ViewTypeMeta = ViewTypeMeta> {
  * the add menu only, never authored rows (matching the single-source `views`
  * prop semantics: an authored row of a non-whitelisted type still renders).
  *
+ * The instance's `icon` is the row's picked one, else the view-type's.
+ *
  * The row's whole `view` value is layered **over** the entry's code-supplied
  * `viewOptions[type]` to become the instance `options`: config-authored keys
  * (`sort`/`filter`/`coverField`/…) override, while non-serializable code-only
@@ -46,6 +49,12 @@ export function buildInstanceFromRow<T extends ViewTypeMeta>(
   const instance: ViewInstance = {
     id: row.id,
     name: row.name,
+    // `viewType.icon` is the generic `T["icon"]`; widen to the concrete shape.
+    icon:
+      row.icon !== undefined
+        ? runtimeSymbol(row.icon)
+        : (viewType.icon as ViewTypeMeta["icon"]),
+    pickedIcon: row.icon ?? null,
     type: row.view.type,
     ...(row.source !== undefined ? { source: row.source } : {}),
     options: {

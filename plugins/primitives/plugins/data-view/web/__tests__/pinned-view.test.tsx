@@ -10,6 +10,9 @@ import type {
   ReadyViewModel,
   ViewModel,
 } from "../internal/use-data-view-model";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+
+const LIST_ICON = symbol("view-list");
 
 /**
  * The pinned-instance contract, at the seam where it was nearly lost.
@@ -33,7 +36,7 @@ const STORAGE_KEY = "runs" as DataViewId;
 
 function inst(id: string) {
   return {
-    instance: { id, name: id, type: "list" },
+    instance: { id, name: id, icon: LIST_ICON, pickedIcon: null, type: "list" },
     viewType: {},
   };
 }
@@ -74,6 +77,7 @@ function model(activeId: string): ViewModel {
       availableSources: [],
       addView: () => {},
       renameView: () => {},
+      setViewIcon: () => {},
       duplicateView: () => {},
       deleteView: () => {},
       reorderView: () => {},

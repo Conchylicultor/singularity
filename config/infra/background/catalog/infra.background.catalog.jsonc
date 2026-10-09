@@ -8,6 +8,7 @@
     {
       "id": "all",
       "name": "All",
+      "icon": "checklist",
       "view": {
         "type": "list",
         "groupBy": { "fieldId": "group", "groupingId": "value" },
@@ -25,6 +26,7 @@
     {
       "id": "failing",
       "name": "Failing",
+      "icon": "error",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "lastRun", "direction": "desc" }],
@@ -41,6 +43,7 @@
     {
       "id": "everything",
       "name": "Everything",
+      "icon": "layers",
       "view": {
         "type": "list",
         "groupBy": { "fieldId": "group", "groupingId": "value" },

@@ -9,6 +9,8 @@
     {
       "id": "gallery",
       "name": "Gallery",
+      "icon": "grid-view",
+      "icon": "grid-view",
       "view": { "type": "gallery", "groupBy": { "fieldId": "status", "groupingId": "value" } }
     }
   ]

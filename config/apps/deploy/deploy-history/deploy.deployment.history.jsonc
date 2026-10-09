@@ -10,11 +10,13 @@
     {
       "id": "recent",
       "name": "Recent",
+      "icon": "history",
       "view": { "type": "list", "sort": [{ "fieldId": "startedAt", "direction": "desc" }] }
     },
     {
       "id": "failures",
       "name": "Failures",
+      "icon": "error",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "startedAt", "direction": "desc" }],
@@ -37,6 +39,7 @@
     {
       "id": "all",
       "name": "All",
+      "icon": "table-rows",
       "view": { "type": "table", "sort": [{ "fieldId": "startedAt", "direction": "desc" }] }
     }
   ],

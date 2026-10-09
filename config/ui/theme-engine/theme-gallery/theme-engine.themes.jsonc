@@ -23,6 +23,8 @@
     {
       "id": "mine",
       "name": "My themes",
+      "icon": "palette",
+      "icon": "palette",
       "view": {
         "type": "gallery",
         "filter": {
@@ -44,6 +46,8 @@
     {
       "id": "community",
       "name": "Community",
+      "icon": "public",
+      "icon": "public",
       "view": {
         "type": "gallery",
         "filter": {
@@ -65,6 +69,8 @@
     {
       "id": "curated",
       "name": "Curated",
+      "icon": "star",
+      "icon": "star",
       "view": {
         "type": "gallery",
         "filter": {

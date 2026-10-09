@@ -35,6 +35,7 @@
     {
       "id": "favorites",
       "name": "Favorites",
+      "icon": "star",
       "view": {
         "type": "list",
         "visibleFields": ["title"],
@@ -58,6 +59,7 @@
     {
       "id": "pages",
       "name": "Private",
+      "icon": "lock",
       "view": {
         "type": "tree",
         "visibleFields": ["title"],
@@ -81,6 +83,7 @@
     {
       "id": "scratch",
       "name": "Scratch",
+      "icon": "edit-note",
       "view": {
         "type": "tree",
         "visibleFields": ["title"],

@@ -4,15 +4,17 @@
   // here — `All` is the whole run. `By change` is the triage read: group the
   // list by what the run did, which is the question the summary's counts raise.
   "views": [
-    { "id": "all", "name": "All", "view": { "type": "list" } },
+    { "id": "all", "name": "All", "icon": "format-list-bulleted", "view": { "type": "list" } },
     {
       "id": "by-change",
       "name": "By change",
+      "icon": "category",
       "view": { "type": "list", "groupBy": "action" }
     },
     {
       "id": "detail",
       "name": "Detail",
+      "icon": "table-rows",
       "view": {
         "type": "table",
         "sort": [{ "fieldId": "startsAt", "direction": "asc" }]

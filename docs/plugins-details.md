@@ -9774,9 +9774,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Fields.Renderer`
           - `Fields.Sample`
-        - Slot contributors: 38 contributors — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
-          - `Fields.Renderer` ×19
-          - `Fields.Sample` ×19
+        - Slot contributors: 40 contributors — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
+          - `Fields.Renderer` ×20
+          - `Fields.Sample` ×20
         - Uses:
           - `primitives/css/cluster.Cluster`
           - `primitives/css/control-panel.ControlPanel`
@@ -9801,8 +9801,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useFieldSamples`
           - `useLocalValue`
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
-          - `fields` ×19
+        - Imported by: 25 plugins — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
+          - `fields` ×20
           - `apps` ×3
           - `config_v2/settings`
           - `primitives/data-view/view-core`
@@ -16993,12 +16993,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`fields`** — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
   - Web:
     - Slots: `Fields.Identity`
-    - Slot contributors: 24 contributors — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
-      - `Fields.Identity` ×24
+    - Slot contributors: 25 contributors — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+      - `Fields.Identity` ×25
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 64 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
-      - `fields` ×45
+    - Imported by: 66 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+      - `fields` ×47
       - `apps` ×7
       - `debug` ×3
       - `infra` ×3
@@ -17617,6 +17617,48 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `fields/server-capabilities.Fields`
           - Cross-plugin:
             - Imported by: `fields/server-capabilities-loader`
+    - **`icon`** — Icon field type: identity only. The config-render capability and the iconField factory live in the plugins/config sub-plugin.
+      - Web:
+        - Contributes: `Fields.Identity` "icon"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses:
+          - `fields.defineFieldIdentity`
+          - `fields.defineFieldType`
+          - `ui/icons.SavedSymbolName`
+          - `ui/icons.symbol`
+        - Exports (values):
+          - `iconFieldType`
+          - `iconIdentity`
+      - Cross-plugin:
+        - Imported by: `fields/icon/config`
+      - Plugins:
+        - **`config`** — Icon field type: config-render capability (icon picker popover for config-v2.fields.renderer) plus the iconField factory.
+          - Web:
+            - Contributes:
+              - `Fields.Renderer` "icon" → `Rendered`
+              - `Fields.Sample` "icon"
+            - Uses:
+              - `config_v2/fields.defineFieldShape`
+              - `config_v2/fields.Fields`
+              - `primitives/css/control-panel.ControlPanel`
+              - `primitives/css/control-panel.ControlPanelPopover`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/icon-picker.IconPicker`
+              - `ui/icons.Icon`
+          - Core:
+            - Uses:
+              - `config_v2/fields.fieldSample`
+              - `fields.FieldDef`
+              - `fields.FieldMeta`
+              - `fields.pickMeta`
+              - `fields/icon.iconFieldType`
+              - `ui/icons/saved-names.parseSavedSymbolName`
+              - `ui/icons/saved-names.SavedSymbolNameSchema`
+            - Exports (types): `IconFieldDef`
+            - Exports (values):
+              - `iconField`
+              - `iconSample`
     - **`image`** — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).
       - Web:
         - Contributes: `Fields.Identity` "image"
@@ -28194,15 +28236,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useControlPanelHost`
               - `usePanelStack`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×11
               - `page` ×5
               - `primitives` ×4
               - `config_v2` ×2
+              - `fields` ×2
               - `tasks` ×2
               - `ui` ×2
               - `apps-core/surface`
-              - `fields/date/filter`
               - `fullscreen`
               - `reorder/edit-mode`
               - `shell/global-action-bar`
@@ -29146,7 +29188,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 390 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 391 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×101
               - `apps` ×74
               - `conversations` ×52
@@ -29155,7 +29197,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×23
               - `apps-core` ×13
               - `tasks` ×13
-              - `fields` ×11
+              - `fields` ×12
               - `plugin-meta` ×8
               - `build` ×6
               - `review` ×5
@@ -29531,6 +29573,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.IdKinds`
           - `primitives/data-view/view-core.buildViewConfigRegistrations`
           - `primitives/data-view/view-core.viewsDescriptor`
+          - `ui/icons/sprites.defineSavedIconSource`
         - Exports (values):
           - `readDataViewConfigDoc`
           - `watchDataViewConfigDoc`
@@ -30730,6 +30773,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `fields/avatar/config`
+          - `fields/icon/config`
           - `page/callout`
           - `primitives/avatar`
     - **`inline-text`** — Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.
@@ -36956,12 +37000,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 299 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 301 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×62
           - `conversations` ×55
           - `page` ×40
           - `primitives` ×40
-          - `fields` ×30
+          - `fields` ×32
           - `debug` ×17
           - `ui` ×9
           - `tasks` ×7
@@ -37119,6 +37163,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `conversations/agents`
               - `fields/avatar/config`
+              - `fields/icon/config`
               - `page/callout`
               - `primitives/icon-picker`
           - Core:
@@ -37185,6 +37230,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-preprompt`
               - `conversations/preprompts`
               - `page/callout`
+              - `primitives/data-view`
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Web:
         - Slots: `SegmentedProgressBarSlots.Variant`

@@ -2,20 +2,25 @@ import { type ReactNode, useMemo } from "react";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { variantField } from "@plugins/fields/plugins/variant/plugins/config/core";
+import { iconField } from "@plugins/fields/plugins/icon/plugins/config/core";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
 import type { ViewActionsCore } from "../internal/use-view-model";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol, type SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const contentCopyIcon = symbol("content-copy");
 const deleteIcon = symbol("delete");
+// The same field the config row declares, so the panel and the Settings pane
+// draw one picker.
+const viewIconField = iconField({ label: "Icon" });
 
 /**
  * Settings panel for the active instance — opened by clicking the active chip.
- * A `Name` section, the type-dispatched options sub-form (over a web-side
+ * A `Name` section, an `Icon` picker (unset = the view-type's own glyph), the
+ * type-dispatched options sub-form (over a web-side
  * `variantField`), and a footer of Duplicate / Delete.
  *
  * It is written in the `control-panel` vocabulary, which is the sibling
@@ -76,6 +81,16 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
           onKeyDown={(e) => {
             if (e.key === "Enter") (e.target as HTMLInputElement).blur();
           }}
+        />
+      </ControlPanel.Section>
+
+      <ControlPanel.Section>
+        <FieldRenderer
+          field={viewIconField}
+          value={instance.instance.pickedIcon}
+          onChange={(icon) =>
+            actions.setViewIcon(id, icon as SavedSymbolName | null)
+          }
         />
       </ControlPanel.Section>
 

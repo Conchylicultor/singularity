@@ -7,6 +7,7 @@ import {
   type ResourceError,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
+import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import {
   viewIdKind,
   type ViewConfigRow,
@@ -57,6 +58,8 @@ export interface ViewsConfigHandle {
    *  row is stamped with `source: sourceId`; absent = the implicit sole source). */
   addView: (type: string, sourceId?: string) => string;
   renameView: (id: string, name: string) => void;
+  /** Set the switcher glyph; `null` reverts to the view-type's own icon. */
+  setViewIcon: (id: string, icon: SavedSymbolName | null) => void;
   duplicateView: (id: string) => string;
   deleteView: (id: string) => void;
   reorderView: (id: string, toIndex: number) => void;
@@ -289,6 +292,28 @@ export function useViewsConfig<T extends ViewTypeMeta>(
     [applyMutation],
   );
 
+  const setViewIcon = useCallback(
+    (id: string, icon: SavedSymbolName | null) => {
+      applyMutation((rows) =>
+        rows.map((r) =>
+          r.id !== id
+            ? r
+            : // Rebuilt in `normalizeRows`' key order, with its conditional
+              // spreads (no icon = no key), so the JSON-identity reconcile
+              // sees the echoed config row as equal.
+              {
+                id: r.id,
+                name: r.name,
+                ...(icon !== null ? { icon } : {}),
+                view: r.view,
+                ...(r.source !== undefined ? { source: r.source } : {}),
+              },
+        ),
+      );
+    },
+    [applyMutation],
+  );
+
   const addView = useCallback(
     (type: string, sourceId?: string): string => {
       const id = newId();
@@ -325,6 +350,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
         const clone: ViewConfigRow = {
           id: newRowId,
           name: `${src.name} copy`,
+          ...(src.icon !== undefined ? { icon: src.icon } : {}),
           // Deep-ish clone of the variant value (JSON-safe by construction).
           view: JSON.parse(JSON.stringify(src.view)) as VariantValue,
           // Copy the source binding explicitly (conditional spread keeps
@@ -371,6 +397,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
       updateView,
       addView,
       renameView,
+      setViewIcon,
       duplicateView,
       deleteView,
       reorderView,
@@ -383,6 +410,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
       updateView,
       addView,
       renameView,
+      setViewIcon,
       duplicateView,
       deleteView,
       reorderView,

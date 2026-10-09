@@ -17,7 +17,7 @@ const CHEVRON = 'svg[data-icon="keyboard-arrow-down"]';
 
 function inst(id: string): ResolvedViewInstance<ViewTypeMeta> {
   return {
-    instance: { id, name: id, type: "list" },
+    instance: { id, name: id, icon: viewIcon, pickedIcon: null, type: "list" },
     viewType: { type: "list", title: "List", icon: viewIcon },
   } as unknown as ResolvedViewInstance<ViewTypeMeta>;
 }

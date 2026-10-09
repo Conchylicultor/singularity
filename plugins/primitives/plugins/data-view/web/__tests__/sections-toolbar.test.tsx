@@ -38,6 +38,8 @@ import type {
 import type { DataViewShellChrome } from "../internal/body-types";
 import { useViewEphemeral } from "../internal/use-view-ephemeral";
 
+const LIST_ICON = symbol("view-list");
+
 /**
  * The `{ kind: "sections" }` chrome: every authored instance renders, stacked,
  * each under its own collapsible header — no switcher, no active instance.
@@ -131,6 +133,8 @@ function instance(spec: InstanceSpec) {
     instance: {
       id: spec.id,
       name: spec.name,
+      icon: LIST_ICON,
+      pickedIcon: null,
       type: spec.tree ? "tree" : "list",
     },
     viewType: spec.tree ? treeView : listView,
@@ -177,6 +181,7 @@ function model(
       variantsFor: () => new Map(),
       addView: () => {},
       renameView: () => {},
+      setViewIcon: () => {},
       duplicateView: () => {},
       deleteView: () => {},
       reorderView: () => {},

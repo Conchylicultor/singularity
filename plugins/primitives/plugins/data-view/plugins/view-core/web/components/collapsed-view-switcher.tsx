@@ -87,8 +87,7 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
   const active =
     instances.find((r) => r.instance.id === activeId) ?? instances[0] ?? null;
   if (!active) return null;
-  // `viewType.icon` is the generic `T["icon"]`; widen to the concrete shape.
-  const ActiveIcon: ViewTypeMeta["icon"] = active.viewType.icon;
+  const ActiveIcon = active.instance.icon;
   const others = instances.filter((r) => r.instance.id !== active.instance.id);
   const settingsInstance = settingsForId === active.instance.id ? active : null;
 
@@ -154,7 +153,6 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
             <DropdownMenuTrigger render={trigger(popupOpen)} />
             <DropdownMenuContent align="start">
               {others.map((r) => {
-                const icon: ViewTypeMeta["icon"] = r.viewType.icon;
                 return (
                   <DropdownMenuItem
                     key={r.instance.id}
@@ -163,7 +161,7 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
                       onSelect(r.instance.id);
                     }}
                   >
-                    <Icon icon={icon} className="size-4" />
+                    <Icon icon={r.instance.icon} className="size-4" />
                     {r.instance.name}
                   </DropdownMenuItem>
                 );

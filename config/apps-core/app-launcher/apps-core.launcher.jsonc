@@ -2,5 +2,5 @@
 // One view: the compact icons grid the launcher popover draws (rail order, no
 // sort — the rows arrive in the order the app rail shows them).
 {
-  "views": [{ "id": "apps", "name": "Apps", "view": { "type": "icons" } }]
+  "views": [{ "id": "apps", "name": "Apps", "icon": "apps", "view": { "type": "icons" } }]
 }

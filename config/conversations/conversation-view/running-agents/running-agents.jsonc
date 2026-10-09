@@ -4,6 +4,8 @@
     {
       "id": "tree",
       "name": "Agents",
+      "icon": "smart-toy",
+      "icon": "smart-toy",
       // Each sub-agent under the one that spawned it; siblings in launch order,
       // which is how the band reads: the agent started first is at the top.
       "view": {

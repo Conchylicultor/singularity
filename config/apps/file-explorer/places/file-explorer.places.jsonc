@@ -9,6 +9,7 @@
     {
       "id": "favorites",
       "name": "Favorites",
+      "icon": "star",
       "view": {
         "type": "list",
         "visibleFields": ["label"],
@@ -31,6 +32,7 @@
     {
       "id": "locations",
       "name": "Locations",
+      "icon": "hard-drive",
       "view": {
         "type": "list",
         "visibleFields": ["label"],

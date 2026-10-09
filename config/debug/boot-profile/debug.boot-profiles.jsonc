@@ -4,6 +4,7 @@
     {
       "id": "all",
       "name": "All",
+      "icon": "rocket-launch",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "createdAt", "direction": "desc" }]
