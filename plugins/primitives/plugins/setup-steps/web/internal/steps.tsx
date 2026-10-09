@@ -14,11 +14,10 @@ import {
   insetClass,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const checkIcon = symbol("check");
-const openInNewIcon = symbol("open-in-new");
 
 /**
  * Lifecycle position of a step within a guided setup flow. `upcoming` steps are
@@ -142,7 +141,7 @@ export function StepLink({
     >
       {label}
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline icon offset from button label */}
-      <Icon icon={openInNewIcon} className="ml-1 size-3.5" />
+      <Icon icon={navIcons.newTab} className="ml-1 size-3.5" />
     </Button>
   );
 }

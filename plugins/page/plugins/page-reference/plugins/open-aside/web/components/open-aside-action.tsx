@@ -4,9 +4,7 @@ import {
   type PageNavigation,
   type PageReferenceActionProps,
 } from "@plugins/page/plugins/page-reference/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-
-const verticalSplitIcon = symbol("vertical-split");
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 
 /**
  * Only where the host declared it can put a page beside the one being read.
@@ -31,7 +29,7 @@ export function OpenAsideAction({ pageId }: PageReferenceActionProps) {
   if (!openAside) return null;
   return (
     <IconButton
-      icon={verticalSplitIcon}
+      icon={navIcons.sidePane}
       label="Open in side pane"
       onClick={() => openAside(pageId)}
     />

@@ -3,9 +3,7 @@ import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web"
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEventSourceOrigin } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import type { EventSource } from "@plugins/apps/plugins/events/plugins/events-core/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-
-const openInNewIcon = symbol("open-in-new");
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 
 /**
  * Open the page this source stands for, in a new browser tab.
@@ -41,7 +39,7 @@ export function SourceOpenAction({
 
   return (
     <IconButton
-      icon={openInNewIcon}
+      icon={navIcons.newTab}
       label="Open source page"
       render={<a href={href} target="_blank" rel="noreferrer noopener" />}
     />

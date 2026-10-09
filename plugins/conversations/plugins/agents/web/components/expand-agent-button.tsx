@@ -3,9 +3,7 @@ import {
   useOpenPane,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentSidePane, agentDetailPane } from "../panes";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-
-const openInFullIcon = symbol("open-in-full");
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 
 export function ExpandAgentButton() {
   const { agentId } = agentSidePane.useParams();
@@ -13,7 +11,7 @@ export function ExpandAgentButton() {
   return (
     <PaneIconAction
       label="Expand"
-      icon={openInFullIcon}
+      icon={navIcons.expand}
       {...openPane.link(agentDetailPane, { id: agentId }, { mode: "root" })}
     />
   );

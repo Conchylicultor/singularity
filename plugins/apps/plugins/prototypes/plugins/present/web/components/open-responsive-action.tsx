@@ -3,9 +3,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { FrameActionRow } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { BrowserTabOpener } from "./frame-link";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-
-const openInFullIcon = symbol("open-in-full");
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 
 /**
  * "Open responsive in a new tab" — a frame action of its own, beside Present:
@@ -25,7 +23,7 @@ export function OpenResponsiveAction({
     >
       {(open) => (
         <IconButton
-          icon={openInFullIcon}
+          icon={navIcons.newTab}
           label="Open responsive in a new tab"
           disabled={open === undefined}
           onClick={open}

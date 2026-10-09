@@ -12,10 +12,9 @@ import {
   isServableCompositionId,
   isServed,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 
 const boltIcon = symbol("bolt");
-const openInNewIcon = symbol("open-in-new");
 
 /**
  * The **serve** shortcut on a deployments row: one button that opens the
@@ -87,7 +86,7 @@ function ServeRowAction({
     const { url } = status;
     return (
       <IconButton
-        icon={openInNewIcon}
+        icon={navIcons.newTab}
         label="Open the local serve"
         tooltip={`Open ${url}`}
         onClick={(e) => {

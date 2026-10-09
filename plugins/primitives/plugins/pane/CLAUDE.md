@@ -691,7 +691,7 @@ need no surface at all — the fixture adds nothing there.
 being rendered. Panes are reusable chrome: the agent manager hosts the page
 detail beside a conversation, and Pages could host a conversation the same way.
 
-Expand (the `MdOpenInFull` button in `PaneChrome`, `usePromote()`) reads it and
+Expand (the `navIcons.expand` button in `PaneChrome`, `usePromote()`) reads it and
 picks one of two destinations:
 
 - **hosted by another app** → hand the pane's app-rooted URL to the tab manager,

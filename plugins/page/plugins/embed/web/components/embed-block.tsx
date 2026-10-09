@@ -18,10 +18,9 @@ import {
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
 import { embedBlock, toEmbedUrl } from "../../core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const openInNewIcon = symbol("open-in-new");
 const smartDisplayIcon = symbol("smart-display");
 
 export function EmbedBlock({ block, editor }: BlockRendererProps) {
@@ -112,7 +111,7 @@ function FilledEmbedBlock({
           >
             <Inline gap="2xs">
               Open original
-              <Icon icon={openInNewIcon} className="size-3" />
+              <Icon icon={navIcons.newTab} className="size-3" />
             </Inline>
           </a>
           {/*

@@ -38,7 +38,7 @@ import {
   formatElapsed,
   useNow,
 } from "@plugins/primitives/plugins/relative-time/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   buildSections,
@@ -56,7 +56,6 @@ const keyboardArrowUpIcon = symbol("keyboard-arrow-up");
 const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 const hourglassEmptyIcon = symbol("hourglass-empty");
 const queuedIcon = symbol("radio-button-unchecked");
-const openInNewIcon = symbol("open-in-new");
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const QUEUE_VIEW = defineDataView("conversations.op-status.queue");
@@ -191,7 +190,7 @@ export function OpenConversationAction({
   if (convId === null || row.isSelf) return null;
   return (
     <IconButton
-      icon={openInNewIcon}
+      icon={navIcons.sidePane}
       label="Open conversation"
       onClick={(e) => {
         e.stopPropagation();

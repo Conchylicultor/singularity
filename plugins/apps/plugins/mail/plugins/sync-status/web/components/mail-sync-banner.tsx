@@ -14,11 +14,10 @@ import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useMailSyncState } from "../internal/use-mail-sync";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const errorIcon = symbol("error");
-const openInNewIcon = symbol("open-in-new");
 const warningIcon = symbol("warning");
 
 /**
@@ -137,7 +136,7 @@ function RemediationActions({
           }}
         >
           Enable Gmail API
-          <Icon icon={openInNewIcon} className="size-4" />
+          <Icon icon={navIcons.newTab} className="size-4" />
         </Button>
       ) : null}
       <RetryButton />

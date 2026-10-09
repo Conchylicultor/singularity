@@ -14,12 +14,11 @@ import {
   releaseRuns,
   releasePreviews,
 } from "@plugins/release/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const playArrowIcon = symbol("play-arrow");
 const stopIcon = symbol("stop");
-const openInNewIcon = symbol("open-in-new");
 
 export function ReleaseArtifact({ runId }: { runId: string }): ReactElement {
   const runResult = useLiveRow(releaseRuns, runId);
@@ -105,7 +104,7 @@ export function ReleaseArtifact({ runId }: { runId: string }): ReactElement {
         {isPreviewRunning && preview && (
           <LinkChip
             mono
-            leading={<Icon icon={openInNewIcon} />}
+            leading={<Icon icon={navIcons.newTab} />}
             title="Open preview in a new tab"
             onClick={() =>
               window.open(preview.url, "_blank", "noopener,noreferrer")

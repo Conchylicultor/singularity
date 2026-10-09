@@ -24,11 +24,10 @@ import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/fil
 import { presentPath } from "../panes";
 import { BrowserTabOpener, frameTarget } from "./frame-link";
 import { PresentOverlay, type PresentPlacement } from "./present-overlay";
-import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+import { type IconRef, navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const fullscreenIcon = symbol("fullscreen");
-const openInNewIcon = symbol("open-in-new");
 const tabIcon = symbol("tab");
 const webAssetIcon = symbol("web-asset");
 
@@ -202,7 +201,7 @@ function NewTabItem({
       onClick={open}
       className="w-auto"
     >
-      <Icon icon={openInNewIcon} className="size-4" />
+      <Icon icon={navIcons.newTab} className="size-4" />
     </DropdownMenuItem>
   );
 }

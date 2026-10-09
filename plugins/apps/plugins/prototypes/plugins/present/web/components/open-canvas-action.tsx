@@ -5,10 +5,8 @@ import {
   encodeCanvas,
   usePrototypeDetail,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { presentCanvasPath } from "../panes";
-
-const openInNewIcon = symbol("open-in-new");
 
 /**
  * "Open the canvas in a new tab" — a header action: the canvas as it is now
@@ -19,7 +17,7 @@ export function OpenCanvasAction(): ReactElement {
   const { name, canvas } = usePrototypeDetail();
   return (
     <IconButton
-      icon={openInNewIcon}
+      icon={navIcons.newTab}
       label="Open the canvas in a new tab"
       onClick={() =>
         window.open(

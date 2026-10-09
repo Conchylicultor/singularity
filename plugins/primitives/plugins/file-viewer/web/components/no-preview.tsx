@@ -8,13 +8,11 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { hostFsOpen, hostFsStat } from "@plugins/infra/plugins/host-fs/core";
 import { showToast } from "@plugins/shell/plugins/toast/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { fileTypeOf } from "@plugins/primitives/plugins/file-type/core";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import { fileRefName, type FileRef } from "../../core";
-
-const openIcon = symbol("open-in-new");
 
 /**
  * The file's kind as "No preview for … files" names it: file-type's label
@@ -100,7 +98,7 @@ function OpenWithDefaultApp({ path }: { path: string }) {
   if (inArchive) return null;
   return (
     <Button variant="outline" onClick={() => openHostFile(path)}>
-      <Icon icon={openIcon} />
+      <Icon icon={navIcons.newTab} />
       Open with default app
     </Button>
   );

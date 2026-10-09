@@ -25,11 +25,10 @@ import {
   useOpenHostFile,
 } from "@plugins/primitives/plugins/file-viewer/web";
 import type { FileViewerGit } from "@plugins/primitives/plugins/file-viewer/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { filesDocumentTheme } from "../internal/theme";
 import { baseName, formatModified, formatSize, parentPath } from "../../core";
 
-const openIcon = symbol("open-in-new");
 const closeIcon = symbol("close");
 
 /**
@@ -98,7 +97,7 @@ export function PreviewPane({
           {renderers.resolved.length > 1 && <FileTabs {...renderers} />}
           {!inArchive && (
             <IconButton
-              icon={openIcon}
+              icon={navIcons.newTab}
               label="Open with default app"
               variant="ghost"
               onClick={() => openHostFile(path)}

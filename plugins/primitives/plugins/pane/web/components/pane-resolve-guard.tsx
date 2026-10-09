@@ -10,10 +10,9 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { paneObjectFor, type PaneInternal, type ResolveHook } from "../pane";
 import { PaneIconAction } from "./pane-icon-action";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 
 const closeIcon = symbol("close");
-const openInFullIcon = symbol("open-in-full");
 
 interface Props {
   pane: PaneInternal;
@@ -166,7 +165,7 @@ function FallbackChrome({
                     ? `Open in ${promote.app.name}`
                     : "Expand pane"
                 }
-                icon={openInFullIcon}
+                icon={navIcons.expand}
                 {...linkProps(promote)}
               />
             )}

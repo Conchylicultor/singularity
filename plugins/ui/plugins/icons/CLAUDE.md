@@ -89,6 +89,22 @@ Until the wanted style's sprite has loaded, `<Icon>` draws the **default
 style's** symbol: the same glyph in the global style, in the same box — the
 default sprites are resident from first paint.
 
+## Navigation icons (`navIcons`)
+
+A control that opens something wears the icon of WHERE it sends you, from
+`navIcons` (`core/nav-icons.ts`) — never a glyph picked per call site:
+
+| Key | Glyph | Destination |
+|---|---|---|
+| `navIcons.newTab` | `open-in-new` | Elsewhere, leaving this view: a new browser/app tab, an external site, the system browser, a host app. |
+| `navIcons.sidePane` | `right-panel-open` | Beside what you are reading: a pane pushed to the right. |
+| `navIcons.expand` | `open-in-full` | Takes over the surface: the pane promoted to root, or opened in its home app ("Open in Pages", "Open in Debug"). |
+
+The three glyphs are reserved: `icons/reserved-nav-icon` rejects `symbol("…")`
+of any of them outside `nav-icons.ts`. `fullscreen` is the window-level idea
+(solo mode, browser fullscreen, presenting, a full-screen viewer), not a
+destination.
+
 ## Sprites (`plugins/sprites`)
 
 - **Server** builds each sprite from `@iconify-json/material-symbols` (400) or
@@ -327,6 +343,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `LUCIDE_SPRITE`
     - `lucideId`
     - `lucideNameOf`
+    - `navIcons`
     - `parseStyleKey`
     - `resolveSymbolStyle`
     - `runtimeSymbol`

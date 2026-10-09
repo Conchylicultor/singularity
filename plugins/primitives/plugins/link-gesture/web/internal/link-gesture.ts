@@ -11,7 +11,7 @@ import type { Activation, LinkTarget } from "../../core";
  * destination's URL, exactly what the same gesture does on an `<a href>`:
  *
  * ```tsx
- * <IconButton icon={MdOpenInFull} label="Expand pane" {...linkProps({ open: go, href: () => url })} />
+ * <IconButton icon={navIcons.expand} label="Expand pane" {...linkProps({ open: go, href: () => url })} />
  * ```
  *
  * **Why this is not free.** The browser grants these gestures to `<a href>`

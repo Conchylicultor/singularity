@@ -23,11 +23,10 @@ import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
 import { reportDetailPane } from "../panes";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const autoFixHighIcon = symbol("auto-fix-high");
-const openInNewIcon = symbol("open-in-new");
 
 export function ReportDetail() {
   const { reportId } = reportDetailPane.useParams();
@@ -225,7 +224,7 @@ function Investigate({ report }: { report: Report }) {
           }
           className="gap-xs"
         >
-          <Icon icon={openInNewIcon} className="size-4" />
+          <Icon icon={navIcons.expand} className="size-4" />
           View task
         </Button>
       </Stack>

@@ -20,10 +20,8 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const openInNewIcon = symbol("open-in-new");
 
 function useGithubBase(): string | null {
   const { data } = useEndpoint(getRepoInfo, {});
@@ -81,7 +79,7 @@ function PushRow({
         </Text>
         {url ? (
           <Icon
-            icon={openInNewIcon}
+            icon={navIcons.newTab}
             className={cn("text-muted-foreground size-4", rigidClass())}
           />
         ) : null}
@@ -237,7 +235,7 @@ export function TaskAttempts({ taskId }: { taskId: string }) {
                       conv={c}
                       actions={
                         <IconButton
-                          icon={openInNewIcon}
+                          icon={navIcons.expand}
                           label="Open as page"
                           tooltip="Open in a new page"
                           onClick={() => opener.openAsPage(c.id)}

@@ -1,4 +1,5 @@
 export { brand, runtimeSymbol, seti, symbol } from "./icon-ref";
+export { navIcons } from "./nav-icons";
 export type {
   BrandRef,
   IconRef,

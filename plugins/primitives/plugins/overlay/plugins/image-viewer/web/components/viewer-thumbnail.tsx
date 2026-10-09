@@ -16,7 +16,7 @@ import type { ViewerImage } from "../internal/types";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const openInFullIcon = symbol("open-in-full");
+const fullscreenIcon = symbol("fullscreen");
 
 export interface ViewerThumbnailProps {
   image: ViewerImage;
@@ -164,7 +164,7 @@ function Thumbnail({ image, size = "inline", children }: ViewerThumbnailProps) {
               decorative
               className={cn(hoverRevealTargetWithGroupFocus, SCRIM, "p-2xs")}
             >
-              <Icon icon={openInFullIcon} className="block size-3.5" />
+              <Icon icon={fullscreenIcon} className="block size-3.5" />
             </Pin>
           </>
         )}

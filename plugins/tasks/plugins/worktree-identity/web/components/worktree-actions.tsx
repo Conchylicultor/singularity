@@ -7,9 +7,7 @@ import {
   useLinkedTask,
   useWorktreePlace,
 } from "../internal/use-worktree-identity";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-
-const openInNewIcon = symbol("open-in-new");
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 
 /**
  * The worktree row's trailing controls: copy the namespace, and open the linked
@@ -26,7 +24,7 @@ export function WorktreeActions() {
       )}
       {task.kind === "linked" ? (
         <IconButton
-          icon={openInNewIcon}
+          icon={navIcons.expand}
           label="Open task"
           onClick={() =>
             navigate(

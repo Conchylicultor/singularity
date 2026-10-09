@@ -16,10 +16,9 @@ import type {
   PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { PrototypeVersionActions } from "../slots";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 
 const libraryAddIcon = symbol("library-add");
-const openInNewIcon = symbol("open-in-new");
 
 const VERSIONS_VIEW = defineDataView("prototypes.versions");
 
@@ -138,7 +137,7 @@ export function OpenVersionConversation({
   if (convId === null) return null;
   return (
     <IconButton
-      icon={openInNewIcon}
+      icon={navIcons.expand}
       label="Open the conversation that made it"
       {...appLinkProps(conversationRoute.link(agentManagerApp, { convId }))}
     />

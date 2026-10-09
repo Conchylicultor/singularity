@@ -12,10 +12,8 @@ import {
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { EVENT_LIST_FIELDS } from "../../core";
 import { formatEventWhen, urlHost } from "./format";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const openInNewIcon = symbol("open-in-new");
 
 // Comparable projection for one field id. Drives the toolbar sort/filter pills
 // and the default table/gallery cell. (Search/filter/sort actually run
@@ -65,7 +63,7 @@ function UrlCell({ url }: { url: string | null }): ReactNode {
       target="_blank"
       rel="noreferrer noopener"
       onClick={(e: MouseEvent) => e.stopPropagation()}
-      icon={<Icon icon={openInNewIcon} />}
+      icon={<Icon icon={navIcons.newTab} />}
       colorClass="bg-muted text-primary hover:bg-muted/80 hover:underline"
       title={href}
     >

@@ -2,10 +2,8 @@ import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-pa
 import { PAGE_BLOCK_TYPE, type Block } from "@plugins/page/plugins/editor/core";
 import { useEditorScope } from "@plugins/page/plugins/editor/web";
 import { usePageNavigation } from "@plugins/page/plugins/page-reference/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const openInNewIcon = symbol("open-in-new");
 
 /**
  * "Open as page" in the block-actions menu: the block and its nested lines,
@@ -37,7 +35,7 @@ export function OpenAsPageItem({
     // has run.
     <ControlPanel.Row
       keepFocus
-      icon={<Icon icon={openInNewIcon} />}
+      icon={<Icon icon={navIcons.sidePane} />}
       onSelect={() => {
         openBlock(block.id);
         close();

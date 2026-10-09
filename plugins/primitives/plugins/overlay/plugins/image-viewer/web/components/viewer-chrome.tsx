@@ -45,7 +45,7 @@ import type { ViewController } from "../internal/view-controller";
 import { ViewStore, type ViewState } from "../internal/view-store";
 import type { ViewerImage } from "../internal/types";
 import { KeyCaps, keyTooltip } from "./key-caps";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const addIcon = symbol("add");
@@ -61,7 +61,6 @@ const imageIcon = symbol("image");
 const slideshowIcon = symbol("slideshow");
 const stripIcon = symbol("view-carousel");
 const keyboardIcon = symbol("keyboard");
-const openInNewIcon = symbol("open-in-new");
 const removeIcon = symbol("remove");
 
 /**
@@ -158,7 +157,7 @@ export function TopBar({
             )}
             {capabilities.open !== "none" && (
               <IconButton
-                icon={openInNewIcon}
+                icon={navIcons.newTab}
                 label="Open original in a new tab"
                 onClick={onOpen}
               />

@@ -14,11 +14,10 @@ import { InsidePaneTitleContext } from "./pane-title-guard";
 import { usePaneEntry, type AnyPane } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 import { SurfaceChromeContext } from "../surface-chrome-context";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 
 const closeIcon = symbol("close");
 const arrowBackIcon = symbol("arrow-back");
-const openInFullIcon = symbol("open-in-full");
 
 interface PaneChromeProps {
   /**
@@ -154,7 +153,7 @@ export function PaneChrome({
               ? `Open in ${promote.app.name}`
               : "Expand pane"
           }
-          icon={openInFullIcon}
+          icon={navIcons.expand}
           {...linkProps(promote)}
         />
       )}

@@ -26,10 +26,9 @@ import { latestRunState } from "../internal/latest-run-state";
 import { BuildPopoverContent } from "./build-popover-content";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const openInFullIcon = symbol("open-in-full");
 const buildIcon = symbol("build");
 
 /** Inner component: receives settled history data so hooks run unconditionally with real values. */
@@ -174,8 +173,8 @@ function BuildButtonInner({
         </Text>
         <ControlSizeProvider size="xs">
           <IconButton
-            icon={openInFullIcon}
-            label="Open in pane"
+            icon={navIcons.expand}
+            label="Open in Debug"
             variant="ghost"
             onClick={() => {
               setOpen(false);
