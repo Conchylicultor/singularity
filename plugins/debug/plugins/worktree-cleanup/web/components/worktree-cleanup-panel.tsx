@@ -504,7 +504,7 @@ function EntryRow({
       {error && (
         <tr className="border-b">
           <td colSpan={5} className="px-lg py-xs">
-            <Text as="span" variant="caption" className="text-destructive">
+            <Text as="span" variant="caption" className="text-destructive-text">
               {error}
             </Text>
           </td>

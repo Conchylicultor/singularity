@@ -18,7 +18,7 @@ export function PageToolError({ result }: { result: ToolCallEvent["result"] }) {
       <Text
         as="div"
         variant="caption"
-        className="text-destructive whitespace-pre-wrap break-words"
+        className="text-destructive-text whitespace-pre-wrap break-words"
       >
         {result.content || "Error"}
       </Text>

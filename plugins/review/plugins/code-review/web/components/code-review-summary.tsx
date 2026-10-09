@@ -15,7 +15,7 @@ const warningIcon = symbol("warning");
 
 const WARNING_ICON_CLASS: Record<"careful" | "critical", string> = {
   careful: "size-3.5 text-warning",
-  critical: "size-3.5 text-destructive",
+  critical: "size-3.5 text-destructive-text",
 };
 
 export function CodeReviewSummary({
@@ -107,7 +107,7 @@ function AttemptCodeReviewSummary({
       <Text as="span" variant="count" className="text-success">
         +{additions}
       </Text>
-      <Text as="span" variant="count" className="text-destructive">
+      <Text as="span" variant="count" className="text-destructive-text">
         −{deletions}
       </Text>
       {maxLevel !== "safe" && (

@@ -11,7 +11,8 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 type WriteInput = { file_path: string; content: string };
 
 export function WriteToolView({ event }: ToolRendererProps) {
-  const { file_path = "", content = "" } = (event.input ?? {}) as Partial<WriteInput>;
+  const { file_path = "", content = "" } = (event.input ??
+    {}) as Partial<WriteInput>;
 
   return (
     <ToolCallCard event={event} aside={<FilePath filePath={file_path} />}>
@@ -22,7 +23,7 @@ export function WriteToolView({ event }: ToolRendererProps) {
         </Scroll>
         {event.result?.isError && (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 separates the error text from the code block above
-          <Text as="p" variant="caption" className="mt-1 text-destructive">
+          <Text as="p" variant="caption" className="mt-1 text-destructive-text">
             {event.result.content}
           </Text>
         )}

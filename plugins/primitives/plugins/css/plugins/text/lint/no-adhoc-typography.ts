@@ -22,7 +22,7 @@ const createRule = ESLintUtils.RuleCreator(
  *
  *   A. `SIZE` — a NAMED font-size step `text-{xs,sm,base,lg,xl,2xl…9xl}`. This is
  *      deliberately narrow: it must NOT match color classes (`text-muted-
- *      foreground`, `text-primary`) nor the sanctioned sub-scale `text-2xs` /
+ *      foreground`, `text-primary-text`) nor the sanctioned sub-scale `text-2xs` /
  *      `text-3xs` (chips/badges, below role granularity). The `\d` boundary on
  *      `[2-9]xl` and the lack of a `2xs`/`3xs` alternative guarantee both.
  *

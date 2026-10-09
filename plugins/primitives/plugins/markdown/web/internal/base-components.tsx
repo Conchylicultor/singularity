@@ -14,7 +14,10 @@ import { InlineCode } from "./inline-code";
 // merged component map so no override (base or enhancer-contributed, present or
 // future) can ever leak it. None of our overrides read `node`.
 export function stripNodeProp(components: Components): Components {
-  const src = components as Record<string, ComponentType<Record<string, unknown>>>;
+  const src = components as Record<
+    string,
+    ComponentType<Record<string, unknown>>
+  >;
   const out: Record<string, ComponentType<Record<string, unknown>>> = {};
   for (const tag of Object.keys(src)) {
     const Original = src[tag]!;
@@ -66,7 +69,7 @@ export function buildBaseComponents(
     ),
     a: ({ href, ...p }) => (
       <a
-        className="text-primary underline"
+        className="text-primary-text underline"
         href={href}
         target={href?.startsWith("http") ? "_blank" : undefined}
         rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}

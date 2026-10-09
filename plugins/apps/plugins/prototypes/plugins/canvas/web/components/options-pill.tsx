@@ -281,7 +281,7 @@ function OptionRow({
                   : "Keep the same in every frame"
               }
               aria-pressed={linked}
-              className={linked ? "bg-primary/15 text-primary" : undefined}
+              className={linked ? "bg-primary/15 text-primary-text" : undefined}
               onClick={() =>
                 dispatch({ type: "toggleLink", id: frame.id, option })
               }
@@ -298,7 +298,7 @@ function OptionRow({
                     : `One frame per ${label.toLowerCase()}`
               }
               aria-pressed={spread}
-              className={spread ? "bg-primary/15 text-primary" : undefined}
+              className={spread ? "bg-primary/15 text-primary-text" : undefined}
               onClick={() => {
                 onClose();
                 dispatch({ type: "toggleSpread", id: frame.id, option });

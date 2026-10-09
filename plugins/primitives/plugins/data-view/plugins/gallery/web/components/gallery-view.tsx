@@ -87,7 +87,7 @@ function renderCover(cover: CoverContent): ReactNode {
       );
     case "icon":
       return (
-        <Center className="aspect-video w-full rounded-md bg-primary/10 text-primary">
+        <Center className="aspect-video w-full rounded-md bg-primary/10 text-primary-text">
           {cover.icon}
         </Center>
       );

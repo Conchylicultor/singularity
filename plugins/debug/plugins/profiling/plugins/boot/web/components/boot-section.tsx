@@ -6,9 +6,15 @@ import {
   type PhaseConfig,
 } from "@plugins/debug/plugins/profiling/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
+import {
+  DataTable,
+  type ColumnDef,
+} from "@plugins/primitives/plugins/data-table/web";
 import {
   getBootProfiling,
   type ProfilingData,
@@ -27,14 +33,46 @@ const PHASE_ORDER = [
 ];
 
 const PHASE_CONFIG: Record<string, PhaseConfig> = {
-  register: { label: "Register (sequential)", color: "bg-categorical-1", bg: "bg-categorical-1/10" },
-  awaitPgReady: { label: "Await PG Ready", color: "bg-categorical-2", bg: "bg-categorical-2/10" },
-  runMigrations: { label: "Run Migrations", color: "bg-categorical-3", bg: "bg-categorical-3/10" },
-  routePopulation: { label: "Route Population", color: "bg-categorical-4", bg: "bg-categorical-4/10" },
-  socketBind: { label: "Socket Bind", color: "bg-categorical-5", bg: "bg-categorical-5/10" },
-  onReadyBlocking: { label: "onReadyBlocking (parallel)", color: "bg-categorical-6", bg: "bg-categorical-6/10" },
-  onReady: { label: "onReady (parallel)", color: "bg-categorical-7", bg: "bg-categorical-7/10" },
-  onAllReady: { label: "onAllReady (parallel)", color: "bg-categorical-8", bg: "bg-categorical-8/10" },
+  register: {
+    label: "Register (sequential)",
+    color: "bg-categorical-1",
+    bg: "bg-categorical-1/10",
+  },
+  awaitPgReady: {
+    label: "Await PG Ready",
+    color: "bg-categorical-2",
+    bg: "bg-categorical-2/10",
+  },
+  runMigrations: {
+    label: "Run Migrations",
+    color: "bg-categorical-3",
+    bg: "bg-categorical-3/10",
+  },
+  routePopulation: {
+    label: "Route Population",
+    color: "bg-categorical-4",
+    bg: "bg-categorical-4/10",
+  },
+  socketBind: {
+    label: "Socket Bind",
+    color: "bg-categorical-5",
+    bg: "bg-categorical-5/10",
+  },
+  onReadyBlocking: {
+    label: "onReadyBlocking (parallel)",
+    color: "bg-categorical-6",
+    bg: "bg-categorical-6/10",
+  },
+  onReady: {
+    label: "onReady (parallel)",
+    color: "bg-categorical-7",
+    bg: "bg-categorical-7/10",
+  },
+  onAllReady: {
+    label: "onAllReady (parallel)",
+    color: "bg-categorical-8",
+    bg: "bg-categorical-8/10",
+  },
 };
 
 function fmtMb(mb: number): string {
@@ -47,7 +85,7 @@ function fmtDelta(mb: number): string {
 }
 
 function deltaClass(mb: number): string {
-  if (mb > 0.05) return "text-destructive";
+  if (mb > 0.05) return "text-destructive-text";
   if (mb < -0.05) return "text-success";
   return "text-muted-foreground";
 }
@@ -108,7 +146,9 @@ const PHASE_DELTA_COLUMNS: ColumnDef<PhaseDeltaRow>[] = [
     align: "end",
     width: "7rem",
     value: (r) => r.delta,
-    cell: (r) => <span className={deltaClass(r.delta)}>{fmtDelta(r.delta)}</span>,
+    cell: (r) => (
+      <span className={deltaClass(r.delta)}>{fmtDelta(r.delta)}</span>
+    ),
   },
 ];
 
@@ -145,10 +185,16 @@ function MemorySummary({
   // Per-phase footprint delta from per-span attribution (directional only).
   const phaseDelta = new Map<string, number>();
   for (const span of spans) {
-    if (span.physFootprintStartMb === undefined || span.physFootprintEndMb === undefined)
+    if (
+      span.physFootprintStartMb === undefined ||
+      span.physFootprintEndMb === undefined
+    )
       continue;
     const prev = phaseDelta.get(span.phase) ?? 0;
-    phaseDelta.set(span.phase, prev + (span.physFootprintEndMb - span.physFootprintStartMb));
+    phaseDelta.set(
+      span.phase,
+      prev + (span.physFootprintEndMb - span.physFootprintStartMb),
+    );
   }
   const phaseDeltaRows: PhaseDeltaRow[] = PHASE_ORDER.filter((p) =>
     phaseDelta.has(p),
@@ -174,7 +220,8 @@ function MemorySummary({
         {phaseDeltaRows.length > 0 && (
           <Stack as="section" gap="sm">
             <SectionLabel>
-              Per-phase footprint delta (directional — overlapping under Promise.all)
+              Per-phase footprint delta (directional — overlapping under
+              Promise.all)
             </SectionLabel>
             <DataTable
               data={phaseDeltaRows}

@@ -44,7 +44,7 @@ export function GenericToolView({ event }: ToolRendererProps) {
             as="pre"
             variant="caption"
             className={`whitespace-pre-wrap break-words p-sm ${
-              event.result.isError ? "text-destructive" : ""
+              event.result.isError ? "text-destructive-text" : ""
             }`}
           >
             {event.result.content || "(empty)"}

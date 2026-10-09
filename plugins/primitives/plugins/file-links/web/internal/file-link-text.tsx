@@ -8,7 +8,10 @@ export interface FileLinkTextProps {
   onFileOpen?: (path: string, line?: number) => void;
 }
 
-export function FileLinkText({ text, onFileOpen }: FileLinkTextProps): ReactNode {
+export function FileLinkText({
+  text,
+  onFileOpen,
+}: FileLinkTextProps): ReactNode {
   if (!text) return null;
   const segments = parseFileLinks(text);
   return (
@@ -21,14 +24,15 @@ export function FileLinkText({ text, onFileOpen }: FileLinkTextProps): ReactNode
               href={seg.value}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary underline"
+              className="text-primary-text underline"
               onClick={(e) => e.stopPropagation()}
             >
               {seg.value}
             </a>
           );
         }
-        if (seg.type !== "path") return <Fragment key={i}>{seg.value}</Fragment>;
+        if (seg.type !== "path")
+          return <Fragment key={i}>{seg.value}</Fragment>;
         if (onFileOpen) {
           return (
             <LinkChip

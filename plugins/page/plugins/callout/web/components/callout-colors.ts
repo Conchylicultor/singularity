@@ -20,5 +20,5 @@ export const COLOR_TEXT: Record<CalloutColor, string> = {
   info: "text-info",
   success: "text-success",
   warning: "text-warning",
-  danger: "text-destructive",
+  danger: "text-destructive-text",
 };

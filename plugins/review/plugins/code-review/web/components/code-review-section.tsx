@@ -245,7 +245,7 @@ function FileSectionBlock({
           <span>·</span>
           <span className="tabular-nums">{totals.count} files</span>
           <span className="tabular-nums text-success">+{totals.additions}</span>
-          <span className="tabular-nums text-destructive">
+          <span className="tabular-nums text-destructive-text">
             −{totals.deletions}
           </span>
         </CollapsibleTrigger>
@@ -293,7 +293,7 @@ function ToolbarRow({
       <Text as={Line} variant="label" className="gap-sm">
         <span className="tabular-nums">{count} files</span>
         <span className="text-success tabular-nums">+{additions}</span>
-        <span className="text-destructive tabular-nums">−{deletions}</span>
+        <span className="text-destructive-text tabular-nums">−{deletions}</span>
       </Text>
       <Stack as={Fill} direction="row" gap="xs" align="center" justify="end">
         <ExpandAllButton

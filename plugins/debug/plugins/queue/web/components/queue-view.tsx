@@ -167,7 +167,7 @@ const STATE_STYLES: Record<JobState, string> = {
   pending: "bg-info/10 text-info",
   running: "bg-warning/10 text-warning",
   retrying: "bg-warning/15 text-warning",
-  dead: "bg-destructive/10 text-destructive",
+  dead: "bg-destructive/10 text-destructive-text",
 };
 
 function JobsTab() {
@@ -287,7 +287,7 @@ function JobsTabInner({
                         {r.state}
                       </Badge>
                       {r.alive === false && (
-                        <Badge colorClass="bg-destructive/10 text-destructive">
+                        <Badge colorClass="bg-destructive/10 text-destructive-text">
                           no worker
                         </Badge>
                       )}
@@ -299,7 +299,7 @@ function JobsTabInner({
                           untouched and its lock still held, which is what stops
                           the sweeper reclaiming it. */}
                       {r.forfeited === true && (
-                        <Badge colorClass="bg-destructive/10 text-destructive">
+                        <Badge colorClass="bg-destructive/10 text-destructive-text">
                           forfeited
                         </Badge>
                       )}
@@ -314,7 +314,7 @@ function JobsTabInner({
                   <td className="px-md py-sm text-muted-foreground">
                     {relativeTime(r.runAt)}
                   </td>
-                  <td className="px-md py-sm text-caption text-destructive">
+                  <td className="px-md py-sm text-caption text-destructive-text">
                     {r.lastError
                       ? truncate(r.lastError.split("\n")[0] ?? "", 60)
                       : ""}
@@ -433,7 +433,7 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
               alive — holds this job&apos;s advisory lock
             </span>
           ) : (
-            <span className="text-destructive">
+            <span className="text-destructive-text">
               gone — no advisory lock on this job; the stuck-lock sweeper will
               reclaim the row (or dispatch is still acquiring it)
             </span>
@@ -455,7 +455,7 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
           <Scroll
             as="pre"
             axis="both"
-            className="max-h-64 rounded-md bg-destructive/5 p-sm text-caption text-destructive"
+            className="max-h-64 rounded-md bg-destructive/5 p-sm text-caption text-destructive-text"
           >
             {job.lastError}
           </Scroll>
@@ -535,7 +535,7 @@ function DeadTabInner({ dead }: { dead: SettledList<DeadJobRow> }) {
                   <td className="px-md py-sm tabular-nums">
                     {r.attempts}/{r.maxAttempts}
                   </td>
-                  <td className="px-md py-sm text-caption text-destructive">
+                  <td className="px-md py-sm text-caption text-destructive-text">
                     {r.lastError
                       ? truncate(r.lastError.split("\n")[0] ?? "", 60)
                       : ""}
@@ -609,7 +609,7 @@ function DeadJobDrawer({
           <Scroll
             as="pre"
             axis="both"
-            className="max-h-64 rounded-md bg-destructive/5 p-sm text-caption text-destructive"
+            className="max-h-64 rounded-md bg-destructive/5 p-sm text-caption text-destructive-text"
           >
             {job.lastError}
           </Scroll>
@@ -697,7 +697,7 @@ function EventsTabInner({
                     <Badge
                       colorClass={
                         r.matchedCount === 0
-                          ? "bg-destructive/10 text-destructive"
+                          ? "bg-destructive/10 text-destructive-text"
                           : "bg-success/10 text-success"
                       }
                     >
@@ -748,7 +748,7 @@ function EmissionDrawer({
       </Field>
       <Field label="Matched triggers">
         {emission.matchedCount === 0 ? (
-          <span className="text-destructive">
+          <span className="text-destructive-text">
             0 — no trigger matched this emission.
           </span>
         ) : (
@@ -842,7 +842,7 @@ function TriggersTabInner({
             active={danglingOnly}
             onClick={() => setDanglingOnly((v) => !v)}
           >
-            <span className="text-destructive">Dangling</span>{" "}
+            <span className="text-destructive-text">Dangling</span>{" "}
             <span className="opacity-60">{danglingCount}</span>
           </FilterChip>
         )}
@@ -881,7 +881,7 @@ function TriggersTabInner({
                           <Inline gap="xs">
                             {t.jobName}
                             {t.dangling && (
-                              <Badge colorClass="bg-destructive/10 text-destructive">
+                              <Badge colorClass="bg-destructive/10 text-destructive-text">
                                 dangling
                               </Badge>
                             )}

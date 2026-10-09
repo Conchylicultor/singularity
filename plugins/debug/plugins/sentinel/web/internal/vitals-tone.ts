@@ -9,7 +9,7 @@ import type { VitalTone } from "./vitals-view";
 export const VALUE_CLASS: Record<VitalTone, string> = {
   neutral: cn("text-foreground"),
   warn: cn("text-warning"),
-  bad: cn("text-destructive"),
+  bad: cn("text-destructive-text"),
 };
 
 /** A meter's fill. */

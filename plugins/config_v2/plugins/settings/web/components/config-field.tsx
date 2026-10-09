@@ -29,7 +29,7 @@ function formatOriginValue(value: unknown): string {
 
 const TIER_BADGE = {
   git: { label: "git", className: "bg-info/10 text-info" },
-  user: { label: "user", className: "bg-primary/10 text-primary" },
+  user: { label: "user", className: "bg-primary/10 text-primary-text" },
 } as const;
 
 /**

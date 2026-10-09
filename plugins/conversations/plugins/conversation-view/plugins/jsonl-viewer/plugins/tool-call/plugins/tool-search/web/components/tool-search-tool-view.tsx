@@ -88,7 +88,7 @@ export function ToolSearchToolView({ event }: ToolRendererProps) {
             </ToolGroup>
           )}
           {errorText && (
-            <Text as="p" variant="caption" className="text-destructive">
+            <Text as="p" variant="caption" className="text-destructive-text">
               {errorText}
             </Text>
           )}
@@ -125,7 +125,7 @@ export function ToolSearchToolView({ event }: ToolRendererProps) {
           </ToolGroup>
         )}
         {errorText && (
-          <Text as="p" variant="caption" className="text-destructive">
+          <Text as="p" variant="caption" className="text-destructive-text">
             {errorText}
           </Text>
         )}

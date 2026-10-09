@@ -30,7 +30,9 @@ export function HookSuccessView({ event }: AttachmentRendererProps) {
     <CollapsibleCard
       error={failed}
       label={`Hook ${att.hookName ?? att.hookEvent ?? "ran"}`}
-      note={typeof att.durationMs === "number" ? `· ${att.durationMs}ms` : undefined}
+      note={
+        typeof att.durationMs === "number" ? `· ${att.durationMs}ms` : undefined
+      }
     >
       <Stack as="div" gap="2xs" className="font-mono text-muted-foreground">
         {att.command && (
@@ -41,7 +43,7 @@ export function HookSuccessView({ event }: AttachmentRendererProps) {
         <Text
           as="p"
           variant="caption"
-          className={failed ? "text-destructive" : undefined}
+          className={failed ? "text-destructive-text" : undefined}
         >
           exit {exitCode}
         </Text>
@@ -49,7 +51,7 @@ export function HookSuccessView({ event }: AttachmentRendererProps) {
           <Text
             as="p"
             variant="caption"
-            className="whitespace-pre-wrap break-words text-destructive"
+            className="whitespace-pre-wrap break-words text-destructive-text"
           >
             {stderr}
           </Text>

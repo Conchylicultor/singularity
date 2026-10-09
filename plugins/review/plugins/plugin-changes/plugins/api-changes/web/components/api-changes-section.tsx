@@ -43,9 +43,9 @@ function DiffSection({
         <Text as={Line} variant="caption" key={item} className="gap-xs">
           <Icon
             icon={removeIcon}
-            className={cn("size-3 text-destructive", rigidClass())}
+            className={cn("size-3 text-destructive-text", rigidClass())}
           />
-          <code className="text-destructive">{item}</code>
+          <code className="text-destructive-text">{item}</code>
         </Text>
       ))}
     </Stack>

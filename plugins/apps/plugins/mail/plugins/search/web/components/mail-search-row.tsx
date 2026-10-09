@@ -77,7 +77,7 @@ export function MailSearchRow({
                 />
               )}
               {result.starred && (
-                <Icon icon={starIcon} className="text-primary" />
+                <Icon icon={starIcon} className="text-primary-text" />
               )}
               {message.internalDate && (
                 <Text variant="caption" tone="muted">

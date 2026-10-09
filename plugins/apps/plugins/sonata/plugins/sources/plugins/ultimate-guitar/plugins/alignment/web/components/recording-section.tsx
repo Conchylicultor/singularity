@@ -263,7 +263,7 @@ export function RecordingSection() {
               href={`https://www.youtube.com/watch?v=${videoId}`}
               target="_blank"
               rel="noreferrer"
-              className="text-body text-primary underline-offset-2 hover:underline"
+              className="text-body text-primary-text underline-offset-2 hover:underline"
             >
               {chosen?.title ?? `youtube.com/watch?v=${videoId}`}
             </a>

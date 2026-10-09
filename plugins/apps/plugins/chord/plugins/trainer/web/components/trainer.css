@@ -302,7 +302,7 @@
   font-variant-numeric: tabular-nums;
 }
 .chord-figure[data-slow] {
-  color: var(--destructive);
+  color: var(--destructive-text);
 }
 
 @media (prefers-reduced-motion: reduce) {

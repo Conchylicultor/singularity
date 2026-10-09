@@ -64,7 +64,7 @@ ruleTester.run(
         errors: [{ messageId: "redundant" }],
       },
       {
-        code: `const el = <Badge as="button" className="cursor-pointer hover:text-destructive" />;`,
+        code: `const el = <Badge as="button" className="cursor-pointer hover:text-destructive-text" />;`,
         errors: [{ messageId: "redundant" }],
       },
       // The shared components.

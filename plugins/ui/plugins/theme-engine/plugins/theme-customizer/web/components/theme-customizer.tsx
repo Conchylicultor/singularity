@@ -70,7 +70,7 @@ function TokenModeSelector({
           onClick={() => onChange(id)}
           className={`py-xs text-caption font-medium rounded-md border transition-colors ${
             mode === id
-              ? "border-primary bg-primary/10 text-primary"
+              ? "border-primary bg-primary/10 text-primary-text"
               : "border-border text-muted-foreground hover:border-primary/50"
           }`}
         >
@@ -110,7 +110,7 @@ function CustomizeForAppToggle({
       onClick={onToggle}
       className={`gap-md px-md py-sm text-body rounded-md border transition-colors ${
         forked
-          ? "border-primary bg-primary/10 text-primary"
+          ? "border-primary bg-primary/10 text-primary-text"
           : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
       }`}
     >

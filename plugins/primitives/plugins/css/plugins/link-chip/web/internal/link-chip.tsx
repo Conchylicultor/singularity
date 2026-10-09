@@ -45,7 +45,7 @@ export interface LinkChipProps extends DensityControlled, Passthrough {
  *
  * It reads as an OBJECT sitting in the sentence — an outlined tile you can
  * point at — rather than as a run of link text. That is deliberate, and it is a
- * reversal: the chip used to paint its label `text-primary` and underline it on
+ * reversal: the chip used to paint its label `text-primary-text` and underline it on
  * hover, borrowing the web's convention for a link inside prose. In a paragraph
  * that names half a dozen tasks, attempts and pages, the result was a wall of
  * accent-colored words, and the accent stopped meaning anything.

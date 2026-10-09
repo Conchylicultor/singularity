@@ -56,7 +56,7 @@ export function SonataOnboarding() {
         <Stack gap="2xl" align="center" className="w-full max-w-2xl">
           {/* Hero — app glyph, headline, and a source-neutral subline. */}
           <Stack gap="lg" align="center">
-            <Center className="size-16 rounded-2xl bg-primary/10 text-primary">
+            <Center className="size-16 rounded-2xl bg-primary/10 text-primary-text">
               <Icon icon={libraryMusicIcon} className="size-8" />
             </Center>
             <Stack gap="xs" align="center">
@@ -103,7 +103,7 @@ export function SonataOnboarding() {
                 )}
               >
                 <Stack gap="md">
-                  <Center className="size-10 rounded-md bg-primary/10 text-primary">
+                  <Center className="size-10 rounded-md bg-primary/10 text-primary-text">
                     {c.icon}
                   </Center>
                   <Stack gap="2xs">

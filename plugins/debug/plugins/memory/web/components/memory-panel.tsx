@@ -183,7 +183,7 @@ export function MemoryPanel() {
           </Center>
         ) : error ? (
           <Center className="h-full">
-            <Text as="div" variant="body" className="text-destructive">
+            <Text as="div" variant="body" className="text-destructive-text">
               {error}
             </Text>
           </Center>

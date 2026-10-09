@@ -108,7 +108,7 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
           ) : (
             <Icon
               icon={closeIcon}
-              className={cn("size-3.5 text-destructive", rigidClass())}
+              className={cn("size-3.5 text-destructive-text", rigidClass())}
             />
           )}
           <span className="font-medium">{step.label}</span>
@@ -126,7 +126,7 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
                   className={cn(
                     "whitespace-pre-wrap break-all",
                     line.stream === "stderr"
-                      ? "text-destructive"
+                      ? "text-destructive-text"
                       : "text-foreground",
                   )}
                 >

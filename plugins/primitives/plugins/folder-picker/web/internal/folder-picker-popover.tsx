@@ -83,7 +83,7 @@ export function FolderPickerPopover({
               ) : (
                 <Icon
                   icon={cancelIcon}
-                  className="size-4 text-destructive"
+                  className="size-4 text-destructive-text"
                   title={verdict.reason}
                 />
               )}

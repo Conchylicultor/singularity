@@ -10,7 +10,7 @@ export function Placeholder({ children, tone = "muted" }: PlaceholderProps) {
     <div
       className={cn(
         "px-md py-sm text-body",
-        tone === "error" ? "text-destructive" : "text-muted-foreground",
+        tone === "error" ? "text-destructive-text" : "text-muted-foreground",
       )}
     >
       {children}

@@ -41,7 +41,7 @@ function StatusIcon({ status }: { status: string }) {
       return (
         <Icon
           icon={cancelIcon}
-          className={cn("size-4 text-destructive", rigidClass())}
+          className={cn("size-4 text-destructive-text", rigidClass())}
         />
       );
     case "stopped":

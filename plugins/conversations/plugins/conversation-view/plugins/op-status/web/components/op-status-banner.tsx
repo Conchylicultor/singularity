@@ -172,7 +172,7 @@ function TitleCell({
         {title ?? <span className="font-mono">{item.slug}</span>}
         {item.isSelf && (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating cell; not a sibling gap the parent can own
-          <span className="ml-1.5 font-normal text-primary">
+          <span className="ml-1.5 font-normal text-primary-text">
             this conversation
           </span>
         )}

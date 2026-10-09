@@ -199,7 +199,7 @@ function InstrumentPicker({
           icon={<Icon icon={autoModeIcon} />}
           actions={
             !instrumentCustomized ? (
-              <Icon icon={checkIcon} className="size-3.5 text-primary" />
+              <Icon icon={checkIcon} className="size-3.5 text-primary-text" />
             ) : undefined
           }
           actionsAlwaysVisible
@@ -234,7 +234,7 @@ function InstrumentPicker({
                     active ? (
                       <Icon
                         icon={checkIcon}
-                        className="size-3.5 text-primary"
+                        className="size-3.5 text-primary-text"
                       />
                     ) : undefined
                   }
@@ -322,7 +322,7 @@ function TrackLevel({
           icon={levelIcon(muted, fader.value)}
           label={muted ? "Unmute track" : "Mute track"}
           aria-pressed={muted}
-          className={cn(muted && "text-destructive")}
+          className={cn(muted && "text-destructive-text")}
           onClick={() => setTrackMuted(songId, trackId, !muted)}
         />
       }

@@ -23,7 +23,7 @@
   font-size: 5rem;
   line-height: 1;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
   font-variant-numeric: tabular-nums;
   animation: count-in-pop 280ms ease-out;
 }

@@ -88,7 +88,8 @@ export function AgentListingDeltaView({ event }: AttachmentRendererProps) {
               key={name}
               className="text-muted-foreground line-through"
             >
-              <span className="text-destructive no-underline">−</span> {name}
+              <span className="text-destructive-text no-underline">−</span>{" "}
+              {name}
             </Text>
           ))}
         </Stack>

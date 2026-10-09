@@ -56,7 +56,7 @@ function TargetResultLine({
         {result.ok ? (
           <Icon icon={checkCircleIcon} className="size-3.5 text-success" />
         ) : (
-          <Icon icon={errorIcon} className="size-3.5 text-destructive" />
+          <Icon icon={errorIcon} className="size-3.5 text-destructive-text" />
         )}
         {result.detail !== undefined && (
           <Text as="span" variant="caption" tone="muted">
@@ -107,7 +107,7 @@ function SourceReportLines({
         <Inline gap="sm">
           <span>{source.name}</span>
           {failed && (
-            <Icon icon={errorIcon} className="size-3.5 text-destructive" />
+            <Icon icon={errorIcon} className="size-3.5 text-destructive-text" />
           )}
         </Inline>
       </Text>

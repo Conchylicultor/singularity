@@ -68,7 +68,7 @@ export function HookErrorView({ event }: AttachmentRendererProps) {
           </Text>
         )}
         {typeof exitCode === "number" && (
-          <Text as="p" variant="caption" className="text-destructive">
+          <Text as="p" variant="caption" className="text-destructive-text">
             exit {exitCode}
           </Text>
         )}
@@ -76,7 +76,7 @@ export function HookErrorView({ event }: AttachmentRendererProps) {
           <Text
             as="p"
             variant="caption"
-            className="whitespace-pre-wrap break-words text-destructive"
+            className="whitespace-pre-wrap break-words text-destructive-text"
           >
             {message}
           </Text>
@@ -85,7 +85,7 @@ export function HookErrorView({ event }: AttachmentRendererProps) {
           <Text
             as="p"
             variant="caption"
-            className="whitespace-pre-wrap break-words text-destructive"
+            className="whitespace-pre-wrap break-words text-destructive-text"
           >
             {stderr}
           </Text>

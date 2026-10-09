@@ -35,7 +35,7 @@ const MARK_UNDERLINE = "underline";
 const MARK_STRIKETHROUGH = "line-through";
 const MARK_CODE = "rounded-md bg-muted px-xs font-mono text-[0.9em]";
 // Lexical theme.link.
-const LINK_CLASS = "text-primary underline";
+const LINK_CLASS = "text-primary-text underline";
 
 /** One piece of a run: plain characters, or a token the registry recognized. */
 type Segment =

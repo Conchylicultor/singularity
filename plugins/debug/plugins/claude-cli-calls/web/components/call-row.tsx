@@ -62,7 +62,7 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
             variant="body"
             className={cn(
               "truncate",
-              isError ? "text-destructive" : "text-foreground",
+              isError ? "text-destructive-text" : "text-foreground",
             )}
           >
             {previewText || (

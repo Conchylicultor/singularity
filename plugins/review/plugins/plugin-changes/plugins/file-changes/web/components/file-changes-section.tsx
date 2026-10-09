@@ -101,7 +101,7 @@ function FileRow({
           className={cn("gap-sm tabular-nums", rigidClass())}
         >
           <span className="text-success">+{file.additions}</span>
-          <span className="text-destructive">&minus;{file.deletions}</span>
+          <span className="text-destructive-text">&minus;{file.deletions}</span>
         </Line>
       </Line>
       {expanded && (

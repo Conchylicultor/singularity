@@ -35,7 +35,7 @@ ruleTester.run(
       { code: `const x = <CollapsibleCard label="Thinking" />;` },
       // Color accent (not a font family) inside the title — allowed.
       {
-        code: `const x = <CollapsibleCard label={<span className="text-primary">Instructions</span>} />;`,
+        code: `const x = <CollapsibleCard label={<span className="text-primary-text">Instructions</span>} />;`,
       },
       // font-mono on a COMPONENT (Badge) — a typography-owning primitive; exempt.
       {

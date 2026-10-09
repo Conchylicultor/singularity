@@ -14,8 +14,8 @@ export function PrepromptRow({ event }: { event: JsonlEvent }) {
   return (
     <CollapsibleCard
       className="border-primary/30 bg-primary/5"
-      icon={<Icon icon={campaignIcon} className="size-3.5 text-primary" />}
-      label={<span className="text-primary">Instructions</span>}
+      icon={<Icon icon={campaignIcon} className="size-3.5 text-primary-text" />}
+      label={<span className="text-primary-text">Instructions</span>}
     >
       <Text
         as="div"

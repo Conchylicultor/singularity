@@ -96,7 +96,7 @@ export function Step({
             done
               ? "bg-success/15 text-success"
               : state === "active"
-                ? "bg-primary/10 text-primary"
+                ? "bg-primary/10 text-primary-text"
                 : "bg-muted text-muted-foreground",
           )}
         >

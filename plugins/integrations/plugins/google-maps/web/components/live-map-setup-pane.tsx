@@ -164,7 +164,7 @@ function LiveMapSetupSteps({
               onChange={(e) => setKeyDraft(e.target.value)}
             />
             {trimmedKey && !keyValid ? (
-              <Text as="p" variant="caption" className="text-destructive">
+              <Text as="p" variant="caption" className="text-destructive-text">
                 Not a Google API key — it should start with AIza and be 39
                 characters long.
               </Text>
@@ -194,7 +194,7 @@ function LiveMapSetupSteps({
           ) : null}
         </Stack>
         {saveError ? (
-          <Text as="p" variant="caption" className="text-destructive">
+          <Text as="p" variant="caption" className="text-destructive-text">
             {saveError}
           </Text>
         ) : null}

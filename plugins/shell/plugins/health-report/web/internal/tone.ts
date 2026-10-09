@@ -27,7 +27,7 @@ export const DOT_HALO_CLASS: Record<HealthLevel, ClassName> = {
 export const SUMMARY_CLASS: Record<HealthLevel, ClassName> = {
   ok: cn("text-muted-foreground"),
   attention: cn("text-warning"),
-  critical: cn("text-destructive"),
+  critical: cn("text-destructive-text"),
   unknown: cn("text-muted-foreground"),
 };
 
@@ -46,6 +46,6 @@ export const BUTTON_TINT_CLASS: Record<
     "text-warning hover:bg-warning/15 hover:text-warning aria-expanded:bg-warning/15 aria-expanded:text-warning",
   ),
   critical: cn(
-    "text-destructive hover:bg-destructive/15 hover:text-destructive aria-expanded:bg-destructive/15 aria-expanded:text-destructive",
+    "text-destructive-text hover:bg-destructive/15 hover:text-destructive-text aria-expanded:bg-destructive/15 aria-expanded:text-destructive-text",
   ),
 };

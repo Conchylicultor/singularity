@@ -93,7 +93,7 @@ function ChangeLabel({
   return (
     <Text
       variant="caption"
-      className={`tabular-nums ${change.good ? "text-success" : "text-destructive"}`}
+      className={`tabular-nums ${change.good ? "text-success" : "text-destructive-text"}`}
       title="Change from the previous period"
     >
       {change.fraction > 0 ? "↑" : "↓"}{" "}

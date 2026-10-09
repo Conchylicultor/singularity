@@ -120,11 +120,11 @@ export function UltimateGuitarLoader({ raw, onRaw }: Props) {
             </span>
           ) : null}
           {parseError ? (
-            <span className="text-caption text-destructive" role="alert">
+            <span className="text-caption text-destructive-text" role="alert">
               {parseError}
             </span>
           ) : unrecognised.length > 0 ? (
-            <span className="text-caption text-destructive" role="alert">
+            <span className="text-caption text-destructive-text" role="alert">
               Unrecognised chords (dropped): {unrecognised.join(", ")}
             </span>
           ) : null}
@@ -159,7 +159,7 @@ export function UltimateGuitarLoader({ raw, onRaw }: Props) {
       </Stack>
 
       {error ? (
-        <span className="text-caption text-destructive" role="alert">
+        <span className="text-caption text-destructive-text" role="alert">
           {error}
         </span>
       ) : null}

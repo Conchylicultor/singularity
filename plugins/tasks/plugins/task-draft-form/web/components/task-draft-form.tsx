@@ -214,7 +214,7 @@ export function TaskDraftForm({
           direction="row"
           align="center"
           gap="xs"
-          className="text-destructive"
+          className="text-destructive-text"
         >
           <Icon icon={scienceIcon} className="size-3.5" />
           <Text as="span" variant="caption" className="font-medium">

@@ -22,7 +22,7 @@ export function deltaTone(value: number, polarity: Polarity): DeltaTone {
 
 const TONE_CLASS: Record<DeltaTone, string> = {
   good: "text-success",
-  bad: "text-destructive",
+  bad: "text-destructive-text",
   flat: "text-muted-foreground",
 };
 

@@ -80,7 +80,7 @@ export function SizeChip({
           {wholePage ? (
             <Icon
               icon={descriptionIcon}
-              className="text-primary"
+              className="text-primary-text"
               aria-label="Whole page"
             />
           ) : null}

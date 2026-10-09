@@ -39,7 +39,7 @@ function Snippet({ snippet }: { snippet: string }) {
         seg.highlight ? (
           <mark
             key={i}
-            className="rounded-sm bg-primary/15 px-2xs font-medium text-primary"
+            className="rounded-sm bg-primary/15 px-2xs font-medium text-primary-text"
           >
             {seg.text}
           </mark>

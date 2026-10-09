@@ -4,15 +4,17 @@ import type { PluginReviewProps } from "@plugins/review/plugins/plugin-changes/c
 export function FileChangesSummary({ plugin }: PluginReviewProps) {
   if (plugin.fileCount === 0) return null;
   return (
-    <Text as="span" variant="caption" className="text-muted-foreground tabular-nums">
+    <Text
+      as="span"
+      variant="caption"
+      className="text-muted-foreground tabular-nums"
+    >
       {plugin.fileCount}f
       {plugin.additions > 0 && (
-        <span className="text-success">
-          {" "}+{plugin.additions}
-        </span>
+        <span className="text-success"> +{plugin.additions}</span>
       )}
       {plugin.deletions > 0 && (
-        <span className="text-destructive"> -{plugin.deletions}</span>
+        <span className="text-destructive-text"> -{plugin.deletions}</span>
       )}
     </Text>
   );

@@ -35,7 +35,7 @@ export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
         aria-pressed={row.done}
         variant="ghost"
         loading={pending}
-        className={row.done ? "text-primary" : undefined}
+        className={row.done ? "text-primary-text" : undefined}
         onClick={(e) => {
           // The card's own click opens the prototype; ticking it must not.
           e.stopPropagation();

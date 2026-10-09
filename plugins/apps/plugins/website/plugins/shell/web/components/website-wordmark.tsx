@@ -56,7 +56,7 @@ export function WordmarkText({
           inline-block, which kept it on the line but sat it on the box's bottom
           edge rather than the text's baseline, lifting the stop — the same
           overflow-baseline rule, seen from the other side.) */}
-      <span className="text-primary">.</span>
+      <span className="text-primary-text">.</span>
     </Text>
   );
 }

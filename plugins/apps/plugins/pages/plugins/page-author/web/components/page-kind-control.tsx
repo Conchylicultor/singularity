@@ -70,7 +70,7 @@ const KIND_LOOK: Record<
     label: "Instructions",
     hint: "Standing instructions for every agent working under the parent page.",
     // The `primary` wash the inline `<instructions>` card wears.
-    tint: "border-primary/35 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary",
+    tint: "border-primary/35 bg-primary/10 text-primary-text hover:bg-primary/20 hover:text-primary-text",
   },
 };
 
@@ -88,7 +88,7 @@ const KIND_ORDER: readonly PageKind["kind"][] = [
 const MENU_ICON_TONE: Record<PageKind["kind"], string> = {
   page: "text-muted-foreground",
   "agent-page": "text-info",
-  instructions: "text-primary",
+  instructions: "text-primary-text",
 };
 
 /** The kind a radio row selects — a fresh instructions page starts non-global. */

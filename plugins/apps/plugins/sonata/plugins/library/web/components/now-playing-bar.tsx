@@ -53,7 +53,7 @@ export function NowPlayingBar() {
     <div className="border-t border-border bg-background">
       <Inset x="xl" y="sm">
         <Stack direction="row" align="center" gap="md">
-          <Center className="size-8 rounded-md bg-primary/10 text-primary">
+          <Center className="size-8 rounded-md bg-primary/10 text-primary-text">
             <Icon icon={musicNoteIcon} className="size-4" />
           </Center>
           {/* Title block — rigid (capped width), title truncates in its Line. */}

@@ -135,7 +135,11 @@ export function ImageDiffView({
 
   if (oldGone && newGone) {
     return (
-      <Text as="div" variant="body" className="px-md py-sm text-destructive">
+      <Text
+        as="div"
+        variant="body"
+        className="px-md py-sm text-destructive-text"
+      >
         Image not found.
       </Text>
     );

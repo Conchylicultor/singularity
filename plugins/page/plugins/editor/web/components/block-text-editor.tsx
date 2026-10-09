@@ -266,7 +266,7 @@ export function BlockTextEditor({
           strikethrough: "line-through",
           code: "rounded-md bg-muted px-xs font-mono text-[0.9em]",
         },
-        link: "text-primary underline",
+        link: "text-primary-text underline",
       },
       // Custom inline nodes (e.g. inline page links) contributed via
       // registerBlockTextExtension, plus LinkNode for inline links. Registered

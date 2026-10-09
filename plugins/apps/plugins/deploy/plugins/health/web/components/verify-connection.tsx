@@ -99,7 +99,7 @@ function VerifyConnectionForm({
   if (last && !last.ok) {
     return (
       <Stack gap="sm" align="start">
-        <Text as="p" variant="caption" className="text-destructive">
+        <Text as="p" variant="caption" className="text-destructive-text">
           {last.message}
         </Text>
         <StepNote>{remediation(last.kind, server)}</StepNote>

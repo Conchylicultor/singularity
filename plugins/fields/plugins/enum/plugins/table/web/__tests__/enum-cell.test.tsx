@@ -38,7 +38,7 @@ describe("EnumCell reads its display metadata off the option", () => {
     const { getByText } = renderCell("failed");
     // The chip shell, not the inner truncating label span.
     const chip = getByText("Failed").parentElement;
-    expect(chip?.className).toContain("text-destructive");
+    expect(chip?.className).toContain("text-destructive-text");
   });
 
   it("spends the option's hint as the chip's tooltip", () => {

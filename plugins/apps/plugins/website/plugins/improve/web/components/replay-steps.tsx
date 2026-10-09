@@ -237,7 +237,7 @@ function StepDot({ state }: { state: StepState }) {
         state === "done"
           ? "border-primary bg-primary text-primary-foreground"
           : state === "active"
-            ? "border-primary/30 text-primary"
+            ? "border-primary/30 text-primary-text"
             : "border-border",
       )}
     >

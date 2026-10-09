@@ -337,7 +337,7 @@ function OpDetailView({
           variant="caption"
           className={cn(
             selfClass("start"),
-            "font-medium text-primary hover:underline",
+            "font-medium text-primary-text hover:underline",
           )}
           {...openPane.link(
             conversationPane,

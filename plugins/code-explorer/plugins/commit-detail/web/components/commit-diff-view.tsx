@@ -99,7 +99,7 @@ function CommitFileList({
           <Text
             as="span"
             variant="caption"
-            className="tabular-nums text-destructive"
+            className="tabular-nums text-destructive-text"
           >
             −{totals.deletions}
           </Text>
@@ -176,7 +176,7 @@ function CommitFileRow({
             >
               <Stack as="span" direction="row" gap="sm" align="center">
                 <span className="text-success">+{file.additions}</span>
-                <span className="text-destructive">−{file.deletions}</span>
+                <span className="text-destructive-text">−{file.deletions}</span>
               </Stack>
             </Text>
           </Line>

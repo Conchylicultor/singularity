@@ -2,7 +2,12 @@ import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; inputKeyed?: boolean; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  inputKeyed?: boolean;
+  run(): Promise<CheckResult>;
+};
 
 // Tailwind color-scale names that have a semantic/categorical token replacement.
 const SCALE_NAMES =
@@ -50,7 +55,7 @@ const check: Check = {
   • Success / done / added / positive  → bg-success, text-success, bg-success/10
   • Warning / pending / held / caution → bg-warning, text-warning, bg-warning/10
   • Info / in-progress / running       → bg-info, text-info, bg-info/10
-  • Error / failed / deleted           → bg-destructive, text-destructive
+  • Error / failed / deleted           → bg-destructive, text-destructive-text
   • Neutral / muted                    → bg-muted, text-muted-foreground
   • Brand action                       → bg-primary, text-primary-foreground
 For categorical data-viz (Gantt phase, model tier, runtime/method badge, hash-assigned chips),

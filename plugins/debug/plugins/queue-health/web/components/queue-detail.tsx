@@ -47,7 +47,7 @@ const DOT_CLASS: Record<QueueTone, string> = {
 const META_CLASS: Record<QueueTone, string> = {
   ok: cn("text-muted-foreground"),
   attention: cn("text-warning"),
-  critical: cn("text-destructive"),
+  critical: cn("text-destructive-text"),
 };
 const QUIET_DOT_CLASS = cn("bg-muted-foreground/50");
 

@@ -211,7 +211,7 @@ try {
         (s) => s.textContent?.trim() === "notes.md",
       );
       const probe = document.createElement("span");
-      probe.className = "text-primary";
+      probe.className = "text-primary-text";
       el.appendChild(probe);
       const accent = getComputedStyle(probe).color;
       probe.remove();

@@ -336,7 +336,7 @@ export function ControlPanelRow({
       <CheckboxIndicator checked={checked ?? false} />
     ) : select === "radio" ? (
       checked ? (
-        <Icon icon={checkIcon} className="text-primary" />
+        <Icon icon={checkIcon} className="text-primary-text" />
       ) : null
     ) : null;
   const leading =
@@ -364,7 +364,7 @@ export function ControlPanelRow({
       select === "radio" ? (
         <Icon
           icon={checkIcon}
-          className={cn("size-3.5 text-primary", !checked && "invisible")}
+          className={cn("size-3.5 text-primary-text", !checked && "invisible")}
         />
       ) : (
         mark

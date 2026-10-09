@@ -10,7 +10,7 @@ import type { ConversationEntry } from "@plugins/conversations/core";
 // its text and outline, so the one conversation doing something reads at a glance.
 const STATUS_CLASSES: Record<ConversationStatus, string> = {
   starting: "bg-muted text-muted-foreground border-border",
-  working: "bg-muted text-primary border-primary/40",
+  working: "bg-muted text-primary-text border-primary/40",
   waiting: "bg-muted text-muted-foreground border-border",
   gone: "bg-warning/15 text-warning border-warning/30",
   done: "bg-muted text-muted-foreground/60 italic border-border",

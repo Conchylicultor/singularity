@@ -65,7 +65,7 @@ export function ServerStatusSection({ server }: { server: Server }) {
           Platform: {row.platform ?? "unrecognized"}
         </Text>
       ) : (
-        <Text as="p" variant="body" className="text-destructive">
+        <Text as="p" variant="body" className="text-destructive-text">
           {row.failureMessage ?? row.failureKind ?? "The last probe failed."}
         </Text>
       )}

@@ -370,7 +370,7 @@ export function WindowChrome({
                   : `Keep on top (${formatShortcutLabel(TOGGLE_PIN_SHORTCUT)})`
               }
               // Pinned reads as "active" via the accent tint, matching the menu check.
-              className={geo.pinned ? "text-primary" : undefined}
+              className={geo.pinned ? "text-primary-text" : undefined}
               onClick={onTogglePin}
             />
             <IconButton

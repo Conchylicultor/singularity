@@ -64,7 +64,7 @@ function UrlCell({ url }: { url: string | null }): ReactNode {
       rel="noreferrer noopener"
       onClick={(e: MouseEvent) => e.stopPropagation()}
       icon={<Icon icon={navIcons.newTab} />}
-      colorClass="bg-muted text-primary hover:bg-muted/80 hover:underline"
+      colorClass="bg-muted text-primary-text hover:bg-muted/80 hover:underline"
       title={href}
     >
       {host}

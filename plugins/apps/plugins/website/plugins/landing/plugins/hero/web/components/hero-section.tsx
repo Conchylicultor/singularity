@@ -70,7 +70,7 @@ export function HeroSection() {
             <Stack gap="2xs">
               <Inline gap="sm">
                 <StatusDot
-                  colorClass="bg-primary text-primary"
+                  colorClass="bg-primary text-primary-text"
                   className="website-hero-property-dot"
                 />
                 <Text variant="label" className="font-semibold">

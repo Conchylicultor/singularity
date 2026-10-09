@@ -47,7 +47,7 @@ const VARIANT_CLASS: Record<
   // Both states carry one `border`, so switching it on cannot move its
   // neighbours by a pixel.
   tinted: {
-    active: "border border-primary/40 bg-primary/10 text-primary",
+    active: "border border-primary/40 bg-primary/10 text-primary-text",
     inactive: BORDERED_OFF,
   },
   // pill-row look: a hairline-outlined pill on whatever is behind it when off,

@@ -13,9 +13,19 @@ export function ChartState({
   loading: boolean;
   children: ReactNode;
 }) {
-  if (error) return <Text as="div" variant="body" className="text-destructive">Failed to load: {error}</Text>;
+  if (error)
+    return (
+      <Text as="div" variant="body" className="text-destructive-text">
+        Failed to load: {error}
+      </Text>
+    );
   if (loading) return <Loading />;
-  if (empty) return <Text as="div" variant="body" className="text-muted-foreground">No commits yet.</Text>;
+  if (empty)
+    return (
+      <Text as="div" variant="body" className="text-muted-foreground">
+        No commits yet.
+      </Text>
+    );
   return <>{children}</>;
 }
 

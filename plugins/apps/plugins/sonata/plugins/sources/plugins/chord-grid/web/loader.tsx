@@ -20,8 +20,7 @@ interface Props {
   onRaw: (raw: unknown) => void;
 }
 
-const PLACEHOLDER =
-  "; Verse\nAmaj9 Am9 (E E6) (E E6)\nCmaj7 Am7 Dm9 G13";
+const PLACEHOLDER = "; Verse\nAmaj9 Am9 (E E6) (E E6)\nCmaj7 Am7 Dm9 G13";
 
 export function ChordGridLoader({ raw, onRaw }: Props) {
   const current = asChordGridRaw(raw);
@@ -30,7 +29,8 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
   // Live parse feedback (recognised chord count + skipped tokens).
   const { events, skipped } = useMemo(() => parseGrid(text), [text]);
 
-  const update = (patch: Partial<ChordGridRaw>) => onRaw({ ...current, ...patch });
+  const update = (patch: Partial<ChordGridRaw>) =>
+    onRaw({ ...current, ...patch });
 
   return (
     <Stack gap="md">
@@ -52,15 +52,15 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
       <div className="flex flex-wrap items-center gap-x-md gap-y-xs text-caption">
         <span className="text-muted-foreground">
           {events.length} chord{events.length === 1 ? "" : "s"} · each cell is a
-          bar · <code className="rounded-md bg-muted px-xs">( )</code> share a bar ·{" "}
-          <code className="rounded-md bg-muted px-xs">.</code> holds the previous
-          chord · <code className="rounded-md bg-muted px-xs">;</code> comments
-          the rest of the line ·{" "}
+          bar · <code className="rounded-md bg-muted px-xs">( )</code> share a
+          bar · <code className="rounded-md bg-muted px-xs">.</code> holds the
+          previous chord · <code className="rounded-md bg-muted px-xs">;</code>{" "}
+          comments the rest of the line ·{" "}
           <code className="rounded-md bg-muted px-xs">I vi V7</code> are degrees
           of <code className="rounded-md bg-muted px-xs">key: C</code>
         </span>
         {skipped.length > 0 ? (
-          <span className={cn("text-destructive")} role="alert">
+          <span className={cn("text-destructive-text")} role="alert">
             Unrecognised: {skipped.join(", ")}
           </span>
         ) : null}

@@ -152,7 +152,8 @@ export function InstructionsView({ event }: AttachmentRendererProps) {
                 key={path}
                 className="text-muted-foreground line-through"
               >
-                <span className="text-destructive no-underline">−</span> {path}
+                <span className="text-destructive-text no-underline">−</span>{" "}
+                {path}
               </Text>
             ))}
           </Stack>

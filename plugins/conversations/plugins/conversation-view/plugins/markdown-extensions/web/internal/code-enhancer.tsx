@@ -17,7 +17,7 @@ export function CodeEnhancer({ children }: { children: ReactNode }) {
       if (text.startsWith("http://") || text.startsWith("https://")) {
         return (
           <a
-            className="text-caption text-primary rounded-sm bg-muted px-xs py-2xs font-mono underline hover:opacity-80"
+            className="text-caption text-primary-text rounded-sm bg-muted px-xs py-2xs font-mono underline hover:opacity-80"
             href={text}
             target="_blank"
             rel="noopener noreferrer"
@@ -47,13 +47,10 @@ export function CodeEnhancer({ children }: { children: ReactNode }) {
     [onFileOpen],
   );
 
-  const enhancement = useMemo(
-    (): MarkdownEnhancement | null => {
-      if (!onFileOpen) return null;
-      return { inlineCode };
-    },
-    [onFileOpen, inlineCode],
-  );
+  const enhancement = useMemo((): MarkdownEnhancement | null => {
+    if (!onFileOpen) return null;
+    return { inlineCode };
+  }, [onFileOpen, inlineCode]);
 
   const value = useMarkdownEnhancement(enhancement);
   return (

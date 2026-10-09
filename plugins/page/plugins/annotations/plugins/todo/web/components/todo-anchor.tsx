@@ -108,7 +108,9 @@ function DispatchableTodoAnchor({
         editor={editor}
         name="Todo"
         className="text-warning/80"
-        action={<Icon icon={errorIcon} className="size-3 text-destructive" />}
+        action={
+          <Icon icon={errorIcon} className="size-3 text-destructive-text" />
+        }
         triggerLabel="Couldn't load this card's dispatch"
         width="md"
         sections={() => (

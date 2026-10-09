@@ -81,7 +81,7 @@ export function LaunchSidebarItem() {
             // The nav rows' `rounded-md`, in the picker's fill, with the
             // accent on the glyph only. As tall as the picker beside it (the md
             // control height), and as wide: a square.
-            className="h-(--control-height-md) w-(--control-height-md) rounded-md bg-sidebar-accent text-primary"
+            className="h-(--control-height-md) w-(--control-height-md) rounded-md bg-sidebar-accent text-primary-text"
           />
         </Line>
       </SidebarMenuItem>

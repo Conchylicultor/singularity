@@ -137,6 +137,20 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
   // painted, so a theme that leaves them out renders exactly as before; a theme
   // sets one to restyle that role alone.
   //
+  // A primary / destructive colour used AS TEXT on a surface (a link, an
+  // error message), apart from the same colour used as a FILL under its
+  // `*Foreground` label (Send, Stop). One value cannot serve both on a dark
+  // surface: a fill dark enough for a white label at 4.5:1 is too dark to read
+  // at 4.5:1 against the surface, and vice versa. Default = the fill colour,
+  // as every text use painted before; a theme with deep fills lifts these.
+  primaryText: {
+    default: "var(--primary)",
+    label: "Primary as text",
+  },
+  destructiveText: {
+    default: "var(--destructive)",
+    label: "Destructive as text",
+  },
   // Emphasised text above body text: a conversation pane's title.
   strongForeground: {
     default: "var(--foreground)",

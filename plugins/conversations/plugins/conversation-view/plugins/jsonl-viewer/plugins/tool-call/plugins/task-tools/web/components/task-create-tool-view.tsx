@@ -12,7 +12,9 @@ export function TaskCreateToolView({ event }: ToolRendererProps) {
   const input = event.input as TaskCreateInput;
 
   const summary = (
-    <span className="truncate">{input.subject ?? input.description ?? "New task"}</span>
+    <span className="truncate">
+      {input.subject ?? input.description ?? "New task"}
+    </span>
   );
 
   return (
@@ -29,7 +31,7 @@ export function TaskCreateToolView({ event }: ToolRendererProps) {
       )}
       {event.result?.isError && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 separates the error text from preceding content
-        <Text as="p" variant="caption" className="mt-2 text-destructive">
+        <Text as="p" variant="caption" className="mt-2 text-destructive-text">
           {event.result.content}
         </Text>
       )}

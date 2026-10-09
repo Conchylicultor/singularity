@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
+import {
+  useExpandAll,
+  ExpandAllButton,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -17,14 +20,21 @@ export function PluginChangesList({
     [data],
   );
 
-  const { expanded: expandedSet, allExpanded, toggleAll, toggle } = useExpandAll(allPaths);
+  const {
+    expanded: expandedSet,
+    allExpanded,
+    toggleAll,
+    toggle,
+  } = useExpandAll(allPaths);
 
   if (isPending) {
     return <Loading label="Loading plugins…" className="px-xs" />;
   }
   if (error) {
     return (
-      <Text as="p" variant="body" className="text-destructive px-xs">Error: {String(error)}</Text>
+      <Text as="p" variant="body" className="text-destructive-text px-xs">
+        Error: {String(error)}
+      </Text>
     );
   }
   if (!data) {

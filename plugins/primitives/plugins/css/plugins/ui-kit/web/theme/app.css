@@ -86,6 +86,8 @@
     --color-background: var(--background);
     /* Role colours (color-palette group), each defaulting to what its surface
        always painted — see the group for which surface reads which. */
+    --color-primary-text: var(--primary-text);
+    --color-destructive-text: var(--destructive-text);
     --color-strong-foreground: var(--strong-foreground);
     --color-subtle-foreground: var(--subtle-foreground);
     --color-chip: var(--chip);

@@ -24,7 +24,7 @@ export function FieldShell({
     <Stack as="label" gap="xs" className={className}>
       <Text as="span" variant="label">
         {label}
-        {required && <span className="text-destructive"> *</span>}
+        {required && <span className="text-destructive-text"> *</span>}
       </Text>
       {children}
       {hint && (
@@ -37,6 +37,7 @@ export function FieldShell({
 }
 
 /** Shared input / textarea styling, so add and edit render pixel-identical controls. */
-export const fieldInputClass = "bg-input rounded-md border px-sm py-xs text-body";
+export const fieldInputClass =
+  "bg-input rounded-md border px-sm py-xs text-body";
 export const fieldTextareaClass =
   "bg-input rounded-md border px-sm py-xs font-mono text-caption";

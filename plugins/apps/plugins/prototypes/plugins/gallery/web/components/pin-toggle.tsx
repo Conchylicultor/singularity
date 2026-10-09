@@ -34,7 +34,7 @@ export function PinCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
         aria-pressed={row.pinned}
         variant="ghost"
         loading={pending}
-        className={row.pinned ? "text-primary" : undefined}
+        className={row.pinned ? "text-primary-text" : undefined}
         onClick={(e) => {
           // The card's own click opens the prototype; pinning it must not.
           e.stopPropagation();
@@ -76,7 +76,7 @@ export function PinHeaderAction() {
       label={pinned ? "Pinned — click to unpin" : "Pin"}
       aria-pressed={pinned}
       loading={pending}
-      className={pinned ? "text-primary" : undefined}
+      className={pinned ? "text-primary-text" : undefined}
       onClick={() => setStatus(name, { pinned: !pinned })}
     />
   );

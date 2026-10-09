@@ -31,7 +31,7 @@ export function TitlebarStylePicker() {
           key={o.label}
           className={`px-md py-xs text-body rounded-md border transition-colors ${
             o.seamless === seamlessTitlebar
-              ? "border-primary bg-primary/10 text-primary"
+              ? "border-primary bg-primary/10 text-primary-text"
               : "border-border text-muted-foreground hover:border-primary/50"
           }`}
           onClick={() => setConfig("seamlessTitlebar", o.seamless)}

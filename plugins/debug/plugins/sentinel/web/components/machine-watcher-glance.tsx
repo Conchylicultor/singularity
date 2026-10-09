@@ -22,7 +22,7 @@ import {
 // report is open, so a closed report receives no vitals at all.
 
 const BANNER_CLASS: Record<BannerView["kind"], string> = {
-  tripped: cn("bg-destructive/10 text-destructive"),
+  tripped: cn("bg-destructive/10 text-destructive-text"),
   stale: cn("bg-muted text-muted-foreground"),
 };
 

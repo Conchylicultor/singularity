@@ -71,7 +71,7 @@ export function RemoteSessionView({ event }: AttachmentRendererProps) {
       label="Remote session"
     >
       <a
-        className="truncate font-mono text-primary underline"
+        className="truncate font-mono text-primary-text underline"
         href={att.url}
         target="_blank"
         rel="noreferrer"

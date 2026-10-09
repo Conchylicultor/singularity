@@ -18,7 +18,7 @@ export function InstructionsAnchor({ blockId, data }: BlockAnchorProps) {
     <ContainerCornerLabel
       blockId={blockId}
       name={global ? "Global instructions" : "Instructions"}
-      className="text-primary"
+      className="text-primary-text"
     />
   );
 }

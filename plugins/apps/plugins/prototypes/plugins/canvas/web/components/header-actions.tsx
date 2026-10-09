@@ -49,7 +49,7 @@ export function AddFrameActions(): ReactElement {
         }
         onClick={() => dispatch({ type: "addPrototype" })}
       >
-        <Icon icon={addIcon} className="text-primary" />
+        <Icon icon={addIcon} className="text-primary-text" />
         Frame
       </Button>
       {sources.map((source) => {
@@ -68,7 +68,7 @@ export function AddFrameActions(): ReactElement {
             }
             onClick={() => dispatch({ type: "addSource", source: source.id })}
           >
-            <Icon icon={addIcon} className="text-primary" />
+            <Icon icon={addIcon} className="text-primary-text" />
             {source.addLabel}
           </Button>
         );

@@ -285,7 +285,7 @@ await withBrowser(async (h) => {
       const cls = (await chip.getAttribute("class")) ?? "";
       r.ok(
         "deferred failure: the segment is destructive",
-        cls.includes("text-destructive"),
+        cls.includes("text-destructive-text"),
         cls,
       );
       r.eq(

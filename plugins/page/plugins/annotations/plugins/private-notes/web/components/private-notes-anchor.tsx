@@ -21,7 +21,7 @@ export function PrivateNotesAnchor({ blockId }: BlockAnchorProps) {
     <ContainerCornerLabel
       blockId={blockId}
       name="Private"
-      className="text-destructive/80"
+      className="text-destructive-text/80"
     />
   );
 }

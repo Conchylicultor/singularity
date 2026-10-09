@@ -16,7 +16,7 @@ const GIT_STATUS_BADGE: Record<EditedFileStatus, string> = {
   modified: "bg-info/15 text-info border-info/30",
   added: "bg-success/15 text-success border-success/30",
   untracked: "bg-success/15 text-success border-success/30",
-  deleted: "bg-destructive/15 text-destructive border-destructive/30",
+  deleted: "bg-destructive/15 text-destructive-text border-destructive/30",
   renamed: "bg-categorical-5/15 text-categorical-5 border-categorical-5/30",
   copied: "bg-categorical-3/15 text-categorical-3 border-categorical-3/30",
   clean: "bg-muted text-muted-foreground border-border",

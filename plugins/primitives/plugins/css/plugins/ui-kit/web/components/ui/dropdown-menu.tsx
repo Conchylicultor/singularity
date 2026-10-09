@@ -404,7 +404,7 @@ function DropdownMenuCheckboxItem({
           data-slot="dropdown-menu-checkbox-item-indicator"
         >
           <MenuPrimitive.CheckboxItemIndicator>
-            <Icon icon={checkIcon} className="text-primary" />
+            <Icon icon={checkIcon} className="text-primary-text" />
           </MenuPrimitive.CheckboxItemIndicator>
         </span>
       </span>
@@ -453,7 +453,7 @@ function DropdownMenuRadioItem({
           data-slot="dropdown-menu-radio-item-indicator"
         >
           <MenuPrimitive.RadioItemIndicator>
-            <Icon icon={checkIcon} className="text-primary" />
+            <Icon icon={checkIcon} className="text-primary-text" />
           </MenuPrimitive.RadioItemIndicator>
         </span>
       </span>

@@ -47,7 +47,7 @@ const LEVEL_BG = {
 
 const LEVEL_ICON_CLASS = {
   careful: "size-3.5 text-warning",
-  critical: "size-3.5 text-destructive",
+  critical: "size-3.5 text-destructive-text",
 };
 
 const LEVEL_TOOLTIP = {
@@ -134,7 +134,7 @@ export function ReviewFileRow({
             className={cn("gap-sm tabular-nums", rigidClass())}
           >
             <span className="text-success">+{file.additions}</span>
-            <span className="text-destructive">−{file.deletions}</span>
+            <span className="text-destructive-text">−{file.deletions}</span>
             {level !== "safe" && (
               <Icon
                 icon={warningIcon}

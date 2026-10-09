@@ -208,7 +208,7 @@ export function SongLibrary() {
                 // The card's identity block, beside the body — the one piece of
                 // the old SongCard that was a real gap in the generic card.
                 leading: () => (
-                  <Center className="size-10 rounded-md bg-primary/10 text-primary">
+                  <Center className="size-10 rounded-md bg-primary/10 text-primary-text">
                     <Icon icon={musicNoteIcon} className="size-5" />
                   </Center>
                 ),

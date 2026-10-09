@@ -79,7 +79,7 @@ function AlsoAfterChip({ taskId, dep }: { taskId: string; dep: TaskListItem }) {
       icon={<Icon icon={closeIcon} />}
       title={`also after: ${title} — click to remove`}
       onClick={remove}
-      className="hover:text-destructive"
+      className="hover:text-destructive-text"
     >
       also after: {title}
     </Badge>

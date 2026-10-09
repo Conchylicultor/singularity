@@ -43,7 +43,7 @@ export interface CollapsibleCardProps {
    *  (jsonl-viewer rule). The card owns the title TYPOGRAPHY (house font + size);
    *  pass content only — `font-*`/`text-*` classes here are banned by lint
    *  (`collapsible-card/no-adhoc-card-title-font`). A semantic color accent
-   *  (e.g. `text-primary` for the Instructions callout) is fine. Display content
+   *  (e.g. `text-primary-text` for the Instructions callout) is fine. Display content
    *  is click-through (toggles the card); interactive content placed here MUST
    *  be wrapped in `<CardHeaderAction>` so it keeps its own click. */
   label: ReactNode;

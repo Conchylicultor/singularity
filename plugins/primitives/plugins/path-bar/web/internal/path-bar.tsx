@@ -309,7 +309,7 @@ export function PathBar({
         onChange={(e) => dispatch({ type: "input", text: e.target.value })}
         onKeyDown={onKeyDown}
         onBlur={() => cancel()}
-        className={cn("font-mono", state.invalid && "text-destructive")}
+        className={cn("font-mono", state.invalid && "text-destructive-text")}
       />
       <FloatingSurface
         open={showPanel}
