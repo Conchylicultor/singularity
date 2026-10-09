@@ -12622,7 +12622,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
               - `ConfigV2.WebRegister` "config"
-            - Uses: 22 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md)
+            - Uses: 21 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md)
               - `primitives/css/ui-kit` ×4
               - `config_v2` ×2
               - `primitives/css/spacing` ×2
@@ -12635,7 +12635,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/adaptive-bar.AdaptiveBar`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/scroll.Scroll`
-              - `primitives/overlay/hover-popover.HoverPopover`
               - `primitives/prompt-editor.PromptEditorSlots`
               - `ui/icons.Icon`
             - Exports (types):
@@ -31354,10 +31353,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
           - Web:
             - Uses:
-              - `primitives/css/spacing.insetClass`
               - `primitives/css/spacing.StackAlign`
               - `primitives/css/spacing.StackDirection`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.OverlayPanel`
+              - `primitives/css/ui-kit.PopoverPadding`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/overlay/popup-open.PopupOpenScope`
             - Exports (types):
@@ -31406,9 +31406,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HoverPopoverProps`
             - Exports (values): `HoverPopover`
           - Cross-plugin:
-            - Imported by:
-              - `apps-core/app-launcher`
-              - `conversations/conversation-view/prompt-templates`
+            - Imported by: `apps-core/app-launcher`
           - Core:
             - Exports (types):
               - `HoverIntent`

@@ -248,7 +248,8 @@ function FloatingActionPanel({
             // so a hovered button is a pill inside the pill, never a
             // rounded-rect patch in a capsule. `rounded` keeps the popover's
             // own corner role.
-            shape === "pill" && "rounded-full [--radius-control:calc(infinity*1px)]",
+            shape === "pill" &&
+              "rounded-full [--radius-control:calc(infinity*1px)]",
             FLOW_CLASS[direction][triggerAt],
             "transition-[width,max-width,max-height,padding,background-color,box-shadow] duration-200 ease-out",
             // Collapsed, `outlined` / `ghost` lay their resting look over the
