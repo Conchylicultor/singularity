@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
@@ -141,6 +141,24 @@ export function LaunchAgentForm({
   // button is — rather than filing a launch that cannot run.
   const claudeBlock = useClaudeCodeLaunchBlock();
 
+  // One launch at a time, whichever of ⌘Enter or the button asked for it: the
+  // ref closes the gap before the re-render, the state drives the button's
+  // spinner for a keyboard launch too.
+  const inFlight = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const blocked = disabled || claudeBlock !== null;
+  const trySubmit = async () => {
+    if (inFlight.current || blocked) return;
+    inFlight.current = true;
+    setSubmitting(true);
+    try {
+      await submit();
+    } finally {
+      inFlight.current = false;
+      setSubmitting(false);
+    }
+  };
+
   const submit = async () => {
     const req = await getRequest(text, toggleValues);
     const result = await launch(
@@ -168,7 +186,8 @@ export function LaunchAgentForm({
         value={text}
         onChange={(next) => setDraft((d) => ({ ...d, text: next }))}
         placeholder={placeholder}
-        submitMode="none"
+        onSubmit={() => void trySubmit()}
+        submitMode="cmd-enter"
         minRows={3}
         maxHeight="16rem"
         namespace={`launch-agent-form-${editorId}`}
@@ -211,9 +230,7 @@ export function LaunchAgentForm({
         {/* The empty flexible cell: the button sits flush right in its own
             track rather than floating over the toggles above it. */}
         <Fill />
-        {/* `submit` returns a promise, so the button pends and locks itself for
-            the whole round trip with no wiring of our own. */}
-        <Button disabled={disabled || claudeBlock !== null} onClick={submit}>
+        <Button disabled={blocked} loading={submitting} onClick={trySubmit}>
           Launch
         </Button>
       </Line>
