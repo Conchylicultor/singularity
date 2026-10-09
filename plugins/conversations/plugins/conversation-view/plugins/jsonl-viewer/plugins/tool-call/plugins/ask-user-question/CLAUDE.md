@@ -73,10 +73,10 @@ answer lives inside the tool result, not in a message a rewind can cut at.
     - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
+    - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
-    - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
     - `conversations/conversation-view/pending-turn` ×2
     - `infra/endpoints` ×2
     - `primitives/css/selection-indicator` ×2
@@ -104,6 +104,7 @@ answer lives inside the tool result, not in a message a rewind can cut at.
     - `AnswerForm`
     - `AnswerHereButton`
     - `answerQuestionDelivery`
+    - `QuestionCard`
 - Server:
   - Uses:
     - `conversations.answerPrompt`

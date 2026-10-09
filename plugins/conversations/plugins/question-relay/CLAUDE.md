@@ -72,7 +72,8 @@ rows whose relay pid is dead (`abandoned`).
 
 `RelayQuestionCard` owns the transcript's `"question"` pending prompt
 (`JsonlViewer.PendingPrompt`). With an open row it renders ask-user-question's
-`AnswerForm` (structured selections; the server validates them against the
+`QuestionCard` — the same tool-call card the transcript draws the question
+with — holding its `AnswerForm` (structured selections; the server validates them against the
 stored questions and joins a multi-select with `", "`) and an *Answer in
 terminal* release. With none it renders ask-user-question's `AnswerHereButton` —
 the flush path, kept for sessions launched without the hook and for released
@@ -91,10 +92,9 @@ questions.
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerForm`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerHereButton`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.FormAnswer`
+    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.QuestionCard`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
-    - `primitives/css/card.Card`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/live-state.ResourceErrorInline`

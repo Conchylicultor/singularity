@@ -2,17 +2,14 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { MarkerAnswerForm } from "./marker-answer-form";
 import { OptionBody, OptionRow } from "./option-row";
+import { summaryFor } from "./question-card";
 import { findAnswerTurn } from "./awaiting";
 import {
   answersFromRecord,
@@ -20,44 +17,7 @@ import {
   parseSelectedLabels,
   type AskUserQuestionInput,
   type ParsedAnswer,
-  type Question,
 } from "./answer-model";
-
-function summaryFor(questions: Question[], firstAnswerParts: string[]) {
-  return (
-    <Line as="span" className="gap-xs">
-      {questions.length > 0 ? (
-        questions.map((q, i) => (
-          <Badge
-            key={i}
-            colorClass="bg-info/15 text-info"
-            className={cn(rigidClass(), "font-mono")}
-          >
-            {q.header}
-          </Badge>
-        ))
-      ) : (
-        <Badge
-          colorClass="bg-info/15 text-info"
-          className={cn(rigidClass(), "font-mono")}
-        >
-          question
-        </Badge>
-      )}
-      {questions[0]?.question && (
-        <Text tone="muted">{questions[0].question}</Text>
-      )}
-      {firstAnswerParts.length > 0 && (
-        <>
-          <span className={cn(rigidClass(), "text-muted-foreground/50")}>
-            &rarr;
-          </span>
-          <Text className="text-foreground">{firstAnswerParts.join(", ")}</Text>
-        </>
-      )}
-    </Line>
-  );
-}
 
 export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   const input = event.input as AskUserQuestionInput;

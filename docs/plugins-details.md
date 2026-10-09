@@ -12089,6 +12089,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `JsonlViewerTool`
                   - `ToolCallCard`
+                  - `ToolCallFrame`
               - Cross-plugin:
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
@@ -12172,10 +12173,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-                    - Uses: 34 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
+                    - Uses: 35 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
                       - `primitives/css/ui-kit` ×9
+                      - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
                       - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
-                      - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
                       - `conversations/conversation-view/pending-turn` ×2
                       - `infra/endpoints` ×2
                       - `primitives/css/selection-indicator` ×2
@@ -12203,6 +12204,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `AnswerForm`
                       - `AnswerHereButton`
                       - `answerQuestionDelivery`
+                      - `QuestionCard`
                   - Server:
                     - Uses:
                       - `conversations.answerPrompt`
@@ -13630,10 +13632,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerForm`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerHereButton`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.FormAnswer`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.QuestionCard`
           - `infra/endpoints.useEndpointMutation`
           - `network/live.useLive`
-          - `primitives/css/card.Card`
-          - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/live-state.ResourceErrorInline`
@@ -27985,10 +27986,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `CardProps`
             - Exports (values): `Card`
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
+            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
               - `apps` ×12
-              - `conversations` ×4
               - `primitives` ×4
+              - `conversations` ×3
               - `page` ×3
               - `active-data/task`
               - `debug/trace/contention`
@@ -28705,9 +28706,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 384 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 383 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×97
-              - `conversations` ×62
+              - `conversations` ×61
               - `primitives` ×50
               - `debug` ×34
               - `ui` ×28

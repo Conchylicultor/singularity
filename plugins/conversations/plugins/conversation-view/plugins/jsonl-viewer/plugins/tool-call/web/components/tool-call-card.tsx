@@ -9,8 +9,9 @@ import {
   CardHeaderAction,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 
-interface ToolCallCardProps {
-  event: ToolCallEvent;
+interface ToolCallFrameProps {
+  /** The tool's name, drawn as the card's identity badge. */
+  name: string;
   summary?: ReactNode;
   /** Muted middot-led count after the identity (`· 3 matches`) — the card's
    *  `note`. Names what it counted; never a bare parenthesised number. */
@@ -25,15 +26,15 @@ interface ToolCallCardProps {
   children?: ReactNode;
   defaultOpen?: boolean;
   /**
-   * Override the error tone. When omitted, the card derives it from
-   * `event.result?.isError`. Renderers whose protocol-level error is an expected
+   * The error tone. `ToolCallCard` derives it from `event.result?.isError`
+   * unless the renderer overrides it: renderers whose protocol-level error is an expected
    * mechanism artifact (e.g. AskUserQuestion's cancel-to-flush interrupt) pass
    * `false` so the card is not styled as a failure.
    */
   isError?: boolean;
   /**
-   * Override "is this call still in flight", which the card otherwise derives
-   * from `event.result` being absent.
+   * "Is this call still in flight" (draws the running dots). `ToolCallCard`
+   * derives it from `event.result` being absent unless the renderer overrides it.
    *
    * For one tool family that derivation is simply wrong: a backgrounded `Agent`
    * gets its `tool_result` at LAUNCH, as an acknowledgement, so the card would
@@ -45,8 +46,13 @@ interface ToolCallCardProps {
   running?: boolean;
 }
 
-export function ToolCallCard({
-  event,
+/**
+ * A tool call's card, drawn from its name alone — for a call that is not (yet)
+ * a transcript event, such as an AskUserQuestion a hook is holding. Renderers
+ * of a transcript event use `ToolCallCard`, which derives the rest from it.
+ */
+export function ToolCallFrame({
+  name,
   summary,
   note,
   leading,
@@ -55,17 +61,15 @@ export function ToolCallCard({
   defaultOpen = false,
   isError,
   running,
-}: ToolCallCardProps) {
-  const hasError = isError ?? event.result?.isError;
-  const isRunning = running ?? !event.result;
+}: ToolCallFrameProps) {
   return (
     <CollapsibleCard
-      error={hasError}
+      error={isError}
       defaultOpen={defaultOpen}
       summary={summary}
       note={note}
       aside={aside}
-      trailing={isRunning ? <BouncingDots /> : undefined}
+      trailing={running ? <BouncingDots /> : undefined}
       label={
         // Rigid identity only: the tool-name badge + an optional leading chip.
         // The flexible `summary` rides the card's own flexible cell (passed as a
@@ -74,7 +78,7 @@ export function ToolCallCard({
         <>
           <Badge
             colorClass={
-              hasError
+              isError
                 ? "bg-destructive/15 text-destructive"
                 : "bg-primary/10 text-primary-text"
             }
@@ -88,7 +92,7 @@ export function ToolCallCard({
               "font-mono p-tool-badge text-tag font-tag-strong rounded-tool-badge hairline-tool-badge border-current/28",
             )}
           >
-            {event.name || "tool_call"}
+            {name}
           </Badge>
           {/* Interactive chip sits inside the (click-through) label, so it opts
               back into pointer events via CardHeaderAction to keep its onClick. */}
@@ -102,5 +106,26 @@ export function ToolCallCard({
     >
       {children}
     </CollapsibleCard>
+  );
+}
+
+type ToolCallCardProps = Omit<ToolCallFrameProps, "name"> & {
+  event: ToolCallEvent;
+};
+
+/** A transcript tool call's card: name, error tone and in-flight state derived from the event. */
+export function ToolCallCard({
+  event,
+  isError,
+  running,
+  ...frame
+}: ToolCallCardProps) {
+  return (
+    <ToolCallFrame
+      {...frame}
+      name={event.name || "tool_call"}
+      isError={isError ?? event.result?.isError}
+      running={running ?? !event.result}
+    />
   );
 }

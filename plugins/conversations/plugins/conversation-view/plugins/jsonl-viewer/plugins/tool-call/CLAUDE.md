@@ -45,6 +45,7 @@
   - Exports (values):
     - `JsonlViewerTool`
     - `ToolCallCard`
+    - `ToolCallFrame`
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`

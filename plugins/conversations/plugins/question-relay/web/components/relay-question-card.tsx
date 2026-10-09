@@ -3,13 +3,12 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   AnswerForm,
   AnswerHereButton,
+  QuestionCard,
   answerDraftScope,
   type FormAnswer,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/web";
@@ -106,30 +105,28 @@ function HeldQuestion({
         () => false,
       );
 
+  // The same card the transcript draws an AskUserQuestion with, so the held
+  // question reads as the tool call it is (its own Answer in terminal action
+  // says the terminal is the other way to answer).
   return (
-    <Card>
-      <Stack gap="xs">
-        <Text as="p" variant="caption" tone="muted">
-          The agent is asking — answer here, or in the terminal
-        </Text>
-        <AnswerForm
-          questions={question.questions}
-          draftScope={answerDraftScope(
-            question.conversationId,
-            question.toolUseId,
-          )}
-          onSubmit={submit}
-          secondaryAction={
-            <Button
-              variant="ghost"
-              loading={release.isPending}
-              onClick={() => release.mutate({ params })}
-            >
-              Answer in terminal
-            </Button>
-          }
-        />
-      </Stack>
-    </Card>
+    <QuestionCard questions={question.questions}>
+      <AnswerForm
+        questions={question.questions}
+        draftScope={answerDraftScope(
+          question.conversationId,
+          question.toolUseId,
+        )}
+        onSubmit={submit}
+        secondaryAction={
+          <Button
+            variant="ghost"
+            loading={release.isPending}
+            onClick={() => release.mutate({ params })}
+          >
+            Answer in terminal
+          </Button>
+        }
+      />
+    </QuestionCard>
   );
 }
