@@ -172,7 +172,7 @@ contributions: [...unreadServed.declare],
 
 Each served resource gets `GET /api/resources/<key>/...` (HTTP fallback for WS-down / curl / SSR) and a subscription entry on the shared `GET /ws/notifications` socket; the web reads it with `useLive` / `useLiveRow`.
 
-**`defineResource` / `defineExternalResource` are the runtime primitives** (`core/resources.ts`, over `framework/resource-runtime`) that `serveValue` / `serveCollection` compile to. Outside that substrate (and `infra/query-resource`'s `windowQueryResource`, which it calls), a plugin calls them directly only for the two page resources not yet on the unified API (`pagesLiveResource` / `pageLinksLiveResource`, flat `defineResource({ mode: "push" })` values over a `resourceDescriptor` — the declared legacy-full group, Resources page item 9), and the `live/no-legacy-resource-spelling` lint rejects importing them anywhere else. On those forms:
+**`defineResource` / `defineExternalResource` are the runtime primitives** (`core/resources.ts`, over `framework/resource-runtime`) that `serveValue` / `serveCollection` compile to. Outside that substrate (and `infra/query-resource`'s `windowQueryResource`, which it calls) and tests, no plugin calls them directly — the flat `defineResource({ … })` form survives only for tests — and the `live/no-legacy-resource-spelling` lint rejects importing them anywhere else. On those forms:
 
 - A resource registers when `defineResource` runs; `Resource.Declare(resource)` in `contributions` is its declaration (what `...served.declare` spreads).
 - **`mode` is required** on a non-keyed resource — `push` (the value rides the WS) or `invalidate` (a version stamp; each tab refetches over HTTP). It is what `liveValue`'s `load` compiles to, and there is no default.

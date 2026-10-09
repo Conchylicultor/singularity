@@ -8,14 +8,14 @@
 - Web:
   - Uses:
     - `apps/pages/page-tree.pageDetailPane`
+    - `network/live.LiveRowResult`
+    - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`
     - `primitives/css/text.Text`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
     - `primitives/syntax-highlight.HighlightedCode`
     - `ui/icons.Icon`
@@ -32,8 +32,6 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`
-- Exemptions:
-  - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-ref-chip.tsx` (debt)
 - Sub-plugins:
   - **`edit-page`** — Renders edit_page MCP tool calls as a side-by-side markdown diff, with the edited page as a clickable chip and what the write changed.
   - **`read-page`** — Renders read_page MCP tool calls: the page the read was scoped to as a clickable chip, and the markdown it returned.

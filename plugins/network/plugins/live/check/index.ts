@@ -1,4 +1,3 @@
-import type TS from "typescript";
 import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
 import {
   listCandidateSources,
@@ -10,11 +9,6 @@ import {
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import {
-  findLegacyDescriptorCalls,
-  legacyDescriptorViolations,
-  PINNED_LEGACY_DESCRIPTORS,
-} from "./legacy-descriptors";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = {
@@ -152,36 +146,4 @@ const contributedColumnsServed: Check = {
   },
 };
 
-// `typescript`'s module object is invariant for the process's lifetime, so a
-// per-process memo is safe. Loaded lazily, so the check runner's "load every
-// check" burst does not pay its eval cost.
-let tsPromise: Promise<typeof TS> | undefined;
-function loadTypescript(): Promise<typeof TS> {
-  return (tsPromise ??= import("typescript").then((m) => m.default));
-}
-
-const legacyDescriptorsPinned: Check = {
-  id: "live:legacy-descriptors-pinned",
-  // INPUT-KEYED: a pure scan of tracked sources.
-  inputKeyed: true,
-  description: `Every bare \`resourceDescriptor(…)\` (live-state's legacy one-payload spelling, under any import alias) outside test code initializes one of the declared legacy-full resources (${PINNED_LEGACY_DESCRIPTORS.join(", ")}), and each of those is still declared. Anything else is a new resource the routed runtime can only reload in full.`,
-  async run() {
-    const [root, ts] = await Promise.all([getWorktreeRoot(), loadTypescript()]);
-    const sources = await listCandidateSources({
-      root,
-      grepArg: "resourceDescriptor",
-      fixed: true,
-    });
-    const violations = legacyDescriptorViolations(
-      findLegacyDescriptorCalls(ts, sources.filter(notTest)),
-    );
-    if (violations.length === 0) return { ok: true };
-    return {
-      ok: false,
-      message: `the legacy resourceDescriptor set moved:\n    ${violations.join("\n    ")}`,
-      hint: "Declare a new resource with network/live (`liveValue` for one payload, `liveCollection` for rows) — never resourceDescriptor. When pages or page-links migrate, drop their name from PINNED_LEGACY_DESCRIPTORS (plugins/network/plugins/live/check/legacy-descriptors.ts).",
-    };
-  },
-};
-
-export default [contributedColumnsServed, legacyDescriptorsPinned];
+export default [contributedColumnsServed];

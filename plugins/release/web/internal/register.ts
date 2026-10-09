@@ -1,7 +1,7 @@
 // Eagerly pull the release core module into the web import graph so its
-// declarations self-register (each `liveValue(...)` / `liveCollection(...)` /
-// `resourceDescriptor(...)` call registers into the live-state key→descriptor
-// map on module evaluation).
+// declarations self-register (each `liveValue(...)` / `liveCollection(...)`
+// call registers into the live-state key→descriptor map on module
+// evaluation).
 //
 // `release.previews` (the `releasePreviews` live value) is boot-critical: it is
 // declared with `preload: "boot"`. boot-snapshot resolves every boot-critical

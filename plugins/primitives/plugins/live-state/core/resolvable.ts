@@ -21,9 +21,7 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
  * loader branch that cannot determine its value returns `unresolved(reason)`.
  * It must **never** return the empty value (`[]` / `0` / `null`) — that is an
  * absorbed failure indistinguishable from a genuinely-empty success — and it
- * throws only for *transient* failures. This also lets a descriptor's
- * `initialData` be a self-describing non-value (`unresolved("not loaded")`)
- * instead of a lie.
+ * throws only for *transient* failures.
  *
  * `reason` is human-facing text rendered in the UI (e.g. "conversation has no
  * worktree"), so the settled non-value can explain itself to the user.

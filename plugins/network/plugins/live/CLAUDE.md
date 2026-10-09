@@ -68,8 +68,7 @@ useLive(graphNodes, { select: countNodes });                          // a slice
   constructors (`liveText(Schema)`, `liveNumber()`, `liveBoolean()`,
   `liveInstant()`, `liveStringArray()`); the domain must fit the row field's
   type (tsc), and `and` / `or` / `column` / `op` / `operand` cannot be column
-  names (they spell a filter tree). None of the three descriptors has a
-  placeholder (`initialData?: never`, as on a `liveValue`): a window, id set or
+  names (they spell a filter tree). As for a `liveValue`, a window, id set or
   grouping not loaded yet is `pending`, never `[]`.
 - **Lookup-only.** Declared WITHOUT `default` — `liveCollection(key, { row, id })`
   — a collection mints `key:rows` alone: a table whose rows are only ever read by
@@ -328,6 +327,13 @@ useLive(graphNodes, { select: countNodes });                          // a slice
     (`useResource(desc, null)` — no subscription, no HTTP read or cold-start
     prime, not a pending mount), the same one a value's `useLive(v, null)` uses
     (which, having no row to be absent, reads `loading`).
+  - **An id the point codec cannot carry** — `""`, or one holding a `,` (the
+    wire id set is comma-joined; `isPointId`) — is answered the same way:
+    `found: false` from the first render, nothing read. No row is addressable
+    by it, so it is a determinate miss, never the render error `encode` would
+    throw. A reader handed an id from outside (a URL, a `[[page:…]]` token, an
+    agent's tool input) renders its not-found state. `useLive(c, { ids })`
+    still throws on one: an explicit set is the caller's to build.
 - **Optimistic reads** are `optimistic-mutation`'s, over the same argument
   shapes: `useOptimisticResource(value, params?, options)` and
   `useOptimisticResource(c, { ids }, options)` (the `:rows` read — the queue's
@@ -627,7 +633,7 @@ useLive(pluginChanges, id === null ? null : { conversationId: id });  // no subj
 - **Declare.** The key is a positional string literal (the scanners read it).
   `params` is a const tuple of names; `P` is derived from it (no phantom
   generic to restate). There is **no `initial`**: not known yet is `loading`,
-  never a stand-in — the descriptor has no `initialData` (an optimistic read of
+  never a stand-in — no descriptor carries a placeholder (an optimistic read of
   a value is `useOptimisticResource(value, params?, options)`, loading until the
   first value — see below). `live: "value"` is the discriminant `useLive`
   dispatches on.
@@ -775,32 +781,20 @@ read off the barrel's module object (a namespace import or an awaited
 `windowQueryResourceDescriptor`, `pointQueryResourceDescriptor`,
 `defineResource`, `defineExternalResource`, `queryResource`,
 `windowQueryResource`, `useResource` — and `usePointResource(s)` and
-`useWindowResource`. Several no longer exist: `usePointResource(s)`,
-`useWindowResource`, `keyedResourceDescriptor`, `queryResourceDescriptor` and
-`queryResource` are deleted, and `windowQueryResourceDescriptor` /
+`useWindowResource`. Several no longer exist: `resourceDescriptor`,
+`usePointResource(s)`, `useWindowResource`, `keyedResourceDescriptor`,
+`queryResourceDescriptor` and `queryResource` are deleted, and
+`windowQueryResourceDescriptor` /
 `pointQueryResourceDescriptor` are internal to `network/live`
 (`core/internal/window-descriptor.ts`) — all still listed so a stale import is
-told its replacement, not only tsc's "no exported member". Its exemptions (`exempt/index.ts` of the plugins that hold them: the substrate, plus
-debt entries for every file not migrated yet) are the burndown inventory (`./singularity exempt list --rule live/no-legacy-resource-spelling --debt`)
-(`research/2026-09-27-global-live-resources-phase3-bulk-migration.md`).
-**Never add an entry for new code** — declare it with `liveValue` /
-`liveCollection`. A migration must delete its file's debt entry:
-`lint/index.test.ts` fails on a listed file that no longer imports one.
-
-One group is permanent rather than burndown: **Declared legacy-full (item 9)**,
-the readers of the two page resources (`pagesResource`, `pageLinksResource`),
-which stay on `resourceDescriptor` — and reload in full — until item 9. The
-`live:legacy-descriptors-pinned` check (`check/legacy-descriptors.ts`) pins
-the resources: it reads every non-test file's AST for a `resourceDescriptor(`
-call (by name, under any import alias, or as a namespace import's member —
-the deleted `keyedResourceDescriptor` / `queryResourceDescriptor` are other
-names, and its test pins that the scan does not confuse them with it) and fails unless each initializes one of the two pinned
-bindings and each pinned binding is still declared; a reference to it that is
-not a call (`const rd = resourceDescriptor`) fails too, since it would hide a
-call from the scan. A new legacy resource is a check failure, not a lint-list
-entry. The check does not pin the group's membership or what its files read —
-like any ignore, an entry is exempt from every legacy spelling — so add one only
-for a new reader of the two page resources.
+told its replacement, not only tsc's "no exported member". Its exemptions
+(`exempt/index.ts` of the plugins that hold them) are the substrate only —
+the plugins that define the old spellings or are compiled onto them
+(`./singularity exempt list --rule live/no-legacy-resource-spelling`); no
+debt entry remains. **Never add an entry for new code** — declare it with
+`liveValue` / `liveCollection`. A file-level entry whose file no longer
+imports an old spelling is reported `(unused-exemption)` by the type-check
+worker (`framework/tooling/exempt`), so a stale one cannot linger.
 
 ## Internals
 
@@ -1009,6 +1003,7 @@ for a new reader of the two page resources.
     - `ScopedColumnMember`
     - `WithContributedColumns`
   - Exports (values):
+    - `isPointId`
     - `LIVE_COLUMNS_KEY`
     - `LIVE_ROW_KEY`
     - `LIVE_ROW_KEY_MAX_BYTES`
@@ -1019,15 +1014,15 @@ for a new reader of the two page resources.
     - `liveValue`
     - `scopedLiveColumns`
 - Cross-plugin:
-  - Imported by: 168 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×48
-    - `conversations` ×34
+  - Imported by: 176 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×51
+    - `conversations` ×35
     - `tasks` ×21
+    - `active-data` ×10
     - `infra` ×10
-    - `active-data` ×9
+    - `page` ×9
     - `debug` ×8
     - `build` ×6
-    - `page` ×6
     - `primitives` ×5
     - `auth` ×3
     - `review` ×3
@@ -1047,22 +1042,11 @@ for a new reader of the two page resources.
 - Exemptions:
   - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
   - Exempted by:
-    - `active-data/page-link` (1 debt)
-    - `apps/pages/page-author` (1 debt)
-    - `apps/pages/page-tree` (7 debt)
-    - `apps/pages/prompt-origin` (1 debt)
-    - `apps/pages/welcome/recent-pages` (1 debt)
-    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools` (1 debt)
     - `framework/central-core` (0 debt)
     - `framework/resource-runtime` (0 debt)
     - `framework/server-core` (0 debt)
     - `infra/query-resource` (0 debt)
     - `network/live` (0 debt)
-    - `page/annotations/instructions/instructions-page` (1 debt)
-    - `page/editor` (3 debt)
-    - `page/inline-page-link` (2 debt)
-    - `page/links` (2 debt)
-    - `page/page-link` (1 debt)
     - `primitives/live-state` (0 debt)
     - `primitives/optimistic-mutation` (0 debt)
 - Central:

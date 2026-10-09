@@ -1,12 +1,10 @@
-import {
-  ResourceErrorInline,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
-  pagesResource,
+  pagesTree,
   pageData,
   type PageRow,
 } from "@plugins/page/plugins/editor/core";
@@ -17,8 +15,8 @@ const linkIcon = symbol("link");
 
 /**
  * Read-only equivalent of the editor's inline page-link chip
- * (`PageLinkInlineView`). Resolves the linked page's title + icon from the live
- * `pagesResource` and renders the same `LinkChip` shape — but never navigates
+ * (`PageLinkInlineView`). Resolves the linked page's title + icon from its live
+ * row in `pagesTree` and renders the same `LinkChip` shape — but never navigates
  * (a static render declares no page navigation), so `onClick` is a pure
  * `stopPropagation`. A consumer that wants navigation can wrap the rendered
  * output in its own click handler; the preview layer stays inert by design.
@@ -30,15 +28,15 @@ const linkIcon = symbol("link");
  * one cannot be forgotten there.
  */
 export function PageLinkChip({ pageId }: { pageId: string }) {
-  const result = useResource(pagesResource);
+  const result = useLiveRow(pagesTree, pageId);
 
-  // A failed read that once had the page set keeps resolving from it;
-  // without one, the chip is the failure (an icon, to keep the line intact).
-  let pages: readonly PageRow[];
+  // A failed read that once had the page keeps resolving from it; without
+  // one, the chip is the failure (an icon, to keep the line intact).
+  let target: PageRow | undefined;
   switch (result.status) {
     case "loading":
       // Show the raw token-free title placeholder rather than nothing, so the
-      // line height stays stable while the resource loads.
+      // line height stays stable while the row loads.
       return (
         <LinkChip onClick={(e) => e.stopPropagation()}>
           <Placeholder>…</Placeholder>
@@ -56,13 +54,12 @@ export function PageLinkChip({ pageId }: { pageId: string }) {
           />
         );
       }
-      pages = result.stale;
+      target = result.stale;
       break;
     case "ready":
-      pages = result.data;
+      target = result.found ? result.row : undefined;
   }
 
-  const target = pages.find((d) => d.id === pageId);
   const data = target ? pageData(target) : undefined;
 
   if (!target) {

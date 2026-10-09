@@ -49,10 +49,6 @@ describe("liveCollection — lookup-only (no default window)", () => {
     expect(resourceDescriptorByKey("test.live-collection.full:groups")).toBe(
       c.groups,
     );
-    // None of the three has a placeholder: not loaded yet is `pending`, never
-    // `[]` — exactly a `liveValue`.
-    for (const d of [c.window, c.rows, c.groups])
-      expect("initialData" in d).toBe(false);
   });
 
   test("types: a window field without `default`, and any preload, are tsc errors", () => {
@@ -104,9 +100,8 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
     expect(resourceDescriptorByKey("test.live-collection.all:groups")).toBe(
       undefined,
     );
-    // Keyed, no placeholder, no default tuple: boot hydrates `{}`.
+    // Keyed, no default tuple: boot hydrates `{}`.
     expect(c.all.keyed.keyOf({ id: "a", n: 1 })).toBe("a");
-    expect("initialData" in c.all).toBe(false);
     expect("defaultParams" in c.all).toBe(false);
     expect(c.all.preload).toBe("boot");
     expect(c.all.queryPk).toBe("id");

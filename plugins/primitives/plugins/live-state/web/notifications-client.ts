@@ -1190,11 +1190,10 @@ export class NotificationsClient {
   /**
    * Has a server-vouched value EVER landed in the cache for (key, params)? True
    * iff `dataUpdatedAt` has left epoch 0 — the exact signal `use-resource.ts`
-   * reads for its `pending` flag. A descriptor's `initialData` is seeded at
-   * `initialDataUpdatedAt: 0`, so a mounted-but-never-applied query reads a
-   * non-undefined `getQueryData` (the placeholder) yet `false` here. This is
-   * what separates "cache holds newer server truth" (keep it) from "cache holds
-   * only the placeholder the server never vouched for" (must not settle with it).
+   * reads for its `pending` flag, so this and every read agree on when a
+   * tuple settled. This is what separates "cache holds newer server truth"
+   * (keep it) from "cache holds nothing the server vouched for" (must not
+   * settle with it).
    */
   private hasAppliedValue(key: string, params: ResourceParams): boolean {
     return (
@@ -1235,8 +1234,8 @@ export class NotificationsClient {
    *
    * On a DROP: if a server-vouched value was ever applied, the cache holds newer
    * truth — return it. Otherwise throw `ResourceStaleReadError` — NEVER settle the
-   * query with the descriptor's placeholder (the "Close (state unknown)" wedge)
-   * nor apply the stale body (old-boot data under destructive buttons). Every drop
+   * query on a value the server never vouched for (the "Close (state unknown)"
+   * wedge) nor apply the stale body (old-boot data under destructive buttons). Every drop
    * also feeds the stale-drop report sink with the running consecutive count.
    *
    * Throws on network (`fetch` `TypeError`), HTTP status (`ResourceHttpError`),
@@ -1277,11 +1276,11 @@ export class NotificationsClient {
       const cached = this.getCachedResource(key, params);
       // "Still current" — keep the cached value ONLY when a server-vouched value
       // was actually applied (same reference; structural sharing sees no change).
-      // A 304 against a never-applied placeholder must NOT settle the query with
-      // it — fall through to the unconditional refetch below.
+      // A 304 against a never-applied entry must NOT settle the query — fall
+      // through to the unconditional refetch below.
       if (cached !== undefined && this.hasAppliedValue(key, params))
         return cached as T;
-      // 304 with only a placeholder (or no base): re-fetch unconditionally so a
+      // 304 with no server-vouched base: re-fetch unconditionally so a
       // needless 304 never leaves the cache empty/stale, then take the write path.
       res = await this.fetchImpl(url, { cache: "no-store", headers: build });
     }
@@ -1348,8 +1347,8 @@ export class NotificationsClient {
         `http drop key=${key} params=${paramsKey(params)} msgVersion=${body.version} haveVersion=${entry!.version} reason=${drop} source=${source}`,
       );
       // Applied → the cache holds newer server-vouched truth; keep it. Never-
-      // applied → the cache holds only the placeholder, and settling the query
-      // with it (or applying the stale body) is the wedge. Throw instead: RQ
+      // applied → the cache holds nothing vouched, and settling the query (or
+      // applying the stale body) is the wedge. Throw instead: RQ
       // retry + the next invalidate frame converge the legitimate race, and a
       // persistent failure surfaces typed and visible instead of confidently
       // wrong.
@@ -1845,7 +1844,7 @@ export class NotificationsClient {
     // answer is already in flight and will apply against our untouched -1
     // baseline. A resub would add load to the congested server that widened the
     // race in the first place. This is the WS twin of `fetchOverHttp`'s
-    // never-settle-with-a-placeholder rule (same `hasAppliedValue` predicate).
+    // never-settle-unvouched rule (same `hasAppliedValue` predicate).
     if (
       msg.kind === "up-to-date" &&
       !this.hasAppliedValue(msg.key, msg.params)
@@ -2008,12 +2007,11 @@ export class NotificationsClient {
     const queryKey = queryKeyFor(key, params);
     // Base-presence guard (load-bearing): never apply a delta onto a missing
     // base. If the cache holds no server-vouched value yet, force a fresh full
-    // snapshot. "Vouched", not "defined": a descriptor's placeholder
-    // (`initialData`, the tree's `[]`) is defined but is no base — a scoped
-    // delta (no `order`) merged onto it would settle the read on a false empty
-    // list, and adopting this delta's version would then drop the tab's own
-    // sub-ack as stale. It happens whenever another tab's subscription on the
-    // shared socket draws a delta before this tab's sub-ack lands.
+    // snapshot — a scoped delta (no `order`) merged onto nothing would settle
+    // the read on a false partial list, and adopting this delta's version
+    // would then drop the tab's own sub-ack as stale. It happens whenever
+    // another tab's subscription on the shared socket draws a delta before
+    // this tab's sub-ack lands.
     if (!this.hasAppliedValue(key, params)) {
       trace(
         `applyDelta key=${key} params=${paramsKey(params)} reason=delta-no-base-resub`,
@@ -2093,9 +2091,9 @@ export class NotificationsClient {
   /**
    * The sub failed server-side: read the value over HTTP now, whatever the
    * query's `enabled`. Not `invalidateQueries` — it refetches only ENABLED
-   * queries, and a descriptor with no placeholder (a `liveValue`, a
-   * collection's window / `:rows` / `:groups`) is disabled until its first
-   * value, so a first-sub failure would sit `pending` with no error forever.
+   * queries, and a pushed query is disabled until its first value
+   * (`use-resource.ts`' `enabled` rule), so a first-sub failure would sit
+   * `pending` with no error forever.
    * `prefetchQuery` fetches it anyway through the same version-guarded read as
    * the query's own `queryFn`, and never rejects: a failure lands in the
    * query's error state (`q.error`, the one error channel), a success heals it.

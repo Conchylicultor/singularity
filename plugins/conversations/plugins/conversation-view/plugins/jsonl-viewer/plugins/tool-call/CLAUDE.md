@@ -72,7 +72,7 @@
   - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
   - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
   - **`flag-raise`** — Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.
-  - **`page-tools`** [exempt] [3 sub-plugins] — Shared appearance for the Singularity page MCP tool rows (read_page / write_agent_note / edit_page): the page-identity chip, the apply-report chips, the markdown body, and the refusal block.…
+  - **`page-tools`** [3 sub-plugins] — Shared appearance for the Singularity page MCP tool rows (read_page / write_agent_note / edit_page): the page-identity chip, the apply-report chips, the markdown body, and the refusal block.…
   - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
   - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
   - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.

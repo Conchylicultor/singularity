@@ -1,13 +1,11 @@
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import {
-  ResourceErrorInline,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   pageData,
   pageKindOf,
-  pagesResource,
+  pagesTree,
   type PageRow,
 } from "@plugins/page/plugins/editor/core";
 import type { PageReferenceChipProps } from "@plugins/page/plugins/page-reference/web";
@@ -22,14 +20,14 @@ const publicIcon = symbol("public");
  * tint already says "instructions", and the reach is the one fact it cannot.
  *
  * The chip is handed only the page's id, so it reads the page's kind off the
- * live pages list (the same list the sidebar renders from). While that list is
- * still loading it waits as a chip-sized shimmer rather than claiming "not
- * global"; a failed read answers from the list it last saw, else is a chip-sized
- * failure with its retry.
+ * page's live row (the set the sidebar renders from). While that row is still
+ * loading it waits as a chip-sized shimmer rather than claiming "not global"; a
+ * failed read answers from the row it last saw, else is a chip-sized failure
+ * with its retry.
  */
 export function InstructionsPageChip({ pageId }: PageReferenceChipProps) {
-  const result = useResource(pagesResource);
-  let pages: readonly PageRow[];
+  const result = useLiveRow(pagesTree, pageId);
+  let page: PageRow | undefined;
   switch (result.status) {
     case "loading":
       return <Loading variant="block" className="h-5 w-16" />;
@@ -44,12 +42,11 @@ export function InstructionsPageChip({ pageId }: PageReferenceChipProps) {
           />
         );
       }
-      pages = result.stale;
+      page = result.stale;
       break;
     case "ready":
-      pages = result.data;
+      page = result.found ? result.row : undefined;
   }
-  const page = pages.find((p) => p.id === pageId);
   if (!page) return null;
   const kind = pageKindOf(pageData(page));
   if (kind.kind !== "instructions" || !kind.global) return null;

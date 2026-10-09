@@ -107,13 +107,13 @@ export interface LiveGroupCodec<F> {
 /**
  * `${key}:groups` — a plain (non-keyed) push value per grouping query. Every
  * groupable column's values share the wire schema (any scalar or NULL); the
- * server validates each value against the row schema's field. No placeholder:
- * a grouping not loaded yet is `pending`, never `[]`.
+ * server validates each value against the row schema's field. A grouping not
+ * loaded yet is `pending`, never `[]`.
  */
 export type LiveGroupsDescriptor<F> = ResourceDescriptor<
   LiveGroup<FilterScalar>[],
   LiveGroupParams
-> & { keyed?: never; initialData?: never; groups: LiveGroupCodec<F> };
+> & { keyed?: never; groups: LiveGroupCodec<F> };
 
 /** The count descriptor's codec: the count query ⇄ wire-params pair. */
 export interface LiveCountCodec {

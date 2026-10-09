@@ -1,13 +1,11 @@
 import type { LexicalNode } from "lexical";
-import {
-  ResourceErrorInline,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
-  pagesResource,
+  pagesTree,
   pageData,
   type PageRow,
 } from "@plugins/page/plugins/editor/core";
@@ -34,14 +32,14 @@ export const PageLinkInlineNode = pageLinkInlineWebNode.Node;
 
 function PageLinkInlineView({ pageId }: { pageId: string }) {
   const nav = usePageNavigation();
-  const result = useResource(pagesResource);
+  const result = useLiveRow(pagesTree, pageId);
 
-  // A failed read that once had the page set keeps resolving from it;
-  // without one, the chip is the failure (an icon, to keep the line intact).
-  let pages: readonly PageRow[];
+  // A failed read that once had the page keeps resolving from it; without
+  // one, the chip is the failure (an icon, to keep the line intact).
+  let target: PageRow | undefined;
   switch (result.status) {
     case "loading":
-      // Render nothing while the pages resource is loading.
+      // Render nothing while the page row is loading.
       return null;
     case "error":
       if (result.stale === undefined) {
@@ -55,13 +53,12 @@ function PageLinkInlineView({ pageId }: { pageId: string }) {
           />
         );
       }
-      pages = result.stale;
+      target = result.stale;
       break;
     case "ready":
-      pages = result.data;
+      target = result.found ? result.row : undefined;
   }
 
-  const target = pages.find((d) => d.id === pageId);
   const data = target ? pageData(target) : undefined;
 
   if (!target) {

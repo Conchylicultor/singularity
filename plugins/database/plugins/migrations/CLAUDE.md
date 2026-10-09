@@ -327,8 +327,10 @@ own when it sits in the cwd.
 from the `core` barrel** — it is the one declaration of this plugin's repo-relative
 dir, and every sanctioned invocation uses it as the child's `cwd`:
 
-- `check/internal/schema-files-loadable.ts` — the require-probe's cwd (a probe, not
-  a drizzle-kit invocation).
+- `core/internal/schema-load-probe.ts` (`schemaLoadFailures`) — the require-probe's cwd
+  (a probe, not a drizzle-kit invocation). The `schema-files-loadable` check and
+  `generateMigration` both run it; generation refuses to start while any schema file
+  fails to load, since drizzle-kit would skip it and exit 0.
 - `framework/tooling/.../checks/plugins/migrations-in-sync` — the check that proves
   the committed migrations match `schema.ts`.
 - `framework/cli/plugins/migrations/cli/migrations.ts` — the real `./singularity build` path.
@@ -400,6 +402,7 @@ only agreement that matters.
     - `PublishedMigrationViolation`
     - `PublishedRef`
     - `RejectOp`
+    - `SchemaLoadFailure`
     - `SnapshotDag`
     - `SnapshotDagProblem`
     - `SnapshotNode`
@@ -434,6 +437,7 @@ only agreement that matters.
     - `renderPhasedMigration`
     - `renderStatements`
     - `schemaGlobFiles`
+    - `schemaLoadFailures`
     - `snapshotAncestors`
     - `splitStatements`
     - `stageDrizzleOut`

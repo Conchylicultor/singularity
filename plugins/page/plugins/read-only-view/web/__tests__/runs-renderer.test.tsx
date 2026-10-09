@@ -11,7 +11,7 @@ import { RunsRenderer } from "../components/runs-renderer";
 // link / soft-break behavior, plus the registry-driven token split.
 //
 // Page-link and inline-math tokens are exercised only through the live app (they
-// need pagesResource / KaTeX). The date family stands in for all of them here —
+// need pagesTree / KaTeX). The date family stands in for all of them here —
 // it needs no provider, and it is the one whose absence was a live bug.
 
 afterEach(cleanup);

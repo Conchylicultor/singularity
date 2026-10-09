@@ -54,11 +54,11 @@ export const MoveBlockBodySchema = z.object({
 export type MoveBlockBody = z.infer<typeof MoveBlockBodySchema>;
 
 // Pages are blocks of `type="page"`, in document order per sidebar sibling group
-// and carrying the derived `docRank` — the SAME shape and order as the `pages`
-// live resource, because both are `loadPages()`. Deliberately not the plain rank
-// sort it used to be: `rank` is only comparable within one `(parent_id, rank)`
-// space, and a page's sidebar siblings can span several, so a second definition
-// of "the pages list" here would be a second, wrong order for one concept.
+// and carrying the stored `docRank` — the column the live `pagesTree` set serves
+// too, read off `(page_id, doc_rank)`. Deliberately not the plain rank sort it
+// used to be: `rank` is only comparable within one `(parent_id, rank)` space,
+// and a page's sidebar siblings can span several, so a second definition of
+// "the pages list" here would be a second, wrong order for one concept.
 export const listPages = defineEndpoint({
   route: "GET /api/pages",
   response: z.array(PageRowSchema),
@@ -89,7 +89,7 @@ export const BlockPageSchema = z.discriminatedUnion("found", [
 ]);
 export type BlockPage = z.infer<typeof BlockPageSchema>;
 
-// The reverse lookup the `pages` resource cannot answer: it carries only
+// The reverse lookup the `pagesTree` set cannot answer: it carries only
 // `type="page"` rows, so a CONTENT block's id resolves to its page only here.
 export const getBlockPage = defineEndpoint({
   route: "GET /api/blocks/:id/page",

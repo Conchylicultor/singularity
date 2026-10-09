@@ -1091,8 +1091,10 @@ describe("useOptimisticResource — read forms", () => {
     expect(typeof useTypeOnly).toBe("function");
   });
 
-  it("a collection's { ids } read never takes the :rows placeholder as its base", async () => {
-    // The `:rows` descriptor seeds `[]` into the cache for its legacy readers.
+  it("a collection's { ids } read stays loading until a real value lands on its canonical id set", async () => {
+    // No descriptor seeds a value: the `:rows` tuple's cache entry is empty
+    // until the server answers, and the read says `loading` — never a `[]`
+    // stand-in an op could be folded onto.
     const client = makeClient();
     const { result } = mountPositional(client, () =>
       useOptimisticResource(
@@ -1102,6 +1104,9 @@ describe("useOptimisticResource — read forms", () => {
       ),
     );
     expect(result.current.status).toBe("loading");
+    expect(
+      client.getQueryData(queryKeyFor(ranks.rows.key, { ids: "a,b" })),
+    ).toBeUndefined();
     act(() => {
       client.setQueryData(queryKeyFor(ranks.rows.key, { ids: "a,b" }), [
         { id: "a", rank: "m" },

@@ -23,13 +23,12 @@ import type { ResourceDef, ResourceFacetData } from "../core";
 
 // A resource's identity (`key`), keyed-ness and bounded membership are declared
 // at a DESCRIPTOR FACTORY call — `liveValue("key", …)`, `liveCollection("key",
-// …)` (a bounded window, its `:rows` point sibling and `:groups`), the old
-// `resourceDescriptor("key", …)`, … — which lives in a plugin's `core/` or
-// `shared/`. The resource is SERVED where a REGISTER call references that
+// …)` (a bounded window, its `:rows` point sibling and `:groups`) — which
+// lives in a plugin's `core/` or `shared/`. The resource is SERVED where a REGISTER call references that
 // descriptor: `serveValue(value, opts)` / `serveCollection(collection, opts)`,
 // or the old `defineResource(descriptor, opts)` (in `server/` or `central/`).
-// The legacy flat form `defineResource({ key, mode })` inlines the key at the
-// register site, as a literal or as `<descriptor>.key`. The key is resolved
+// The legacy flat form `defineResource({ key, mode })` (kept for tests) inlines
+// the key at the register site, as a literal or as `<descriptor>.key`. The key is resolved
 // across files the way the `routes` facet resolves `[endpoint.route]` computed
 // keys: an extract-time
 // `name → descriptor` map, built over the serving plugin's own sources and, for
@@ -262,7 +261,7 @@ export function parseFileBindings(src: string): FileBindings {
  * Two shapes carry a key. The DESCRIPTOR form passes a descriptor identifier as
  * the first argument (`defineResource(tasksResource, opts)`). The FLAT form
  * inlines an object literal whose `key:` is either a string literal or a
- * descriptor's `.key` (`defineResource({ key: pagesResource.key, mode, … })`) —
+ * descriptor's `.key` (`defineResource({ key: value.key, mode, … })`) —
  * both name the same descriptor, so both resolve through the same
  * {@link resolveDescriptorIdentifier}.
  *

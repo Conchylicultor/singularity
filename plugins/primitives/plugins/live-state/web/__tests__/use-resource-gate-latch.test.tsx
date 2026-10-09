@@ -8,7 +8,9 @@
  *   - a tuple already cached (boot-hydrated) renders ONCE, ready, the slice
  *     applied — no widened render followed by a narrowed one;
  *   - a tuple with no value yet still flips loading → ready even when the slice
- *     is identical across the placeholder → value boundary (the gate's job);
+ *     is identical across the no-value → value boundary: a selector answering
+ *     `undefined` for the first value leaves `data` unchanged (the gate's job),
+ *     and the landed `undefined` slice reads `ready`, not `loading`;
  *   - once settled, a push that leaves the slice equal re-renders nothing;
  *   - a params change re-gates for a tuple with no value yet, and starts
  *     narrowed for one already cached;
@@ -40,17 +42,19 @@ import {
   type ResourceResult,
   useResource,
 } from "@plugins/primitives/plugins/live-state/web";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 
-const rowsResource = resourceDescriptor<number[], { id: string }>(
-  "test.gate-latch.rows",
-  z.array(z.number()),
-  [],
-);
+const rowsResource: ResourceDescriptor<number[], { id: string }> = {
+  key: "test.gate-latch.rows",
+  schema: z.array(z.number()),
+  validateParams: () => {},
+};
 const keyOf = (id: string) => queryKeyFor(rowsResource.key, { id });
 
-// The slice is the same before and after the first value: the placeholder `[]`
-// and `[0]` both select `false` — the silent flip the gate exists for.
+// The slice is the same before and after the first value: no data yet and
+// `[0]` both read `undefined` — the silent flip the gate exists for.
+const firstPositive = (rows: number[]): number | undefined =>
+  rows.find((n) => n > 0);
 const anyPositive = (rows: number[]): boolean => rows.some((n) => n > 0);
 
 function makeClient(): QueryClient {
@@ -87,7 +91,7 @@ function mount<R, P>(
 }
 
 const useGated = ({ id }: { id: string }) =>
-  useResource(rowsResource, { id }, { select: anyPositive, gate: true });
+  useResource(rowsResource, { id }, { select: firstPositive, gate: true });
 
 /** One select read of tuple `a`, gated or not (the same hooks either way). */
 const useMaybeGated = ({ gated }: { gated: boolean }) =>
@@ -135,7 +139,7 @@ describe("useResource gate — the derived latch", () => {
     const first = renders[0]!;
     expect(first.status).toBe("ready");
     if (first.status !== "ready") throw new Error("unreachable");
-    expect(first.data).toBe(true);
+    expect(first.data).toBe(1);
   });
 
   it("a tuple with no value flips loading → ready even when the slice is unchanged across the boundary", async () => {
@@ -148,7 +152,7 @@ describe("useResource gate — the derived latch", () => {
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const r = result.current;
     if (r.status !== "ready") throw new Error("unreachable");
-    expect(r.data).toBe(false);
+    expect(r.data).toBeUndefined();
   });
 
   it("once settled, a push that leaves the slice equal re-renders nothing; one that moves it does", async () => {
@@ -172,7 +176,7 @@ describe("useResource gate — the derived latch", () => {
     });
     await waitFor(() => {
       const r = result.current;
-      expect(r.status === "ready" && r.data).toBe(true);
+      expect(r.status === "ready" && r.data).toBe(3);
     });
   });
 
@@ -186,7 +190,7 @@ describe("useResource gate — the derived latch", () => {
     expect(result.current.status).toBe("ready");
 
     // b: no value — loading, then its first value renders even though the
-    // slice (`false`) is what the placeholder would select too.
+    // slice (`undefined`) is what the read held before it too.
     rerender({ id: "b" });
     expect(result.current.status).toBe("loading");
     act(() => {
@@ -195,7 +199,7 @@ describe("useResource gate — the derived latch", () => {
     await waitFor(() => expect(result.current.status).toBe("ready"));
     const onB = result.current;
     if (onB.status !== "ready") throw new Error("unreachable");
-    expect(onB.data).toBe(false);
+    expect(onB.data).toBeUndefined();
     await settleNotifications();
 
     // c: cached — ready on the switching render itself, nothing after it.
@@ -206,7 +210,7 @@ describe("useResource gate — the derived latch", () => {
     const onC = renders.at(-1)!;
     expect(onC.status).toBe("ready");
     if (onC.status !== "ready") throw new Error("unreachable");
-    expect(onC.data).toBe(false);
+    expect(onC.data).toBeUndefined();
   });
 
   it("a read whose tuple holds a value adds no cache listener", async () => {

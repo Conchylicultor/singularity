@@ -2,18 +2,6 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
-    rule: "live/no-legacy-resource-spelling",
-    paths: [
-      "core/resources.ts",
-      "server/internal/resources.ts",
-      "web/components/page-options.tsx",
-    ],
-    kind: "debt",
-    task: "task-1791372067670-epcpji",
-    reason:
-      "Burndown: imported an old live-resource spelling when phase 3 started and still depends on the tree resource (item 3). New code declares, serves and reads through network/live; delete this entry when the file migrates.",
-  },
-  {
     rule: "page-editor/no-adhoc-forest-write",
     paths: ["server/internal/forest-writer.ts"],
     kind: "sanctioned",

@@ -1,10 +1,5 @@
-import { resolve } from "path";
-import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
-import {
-  getWorktreeRoot,
-  spawnCaptured,
-} from "@plugins/infra/plugins/spawn/core";
-import { MIGRATIONS_PLUGIN_DIR } from "../../core/internal/schema-glob-patterns";
+import { schemaLoadFailures } from "@plugins/database/plugins/migrations/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 // Inlined minimal Check shape (mirrors the sibling migration checks) to avoid a
 // cross-plugin import of the framework Check type from a check file.
@@ -23,56 +18,10 @@ const schemaFilesLoadableCheck: Check = {
   // Cheap structural invariant: guard even `./singularity build --skip-checks`.
   alwaysRun: true,
   async run() {
-    const root = await getWorktreeRoot();
-    const absFiles = (await schemaGlobFiles(root)).map((f) => resolve(root, f));
-
-    // One subprocess replicating drizzle-kit's synchronous require() load, run
-    // from the migrations plugin dir (matching drizzle-kit's module/tsconfig
-    // resolution) and with exactly drizzle-kit's own environment — which is to
-    // say, no namespace. That is the point: a schema-glob file that resolved a
-    // runtime namespace at module eval would break real migration generation,
-    // so the probe must not be handed one the real run does not have.
-    const result = await spawnCaptured(
-      [
-        process.execPath,
-        "--bun",
-        resolve(root, MIGRATIONS_PLUGIN_DIR, "check/internal/require-probe.ts"),
-        ...absFiles,
-      ],
-      {
-        cwd: resolve(root, MIGRATIONS_PLUGIN_DIR),
-        env: {
-          ...process.env,
-          NO_COLOR: "1",
-        },
-        // The probe require()s every schema-glob file in one pass — seconds of
-        // module loading, no I/O that can block indefinitely. Three minutes is
-        // there for the case a schema file's module scope does something that
-        // never returns, which is exactly the class of bug this check hunts.
-        timeoutMs: 180_000,
-      },
-    );
-    const stdout = result.stdout;
-    const stderr = result.stderr;
-    const exitCode = result.exitCode;
-
-    let failures: { file: string; error: string }[];
-    try {
-      failures = JSON.parse(stdout);
-    } catch (parseErr) {
-      // The probe couldn't even produce a parseable result — surface loudly,
-      // including the parse error and whatever the probe wrote to stderr.
-      return {
-        ok: false,
-        message:
-          `schema-files-loadable probe produced unparseable output (${String(parseErr)}).\n` +
-          `exit code: ${exitCode}\nstderr:\n${stderr}\nstdout:\n${stdout}`,
-      };
-    }
-    // A non-zero exit with parseable stdout is fine (per-file errors are
-    // captured in `failures`); only an unparseable non-zero exit is a probe
-    // failure, handled above.
-    void exitCode;
+    // The probe is shared with `generateMigration`, which runs it before every
+    // drizzle-kit generation; this check is the same question asked on every
+    // check pass, so a broken file is named before anyone generates.
+    const failures = await schemaLoadFailures(await getWorktreeRoot());
 
     if (failures.length > 0) {
       return {
@@ -82,10 +31,11 @@ const schemaFilesLoadableCheck: Check = {
           `(they would be SILENTLY SKIPPED during migration generation):\n` +
           failures.map((f) => `  ${f.file} — ${f.error}`).join("\n"),
         hint:
-          "A schema file's import graph pulls in an async-only module (top-level await, " +
-          "e.g. lexical/@lexical/yjs — often reached through a plugin barrel). Keep " +
-          "tables.ts/schema.ts a leaf that imports only synchronous modules; move the " +
-          "async import out of its graph.",
+          "A schema file's import graph pulls in a module that cannot load outside a " +
+          "running backend — an async-only one (top-level await, e.g. lexical/@lexical/yjs) " +
+          "or one that throws at module eval (e.g. it asks for a runtime namespace) — " +
+          "often reached through a plugin barrel. Keep tables.ts/schema.ts a leaf that " +
+          "imports only modules safe to load anywhere; move the offending import out of its graph.",
       };
     }
     return { ok: true };

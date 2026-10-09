@@ -32,8 +32,8 @@ import { asBlockData, StoredBlockDataSchema } from "../../core/schemas";
 // never on a fold toggle (`expanded`), an `icon` change inside the payload
 // (presentation, like the fold: an auto-generated or picked emoji is not an
 // edit, and must not reorder Recent pages — the callout's own `icon` key is
-// presentation too), a `pageId` recompute (a function of the placement that
-// already counted), or the trash ledger correlation. No write site stamps it;
+// presentation too), a `pageId` recompute or a `docRank` re-mint (functions of
+// a placement that already counted), or the trash ledger correlation. No write site stamps it;
 // the trigger RAISEs on one that tries.
 export const _blocks = deriveUpdatedAt(
   pgTable(
@@ -61,6 +61,13 @@ export const _blocks = deriveUpdatedAt(
         .notNull()
         .default(asBlockData({})),
       rank: rankText("rank").notNull(),
+      // The page row's place in its SIDEBAR group — the live page rows sharing
+      // its `page_id`, which span several `(parent_id, rank)` spaces, so `rank`
+      // cannot order them. WRITER-DERIVED, never authored: `withPageForest`
+      // re-mints it for every partition a structural write touched
+      // (`doc-rank.ts`), so ordering by it equals document order. NULL on
+      // content rows; never in a request body.
+      docRank: rankText("doc_rank"),
       expanded: boolean("expanded").notNull().default(true),
       // NULL = live. A soft delete (trash) sets `deletedAt` + `trashEntryId`
       // instead of DELETEing the row, so the self-referential FK cascades never
@@ -133,6 +140,9 @@ export const _blocks = deriveUpdatedAt(
       data: { exceptKeys: ["icon"] },
       rank: true,
       deletedAt: true,
+      // A re-mint follows a placement that already counted (or none at all, for
+      // a sibling the reconcile merely re-spaced) — it must not reorder Recent.
+      docRank: false,
       id: false,
       pageId: false,
       expanded: false,

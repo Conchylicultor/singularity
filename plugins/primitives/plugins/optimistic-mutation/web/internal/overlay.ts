@@ -565,10 +565,9 @@ export function confirmPass<Data, Vars>(
  * so a non-confirmation carries no evidence.
  *
  * `serverData` must be an AUTHORITATIVE snapshot, or `undefined` when none has
- * landed yet. A resource's `initialData` is a placeholder, never a snapshot, and
- * must not be passed: an empty base "reflects" a remove and vacuously absorbs an
- * update-only patch, so `isConfirmedBy` would confirm the op against data the
- * server never sent.
+ * landed yet. Anything else — a stand-in empty base — must not be passed: an
+ * empty base "reflects" a remove and vacuously absorbs an update-only patch, so
+ * `isConfirmedBy` would confirm the op against data the server never sent.
  */
 export function resolvePass<Data, Vars>(
   pending: ReadonlyArray<PendingOp<Vars>>,

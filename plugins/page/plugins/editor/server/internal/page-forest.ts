@@ -5,6 +5,7 @@ import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { _blocks } from "./tables";
 import { loadPagesBlocks, type BlockRow } from "./forest";
 import type { BlockReadExecutor } from "./page-id";
+import { reconcileDocRanks } from "./doc-rank";
 
 /**
  * Advisory-lock namespace for "structural write to one page's block forest".
@@ -136,6 +137,17 @@ export type ForestExecutor = NodePgDatabase;
  * The watermark is `currentTxId` read INSIDE the transaction, so no handler
  * hand-rolls the ack token the optimistic-mutation primitive compares against.
  *
+ * ## Why the sidebar order is re-minted here
+ *
+ * `page_blocks.doc_rank` orders a page's sub-pages in DOCUMENT order, which no
+ * single row states: a sub-page sits directly in its page or under content
+ * blocks, so dragging a toggle moves the sub-page inside it without any write
+ * to the sub-page's row. This is the one chokepoint every structural write
+ * passes, so after `fn` and before the watermark it re-mints `doc_rank` for
+ * exactly the groups the write's mutators marked (`reconcileDocRanks`) — in the
+ * same transaction, under the same locks. A write that marked nothing pays
+ * nothing.
+ *
  * An EMPTY scope list is a transaction with no lock. It is reachable only from
  * the id-derived scope resolvers (`pageScopesOf`) when every named row has
  * already vanished — a state in which the callback provably has nothing to
@@ -149,10 +161,14 @@ export async function withPageForest<T>(
   const requested = Array.isArray(scopes) ? scopes : [scopes];
   // Deduped and sorted: dedupe because `pg_advisory_xact_lock` is re-entrant but
   // a repeat is pure waste, sorted because that is the deadlock proof.
-  const keys = [...new Set(requested.map((s) => s ?? WORKSPACE_ROOT_SCOPE))].sort();
+  const keys = [
+    ...new Set(requested.map((s) => s ?? WORKSPACE_ROOT_SCOPE)),
+  ].sort();
   // Only real pages have rows to load; the workspace-root scope names a sibling
   // space, not a content set.
-  const pageIds = [...new Set(requested.filter((s): s is string => s !== null))];
+  const pageIds = [
+    ...new Set(requested.filter((s): s is string => s !== null)),
+  ];
 
   const queued: Array<() => void | Promise<void>> = [];
   const committed = await executor.transaction(async (tx) => {
@@ -170,6 +186,7 @@ export async function withPageForest<T>(
       );
     }
     const value = await fn(ctx);
+    await reconcileDocRanks(ctx.tx);
     // Ack token: the commit's xid8, read inside the write transaction (Rule A).
     return { value, watermark: await currentTxId(tx) };
   });

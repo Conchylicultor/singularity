@@ -2,7 +2,7 @@
  * NotificationsClient HTTP fetch-path hazard tests (Fix A/B/C/F). The REAL
  * client runs on a `createTransportHub()` with a scripted `fetchImpl` injected
  * through the constructor seam, so `fetchOverHttp`'s cache directive, the
- * epoch-aware version guard, the never-applied placeholder guard, and the
+ * epoch-aware version guard, the never-applied (unvouched) guard, and the
  * stale-drop report sink are exercised end-to-end. Only the three OS globals
  * (WebSocket/BroadcastChannel/navigator.locks) plus `fetch` are faked.
  *
@@ -219,14 +219,15 @@ describe("NotificationsClient — HTTP fetch path", () => {
     expect(drops).toHaveLength(0);
   });
 
-  test("3: 304 never-applied → second unconditional fetch, body applied (placeholder-guard pin)", async () => {
+  test("3: 304 never-applied → second unconditional fetch, body applied (vouched-not-defined guard pin)", async () => {
     const { client, qc, fetchQueue, fetchCalls } = await setup();
     client.observe("k", {}, undefined, pushSchema);
-    // A placeholder is present in the cache but was never server-applied
-    // (dataUpdatedAt held at epoch 0 — exactly a descriptor's initialData).
+    // A value is present in the cache but was never server-applied
+    // (dataUpdatedAt held at epoch 0): the guard keys on "vouched", not
+    // "defined", so it must not keep it.
     qc.setQueryData(
       queryKeyFor("k", {}),
-      { status: "placeholder" },
+      { status: "unvouched" },
       { updatedAt: 0 },
     );
     client.noteHttpEtag("k", {}, undefined, "e1"); // so the GET is conditional
@@ -301,8 +302,8 @@ describe("NotificationsClient — HTTP fetch path", () => {
     // A versioned entry whose cache holds NO server-vouched value. The vehicle is
     // React Query gc'ing the observer-less query out from under a live sub (the
     // real production state): apply a real sub-ack for the version+epoch, then
-    // reset the entry to a never-applied placeholder (`updatedAt: 0`, exactly a
-    // descriptor's initialData — the same idiom as case 3).
+    // reset the entry to a never-applied value (`updatedAt: 0` — the same
+    // idiom as case 3).
     //
     // Deliberately NOT via an `up-to-date` frame: a value-less ack may no longer
     // advance a never-applied entry's version (see handleServerMessage's
@@ -317,7 +318,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
     });
     qc.setQueryData(
       queryKeyFor("k", {}),
-      { status: "placeholder" },
+      { status: "unvouched" },
       { updatedAt: 0 },
     );
 
@@ -477,7 +478,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
     client.observe("k", {}, undefined, pushSchema);
     // Same gc'd-cache vehicle as case 5: the sub-ack stamps entry.epoch=b1=
     // serverEpoch and version 5, then the query is reset to a never-applied
-    // placeholder. (An `up-to-date` can no longer stamp a never-applied entry.)
+    // value. (An `up-to-date` can no longer stamp a never-applied entry.)
     socket.serverSend({
       kind: "sub-ack",
       key: "k",
@@ -488,7 +489,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
     });
     qc.setQueryData(
       queryKeyFor("k", {}),
-      { status: "placeholder" },
+      { status: "unvouched" },
       { updatedAt: 0 },
     );
 
@@ -653,17 +654,16 @@ describe("NotificationsClient — HTTP fetch path", () => {
     expect(qc.getQueryData(queryKeyFor("k", {}))).toEqual({ status: "v7" });
   });
 
-  // A sub-error reaches a query that has no value AND no placeholder — a
-  // `liveValue`, a collection's window / `:rows` / `:groups`. `useResource`
-  // keeps such a query disabled until its first value, and
+  // A sub-error reaches a query that has no value yet. `useResource` keeps a
+  // pushed query disabled until its first value, and
   // `invalidateQueries` skips disabled queries, so the fallback read must be
   // run on the query directly: its outcome is the query's error state (or
   // heals it), never a read left `pending` with no error.
-  describe("sub-error on a placeholder-less query with no value yet", () => {
+  describe("sub-error on a pushed query with no value yet", () => {
     async function observeDisabled() {
       const env = await setup();
       env.client.observe("nv", {}, undefined, pushSchema);
-      // `useResource`'s options for a descriptor with no `initialData`.
+      // `useResource`'s options for a pushed descriptor.
       const observer = new QueryObserver(env.qc, {
         queryKey: queryKeyFor("nv", {}),
         queryFn: () =>

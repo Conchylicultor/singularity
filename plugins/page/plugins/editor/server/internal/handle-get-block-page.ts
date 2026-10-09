@@ -28,7 +28,7 @@ export const handleGetBlockPage = implement(
       })
       // Trashed rows are `deletedAt`-flagged, not deleted — `liveBlocks` excludes
       // them so a link to a trashed page degrades to plain text rather than
-      // opening a pane the pages resource cannot resolve.
+      // opening a pane the pages set cannot resolve.
       .from(liveBlocks)
       .where(eq(liveBlocks.id, params.id))
       .limit(1);

@@ -20,6 +20,7 @@ import {
 import { reconcileBlocks } from "./reconcile";
 import { BlockLifecycle, type DeletedBlockRow } from "./document-hooks";
 import type { PageForestCtx, PageForestTx } from "./page-forest";
+import { markDocOrderDirty } from "./doc-order-dirty";
 
 /**
  * THE only module in the repo that may name `_blocks` in a MUTATION position.
@@ -54,11 +55,20 @@ import type { PageForestCtx, PageForestTx } from "./page-forest";
  */
 
 /**
- * Every column an INSERT may name. `updatedAt` is not one: it is DERIVED
- * (`deriveUpdatedAt` in `tables.ts`) — it defaults on insert and the table's
- * trigger moves it on update — so no write of `page_blocks` can spell it.
+ * Every column an INSERT may name. Two are not:
+ *
+ *  - `updatedAt` is DERIVED (`deriveUpdatedAt` in `tables.ts`) — it defaults on
+ *    insert and the table's trigger moves it on update — so no write of
+ *    `page_blocks` can spell it.
+ *  - `docRank` is WRITER-derived: `withPageForest`'s reconcile mints it from
+ *    document order for every partition a write touched ({@link writeDocRanks}
+ *    is its one writer), so no caller can hand one in — not a handler, and not a
+ *    request body.
  */
-export type NewBlockRow = Omit<typeof _blocks.$inferInsert, "updatedAt">;
+export type NewBlockRow = Omit<
+  typeof _blocks.$inferInsert,
+  "updatedAt" | "docRank"
+>;
 
 /**
  * The columns a field-scoped UPDATE may name. `id` is excluded — identity is not
@@ -81,6 +91,25 @@ export type BlockColumnChanges = Partial<
 // ---------------------------------------------------------------------------
 // Low-level column writers
 // ---------------------------------------------------------------------------
+//
+// Each one that can change a row's PLACEMENT — its parent, rank, type, page
+// partition or trash flag — marks the partitions it wrote as doc-order dirty
+// (`doc-order-dirty.ts`), so `withPageForest` re-mints their `doc_rank` before
+// commit. The marks live here, at the bottom, so every composite writer above
+// inherits them; a data-only write (the text projection, a rename, an icon, a
+// fold) names none of those columns and costs the reconcile nothing.
+
+/**
+ * The columns whose change can move a page row within, into or out of its
+ * sidebar group — the ones {@link updateBlockFields} marks for.
+ */
+const PLACEMENT_COLUMNS = [
+  "parentId",
+  "rank",
+  "type",
+  "pageId",
+  "deletedAt",
+] as const satisfies readonly (keyof BlockColumnChanges)[];
 
 /**
  * Insert rows in the given order. Callers must order parent-before-descendant —
@@ -92,16 +121,74 @@ export async function insertBlocks(
 ): Promise<void> {
   if (rows.length === 0) return;
   await tx.insert(_blocks).values(rows);
+  markDocOrderDirty(
+    tx,
+    rows.map((r) => r.pageId ?? null),
+  );
 }
 
-/** Write exactly the columns `changes` names onto one row. */
+/**
+ * Write exactly the columns `changes` names onto one row.
+ *
+ * A write naming a placement column marks the row's partition — BOTH of them
+ * when it names `pageId`, read before the write so a row leaving a group marks
+ * the group it left. A write turning the row into anything but a page clears
+ * its `doc_rank` in the same statement: only page rows carry one.
+ */
 export async function updateBlockFields(
   tx: PageForestTx,
   id: string,
   changes: BlockColumnChanges,
 ): Promise<void> {
   if (Object.keys(changes).length === 0) return;
-  await tx.update(_blocks).set(changes).where(eq(_blocks.id, id));
+  const placement = PLACEMENT_COLUMNS.some((c) => changes[c] !== undefined);
+  if (!placement) {
+    await tx.update(_blocks).set(changes).where(eq(_blocks.id, id));
+    return;
+  }
+  if (changes.pageId !== undefined) {
+    const [old] = await tx
+      .select({ pageId: _blocks.pageId })
+      .from(_blocks)
+      .where(eq(_blocks.id, id));
+    if (old) markDocOrderDirty(tx, [old.pageId]);
+  }
+  const leavesPages =
+    changes.type !== undefined && changes.type !== PAGE_BLOCK_TYPE;
+  const written = await tx
+    .update(_blocks)
+    .set(leavesPages ? { ...changes, docRank: null } : changes)
+    .where(eq(_blocks.id, id))
+    .returning({ pageId: _blocks.pageId });
+  markDocOrderDirty(
+    tx,
+    written.map((r) => r.pageId),
+  );
+}
+
+/**
+ * THE `doc_rank` writer — the only one. Called by the reconcile alone
+ * (`doc-rank.ts`), with the changes `planDocRanks` derived from document order
+ * under the lock; one statement however many rows moved. Marks nothing: a
+ * re-mint changes no placement, only the key that states it.
+ *
+ * `docRank` is `touchedBy: false`, so a re-mint never moves `updated_at` (a
+ * sibling re-spaced around a drag was not edited).
+ */
+export async function writeDocRanks(
+  tx: PageForestTx,
+  changes: readonly { id: string; docRank: string }[],
+): Promise<void> {
+  if (changes.length === 0) return;
+  await tx.execute(sql`
+    UPDATE ${_blocks}
+       SET doc_rank = v.doc_rank
+      FROM unnest(
+             ${sql.param(changes.map((c) => c.id))}::text[],
+             ${sql.param(changes.map((c) => c.docRank))}::text[]
+           ) AS v(id, doc_rank)
+     WHERE ${_blocks}.id = v.id
+  `);
 }
 
 /**
@@ -120,7 +207,14 @@ export async function deleteBlockRoots(
   ids: string[],
 ): Promise<void> {
   if (ids.length === 0) return;
-  await tx.delete(_blocks).where(inArray(_blocks.id, ids));
+  const deleted = await tx
+    .delete(_blocks)
+    .where(inArray(_blocks.id, ids))
+    .returning({ pageId: _blocks.pageId });
+  markDocOrderDirty(
+    tx,
+    deleted.map((r) => r.pageId),
+  );
 }
 
 /**
@@ -157,10 +251,15 @@ export async function trashBlockRoots(
   entryId: string,
 ): Promise<void> {
   if (ids.length === 0) return;
-  await tx
+  const trashed = await tx
     .update(_blocks)
     .set({ deletedAt: new Date(), trashEntryId: entryId })
-    .where(and(inArray(_blocks.id, ids), isNull(_blocks.deletedAt)));
+    .where(and(inArray(_blocks.id, ids), isNull(_blocks.deletedAt)))
+    .returning({ pageId: _blocks.pageId });
+  markDocOrderDirty(
+    tx,
+    trashed.map((r) => r.pageId),
+  );
 }
 
 /**
@@ -175,10 +274,15 @@ export async function untrashBlockRoots(
   ids: string[],
 ): Promise<void> {
   if (ids.length === 0) return;
-  await tx
+  const restored = await tx
     .update(_blocks)
     .set({ deletedAt: null, trashEntryId: null })
-    .where(inArray(_blocks.id, ids));
+    .where(inArray(_blocks.id, ids))
+    .returning({ pageId: _blocks.pageId });
+  markDocOrderDirty(
+    tx,
+    restored.map((r) => r.pageId),
+  );
 }
 
 // ---------------------------------------------------------------------------

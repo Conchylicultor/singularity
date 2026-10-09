@@ -1,14 +1,11 @@
-import { useCallback } from "react";
-import {
-  foldResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useCallback, useState } from "react";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   getBlockPage,
   pageData,
-  pagesResource,
+  pagesTree,
 } from "@plugins/page/plugins/editor/core";
 import { Editor } from "@plugins/page/plugins/editor/web";
 import { blockDetailPane, pageDetailPane } from "../panes";
@@ -37,22 +34,30 @@ const MISSING: BlockTarget = { kind: "missing" };
 /**
  * Resolve a block id in two tiers, which are not interchangeable:
  *
- * - `pagesResource` — already subscribed app-wide, carries every `type="page"`
- *   row. A PAGE id (what a URL and the sidebar expose) is answered from it for
- *   free, with no request.
+ * - `pagesTree` — every `type="page"` row, read by id (`:rows`). A PAGE id
+ *   (what a URL and the sidebar expose) is answered from it, with no endpoint
+ *   request.
  * - `getBlockPage` — the reverse lookup for a CONTENT block, which the pages
- *   resource structurally cannot answer. Fired only on a resource miss, so a
- *   transcript full of page ids costs zero requests.
+ *   set structurally cannot answer. Fired only on a known miss, so a transcript
+ *   full of page ids costs no lookup.
+ *
+ * Once the lookup has said the id is a CONTENT block, the `:rows` read is
+ * dropped (`null`). A point tuple refills every id it holds on any write to
+ * that row, member or not — so holding a content block's id would cost a
+ * `pages.tree:rows` load per typing projection of that block, for as long as
+ * the block pane (or a chip naming it) is open. Dropping it costs nothing: a
+ * content block becomes a page only through turn-into-page, and the lookup
+ * already answered for this id.
  */
 export function useBlockTarget(blockId: string): BlockTarget {
-  const pages = useResource(pagesResource);
-  // `null` until the pages list is known (the target then answers from the
-  // list's own state below); the reverse lookup fires only on a known miss.
-  const isListedPage = foldResource(pages, {
-    loading: () => null,
-    error: () => null,
-    ready: (list) => list.some((p) => p.id === blockId),
-  });
+  // The id the lookup has answered as a content block — its `:rows` read is
+  // dropped from then on (see above). Keyed by id, so a new id reads again.
+  const [contentId, setContentId] = useState<string | null>(null);
+  const page = useLiveRow(pagesTree, contentId === blockId ? null : blockId);
+  // `null` until the row read answers (the target then answers from its own
+  // state below); the reverse lookup fires only on a known miss.
+  const isListedPage =
+    page.status === "loading" || page.status === "error" ? null : page.found;
   const lookup = useEndpoint(
     getBlockPage,
     { id: blockId },
@@ -64,14 +69,17 @@ export function useBlockTarget(blockId: string): BlockTarget {
     },
   );
 
-  if (pages.status === "loading") return PENDING;
-  if (pages.status === "error") return { kind: "error", error: pages.error };
+  if (page.status === "loading") return PENDING;
+  if (page.status === "error") return { kind: "error", error: page.error };
   if (isListedPage) return { kind: "page", pageId: blockId };
   if (lookup.isError) return { kind: "error", error: lookup.error };
   if (lookup.isPending) return PENDING;
   const found = lookup.data;
   if (!found.found) return MISSING;
   if (found.isPage) return { kind: "page", pageId: found.pageId };
+  // React's render-time state adjustment: the next render drops the `:rows`
+  // read, and answers from the lookup alone (`null` reads `found: false`).
+  if (contentId !== blockId) setContentId(blockId);
   return { kind: "block", pageId: found.pageId, blockId, type: found.type };
 }
 
@@ -123,15 +131,13 @@ const UNTITLED = "Untitled";
  */
 export function useBlockTargetTitle(target: BlockTarget): string | undefined {
   const label = useBlockTypeLabel(target.kind === "block" ? target.type : "");
-  const pages = useResource(pagesResource);
-  if (target.kind !== "page" && target.kind !== "block") return undefined;
-  // The pages list not known (loading) or failed: no title, never a stand-in.
-  const page = foldResource(pages, {
-    loading: () => undefined,
-    error: () => undefined,
-    ready: (list) => list.find((p) => p.id === target.pageId),
-  });
-  if (page === undefined) return undefined;
-  const title = pageData(page).title || UNTITLED;
+  const opens = target.kind === "page" || target.kind === "block";
+  const page = useLiveRow(pagesTree, opens ? target.pageId : null);
+  if (!opens) return undefined;
+  // The page row not known (loading), failed or absent: no title, never a
+  // stand-in.
+  if (page.status === "loading" || page.status === "error") return undefined;
+  if (!page.found) return undefined;
+  const title = pageData(page.row).title || UNTITLED;
   return target.kind === "page" ? title : `${title} › ${label}`;
 }

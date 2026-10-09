@@ -141,9 +141,8 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
   ready arm's `error`). `dispatch` exists only on the `ready` arm (a tsc error on
   the others), so an op can never be folded
   onto a base nobody has seen — `prototypes.picks` used to fold a click onto
-  `{}` before the stored picks loaded. A collection's `:rows` descriptor still
-  carries a `[]` placeholder for its legacy readers; the `{ ids }` form never
-  takes it.
+  `{}` before the stored picks loaded. No live descriptor carries a
+  placeholder any more, so no query holds a stand-in value to take.
 - **Ops do not reset when the params change** (a re-baseline: the queue's live
   id set moves). The overlay keeps its ops and replays them on the new tuple's
   base; the result is `loading` again until that base lands. A caller that must
@@ -258,22 +257,20 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
   another writer later deletes.
 
   **Only an authoritative snapshot may confirm.** Both edges are gated on one, and
-  neither a placeholder `initialData` nor "the cache emitted an event" qualifies
-  (the gate stays although no form takes a placeholder as its base: a
-  collection's `:rows` query still seeds its `[]` placeholder into the cache,
-  and a params re-baseline can resolve an op before the new tuple's base
-  lands):
+  neither "the cache holds something" nor "the cache emitted an event"
+  qualifies (a params re-baseline can resolve an op before the new tuple's
+  base lands):
   - The QueryCache emits `"updated"` for **every** query action (`fetch`,
     `error`, `invalidate`, `setState`), none of which touch `state.data`. Only
     `success` bumps `dataUpdateCount`, so the push edge ignores any event that
     doesn't increase it — ungated, a bare `invalidateQueries` would coarse-confirm
     every resolved op and charge each a divergence miss for a snapshot that never
     arrived.
-  - Before the first push, `state.data` is the descriptor's placeholder if it
-    has one (`dataUpdatedAt === 0`). The resolve edge passes `undefined` rather
-    than the placeholder, because `isConfirmedBy` would accept it (an empty base
-    vacuously "reflects" a remove, and `isPatchReflected` treats an update
-    naming a missing row as absorbed), dropping the op against data never sent.
+  - Before the first push (`dataUpdatedAt === 0`) the resolve edge passes
+    `undefined`, never a stand-in base, because `isConfirmedBy` would accept an
+    empty one (an empty base vacuously "reflects" a remove, and
+    `isPatchReflected` treats an update naming a missing row as absorbed),
+    dropping the op against data never sent.
 
   **Tokenless-coarse soundness.** `gen > dispatchGen` proves *a* push landed
   after dispatch, not that it carries our commit. In the rare bad ordering (a

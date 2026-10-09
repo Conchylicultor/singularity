@@ -87,17 +87,14 @@ type OriginField<O extends LiveValueOrigin> = O extends "central"
   : { origin?: never };
 
 /**
- * A declared live value — a `ResourceDescriptor` with no placeholder
- * (`initialData`), discriminated from a collection by `live: "value"`.
+ * A declared live value — a `ResourceDescriptor` discriminated from a
+ * collection by `live: "value"`.
  */
 export type LiveValue<
   T,
   P extends Record<string, string> = Record<string, never>,
   O extends LiveValueOrigin = "worktree",
-> = Omit<
-  ResourceDescriptor<T, P>,
-  "initialData" | "keyed" | "preload" | "origin" | "load"
-> &
+> = Omit<ResourceDescriptor<T, P>, "keyed" | "preload" | "origin" | "load"> &
   OriginField<O> & {
     live: "value";
     /**
@@ -110,8 +107,6 @@ export type LiveValue<
     preload?: ResourcePreload;
     /** Absent ⇒ pushed (the declaration's `"push"`). See {@link LiveValueLoad}. */
     load?: "on-demand";
-    /** A value has no placeholder: not known yet is `pending`, never a stand-in. */
-    initialData?: never;
     /** A value is pushed whole — never a row-keyed delta. */
     keyed?: never;
   };

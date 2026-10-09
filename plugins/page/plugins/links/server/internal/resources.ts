@@ -1,12 +1,13 @@
 import { asc, eq, inArray, sql } from "drizzle-orm";
-import { z } from "zod";
 import { db } from "@plugins/database/server";
 import {
   nullable,
   parsed,
 } from "@plugins/database/plugins/sql-projection/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { serveValue } from "@plugins/network/plugins/live/server";
+import {
+  serveCollection,
+  serveValue,
+} from "@plugins/network/plugins/live/server";
 import { EmojiSchema } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 import { liveBlocks } from "@plugins/page/plugins/editor/server";
 import {
@@ -16,12 +17,9 @@ import {
   type BlockNode,
 } from "@plugins/page/plugins/editor/core";
 import { inlineTokensAsText } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
-import { PageLinkEdgeSchema } from "../../core/schemas";
-import {
-  pageBacklinks,
-  pageLinksResource as pageLinksDescriptor,
-} from "../../core/resources";
-import type { BacklinkRow, PageLinkEdge } from "../../core/schemas";
+import { pageBacklinks, pageLinkSources } from "../../core/resources";
+import type { BacklinkRow } from "../../core/schemas";
+import { linkSourceRowsServeOptions } from "./link-source-rows";
 import { deriveSnippet } from "./snippet";
 import { _pageLinks } from "./tables";
 
@@ -229,22 +227,11 @@ function toNode(row: {
   return { ...row, rank: String(row.rank) };
 }
 
-// Push resource: the full (source → target) edge list. Every write to
-// `page_links` — reindex insert/delete, the trash hook's edge drop, an FK
-// cascade from a hard delete — is picked up by the L4 DB change-feed, so the
-// sidebar's linked-page reference children stay live with no explicit pushes.
-export const pageLinksLiveResource = defineResource<PageLinkEdge[]>({
-  key: pageLinksDescriptor.key,
-  mode: "push",
-  schema: z.array(PageLinkEdgeSchema),
-  loader: async () =>
-    db
-      // DISTINCT: an edge row is per linking BLOCK, and this list is per page
-      // pair — a page linking from three blocks is still one reference child.
-      .selectDistinct({
-        sourcePageId: _pageLinks.sourcePageId,
-        targetPageId: _pageLinks.targetPageId,
-      })
-      .from(_pageLinks)
-      .orderBy(asc(_pageLinks.sourcePageId), asc(_pageLinks.targetPageId)),
-});
+// Every live page with the pages linking to it — a routed `all` collection
+// over `page_blocks` and its `page_links` children (`./link-source-rows.ts`):
+// an edge write — reindex insert/delete, the trash hook's edge drop, an FK
+// cascade from a hard delete — refills its target page's row alone.
+export const pageLinkSourcesServed = serveCollection(
+  pageLinkSources,
+  linkSourceRowsServeOptions,
+);

@@ -37,7 +37,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/core";
 
 let seq = 0;
-/** A placeholder-less descriptor (a `liveValue`'s shape): loading until a value lands. */
+/** A pushed descriptor (a `liveValue`'s shape): loading until a value lands. */
 const descriptor = (): ResourceDescriptor<number[], { n: string }> => {
   const d: ResourceDescriptor<number[], { n: string }> = {
     key: `test.use-resources.${seq++}`,

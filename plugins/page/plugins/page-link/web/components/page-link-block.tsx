@@ -4,18 +4,24 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
-  foldResource,
   matchResource,
   ResourceErrorInline,
-  useResource,
   type ResourceError,
 } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useLiveRow,
+  type LiveRowResult,
+} from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
+import {
+  pagesTree,
+  pageData,
+  type PageRow,
+} from "@plugins/page/plugins/editor/core";
 import {
   usePageOptions,
   useBlockActivate,
@@ -55,17 +61,31 @@ type PageLinkState =
   | { state: "missing"; data?: undefined }
   | { state: "resolved"; data: ReturnType<typeof pageData> };
 
-function resolvedOrMissing(
-  row: Parameters<typeof pageData>[0] | undefined,
-): PageLinkState {
+function resolvedOrMissing(row: PageRow | undefined): PageLinkState {
   return row === undefined
     ? { state: "missing" }
     : { state: "resolved", data: pageData(row) };
 }
 
+/** A linked page's row read, as the row's state. */
+function linkStateOf(result: LiveRowResult<PageRow>): PageLinkState {
+  switch (result.status) {
+    case "loading":
+      return { state: "pending" };
+    // A failed read that once had the page keeps resolving from it; without
+    // one, the row says the read failed.
+    case "error":
+      return result.stale === undefined
+        ? { state: "failed", error: result.error, refetch: result.refetch }
+        : resolvedOrMissing(result.stale);
+    case "ready":
+      return resolvedOrMissing(result.found ? result.row : undefined);
+  }
+}
+
 /**
  * A small page-picker popover: filterable list of pages fed by the live
- * pagesResource (via the shared usePageOptions/PageOptionsList). Selecting a
+ * `pagesTree` set (via the shared usePageOptions/PageOptionsList). Selecting a
  * page invokes `onSelect(pageId)`.
  *
  * Its open-state is the BLOCK's, not this component's, so the block can open it
@@ -143,7 +163,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   // Only the RESOLVED link below gets actions: the picker row and the
   // not-found row name no page, so there is nothing for an action to open.
   const actions = usePageReferenceActions(pageId);
-  const result = useResource(pagesResource);
+  const result = useLiveRow(pagesTree, pageId === "" ? null : pageId);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // Which of the five arms below will render, as a UNION that CARRIES the
@@ -152,19 +172,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   // here; making it a union is what keeps "not known yet" its own answer instead
   // of collapsing into "no such page" on the way.
   const link: PageLinkState =
-    pageId === ""
-      ? { state: "unset" }
-      : foldResource(result, {
-          loading: (): PageLinkState => ({ state: "pending" }),
-          // A failed read that once had the page set keeps resolving from it;
-          // without one, the row says the read failed.
-          error: (error, stale): PageLinkState =>
-            stale === undefined
-              ? { state: "failed", error, refetch: result.refetch }
-              : resolvedOrMissing(stale.find((d) => d.id === pageId)),
-          ready: (pages) =>
-            resolvedOrMissing(pages.find((d) => d.id === pageId)),
-        });
+    pageId === "" ? { state: "unset" } : linkStateOf(result);
 
   // Both arms that render a picker make "open it" the block's primary action, so
   // inserting a page-link and pressing Enter picks a page — the single step

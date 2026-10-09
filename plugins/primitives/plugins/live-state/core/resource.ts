@@ -11,11 +11,6 @@ export type ResourceOrigin = "central";
  */
 export type ResourcePreload = "boot" | "boot-and-keep";
 
-/** The trailing options of the old descriptor factories. */
-export interface ResourceDescriptorOptions {
-  preload?: ResourcePreload;
-}
-
 export interface ResourceDescriptor<
   T,
   P extends Record<string, string> = Record<string, string>,
@@ -31,21 +26,6 @@ export interface ResourceDescriptor<
    * drift.
    */
   schema: ZodParser<T>;
-  /**
-   * Optional typed placeholder used as TanStack Query's `initialData`. It is
-   * NEVER a value: it is seeded with `initialDataUpdatedAt: 0`, and
-   * `useResource` reports `pending` while `dataUpdatedAt === 0`, so a consumer
-   * never reads it as data. Nothing takes it as a base either:
-   * `useOptimisticResource` reads a declaration and stays `pending` until the
-   * first authoritative value.
-   *
-   * Absent (a `liveValue`, a `liveCollection`'s window / `:rows` / `:groups`)
-   * ⇒ no placeholder at all: the query simply has no data until the first
-   * authoritative value, still `pending` at `dataUpdatedAt === 0`. Not known
-   * yet is a state, not a stand-in value. Only the two page descriptors
-   * (`resourceDescriptor`) still seed one (Resources page item 9).
-   */
-  initialData?: T;
   /**
    * Marks a row-keyed delta-sync resource (server `mode: "keyed"`). The server
    * ships only changed rows + the id order; the client merges by id. `keyOf`
@@ -79,9 +59,9 @@ export interface ResourceDescriptor<
   /**
    * `"on-demand"`: the server never ships this resource's value over the
    * socket — a change sends an `invalidate` and each tab refetches over HTTP
-   * (the runtime's `invalidate` mode). The CLIENT must know it: with no
-   * placeholder, `useResource` otherwise waits for a sub-ack value that this
-   * mode never sends. Declared here, on the shared descriptor, so the server's
+   * (the runtime's `invalidate` mode). The CLIENT must know it:
+   * `useResource` otherwise waits for a sub-ack value that this mode never
+   * sends. Declared here, on the shared descriptor, so the server's
    * delivery mode and the client's read cannot disagree (`liveValue`'s `load`;
    * the server derives its mode from it). Absent ⇒ pushed.
    */
@@ -111,35 +91,24 @@ export interface ResourceDescriptor<
    * BEFORE registering a sub or serving an HTTP read, so a mismatched sub — in
    * practice a tab running an older bundle after a deploy — is refused as
    * `contract-mismatch` and never re-run by a push. Required, so every factory
-   * decides: `liveValue` checks its declared param names, a `liveCollection`'s
-   * resources run their strict decoders, and the legacy factory below states
-   * {@link acceptAnyParams} by name.
+   * decides: `liveValue` checks its declared param names and a
+   * `liveCollection`'s resources run their strict decoders.
    */
   validateParams: (params: Record<string, string>) => void;
   /** Phantom — exists only at the type level so `useResource` can infer `P`. */
   readonly __params?: P;
 }
 
-/**
- * The params gate of a legacy descriptor (`resourceDescriptor` — the two page
- * resources): accepts any params, because those loaders never declared their
- * param names.
- * Named, so "this resource validates nothing" is a visible choice rather than
- * an absent field.
- */
-export function acceptAnyParams(_params: Record<string, string>): void {}
-
 // Module-level key→descriptor registry. Populated by descriptor-module evaluation
-// (each factory call below runs on import), so a key→descriptor lookup exists before
+// (each factory call runs on import), so a key→descriptor lookup exists before
 // first paint — boot-snapshot hydration resolves the server's snapshot keys against it
 // instead of a hand-maintained client list. Keys are unique per resource by construction.
 const byKey = new Map<string, ResourceDescriptor<unknown>>();
 
 /**
  * Register a descriptor in the key→descriptor map boot hydration resolves
- * against. Every factory here calls it; exported for the descriptor factories
- * other plugins own (`network/live`'s `liveValue` and `liveCollection`), which
- * build a descriptor shape these factories do not (no `initialData`). A plugin DECLARING a
+ * against. Exported for the descriptor factories, which other plugins own
+ * (`network/live`'s `liveValue` and `liveCollection`). A plugin DECLARING a
  * resource never calls it — it goes through a factory of the resource
  * vocabulary, which is what the build scanners can see.
  */
@@ -162,28 +131,4 @@ export function resourceDescriptorByKey(
   key: string,
 ): ResourceDescriptor<unknown> | undefined {
   return byKey.get(key);
-}
-
-// The `keyed?: never` in the return type makes non-keyed-ness statically visible,
-// so the server's `defineResource(descriptor, …)` two-arg overload can discriminate
-// a plain descriptor from a keyed one (and only the keyed branch demands a scope
-// policy). Without it, `keyed` is merely optional and neither branch matches.
-export function resourceDescriptor<
-  T,
-  P extends Record<string, string> = Record<string, never>,
->(
-  key: string,
-  schema: ZodParser<T>,
-  initialData: T,
-  opts?: ResourceDescriptorOptions,
-): ResourceDescriptor<T, P> & { keyed?: never; initialData: T } {
-  const d = {
-    key,
-    schema,
-    initialData,
-    validateParams: acceptAnyParams,
-    ...opts,
-  };
-  registerResourceDescriptor(d as ResourceDescriptor<unknown>);
-  return d;
 }

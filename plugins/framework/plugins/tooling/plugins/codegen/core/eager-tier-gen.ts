@@ -237,8 +237,8 @@ const WATCHED_SLOTS: { marker: string; head: string }[] = [
 // surface painted the pending state it was designed never to show. Every miss
 // looked exactly like a plugin declaring nothing.
 //
-// Each name must still be a DISTINCT identifier for the textual scan
-// (`\bresourceDescriptor` does not match inside `registerResourceDescriptor`),
+// Each name must still be a DISTINCT identifier for the textual scan (a
+// factory name is matched as a whole identifier, never inside a longer one),
 // which is what `findMarkerCalls` guarantees.
 const DESCRIPTOR_FACTORIES = Object.entries(resourceDescriptorFactories);
 

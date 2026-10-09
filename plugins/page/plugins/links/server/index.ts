@@ -1,4 +1,3 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import {
@@ -12,7 +11,7 @@ import {
 } from "./internal/backfill-job";
 import {
   pageBacklinksServed,
-  pageLinksLiveResource,
+  pageLinkSourcesServed,
 } from "./internal/resources";
 import {
   backlinksDeleteHook,
@@ -22,7 +21,6 @@ import {
 
 export { PageLinks } from "./internal/extractor";
 export type { PageLinkExtractor } from "./internal/extractor";
-export { pageLinksLiveResource } from "./internal/resources";
 export { reindexPage } from "./internal/reindex";
 
 export default {
@@ -33,7 +31,7 @@ export default {
   register: [reindexLinksJob, backfillPageLinksJob, pageLinksBackfillWarmup],
   contributions: [
     ...pageBacklinksServed.declare,
-    Resource.Declare(pageLinksLiveResource),
+    ...pageLinkSourcesServed.declare,
     // Reindex a page's outgoing links whenever its blocks change. Declared (not
     // imperatively bound) so the events plugin's syncTriggerContributions makes
     // it idempotent across reboots. Match-any on pageId — the per-emit pageId

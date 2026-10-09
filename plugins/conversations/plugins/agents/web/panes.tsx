@@ -1,11 +1,12 @@
 import type { ReactElement } from "react";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
   Pane,
   PaneChrome,
   defineRoute,
-  resolveFrom,
+  resolveRow,
+  rowOrStale,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
@@ -16,7 +17,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { AgentSideBody } from "./components/agent-side-body";
-import { agentRows, type Agent } from "../shared/resources";
+import { agentRows } from "../shared/resources";
 import { Agents as AgentsSlots } from "./slots";
 import { AgentsList } from "./components/agents-list";
 import { AgentDetail } from "./components/agent-detail";
@@ -35,29 +36,9 @@ export const agentsRootPane = Pane.define({
   width: 320,
 });
 
-type AgentLookup =
-  | { status: "pending" }
-  | { status: "found"; agent: Agent }
-  | { status: "missing" };
-
-/** One agent from the live agent rows, by id. */
-function useAgentLookup(id: string): AgentLookup {
-  const result = useLive(agentRows);
-  switch (result.status) {
-    case "loading":
-    case "error":
-      return { status: "pending" };
-    case "ready":
-      break;
-  }
-  const agent = result.data.find((a: Agent) => a.id === id);
-  return agent ? { status: "found", agent } : { status: "missing" };
-}
-
 /** The agent's name, or undefined until it is known (the title's fallback shows). */
 function useAgentName(id: string): string | undefined {
-  const lookup = useAgentLookup(id);
-  return lookup.status === "found" ? lookup.agent.name : undefined;
+  return rowOrStale(useLiveRow(agentRows, id))?.name;
 }
 
 function useAgentDetailTitle({ id }: { id: string }): string | undefined {
@@ -84,9 +65,7 @@ function useSystemAgentTitle({
 }
 
 function useResolveAgent({ id }: { id: string }): ResolveResult {
-  return resolveFrom(useLive(agentRows), (agents) =>
-    agents.some((a) => a.id === id),
-  );
+  return resolveRow(useLiveRow(agentRows, id));
 }
 
 export const agentDetailPane = Pane.define({

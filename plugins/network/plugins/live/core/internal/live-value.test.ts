@@ -7,11 +7,10 @@ import { liveValue } from "./live-value";
 const S = z.object({ n: z.number() });
 
 describe("liveValue", () => {
-  test("a param-less, un-preloaded value: no placeholder, no preload, no defaultParams", () => {
+  test("a param-less, un-preloaded value: no preload, no defaultParams", () => {
     const v = liveValue("test.live-value.plain", { schema: S });
     expect(v.live).toBe("value");
     expect(v.params).toEqual([]);
-    expect("initialData" in v).toBe(false);
     expect(v.preload).toBeUndefined();
     expect(v.defaultParams).toBeUndefined();
     expect(v.keyed).toBeUndefined();

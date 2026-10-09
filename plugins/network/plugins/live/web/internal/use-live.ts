@@ -21,6 +21,7 @@ import type {
   LiveValue,
   LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
+import { isPointId } from "@plugins/network/plugins/live/core";
 import { withoutWindowFields } from "./window-fields";
 
 // The read half of a `liveCollection`. A consumer asks a QUERY — a window
@@ -503,7 +504,10 @@ function useCollection<Row, F, S extends string>(
   return list;
 }
 
-/** The null-id answer: no id names no row, and there is nothing to refetch. */
+/**
+ * The no-row answer — a `null` id, or one no point set can carry (empty, or
+ * holding a `,`): no row is addressable by it, and there is nothing to refetch.
+ */
 const NO_ID: LiveRowResult<never> = {
   status: "ready",
   found: false,
@@ -520,24 +524,28 @@ const NO_ID: LiveRowResult<never> = {
  *
  * A `null` id (nothing to look up yet) is `found: false` from the first render
  * and reads nothing (the substrate's skip — no subscription, not a pending
- * mount): no id names no row.
+ * mount): no id names no row. So is an id the point codec cannot carry (`""`,
+ * or one holding a `,` — the wire set is comma-joined): no row can be
+ * addressed by it, so the answer is as determinate as for `null`. A reader
+ * handed an id from outside (a URL, a `[[page:…]]` token, an agent's tool
+ * input) therefore renders its not-found state, never a render error.
  */
 export function useLiveRow<Row>(
   collection: LiveRowsCollection<Row>,
   id: string | null,
 ): LiveRowResult<Row> {
-  const idsKey = id === null ? null : collection.rows.point.encode([id]).ids;
+  const absent = id === null || !isPointId(id);
+  const idsKey = absent ? null : collection.rows.point.encode([id]).ids;
   const params = useMemo(
     () => (idsKey === null ? null : { ids: idsKey }),
     [idsKey],
   );
   const result = useResource(collection.rows, params);
-  const absent = id === null;
   // The result keeps its identity until what it is built from changes, like
   // `useLive`'s list result: consumers memoize on it. `useResource`'s own
   // result changes only with its status / data / error / stale.
   return useMemo((): LiveRowResult<Row> => {
-    // Determinate without the server: no id names no row.
+    // Determinate without the server: no (carriable) id names no row.
     if (absent) return NO_ID;
     const { refetch } = result;
     switch (result.status) {

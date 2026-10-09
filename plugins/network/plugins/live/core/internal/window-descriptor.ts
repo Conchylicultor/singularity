@@ -45,10 +45,8 @@ import type {
 // `liveCollection` replaces the window's limit-only codec with its query codec,
 // which holds the same two properties.
 //
-// Neither descriptor has a placeholder (`initialData`), exactly like a
-// `liveValue`: a window or id set not loaded yet is `pending`, never `[]`. So
-// each is minted here and registered directly, with no placeholder argument
-// to fill.
+// A window or id set not loaded yet is `pending`, never `[]`, exactly like a
+// `liveValue`.
 //
 // A failed DECODE throws `ResourceContractError` (a subscription's params do
 // not match the declaration — the runtime refuses it as `contract-mismatch`); a
@@ -66,7 +64,7 @@ function pkKeyOf<Row>(pkField: keyof Row & string): (row: unknown) => string {
   return (row) => String((row as Record<string, unknown>)[pkField]);
 }
 
-/** A keyed row-array descriptor with no placeholder, registered for boot hydration. */
+/** A keyed row-array descriptor, registered for boot hydration. */
 function keyedRows<Row, P extends Record<string, string>>(
   key: string,
   rowSchema: ZodParser<Row>,
@@ -78,7 +76,6 @@ function keyedRows<Row, P extends Record<string, string>>(
   },
 ): ResourceDescriptor<Row[], P> & {
   keyed: { keyOf: (row: unknown) => string };
-  initialData?: never;
 } {
   const d = {
     key,
@@ -145,6 +142,16 @@ export function windowQueryResourceDescriptor<Row>(
  * preloaded (post-mount hydration is the recorded decision — the server cannot
  * know a client's id set at snapshot time).
  */
+/**
+ * Whether a point id set can carry `id`: the wire form joins the set on `,`, so
+ * an id must be non-empty and comma-free. An id outside that alphabet names no
+ * row any point read can address — `useLiveRow` answers it `found: false`
+ * rather than encoding it (which throws).
+ */
+export function isPointId(id: string): boolean {
+  return id !== "" && !id.includes(",");
+}
+
 export function pointQueryResourceDescriptor<Row>(
   key: string,
   rowSchema: ZodParser<Row>,
@@ -152,7 +159,7 @@ export function pointQueryResourceDescriptor<Row>(
 ): PointQueryResourceContract<Row> {
   const encode = (ids: readonly string[]): PointParams => {
     for (const id of ids) {
-      if (id === "" || id.includes(",")) {
+      if (!isPointId(id)) {
         throw new Error(
           `pointQueryResourceDescriptor("${key}").encode: ids must be non-empty and ` +
             `comma-free, got ${JSON.stringify(id)}`,

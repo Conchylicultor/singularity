@@ -2507,6 +2507,9 @@ describe("round-trip property (fuzzed forest)", () => {
       data: (r) => ({ pageId: `p${Math.floor(r() * 99)}` }),
       children: false,
     },
+    // `<map/>`: empty data (what it shows is derived from the page's places on
+    // render), and `body: "none"` like `page-link`, so no children.
+    { type: "map", data: () => ({}), children: false },
     // An AGENT-AUTHORED page — the one `page` a document can carry both ways.
     // Id-less below, it is the MINT form (`<agent-page title="…">body`); stamped,
     // it is the pointer plus body, and its id comes back as `ref` because

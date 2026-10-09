@@ -1,8 +1,6 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import {
-  foldResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   useOpenPane,
@@ -13,7 +11,7 @@ import { useUndoableTrash } from "@plugins/infra/plugins/trash/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import {
-  pagesResource,
+  pagesTree,
   deleteBlock,
   pageData,
   type Block,
@@ -41,7 +39,8 @@ export function DeletePageAction({ row }: ItemActionProps<Block>) {
   const { undo } = useUndoRedo();
   const openPane = useOpenPane();
   const paneStore = usePaneStore();
-  const pages = useResource(pagesResource);
+  // The whole set: the open page's ancestry is a walk up its `pageId` chain.
+  const pages = useLive(pagesTree);
   const openPageId = pageDetailPane.useRouteEntry()?.params.pageId;
 
   const onDelete = async () => {

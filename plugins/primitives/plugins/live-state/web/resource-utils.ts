@@ -14,8 +14,9 @@
  *
  * GATE RESTRICTION: feed only whole-resource results (no `select`) into these.
  * A select-scoped subscription can settle without a re-render when the
- * selected slice is identical across the initialData→first-real-data boundary
- * (see use-resource.ts) — a gate built on one can wedge as loading forever.
+ * selected slice is identical across the no-value→first-value boundary (a
+ * selector answering `undefined`; see use-resource.ts) — a gate built on one
+ * can wedge as loading forever.
  * For a select-based readiness read, pass `gate: true` to useResource instead.
  */
 

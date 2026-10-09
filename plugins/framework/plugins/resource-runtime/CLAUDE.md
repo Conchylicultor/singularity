@@ -15,8 +15,8 @@ never see this plugin directly.
 Plugins do not call it to add live state: they declare with `network/live`'s
 `liveValue` / `liveCollection` and serve with `serveValue` / `serveCollection`,
 which compile to `defineResource` (`plugins/network/plugins/live/CLAUDE.md`). The
-only direct callers left are that substrate and the two page resources
-(`pages`, `page-links`; Resources page item 9). `mode` has no default: a non-keyed
+only direct callers left are that substrate and tests (the flat
+`defineResource({ … })` form has no production caller). `mode` has no default: a non-keyed
 definition states `push` or `invalidate` (the flat `DefineResourceInput` and the
 two-arg `ServerResourceOptions` require it; the keyed `KeyedServerResourceOptions`
 has none), because the old implicit `invalidate` was a delivery choice nobody
@@ -736,8 +736,8 @@ query (`fetchAfterSubError`) — see `live-state/CLAUDE.md`.
 
 Every resource carries `validateParams(params)` — required on `ResourceContract`,
 so every descriptor factory decides (`liveValue`: exact declared names;
-`liveCollection`'s window / `:rows` / `:groups`: their strict decoders; the
-legacy factories: `acceptAnyParams` by name). It throws `ResourceContractError`
+`liveCollection`'s window / `:rows` / `:groups`: their strict decoders). It
+throws `ResourceContractError`
 (`packages/resource-protocol`) when a tuple does not match the declaration —
 after a deploy, a tab still running the previous bundle. Only the flat
 `defineResource({...})` form may omit it (it declares no params; absent ⇒ any).

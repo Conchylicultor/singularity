@@ -250,10 +250,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree.useBlockTarget`
           - `apps/pages/page-tree.useBlockTargetTitle`
           - `apps/pages/page-tree.useOpenBlockTarget`
+          - `network/live.useLiveRow`
           - `page/editor.PageIcon`
           - `primitives/css/link-chip.LinkChip`
-          - `primitives/live-state.foldResource`
-          - `primitives/live-state.useResource`
           - `primitives/pane.useOpenPane`
         - Exports (values): `PageLinkChip`
       - Server:
@@ -264,8 +263,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/id-chip.idChipServer`
           - `database.db`
           - `page/editor.liveBlocks`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-link-chip.tsx` (debt)
       - Core:
         - Exports (values): `BLOCK_CHIP_SURFACES`
     - **`plugin-link`** — Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
@@ -3777,6 +3774,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `apps/pages/page-tree.pageDetailPane`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLiveRow`
               - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/ui-kit.Button`
@@ -3784,11 +3782,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.ControlSize`
               - `primitives/css/ui-kit.useControlSize`
               - `primitives/live-state.ResourceErrorInline`
-              - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
-          - Exemptions:
-            - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-kind-control.tsx` (debt)
         - **`page-outline`** — The open page's headings as an outline rail pinned to the right edge of the pane: one dash per heading, the current section highlighted, hover to expand into a click-to-jump outline. Headings are identified generically from each block type's declared `semantics`, so it names no block type.
           - Web:
             - Contributes: `PageDetail.Overlay` "outline" → `PageOutline`
@@ -3841,14 +3836,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pageDetailPane.Actions` "edited" → `EditedLabel`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 79 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+            - Uses: 80 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
               - `primitives/pane` ×9
               - `page/editor` ×7
               - `primitives/data-view` ×5
               - `primitives/css/ui-kit` ×4
-              - `primitives/live-state` ×4
               - `infra/endpoints` ×3
+              - `network/live` ×3
               - `page/page-reference` ×3
+              - `primitives/live-state` ×3
               - `primitives/overlay/image-viewer` ×3
               - `apps/pages/shell` ×2
               - `primitives/breadcrumb` ×2
@@ -3858,7 +3854,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/auto-icon.RegenerateIconAction`
               - `infra/attachments.uploadAttachment`
               - `infra/trash.useUndoableTrash`
-              - `network/live.useLive`
               - `page/links.Backlinks`
               - `primitives/app-shell.SidebarItem`
               - `primitives/collapsible.useCollapsible`
@@ -3923,23 +3918,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/artifacts/page`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
           - Exemptions:
-            - Exempts itself from:
-              - `endpoints/no-void-fetch-endpoint` — `web/components/pages-sidebar.tsx` (sanctioned)
-              - `live/no-legacy-resource-spelling` — `web/components/delete-page-action.tsx`, `web/components/page-breadcrumb.tsx`, `web/components/page-cover.tsx`, `web/components/page-header.tsx`, `web/components/pages-sidebar.tsx`, `web/internal/block-target.ts`, `web/panes.tsx` (debt)
+            - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/pages-sidebar.tsx` (sanctioned)
         - **`prompt-origin`** — Origin backlink in the task detail: the page a `/prompt`-block-launched task came from, as a clickable chip opening pageDetailPane. Renders nothing when the task has no prompt-block link or the page is gone.
           - Web:
             - Contributes: `TaskDetailSlots.Section` "Origin" → `PromptOriginSection`
             - Uses:
               - `apps/pages/page-tree.pageDetailPane`
+              - `network/live.useLiveRow`
               - `page/prompt/link.usePromptTaskLink`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/link-chip.LinkChip`
-              - `primitives/live-state.useResource`
               - `primitives/pane.useOpenPane`
               - `tasks/task-detail.TaskDetailSlots`
               - `ui/icons.Icon`
-          - Exemptions:
-            - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/prompt-origin-section.tsx` (debt)
         - **`shell`** — App shell for Pages. Registers the /pages app entry — its brand the workspace (the user's initial tile as the launcher mark, and "<first name>'s pages" from the OS account) — defines the Pages.Sidebar slot, and contributes the app's own theme (Ink), which Pages selects.
           - Web:
             - Slots: `Pages.Sidebar`
@@ -4075,6 +4066,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `apps/pages/page-tree.pageDetailPane`
                   - `apps/pages/welcome.PagesWelcome`
+                  - `network/live.useLive`
                   - `page/editor.PageIcon`
                   - `primitives/css/card.Card`
                   - `primitives/css/clip.Clip`
@@ -4084,13 +4076,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
                   - `primitives/live-state.ResourceErrorInline`
-                  - `primitives/live-state.useResource`
                   - `primitives/loading.Loading`
                   - `primitives/pane.useOpenPane`
                   - `primitives/relative-time.RelativeTime`
                   - `ui/icons.Icon`
-              - Exemptions:
-                - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/recent-pages-section.tsx` (debt)
     - **`prototypes`** — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
       - Server:
         - Contributes: `taskCategory` "prototypes"
@@ -9929,12 +9918,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Item.Avatar` → `AgentAvatarRow`
           - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
           - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-        - Uses: 54 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
-          - `primitives/pane` ×7
+        - Uses: 57 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
+          - `primitives/pane` ×8
           - `primitives/avatar` ×4
           - `primitives/collapsible` ×4
           - `primitives/live-state` ×4
           - `conversations/conversation-ui/item` ×3
+          - `network/live` ×3
           - `primitives/css/ui-kit` ×3
           - `primitives/data-view` ×3
           - `primitives/css/spacing` ×2
@@ -9946,7 +9936,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/avatar/table.avatarFieldDef`
           - `ids.IdKinds`
           - `infra/endpoints.fetchEndpoint`
-          - `network/live.useLive`
           - `primitives/app-shell.opensPane`
           - `primitives/css/center.Center`
           - `primitives/css/placeholder.Placeholder`
@@ -9975,17 +9964,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.kind` "launch"
           - `resource.declare` "agent-launches"
           - `resource.declare` "agent-launches:rows"
-          - `resource.declare` "agents"
+          - `resource.declare` "agents.roster"
+          - `resource.declare` "agents.roster:rows"
           - `derived-view` "agents_v"
           - `derived-table` "task_latest_conversation"
           - `taskCategory` "agents"
-        - Uses: 28 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
-          - `primitives/rank` ×4
+        - Uses: 26 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
           - `tasks/tasks-core` ×4
+          - `primitives/rank` ×3
           - `database/sql-projection` ×2
           - `ids` ×2
           - `infra/endpoints` ×2
-          - `network/live` ×2
           - `tasks/task-category` ×2
           - `conversations/model-provider/catalog.getModelCatalog`
           - `conversations.createConversation`
@@ -9996,6 +9985,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
           - `infra/attachments.Attachments`
           - `infra/claude-cli/availability.assertClaudeCodeReady`
+          - `network/live.serveCollection`
           - `ui/icons/sprites.defineSavedIconSource`
         - DB schema:
           - `plugins/conversations/plugins/agents/server/internal/rollup-table.ts`
@@ -10018,7 +10008,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources:
           - `agent-launches` (keyed)
           - `agent-launches:rows` (keyed, point)
-          - `agents` (push, unbounded: the user's hand-written agent roster (agents_v) — the Agents sidebar renders the whole tree; grows only by hand)
+          - `agents.roster` (keyed)
+          - `agents.roster:rows` (keyed, point)
         - Routes:
           - `GET /api/agents`
           - `POST /api/agents`
@@ -12033,14 +12024,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - Web:
                     - Uses:
                       - `apps/pages/page-tree.pageDetailPane`
+                      - `network/live.LiveRowResult`
+                      - `network/live.useLiveRow`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/cluster.Cluster`
                       - `primitives/css/link-chip.LinkChip`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Inset`
                       - `primitives/css/text.Text`
-                      - `primitives/live-state.foldResource`
-                      - `primitives/live-state.useResource`
                       - `primitives/pane.useOpenPane`
                       - `primitives/syntax-highlight.HighlightedCode`
                       - `ui/icons.Icon`
@@ -12057,8 +12048,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
                       - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
                       - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`
-                  - Exemptions:
-                    - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-ref-chip.tsx` (debt)
                   - Plugins:
                     - **`edit-page`** — Renders edit_page MCP tool calls as a side-by-side markdown diff, with the edited page as a clickable chip and what the write changed.
                       - Web:
@@ -14280,6 +14269,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PublishedMigrationViolation`
           - `PublishedRef`
           - `RejectOp`
+          - `SchemaLoadFailure`
           - `SnapshotDag`
           - `SnapshotDagProblem`
           - `SnapshotNode`
@@ -14314,6 +14304,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `renderPhasedMigration`
           - `renderStatements`
           - `schemaGlobFiles`
+          - `schemaLoadFailures`
           - `snapshotAncestors`
           - `splitStatements`
           - `stageDrizzleOut`
@@ -23384,6 +23375,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ScopedColumnMember`
           - `WithContributedColumns`
         - Exports (values):
+          - `isPointId`
           - `LIVE_COLUMNS_KEY`
           - `LIVE_ROW_KEY`
           - `LIVE_ROW_KEY_MAX_BYTES`
@@ -23394,15 +23386,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveValue`
           - `scopedLiveColumns`
       - Cross-plugin:
-        - Imported by: 168 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×48
-          - `conversations` ×34
+        - Imported by: 176 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×51
+          - `conversations` ×35
           - `tasks` ×21
+          - `active-data` ×10
           - `infra` ×10
-          - `active-data` ×9
+          - `page` ×9
           - `debug` ×8
           - `build` ×6
-          - `page` ×6
           - `primitives` ×5
           - `auth` ×3
           - `review` ×3
@@ -23422,22 +23414,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
         - Exempted by:
-          - `active-data/page-link` (1 debt)
-          - `apps/pages/page-author` (1 debt)
-          - `apps/pages/page-tree` (7 debt)
-          - `apps/pages/prompt-origin` (1 debt)
-          - `apps/pages/welcome/recent-pages` (1 debt)
-          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools` (1 debt)
           - `framework/central-core` (0 debt)
           - `framework/resource-runtime` (0 debt)
           - `framework/server-core` (0 debt)
           - `infra/query-resource` (0 debt)
           - `network/live` (0 debt)
-          - `page/annotations/instructions/instructions-page` (1 debt)
-          - `page/editor` (3 debt)
-          - `page/inline-page-link` (2 debt)
-          - `page/links` (2 debt)
-          - `page/page-link` (1 debt)
           - `primitives/live-state` (0 debt)
           - `primitives/optimistic-mutation` (0 debt)
       - Central:
@@ -23885,15 +23866,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Editor.InsertAction` "Instructions page"
                 - Uses:
                   - `infra/endpoints.fetchEndpoint`
+                  - `network/live.useLiveRow`
                   - `page/editor.Editor`
                   - `page/page-reference.PageReference`
                   - `primitives/css/badge.Badge`
                   - `primitives/live-state.ResourceErrorInline`
-                  - `primitives/live-state.useResource`
                   - `primitives/loading.Loading`
                   - `ui/icons.Icon`
-              - Exemptions:
-                - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/instructions-page-chip.tsx` (debt)
         - **`private-notes`** — Private-note block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
@@ -24310,13 +24289,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ← `page.turn-into-page`
         - Contributes: `IdKinds.Kind` "block"
         - Uses: 83 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
-          - `primitives/live-state` ×5
           - `primitives/text-editor/caret-trigger` ×5
           - `primitives/css/spacing` ×4
           - `primitives/css/ui-kit` ×4
           - `primitives/dom/dom-selection` ×4
+          - `primitives/live-state` ×4
           - `primitives/slot-render` ×4
           - `primitives/undo-redo` ×4
+          - `network/live` ×3
           - `primitives/css/control-panel` ×3
           - `primitives/css/coords` ×3
           - `primitives/multi-select` ×3
@@ -24324,7 +24304,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor/caret-motion` ×3
           - `reorder` ×3
           - `infra/endpoints` ×2
-          - `network/live` ×2
           - `primitives/latest-ref` ×2
           - `primitives/persistent-draft` ×2
           - `ids.IdKinds`
@@ -24466,7 +24445,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.kind` "block"
           - `resource.declare` "page-blocks"
           - `resource.declare` "page-edited-at"
-          - `resource.declare` "pages"
+          - `resource.declare` "pages.tree"
+          - `resource.declare` "pages.tree:rows"
           - `page.block-data` "page"
           - `page.block-annotation`
         - Uses:
@@ -24482,6 +24462,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/trash._trashEntries`
           - `infra/trash.defineTrashSource`
           - `infra/trash.recordTrashEntry`
+          - `network/live.serveCollection`
           - `network/live.serveValue`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.rankAdjacentTo`
@@ -24501,6 +24482,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BlockTrashHook`
           - `CopiedBlock`
           - `DeletedBlockRow`
+          - `DocRankDrift`
           - `PageContentSnapshot`
           - `PageData`
           - `PageForestTx`
@@ -24515,12 +24497,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `blockTextServerExtensions`
           - `blockTextServerNodes`
           - `deleteBlocksSubtree`
+          - `docRankDriftSink`
           - `Editor`
           - `liveBlocks`
           - `PAGE_BLOCK_TYPE`
           - `pageData`
           - `PageDataSchema`
-          - `pagesLiveResource`
           - `readPageEditedAt`
           - `renamePage`
           - `resolveBlockAnnotations`
@@ -24534,7 +24516,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources:
           - `page-blocks` (push, unbounded: one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window)
           - `page-edited-at` (push)
-          - `pages` (push)
+          - `pages.tree` (keyed)
+          - `pages.tree:rows` (keyed, point)
         - Routes:
           - `GET /api/pages`
           - `GET /api/pages/:pageId/blocks`
@@ -24553,11 +24536,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.defineIdKind`
           - `infra/endpoints.defineEndpoint`
           - `infra/trash.TrashOutcomeSchema`
+          - `network/live.liveCollection`
           - `network/live.liveValue`
           - `primitives/collab-doc.readYDoc`
           - `primitives/collab-doc.yDocContent`
           - `primitives/collab-doc.yDocFromLexical`
-          - `primitives/live-state.resourceDescriptor`
           - `primitives/rank.Rank`
           - `primitives/rank.RankSchema`
           - `primitives/text-editor/token-extension.InlineTokenExtension`
@@ -24690,7 +24673,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageRowSchema`
           - `PAGES_TRASH_SOURCE`
           - `pageSourcesOf`
-          - `pagesResource`
+          - `pagesTree`
           - `parseInlineMarkdown`
           - `parseMarkdownToForest`
           - `parseTagLine`
@@ -24741,11 +24724,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `xmlTextContentLength`
           - `xmlTextToRuns`
       - Cross-plugin:
-        - Imported by: 72 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Imported by: 73 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `page` ×56
           - `apps` ×8
+          - `reports` ×4
           - `active-data` ×3
-          - `reports` ×3
           - `primitives` ×2
         - Extended by:
           - `apps/pages/auto-icon` (table `editor_ext_auto_icon`)
@@ -24755,7 +24738,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Endpoint callers: `editor-collab`
       - Exemptions:
         - Exempts itself from:
-          - `live/no-legacy-resource-spelling` — `core/resources.ts`, `server/internal/resources.ts`, `web/components/page-options.tsx` (debt)
           - `page-editor/no-adhoc-forest-write` — `server/internal/forest-writer.ts` (sanctioned)
           - `page-editor/no-adhoc-doc-write` — `web/__tests__`, `web/internal/block-text-write.ts`, `web/internal/live-state-yjs-provider.ts`, `web/internal/local-yjs-provider.ts` (sanctioned)
           - `page-editor/no-unfiltered-blocks-read` — `server/internal/forest-writer.ts`, `server/internal/handle-patch-blocks.ts`, `server/internal/live-blocks.ts`, `server/internal/page-forest.ts`, `server/internal/trash-blocks.ts` (sanctioned)
@@ -25089,6 +25071,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Uses:
           - `infra/endpoints.fetchEndpoint`
+          - `network/live.useLiveRow`
           - `page/editor.BlockTextPluginProps`
           - `page/editor.blockTextTokenExtension`
           - `page/editor.PageIcon`
@@ -25103,7 +25086,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state.foldResource`
           - `primitives/live-state.matchResource`
           - `primitives/live-state.ResourceErrorInline`
-          - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
           - `primitives/text-editor/caret-trigger.useCaretMenu`
@@ -25116,13 +25098,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pageLinkInlineNode`
           - `pageLinkToken`
           - `scanPageLinkTokens`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-link-chip.tsx`, `web/components/page-link-inline-node.tsx` (debt)
     - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
       - Server:
         - Contributes:
           - `resource.declare` "page-backlinks"
-          - `resource.declare` "page-links"
+          - `resource.declare` "page-links.sources"
+          - `resource.declare` "page-links.sources:rows"
           - `trigger` "page.links.reindex"
           - `page.editor.block.onDelete`
           - `page.editor.block.onTrash`
@@ -25134,6 +25115,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
           - `infra/warmup.defineWarmup`
+          - `network/live.serveCollection`
           - `network/live.serveValue`
           - `page/editor._blocks`
           - `page/editor.BlockDeleteHook`
@@ -25149,7 +25131,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `PageLinkExtractor`
         - Exports (values):
           - `PageLinks`
-          - `pageLinksLiveResource`
           - `reindexPage`
         - Register:
           - `defineJob('page.links.reindex')`
@@ -25157,7 +25138,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineWarmup('page.links.backfill')`
         - Resources:
           - `page-backlinks` (push, unbounded: the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table)
-          - `page-links` (push)
+          - `page-links.sources` (keyed)
+          - `page-links.sources:rows` (keyed, point)
       - Web:
         - Uses:
           - `network/live.useLive`
@@ -25178,25 +25160,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `Backlinks`
       - Core:
         - Uses:
+          - `network/live.liveCollection`
           - `network/live.liveValue`
-          - `primitives/live-state.resourceDescriptor`
           - `ui/icons/emoji.EmojiSchema`
         - Exports (types):
           - `BacklinkRow`
           - `BacklinkSnippet`
-          - `PageLinkEdge`
         - Exports (values):
           - `BacklinkRowSchema`
           - `pageBacklinks`
-          - `PageLinkEdgeSchema`
-          - `pageLinksResource`
+          - `pageLinkSources`
       - Cross-plugin:
         - Imported by:
           - `apps/pages/page-tree`
           - `page/inline-page-link`
           - `page/page-link`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `core/resources.ts`, `server/internal/resources.ts` (debt)
     - **`map`** — Map block type: draws every located item on the page on an interactive map (through the map primitive), with overlays derived on each render from the page's blocks by contributed PageMap.Layer functions — so the map cannot drift from the page and names no block type. Clicking a pin scrolls to and selects the block it stands for; items a layer cannot place yet are counted under the map. Map block type: registers its (empty) `data` schema at the server write boundary.
       - Web:
         - Slots: `PageMap.Layer`
@@ -25402,7 +25380,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
         - Uses: 23 symbols — full list in [`plugins/page/plugins/page-link/REFERENCE.md`](../plugins/page/plugins/page-link/REFERENCE.md)
           - `page/editor` ×6
-          - `primitives/live-state` ×5
+          - `primitives/live-state` ×3
+          - `network/live` ×2
           - `page/page-reference` ×2
           - `primitives/css/center.Center`
           - `primitives/css/placeholder.Placeholder`
@@ -25433,8 +25412,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.typeVar`
           - `ui/icons.symbol`
         - Exports (values): `pageLinkBlock`
-      - Exemptions:
-        - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-link-block.tsx` (debt)
     - **`page-reference`** — The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, and the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip. Owns no reference, no action and no decoration of its own.
       - Web:
         - Slots:
@@ -30545,16 +30522,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 197 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×50
-          - `conversations` ×39
+        - Imported by: 194 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×49
+          - `conversations` ×38
           - `ui` ×22
           - `tasks` ×18
           - `debug` ×11
           - `page` ×11
           - `primitives` ×9
-          - `active-data` ×6
           - `infra` ×6
+          - `active-data` ×5
           - `auth` ×4
           - `build` ×4
           - `plugin-meta` ×3
@@ -30578,7 +30555,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PointResourceDescriptor`
           - `Resolvable`
           - `ResourceDescriptor`
-          - `ResourceDescriptorOptions`
           - `ResourceErrorKind`
           - `ResourceOrigin`
           - `ResourcePreload`
@@ -30592,7 +30568,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `registerResourceDescriptor`
           - `resolvableSchema`
           - `resolved`
-          - `resourceDescriptor`
           - `resourceDescriptorByKey`
           - `ResourceError`
           - `tolerantEnum`
@@ -33563,8 +33538,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
   - Cross-plugin:
-    - Imported by: 54 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×19
+    - Imported by: 55 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×20
       - `debug` ×17
       - `conversations` ×7
       - `database` ×3
@@ -33798,6 +33773,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OutboxEntrySchema`
       - Cross-plugin:
         - Imported by: `framework/tooling/checks`
+    - **`page-doc-rank-drift`** — Page doc-rank drift report kind: files the page editor's docRankDriftSink — a boot reconcile that had to re-mint `page_blocks.doc_rank` the structural-write chokepoint should already have kept in document order (a writer bypassed the doc-order marks, or an old backend wrote during a hot-swap) — deduped on the kind alone, with an investigation task naming the bypass to find.
+      - Server:
+        - Contributes: `report-kind` "page-doc-rank-drift"
+        - Uses:
+          - `page/editor.docRankDriftSink`
+          - `reports.recordReport`
+          - `reports.ReportKind`
     - **`page-undo-conflict`** — Page-undo-conflict collector: drains the page editor's undoConflictReportSink into a report whenever a data-based text undo entry meets a second writer — a replay that found text other than what the entry recorded and applied the entry anyway (stale-entry), or a typing run dropped because a remote change landed inside it (run-aborted) — plus the Debug → Reports summary view. Page-undo-conflict report kind: validates the page editor's undo-conflict payloads (a text undo entry replayed over a block a second writer had changed since it was recorded, or a typing run dropped because a remote change landed inside it), fingerprints by reason alone (the block id, direction and the two lengths are per-occurrence noise), and renders an investigation task.
       - Web:
         - Contributes:

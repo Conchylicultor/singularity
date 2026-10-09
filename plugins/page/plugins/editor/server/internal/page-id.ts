@@ -1,10 +1,13 @@
 import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { _blocks } from "./tables";
 import { liveBlocks } from "./live-blocks";
 import type { PageForestTx } from "./page-forest";
+import { markDocOrderDirty } from "./doc-order-dirty";
 
 /**
  * Any drizzle executor these reads can ride on: the global handle (production),
@@ -104,16 +107,29 @@ export async function computePageId(
 // Requires a `PageForestTx`: it re-scopes a whole subtree's `page_id`, moving
 // rows between the page partitions every other writer reads their forest from,
 // so it is never legal unlocked.
+//
+// Every re-scoped row moves between two sidebar groups, so BOTH its old and its
+// new `page_id` are marked doc-order dirty (`doc-order-dirty.ts`) — the
+// turn-into-page and cross-page-move half of the `doc_rank` maintenance, where
+// a page row changes group without any write naming it. The old value comes
+// from the CTE (which reads the pre-UPDATE snapshot), the new from RETURNING.
 export async function recomputePageIdSubtree(
   tx: PageForestTx,
   rootId: string,
 ): Promise<void> {
-  await tx.execute(sql`
+  const moved = await executeRows(tx, {
+    label: "page_blocks recompute page_id subtree",
+    row: z.object({
+      old_page_id: z.string().nullable(),
+      page_id: z.string().nullable(),
+    }),
+    query: sql`
     WITH RECURSIVE resolved AS (
       -- Root: pageId derived from its current parent via the standard rule.
       SELECT
         b.id,
         b.type,
+        b.page_id AS old_page_id,
         CASE
           WHEN p.id IS NULL THEN NULL
           WHEN p.type = 'page' THEN p.id
@@ -127,6 +143,7 @@ export async function recomputePageIdSubtree(
       SELECT
         c.id,
         c.type,
+        c.page_id AS old_page_id,
         CASE
           WHEN r.type = 'page' THEN r.id
           ELSE r.page_id
@@ -139,5 +156,11 @@ export async function recomputePageIdSubtree(
     FROM resolved
     WHERE t.id = resolved.id
       AND t.page_id IS DISTINCT FROM resolved.page_id
-  `);
+    RETURNING resolved.old_page_id, t.page_id
+  `,
+  });
+  markDocOrderDirty(
+    tx,
+    moved.flatMap((r) => [r.old_page_id, r.page_id]),
+  );
 }

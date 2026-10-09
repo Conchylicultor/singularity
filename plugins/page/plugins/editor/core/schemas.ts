@@ -64,24 +64,29 @@ export const BlockSchema = z.object({
 });
 export type Block = z.infer<typeof BlockSchema>;
 
-// A page row as the `pages` resource emits it: a `type="page"` block plus
-// `docRank` — a DERIVED, per-load ordering key.
+// A page row as the `pagesTree` set serves it: a `type="page"` block plus
+// `docRank` — its place in its SIDEBAR group.
 //
 // `rank` is the storage key: a fractional index comparable ONLY within its own
 // `(parent_id, rank)` space. The sidebar's sibling group is "pages sharing a
 // `pageId`", which can span SEVERAL such spaces (a sub-page may be a direct
 // child of its page, or sit under a text line / toggle), so sorting those `rank`
 // strings against each other is meaningless — and duplicates across spaces make
-// the DnD rank arithmetic throw. `docRank` is a real fractional-index `Rank`
-// minted by the loader, unique and ordered WITHIN one `pageId` group, derived
-// from true document order (a rank-ordered DFS of the block forest).
+// the DnD rank arithmetic throw. `docRank` is a real fractional-index `Rank`,
+// unique and ordered WITHIN one `pageId` group, in true document order (a
+// rank-ordered DFS of the block forest, stopping at nested pages).
 //
-// It is **never persisted and never written back**: no column, no migration, no
-// request body. A `docRank` is only valid against the group it was minted with,
-// and the SAME row read through `pageBlocks` carries no `docRank` at all —
-// writing one back would give one row two conflicting `rank` values. Moves send
-// positional intent (an anchor id); the server mints the real `rank` against the
-// complete sibling set.
+// It is PERSISTED — `page_blocks.doc_rank` — and WRITER-DERIVED: the
+// structural-write chokepoint (`withPageForest`) re-mints it for exactly the
+// groups a write touched, keeping every key that still fits, so a reorder is an
+// ordinary write of the rows that moved. (It used to be minted afresh per load,
+// which is why it once could not be stored: a per-load key was valid only
+// against the group it was minted with. A maintained column has no such
+// window.) It is still **never written into `rank` and never in a request
+// body**: no client mints one, and moves send positional intent (an anchor id)
+// while the server mints the real `rank` against the complete sibling set. The
+// SAME row read through `pageBlocks` carries no `docRank` — that resource orders
+// by `rank`, within one `(parent_id, rank)` space, where it is meaningful.
 export const PageRowSchema = BlockSchema.extend({ docRank: RankSchema });
 export type PageRow = z.infer<typeof PageRowSchema>;
 

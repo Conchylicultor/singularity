@@ -10,23 +10,20 @@ import {
   type RefObject,
 } from "react";
 import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
-import {
-  foldResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   PaneChrome,
   useOpenPane,
-  resolveFrom,
+  resolveRow,
   type ResolveResult,
 } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import {
   pageBlocks,
-  pagesResource,
+  pagesTree,
   pageData,
   textOf,
 } from "@plugins/page/plugins/editor/core";
@@ -88,9 +85,7 @@ const RULE_STYLE = { paddingTop: "calc(var(--space-xl) + var(--space-xs))" };
 // declarations, so the forward reference is safe at runtime.
 
 function useResolvePage({ pageId }: { pageId: string }): ResolveResult {
-  return resolveFrom(useResource(pagesResource), (pages) =>
-    pages.some((d) => d.id === pageId),
-  );
+  return resolveRow(useLiveRow(pagesTree, pageId));
 }
 
 export const pageDetailPane = Pane.define({
@@ -105,7 +100,7 @@ export const pageDetailPane = Pane.define({
   component: PageDetailBody,
   width: 720,
   useResolve: useResolvePage,
-  // Tab/document title: the page's title from the global pages resource (same
+  // Tab/document title: the page's title from its row in the pages set (same
   // source PageDetailBody renders), falling back to the pageId. The header
   // paints the breadcrumb trail instead.
   title: {
@@ -177,17 +172,15 @@ function PagesTreeBody(): ReactElement {
 }
 
 /**
- * The page's title from the global pages resource, or undefined while loading
+ * The page's title from its row in the pages set, or undefined while loading
  * or failed (the tab then shows the chrome's pageId fallback).
  */
 function usePageTitle({ pageId }: { pageId: string }): string | undefined {
-  const result = useResource(pagesResource);
-  const page = foldResource(result, {
-    loading: () => undefined,
-    error: () => undefined,
-    ready: (pages) => pages.find((d) => d.id === pageId),
-  });
-  return page ? pageData(page).title : undefined;
+  const result = useLiveRow(pagesTree, pageId);
+  if (result.status === "loading" || result.status === "error") {
+    return undefined;
+  }
+  return result.found ? pageData(result.row).title : undefined;
 }
 
 /** The block pane's tab title: "<page> › <block>", as its Artifacts row reads. */

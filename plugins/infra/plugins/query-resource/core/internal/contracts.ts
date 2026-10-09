@@ -43,8 +43,8 @@ export type PointQueryResourceContract<Row> = PointResourceDescriptor<Row> & {
  * declaration — `unbounded.reason` says why the set is small enough to hold
  * whole — so it has no window codec, no limit and no default tuple: boot
  * hydrates the `{}` tuple, and any param is a subscription this declaration
- * never minted (`validateParams` throws `ResourceContractError`). No
- * placeholder (`initialData`): not loaded yet is `pending`, never `[]`.
+ * never minted (`validateParams` throws `ResourceContractError`). Not loaded
+ * yet is `pending`, never `[]`.
  *
  * Only the TYPE lives here, like the window and point contracts: the server
  * compiler (`compileAllCollection`) consumes it, and its one factory is
@@ -55,7 +55,6 @@ export type AllQueryResourceContract<Row> = ResourceDescriptor<
   Record<string, never>
 > & {
   keyed: { keyOf: (row: unknown) => string };
-  initialData?: never;
   all: {
     /**
      * The total order: row fields, each with its direction. The pk breaks

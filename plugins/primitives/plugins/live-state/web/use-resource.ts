@@ -18,7 +18,6 @@ import {
   useQueries,
   useQuery,
   useQueryClient,
-  type NonUndefinedGuard,
   type QueryObserverResult,
 } from "@tanstack/react-query";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
@@ -294,8 +293,9 @@ export interface UseResourceOptions<T, S> {
    * (`notifyOnChangeProps`), so the per-push `dataUpdatedAt` bump no longer
    * forces a re-render. Consequence: `pending` flips to `false` silently (no
    * re-render) if the selected slice is identical across the
-   * initialData→first-real-data boundary — harmless for point lookups, where
-   * the caller sees the same value either way.
+   * no-value→first-value boundary — a selector that answers `undefined` (a
+   * point lookup that finds nothing) — harmless for point lookups, where the
+   * caller sees the same value either way.
    *
    * Pass a **stable** selector (`useCallback`) so it is not re-run every render.
    */
@@ -303,11 +303,13 @@ export interface UseResourceOptions<T, S> {
   /**
    * Make the `pending` → settled flip reliable for READINESS GATES built on a
    * `select` read. Without it, the flip is silent (no re-render) when the
-   * selected slice is identical across the initialData→first-real-data
-   * boundary — harmless for point lookups, fatal for a gate (it can wedge as
-   * pending forever). With `gate: true`, notifications stay un-scoped until
-   * the tuple's query holds a value, then narrow to the select-scoped ones,
-   * so the steady-state re-render behavior is identical to plain `select`.
+   * selected slice is identical across the no-value→first-value boundary —
+   * the query holds no data before its first value, so a selector answering
+   * `undefined` leaves `data` unchanged — harmless for point lookups, fatal for
+   * a gate (it can wedge as pending forever). With `gate: true`,
+   * notifications stay un-scoped until the tuple's query holds a value, then
+   * narrow to the select-scoped ones, so the steady-state re-render behavior
+   * is identical to plain `select`.
    * The latch is derived from the cache, so a tuple already cached (a boot
    * hydration) is narrowed from its first render — one render, not two.
    */
@@ -352,13 +354,11 @@ function useCanonicalParams(
 /**
  * The query options of ONE read tuple — shared by `useResource` (its
  * non-skipped arm) and `useResources`, so a tuple read either way is the same
- * query: one key, one HTTP fallback, one placeholder rule, one GC rule.
+ * query: one key, one HTTP fallback, one enabled rule, one GC rule.
  */
 interface TupleQueryOptions<T> {
   queryKey: unknown[];
   queryFn: () => Promise<T>;
-  initialData: NonUndefinedGuard<T>;
-  initialDataUpdatedAt: 0;
   enabled?: (query: { state: { data: unknown } }) => boolean;
   structuralSharing: typeof dateAwareReplaceEqualDeep;
   gcTime?: number;
@@ -377,23 +377,18 @@ function tupleQueryOptions<T, P extends ResourceParams>(
     // normally fills the cache so this rarely runs. Errors propagate to `q.error`.
     queryFn: () =>
       notifications.fetchOverHttp(key, p, origin, schema, "fallback"),
-    // A typed placeholder, never a value: seeded at epoch 0 so
-    // `dataUpdatedAt === 0` means only the placeholder has been seen. A
-    // descriptor without one (a `liveValue`) seeds nothing — the query simply
-    // has no data, still `dataUpdatedAt === 0`, still `pending`.
-    initialData: resource.initialData as NonUndefinedGuard<T>,
-    initialDataUpdatedAt: 0 as const,
-    // With no placeholder, React Query would fetch on mount (a query with no
-    // data always loads). The WS sub-ack is what fills the cache — the HTTP
-    // `queryFn` is only the fallback — so such a query stays disabled until a
-    // value lands (then `invalidate` refetches behave as for any other). That is
-    // exactly a placeholder query's behavior under `staleTime: Infinity`. A
-    // manual `refetch()` ignores `enabled`.
+    // Until its first value the query has no data (there is no placeholder),
+    // sits at `dataUpdatedAt === 0`, and reads `pending`. React Query would
+    // fetch such a query on mount (a query with no data always loads), but the
+    // WS sub-ack is what fills the cache — the HTTP `queryFn` is only the
+    // fallback — so the query stays disabled until a value lands (then
+    // `invalidate` refetches behave as for any other). A manual `refetch()`
+    // ignores `enabled`.
     //
     // An on-demand resource is the exception: its value NEVER rides the socket
     // (no sub-ack value, only `invalidate` frames), so HTTP is its read path,
     // not a fallback — it fetches on mount like any enabled query.
-    ...(resource.initialData === undefined && resource.load !== "on-demand"
+    ...(resource.load !== "on-demand"
       ? {
           enabled: (query: { state: { data: unknown } }) =>
             query.state.data !== undefined,
@@ -455,7 +450,7 @@ const NO_CACHE_SUBSCRIPTION = (): (() => void) => () => {};
 
 /**
  * Does the tuple's query hold a value — has its `dataUpdatedAt` left epoch 0
- * (the placeholder, and an absent query, sit at 0)? The `gate` latch, derived
+ * (a query with no data yet, and an absent query, sit at 0)? The `gate` latch, derived
  * from the query cache through `useSyncExternalStore` (an external store read
  * in render, so the React Compiler cannot memoize it stale): it flips with the
  * cache write that lands the value — re-rendering the read once, which is the
@@ -600,8 +595,6 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   const q = useQuery({
     queryKey,
     queryFn: tuple?.queryFn ?? skipToken,
-    initialData: tuple?.initialData as NonUndefinedGuard<T>,
-    initialDataUpdatedAt: 0,
     ...(tuple?.enabled ? { enabled: tuple.enabled } : {}),
     structuralSharing: dateAwareReplaceEqualDeep,
     ...(tuple?.gcTime !== undefined ? { gcTime: tuple.gcTime } : {}),
@@ -618,9 +611,8 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
 
   // `hasValue` — a real value has landed at least once (`dataUpdatedAt` leaves
   // epoch 0 only on a successful load). The internal branches below key off
-  // it, not on "loaded and not errored", so an error does not re-select
-  // `initialData`, re-prime, or re-time the mount→settle metric. A skipped
-  // read has none.
+  // it, not on "loaded and not errored", so an error does not re-prime or
+  // re-time the mount→settle metric. A skipped read has none.
   const hasValue = !skipped && q.dataUpdatedAt !== 0;
   // The one typed failure (memoized per raw error, so every observer of the
   // query shares one `ResourceError` identity).
@@ -671,11 +663,12 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
 
   // The result identity recomputes only on data/error (which decide the
   // status); the returned `refetch` calls the freshest `q.refetch` through the
-  // stable `refetchQuery`. `hasValue` is the landed signal:
-  // the `initialData` placeholder is neither `ready` nor the error arm's
-  // `stale` (the SELECTED slice once a value has landed — a first-load failure
-  // has no trustworthy value to expose). A skipped read (`params === null`, no
-  // subject yet) is `loading` with nothing to refetch.
+  // stable `refetchQuery`. `hasValue` is the landed signal, not
+  // `data !== undefined`: a selector may answer `undefined` for a landed value
+  // (a point lookup that finds nothing), which is `ready`, not `loading`. The
+  // error arm's `stale` is the SELECTED slice once a value has landed — a
+  // first-load failure has no trustworthy value to expose. A skipped read
+  // (`params === null`, no subject yet) is `loading` with nothing to refetch.
   return useMemo((): ResourceResult<T | S> => {
     if (skipped) return { status: "loading", refetch: SKIPPED_REFETCH };
     return queryResult(data, error, refetchQuery, hasValue);
@@ -709,7 +702,7 @@ function combineTuples(
  * Read a VARYING number of tuples of one resource — `useResource` for a list of
  * params whose length changes over time (a segmented scroll's windows), which
  * a hook call per tuple cannot express. Each tuple is read exactly as
- * `useResource` reads it — the same query (key, HTTP fallback, placeholder, GC
+ * `useResource` reads it — the same query (key, HTTP fallback, enabled rule, GC
  * rule), the same `observe` / `unobserve` refcount (a tuple another component
  * also reads is subscribed once), the same cold-start prime, and the same
  * pending-mount count until its first value — and yields the same

@@ -38,6 +38,7 @@ import {
   publishedMigrationOrigins,
   renderPhasedMigration,
   renderStatements,
+  schemaLoadFailures,
   stageDrizzleOut,
 } from "@plugins/database/plugins/migrations/core";
 import {
@@ -353,6 +354,23 @@ export async function generateMigration(opts: {
   // main's favour. NOT about drizzle-kit's inputs: it picks the prior snapshot
   // off a sorted `readdir(meta)`, and reads the journal only for `idx`.
   regenerateJournal(migrationsDir);
+
+  // drizzle-kit loads every schema-glob file with a synchronous require() and,
+  // when one throws, skips it and exits 0 — generating a migration with that
+  // file's tables silently missing, whatever the error was. Its output names
+  // only the error kinds someone listed below; this asks the question itself,
+  // by loading each file the way drizzle-kit will, before trusting a run.
+  const loadFailures = await schemaLoadFailures(root);
+  if (loadFailures.length > 0) {
+    console.error(
+      `\nError: ${loadFailures.length} schema file(s) cannot be loaded the way drizzle-kit\n` +
+        "loads them, so their tables would be SILENTLY DROPPED from migration generation:\n" +
+        loadFailures.map((f) => `  ${f.file} — ${f.error}`).join("\n") +
+        "\n\nFix the offending import (`./singularity check schema-files-loadable` names\n" +
+        "the same files); never generate around it.",
+    );
+    process.exit(1);
+  }
 
   const before = new Set(readdirSync(migrationsDir));
 

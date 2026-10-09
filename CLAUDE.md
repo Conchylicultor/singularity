@@ -250,8 +250,8 @@ This is the single most important coding principle:
   `maxLimit`, or lookup-only by id), so every read/recompute is O(window ∪ changed), never
   O(collection). A new value is `liveValue` + `serveValue`; a `source: "db"` array or record value
   must state `unbounded: { reason }` (tsc). Read both with `useLive` / `useLiveRow`. The old
-  spellings (`resourceDescriptor`, `defineResource`, `useResource`, …) remain only
-  for the two page resources (Resources page item 9); the
+  spellings that still exist (`defineResource`, `useResource`, …) remain only as the
+  substrate the unified API compiles to; the
   `live/no-legacy-resource-spelling` lint rejects them elsewhere — never copy one as precedent. See
   `plugins/network/plugins/live/CLAUDE.md`.
 - **Collections of domain records are DataViews.** Rendering a homogeneous set of domain records (rows from DB / live-state / config) is a `data-view` surface (`views={["list"]}` minimum — search/filter/sort/groupBy/item-actions come free), never a hand-rolled `.map()` of `<Row>`. `Row`+map is only for transient chrome (menus, pickers, tab strips), annotated `// eslint-disable-next-line data-view/no-adhoc-row-list -- <reason>` (ESLint: `no-adhoc-row-list`). See `plugins/primitives/plugins/data-view/CLAUDE.md` and `research/2026-07-17-global-data-view-adoption-guardrail.md`.

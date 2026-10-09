@@ -28,9 +28,9 @@ export class ResourceHttpError extends Error {
 
 /**
  * An HTTP resource GET returned a value the version guard rejected as stale, on
- * a `(key, params)` whose cache holds only the descriptor's placeholder (never a
- * server-vouched value). `fetchOverHttp` throws this rather than settling the
- * query with that placeholder (the "Close (state unknown)" wedge) or applying
+ * a `(key, params)` whose cache never held a server-vouched value.
+ * `fetchOverHttp` throws this rather than settling the query on nothing
+ * vouched (the "Close (state unknown)" wedge) or applying
  * the stale body (which would render old-boot data). React Query's `retry` plus
  * the next `invalidate` frame converge the legitimate same-epoch race; if the
  * retry also loses, `q.error` settles typed and visible. Swallowed by

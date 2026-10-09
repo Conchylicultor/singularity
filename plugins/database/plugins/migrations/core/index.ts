@@ -1,4 +1,9 @@
 export { schemaGlobFiles } from "./internal/schema-glob";
+// "Does every schema-glob file load the way drizzle-kit loads it?" — asked by
+// the `schema-files-loadable` check and by the CLI's `generateMigration` before
+// it trusts a drizzle-kit run (which drops an unloadable file silently).
+export { schemaLoadFailures } from "./internal/schema-load-probe";
+export type { SchemaLoadFailure } from "./internal/schema-load-probe";
 // The repo-relative DEV-TREE location of this plugin — drizzle-kit's cwd for
 // every sanctioned invocation, and the anchor its relative config paths resolve
 // against. Public because the two invocation sites live in other plugins

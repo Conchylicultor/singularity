@@ -1,19 +1,41 @@
 import { z } from "zod";
-import { liveValue } from "@plugins/network/plugins/live/core";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { BlockSchema, PageRowSchema } from "./schemas";
-import type { PageRow } from "./schemas";
 
-// All pages (`type="page"` blocks). The sidebar tree is built from these by
-// `pageId` (the nearest page ancestor — `parentId` may point at a content
-// block), and ordered by `docRank` — the loader's derived document-order key
-// (see `PageRowSchema`), NOT the raw storage `rank`. Array order ≡ `docRank`
-// order.
-export const pagesResource = resourceDescriptor<PageRow[]>(
-  "pages",
-  z.array(PageRowSchema),
-  [],
-);
+// All live pages (`type="page"` blocks), the WHOLE set (`all`): the sidebar
+// renders every page, and the `[[` / page-link pickers filter it by title
+// locally; the by-id readers (the page header, cover and kind control, the
+// link chips, the pane resolvers) read one row of it through `:rows`
+// (`useLiveRow`). The sidebar tree is built by `pageId` (the nearest page
+// ancestor — `parentId` may point at a content block) and ordered by `docRank`
+// — the persisted, writer-derived document-order key (see `PageRowSchema`),
+// NOT the raw storage `rank`; the set's own order is `createdAt`, which never
+// changes, so a re-minted `docRank` is an in-place row refill, never an
+// `orderOf`.
+//
+// Served over the `page_blocks` TABLE (`../server/internal/page-rows.ts`):
+// a rename, an icon, cover or kind change is that page's refill, a re-mint the
+// refill of exactly the re-minted pages, a create / restore an entrant, a trash
+// an exit — and a write to a CONTENT block (the ~1s `data.text` typing
+// projection) loads nothing, since no page row changed.
+//
+// The key is NEW (`pages.tree`; it was the legacy push resource `pages`): a
+// tab still running a bundle that subscribed the old key gets `unknown-key` — a
+// `skew` verdict, the Reload prompt — rather than keyed deltas its non-keyed
+// read cannot apply. Pinned by `../server/internal/pages-tree-oracle.test.ts`.
+//
+// Not preloaded: nothing reads it until the Pages app (or a page chip) mounts.
+export const pagesTree = liveCollection("pages.tree", {
+  row: PageRowSchema,
+  id: "id",
+  all: {
+    orderBy: [["createdAt", "asc"]],
+    unbounded: {
+      reason:
+        "the sidebar renders every page; the [[ and link pickers filter by title locally",
+    },
+  },
+});
 
 // A page's content forest: every block whose nearest page ancestor is
 // `pageId`, sub-page rows included, pushed whole whenever it changes. A value

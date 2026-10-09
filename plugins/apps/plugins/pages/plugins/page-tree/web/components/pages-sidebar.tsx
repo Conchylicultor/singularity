@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -14,14 +14,15 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import type { SectionsToolbar } from "@plugins/primitives/plugins/data-view/core";
 import {
-  pagesResource,
+  pagesTree,
   updateBlock,
   moveBlock,
   pageData,
   type PageRow,
 } from "@plugins/page/plugins/editor/core";
-import { pageLinksResource } from "@plugins/page/plugins/links/core";
+import { pageLinkSources } from "@plugins/page/plugins/links/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { usePageReferenceTint } from "@plugins/page/plugins/page-reference/web";
 import { pageDetailPane, pagesTreePane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
@@ -52,9 +53,22 @@ const ACTIVE_LABEL = cn("font-medium text-strong-foreground");
 
 const NO_LINK_PARENTS: readonly string[] = [];
 
+/**
+ * The pages in sidebar order: by `docRank`. The tree keeps each parent's
+ * INCOMING child order (`buildTree`), so the rows must arrive sorted — and the
+ * set's own order is `createdAt` (a key that never moves, so a re-mint is a
+ * row refill rather than an `orderOf`). `docRank` is unique and ordered only
+ * WITHIN one `pageId` group, so a global sort lands every group in its own
+ * order; across groups it means nothing, and the sort is stable. Module scope:
+ * `useLive`'s `select` must be a stable function.
+ */
+function inDocOrder(pages: readonly PageRow[]): PageRow[] {
+  return [...pages].sort((a, b) => Rank.compare(a.docRank, b.docRank));
+}
+
 export function PagesSidebar() {
-  const result = useResource(pagesResource);
-  const links = useResource(pageLinksResource);
+  const result = useLive(pagesTree, { select: inDocOrder });
+  const links = useLive(pageLinkSources);
   const openPane = useOpenPane();
   const tintOf = usePageReferenceTint();
   const selectedId = pageDetailPane.useRouteEntry()?.params.pageId;
@@ -71,20 +85,17 @@ export function PagesSidebar() {
   const inOwnColumn = useCurrentPane()?.id === pagesTreePane.id;
   const openMode = inOwnColumn ? ("swap" as const) : ("push" as const);
 
-  // target page id → the pages that link to it. Feeds the tree's alias edges,
-  // so a page linked from another page shows up as a reference child of the
-  // linking page. While the edges are still loading — or when their read
+  // page id → the pages that link to it. Feeds the tree's alias edges, so a
+  // page linked from another page shows up as a reference child of the
+  // linking page. While the sources are still loading — or when their read
   // failed — the tree simply renders without aliases (they pop in — never a
   // wrong hierarchy; the aliases are an enrichment, the pages read is the
   // tree).
-  const linkSourcesByTarget = useMemo(() => {
-    const map = new Map<string, string[]>();
+  const linkSourcesById = useMemo(() => {
+    const map = new Map<string, readonly string[]>();
     if (links.status === "loading" || links.status === "error") return map;
-    for (const edge of links.data) {
-      if (edge.sourcePageId === edge.targetPageId) continue;
-      const sources = map.get(edge.targetPageId);
-      if (sources) sources.push(edge.sourcePageId);
-      else map.set(edge.targetPageId, [edge.sourcePageId]);
+    for (const row of links.data) {
+      if (row.linkedFrom.length > 0) map.set(row.id, row.linkedFrom);
     }
     return map;
   }, [links]);
@@ -239,14 +250,15 @@ export function PagesSidebar() {
             // Pages a page links to (page-link blocks, inline [[links]]) appear
             // as read-only reference children of the linking page.
             getAliasParents: (b) =>
-              linkSourcesByTarget.get(b.id) ?? NO_LINK_PARENTS,
+              linkSourcesById.get(b.id) ?? NO_LINK_PARENTS,
             // `docRank`, NOT the storage `rank`: a `rank` is comparable only
             // within one `(parent_id, rank)` space, and this sibling group (pages
             // sharing a `pageId`) can span several — some sub-pages are direct
             // children of the page, others sit under a text line / toggle. The
-            // server mints `docRank` per group from true document order, so
+            // server keeps `docRank` per group in true document order (a stored
+            // column) and the rows arrive sorted by it (`inDocOrder`), so
             // display order, array order, and `computeFlatReorder`'s rank-sorted
-            // neighbourhood are now ONE order. They silently disagreed before:
+            // neighbourhood are ONE order. They silently disagreed before:
             // display followed the array (a global rank sort), the DnD arithmetic
             // re-sorted the sibling set — so a drop resolved against neighbours
             // the user never saw, or hit a cross-space duplicate rank and aborted.

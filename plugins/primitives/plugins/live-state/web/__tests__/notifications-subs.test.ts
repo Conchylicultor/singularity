@@ -196,12 +196,10 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     expect(qc.getQueryData(["rk"])).toEqual([{ id: "a", n: 1 }]); // healed
   });
 
-  test("a placeholder is no base: a scoped delta before this tab's sub-ack → forced resub, never a false empty list", async () => {
+  test("no vouched base: a scoped delta before this tab's sub-ack → forced resub, never a false partial list", async () => {
     const { client, socket, qc } = await setup();
     client.observe("rk", {}, undefined, keyedSchema, keyOf);
-    // A descriptor's placeholder (the tree's `[]`), seeded at epoch 0 exactly as
-    // `useResource`'s `initialData` is: defined, never server-vouched.
-    qc.setQueryData(["rk"], [], { updatedAt: 0 });
+    // Nothing server-vouched yet: the tuple's query holds no value.
     const before = subFrames(socket, "rk").length;
 
     // Another tab's subscription on the shared socket drew a SCOPED delta (no
@@ -214,7 +212,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       deletes: [],
       version: 3,
     });
-    expect(qc.getQueryState(["rk"])?.dataUpdatedAt).toBe(0); // not settled on []
+    expect(qc.getQueryState(["rk"])?.dataUpdatedAt ?? 0).toBe(0); // not settled on the delta
     expect(subFrames(socket, "rk")).toHaveLength(before + 1); // forced full resub
 
     // The recovery sub-ack applies (baselines reset), whatever this delta's version.
@@ -454,7 +452,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
   // for, so the client runs the HTTP fallback read on exactly that query — its
   // outcome sets q.error / heals — instead of absorbing the frame and wedging
   // the resource pending forever. A direct fetch (`prefetchQuery`), not
-  // `invalidateQueries`, which skips a disabled (placeholder-less, valueless)
+  // `invalidateQueries`, which skips a disabled (valueless)
   // query — pinned end-to-end in notifications-http-fetch.test.ts. Gated on a
   // live local sub, like every other broadcast frame.
   test("sub-error with params for a held sub → fetches exactly that query key", async () => {

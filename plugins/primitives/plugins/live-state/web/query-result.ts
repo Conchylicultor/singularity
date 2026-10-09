@@ -11,10 +11,11 @@ import type { ResourceResult } from "./use-resource";
  * - `loading` while no value has landed and nothing failed;
  * - `ready` otherwise.
  *
- * `landed` says whether `data` is a real value. It defaults to
- * `data !== undefined`; a read whose query holds a placeholder before its
- * first load (`useResource`'s `initialData` at `dataUpdatedAt === 0`) passes
- * its own answer, so the placeholder is neither `ready` nor `stale`.
+ * `landed` says whether a value has landed. It defaults to
+ * `data !== undefined`; a read whose `data` is a SELECTED slice
+ * (`useResource`'s `select`) passes its query's own answer
+ * (`dataUpdatedAt !== 0`), because a selector may answer `undefined` for a
+ * landed value — a point lookup that finds nothing is `ready`, not `loading`.
  */
 export function queryResult<T>(
   data: T | undefined,

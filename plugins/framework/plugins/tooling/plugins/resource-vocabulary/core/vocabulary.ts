@@ -141,9 +141,8 @@ export interface RegisterMarker {
  * and return positions), so a `ResourceDescriptor<Row[]>` is not assignable to
  * `ResourceDescriptor<unknown>` and the filter would silently match nothing —
  * the exact failure mode this file exists to end. Widening the fields
- * instead keeps the filter total. It matches on `key` + `schema` only — not
- * `initialData`, which a `liveValue` (no placeholder) does not have, so it
- * would slip past the filter.
+ * instead keeps the filter total. It matches on `key` + `schema` only, the
+ * two fields every descriptor carries.
  *
  * Over-inclusion is the safe direction: a future non-factory export that happens
  * to match demands a classification entry, which is a loud compile error.
@@ -209,11 +208,6 @@ const PRELOAD: PreloadFlag = {
 };
 
 export const resourceDescriptorFactories = {
-  resourceDescriptor: {
-    barrel: LIVE_STATE_CORE,
-    preload: PRELOAD,
-    mints: [{ suffix: "", keyed: false, membership: null, preloadable: true }],
-  },
   liveValue: {
     barrel: LIVE_CORE,
     preload: PRELOAD,

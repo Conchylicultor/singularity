@@ -15,11 +15,10 @@ const createRule = ESLintUtils.RuleCreator(
  * The unified live-resource API (`plugins/network/plugins/live`) replaces the
  * twelve older ways to declare, serve and read a live resource with three
  * pairs: `liveValue` / `serveValue` / `useLive`, and `liveCollection` /
- * `serveCollection` / `useLive` / `useLiveRow`. The old spellings stay only as
- * the substrate the new ones compile to, and for the resources a later item
- * moves (the tree and the revision ticks — see
- * research/2026-09-27-global-live-resources-phase3-bulk-migration.md; config
- * migrated in research/2026-09-27-global-config-live-values-optional-params.md).
+ * `serveCollection` / `useLive` / `useLiveRow`. The old spellings that still
+ * exist stay only as the substrate the new ones compile to; the deleted ones
+ * stay listed so a stale import is told its replacement
+ * (research/2026-10-08-global-page-tree-and-agents-routed.md).
  *
  * Flags every import of an old spelling from the barrel that exports it — a
  * named import (aliases included), an `export { … } from` re-export — and every
@@ -29,8 +28,8 @@ const createRule = ESLintUtils.RuleCreator(
  * destructuring (`const { useResource } = m`). A call needs one of those, so
  * this covers every call. The module object is resolved through scope, so a
  * local that shadows it is not flagged. A type position (`typeof m.x`) calls
- * nothing and is not flagged. The substrate plugins, and the files not
- * migrated yet, are exempt through debt entries in their plugins' `exempt/index.ts`.
+ * nothing and is not flagged. Only the substrate plugins are exempt, through
+ * sanctioned entries in their plugins' `exempt/index.ts`.
  */
 
 /** Each old spelling → the unified spelling that replaces it. */

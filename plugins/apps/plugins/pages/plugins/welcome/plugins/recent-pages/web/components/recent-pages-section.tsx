@@ -1,10 +1,8 @@
 import { type ReactElement } from "react";
-import {
-  ResourceErrorInline,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
+import { pagesTree, pageData } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -25,7 +23,7 @@ const RECENT_LIMIT = 6;
 
 export function RecentPagesSection(): ReactElement | null {
   const openPane = useOpenPane();
-  const result = useResource(pagesResource);
+  const result = useLive(pagesTree);
 
   if (result.status === "loading" || result.status === "error") {
     return (

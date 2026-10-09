@@ -501,6 +501,32 @@ describe("useLiveRow", () => {
     unmount();
   });
 
+  it.each([
+    ["holding a comma", "a,b"],
+    ["empty", ""],
+  ])(
+    "an id the point codec cannot carry (%s) is not found, reads nothing, and does not throw",
+    (_label, id) => {
+      const c = collection();
+      const client = makeClient();
+      const observe = vi.spyOn(NotificationsClient.prototype, "observe");
+      const seen: LiveRowResult<Row>[] = [];
+      const { unmount } = mount(client, () => {
+        const r = useLiveRow(c, id);
+        seen.push(r);
+        return r;
+      });
+      expect(seen.length).toBeGreaterThan(0);
+      for (const r of seen)
+        expect(r).toMatchObject({ status: "ready", found: false });
+      expect(
+        observe.mock.calls.filter(([key]) => key.startsWith(c.key)),
+      ).toEqual([]);
+      observe.mockRestore();
+      unmount();
+    },
+  );
+
   it("an id switched to null is not found on that very render; switched back, it reads the row", async () => {
     const c = collection();
     const client = makeClient();

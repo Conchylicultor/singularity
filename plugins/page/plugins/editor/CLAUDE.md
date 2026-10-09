@@ -7,32 +7,125 @@
 a `pageId`*, which spans several such spaces — so two of its rows legitimately
 hold the same rank, and `Rank.between("a1", "a1")` throws inside `computeDrop`.
 
-So the **server** defines the order. `pagesLiveResource` emits a `PageRow` =
-`Block` + **`docRank`**: a real minted `Rank`, unique and ordered within one
-`pageId` group, derived from true document order by `docOrderPaths()` (an upward
-rank-path CTE, sorted in JS). Rows come back in that order, so **display order,
-array order, and `computeFlatReorder`'s rank-sorted neighbourhood are one order**.
-See
-[`research/2026-07-16-page-sidebar-document-order.md`](../../../../research/2026-07-16-page-sidebar-document-order.md).
+So the **server** defines the order, and stores it: `page_blocks.doc_rank`
+(nullable `rank_text`; NULL on content rows). The live `pagesTree` set and
+`GET /api/pages` emit a `PageRow` = `Block` + **`docRank`** read straight off the
+column — the HTTP read ordered by `(page_id, doc_rank)`, the set by `createdAt`
+and sorted by `docRank` where it renders (the sidebar's `inDocOrder`, since the
+tree keeps its incoming child order) — so **display order, array order, and
+`computeFlatReorder`'s rank-sorted neighbourhood are one order**. See
+[`research/2026-07-16-page-sidebar-document-order.md`](../../../../research/2026-07-16-page-sidebar-document-order.md)
+and, for the column,
+[`research/2026-10-08-global-page-tree-and-agents-routed.md`](../../../../research/2026-10-08-global-page-tree-and-agents-routed.md) §2, §4.1.
 
-- **Never write `docRank` back** — no column, no migration, never in a request
-  body. It is valid only against the group it was minted with, and the same row
-  read through `pageBlocks` carries none, so persisting it would give one row
-  two conflicting ranks. `rank` stays the storage key; moves send **positional
-  intent** (an anchor id) and the server mints the rank against the full sibling set.
-- **Membership is never a function of the traversal.** The loader's driving
-  relation is the plain drizzle select; the path map is looked *onto* it. A page
-  whose path can't resolve keeps its row (sorted last in its group, by raw `rank`)
-  — dropping it would remove the page from the `[[` picker, breadcrumbs, the story
-  gallery and the blog panel, not merely mis-order the sidebar. (Only corruption
+> **Invariant I-DR.** For each group P (live page rows sharing `page_id`; NULL
+> is the root group), ordering by `doc_rank` equals document order —
+> `docOrderRows` + `compareDocOrder`: rank-ordered DFS pre-order, stopping at
+> nested pages.
+
+**Why a column.** The order used to be minted per load (`Rank.nBetween` over
+every group, on every read), which a routed collection cannot carry: one page
+insert re-keyed every sibling, and dragging a toggle that holds a sub-page moves
+the sub-page without any write to its row. A maintained column turns a reorder
+into an ordinary write of the rows that moved.
+
+**How it is maintained — at the one structural-write chokepoint.**
+
+- **Marks in the lowest-level mutators.** `insertBlocks`, `updateBlockFields`
+  (only when it names `parentId`, `rank`, `type`, `pageId` or `deletedAt` —
+  recording the OLD `page_id` too when it names `pageId`), `trashBlockRoots`,
+  `untrashBlockRoots`, `deleteBlockRoots` and `recomputePageIdSubtree` (old and
+  new `page_id`, via `UPDATE … RETURNING`) record the groups they wrote in a
+  module-private `WeakMap<PageForestTx, Set<scope>>` (`doc-order-dirty.ts`).
+  Every composite writer inherits them; nothing above the mutators knows they
+  exist.
+- **Reconcile in `withPageForest`**, after `fn(ctx)` and before the watermark
+  (`doc-rank.ts`): one partition-scoped `docOrderRows` (the upward CTE, seeded
+  only by the dirty groups' pages), sorted in JS by `compareDocOrder`, then
+  `planDocRanks` (`core/doc-rank.ts`, pure) keeps the longest strictly
+  increasing run of existing keys and re-mints the rest with
+  `Rank.nBetween(prev, next, n)`, and `writeDocRanks` writes only the changes,
+  in one statement. `planDocRanks` throws if its own output is not strictly
+  ascending — there is no unique index to catch a duplicate later.
+- **Cost.** A data-only write (the typing projection, a rename, an icon, a fold)
+  marks nothing: **0 queries**. A structural op in a page with no sub-pages: one
+  indexed CTE returning nothing. A drag that reorders k sub-pages: one UPDATE of
+  at most k rows.
+- **Boot reconcile** (`onReadyBlocking`, after `database`'s migrations, before
+  the backend serves — `doc-rank-boot.ts`): plans against the global
+  `docOrderRows()`, then re-mints through `withPageForest` over exactly the
+  groups that need it, so the write is re-planned under their locks. A database
+  whose live pages hold no key yet is the one-time **backfill** (silent); any
+  other change is **drift** — a writer that bypassed the marks, or an old backend
+  writing during a hot-swap — repaired and announced on `docRankDriftSink`
+  (`doc-rank-drift-sink.ts`), which `reports/page-doc-rank-drift` files as a
+  `page-doc-rank-drift` report. A sink, never a `reports` import: this barrel
+  is loaded by drizzle-kit through `_blocks`, and `reports/server` throws at
+  module eval outside a backend (`schema-files-loadable`). Idempotent.
+- **`docRank` is `touchedBy: false`**: a re-mint never moves `updated_at`, so a
+  sibling re-spaced around a drag does not jump in Recent pages.
+
+Rules that still hold:
+
+- **`docRank` is never written into `rank`, and never in a request body.**
+  `NewBlockRow` / `BlockColumnChanges` cannot name it, so `writeDocRanks` is its
+  only writer; moves send **positional intent** (an anchor id) and the server
+  mints the rank against the full sibling set. The same row read through
+  `pageBlocks` carries no `docRank` — that resource orders by `rank`, inside one
+  `(parent_id, rank)` space, where it is meaningful.
+- **Membership is never a function of the traversal.** `docOrderRows`' driving
+  relation is the plain select of live page rows; the path CTE is LEFT-joined
+  onto it. A page whose path can't resolve keeps its row (`path: null`, sorted
+  last in its group by raw `rank`) and is still given a key. (Only corruption
   reaches that branch — a live page can never point at a trashed parent.)
 - **Don't move the sort into SQL.** `rank_text` is `TEXT COLLATE "C"`, but a
   recursive CTE can flatten the domain back to plain `text` and revert to locale
-  collation, where `'a' < 'B'` while `Rank.compare` says `'B' < 'a'`.
+  collation, where `'a' < 'B'` while `Rank.compare` says `'B' < 'a'`. (The
+  loader's `ORDER BY doc_rank` is fine: it orders the column itself, not a CTE
+  output.)
+- **A live page with no `doc_rank` is a loud loader error**, naming the row —
+  never minted over at read time. It means a write bypassed the marks; the next
+  structural write in that group, or the next boot, repairs it.
 
 `docRank` derives from **ranks, not content**, so the ~1s `data.text` projection
-re-runs this loader on every keystroke burst for a byte-identical result — empty
-diff, no push.
+of a content block marks nothing and re-mints nothing.
+
+## The page tree is a routed collection (`pagesTree`, key `pages.tree`)
+
+Every live page — `liveCollection("pages.tree", { all: { orderBy: createdAt,
+unbounded } })`, no preload — served by `serveCollection` over the
+`page_blocks` TABLE (`server/internal/page-rows.ts`, the ONE spelling the server
+and the tests compile): `where type = 'page' AND deleted_at IS NULL`, every
+block wire field by name, `docRank` included — bound to `doc_rank` BY NAME.
+The column is nullable (content rows hold NULL) and the binding states no
+non-null claim: the `all` compiler refuses an `expr` that is exactly one
+column, and a base column's nullability is not checked. I-DR keeps it set on
+every live page, and a leaked NULL is caught only where it lands — the row
+schema's `RankSchema` fails the load or refill, so the whole tuple errors
+loudly (the sidebar shows the error) rather than one row sorting anywhere. Readers:
+`useLive(pagesTree)` where they need the whole set (sidebar, `usePageOptions`,
+breadcrumb, delete-action ancestry, Recent pages), `useLiveRow(pagesTree, id)`
+for one page (header, cover, kind control, pane resolvers and titles,
+`useBlockTarget`, the link block, the inline node and the page chips).
+
+- **Order is `createdAt` because it never moves**: a `doc_rank` re-mint is then
+  an in-place refill of the re-minted rows, never an `orderOf`. A surface that
+  renders the tree sorts by `docRank` itself.
+- **Costs**, pinned per step by `server/internal/pages-tree-oracle.test.ts` on
+  the tree oracle: a content block's write (the typing projection) loads
+  nothing; a rename / icon / cover / kind write is that page's refill; a toggle
+  drag refills exactly the pages the reconcile re-minted; a create or restore
+  is one refill and one `orderOf`; a trash an exit after a one-id probe (the
+  `where` reads `deleted_at`).
+- **The key is new** (it was the legacy push resource `pages`), so a tab still
+  running an old bundle is refused `unknown-key` — the skew/Reload prompt — not
+  handed keyed deltas its non-keyed read cannot apply (C39, pinned by the same
+  suite).
+
+`doc-rank.test.ts` is the writer oracle: random op sequences across every
+structural writer (ops, patches, trash/restore, cross-page moves,
+turn-into-page) asserting I-DR against the global `docOrderRows()` after every
+step, plus the depth-2 to-do-under-to-do drag and the 0-query data-only patch.
 
 ## The page column (one owner for the content-left edge)
 
@@ -4056,13 +4149,14 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor.TurnInto` ← `page.turn-into-page`
   - Contributes: `IdKinds.Kind` "block"
   - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×5
     - `primitives/text-editor/caret-trigger` ×5
     - `primitives/css/spacing` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/dom/dom-selection` ×4
+    - `primitives/live-state` ×4
     - `primitives/slot-render` ×4
     - `primitives/undo-redo` ×4
+    - `network/live` ×3
     - `primitives/css/control-panel` ×3
     - `primitives/css/coords` ×3
     - `primitives/multi-select` ×3
@@ -4070,7 +4164,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/text-editor/caret-motion` ×3
     - `reorder` ×3
     - `infra/endpoints` ×2
-    - `network/live` ×2
     - `primitives/latest-ref` ×2
     - `primitives/persistent-draft` ×2
     - `ids.IdKinds`
@@ -4212,7 +4305,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `ids.kind` "block"
     - `resource.declare` "page-blocks"
     - `resource.declare` "page-edited-at"
-    - `resource.declare` "pages"
+    - `resource.declare` "pages.tree"
+    - `resource.declare` "pages.tree:rows"
     - `page.block-data` "page"
     - `page.block-annotation`
   - Uses:
@@ -4228,6 +4322,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `infra/trash._trashEntries`
     - `infra/trash.defineTrashSource`
     - `infra/trash.recordTrashEntry`
+    - `network/live.serveCollection`
     - `network/live.serveValue`
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.rankAdjacentTo`
@@ -4247,6 +4342,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockTrashHook`
     - `CopiedBlock`
     - `DeletedBlockRow`
+    - `DocRankDrift`
     - `PageContentSnapshot`
     - `PageData`
     - `PageForestTx`
@@ -4261,12 +4357,12 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `blockTextServerExtensions`
     - `blockTextServerNodes`
     - `deleteBlocksSubtree`
+    - `docRankDriftSink`
     - `Editor`
     - `liveBlocks`
     - `PAGE_BLOCK_TYPE`
     - `pageData`
     - `PageDataSchema`
-    - `pagesLiveResource`
     - `readPageEditedAt`
     - `renamePage`
     - `resolveBlockAnnotations`
@@ -4280,7 +4376,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Resources:
     - `page-blocks` (push, unbounded: one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window)
     - `page-edited-at` (push)
-    - `pages` (push)
+    - `pages.tree` (keyed)
+    - `pages.tree:rows` (keyed, point)
   - Routes:
     - `GET /api/pages`
     - `GET /api/pages/:pageId/blocks`
@@ -4299,11 +4396,11 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `ids.defineIdKind`
     - `infra/endpoints.defineEndpoint`
     - `infra/trash.TrashOutcomeSchema`
+    - `network/live.liveCollection`
     - `network/live.liveValue`
     - `primitives/collab-doc.readYDoc`
     - `primitives/collab-doc.yDocContent`
     - `primitives/collab-doc.yDocFromLexical`
-    - `primitives/live-state.resourceDescriptor`
     - `primitives/rank.Rank`
     - `primitives/rank.RankSchema`
     - `primitives/text-editor/token-extension.InlineTokenExtension`
@@ -4436,7 +4533,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `PageRowSchema`
     - `PAGES_TRASH_SOURCE`
     - `pageSourcesOf`
-    - `pagesResource`
+    - `pagesTree`
     - `parseInlineMarkdown`
     - `parseMarkdownToForest`
     - `parseTagLine`
@@ -4487,11 +4584,11 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `xmlTextContentLength`
     - `xmlTextToRuns`
 - Cross-plugin:
-  - Imported by: 72 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 73 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `page` ×56
     - `apps` ×8
+    - `reports` ×4
     - `active-data` ×3
-    - `reports` ×3
     - `primitives` ×2
   - Extended by:
     - `apps/pages/auto-icon` (table `editor_ext_auto_icon`)
@@ -4501,7 +4598,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Endpoint callers: `editor-collab`
 - Exemptions:
   - Exempts itself from:
-    - `live/no-legacy-resource-spelling` — `core/resources.ts`, `server/internal/resources.ts`, `web/components/page-options.tsx` (debt)
     - `page-editor/no-adhoc-forest-write` — `server/internal/forest-writer.ts` (sanctioned)
     - `page-editor/no-adhoc-doc-write` — `web/__tests__`, `web/internal/block-text-write.ts`, `web/internal/live-state-yjs-provider.ts`, `web/internal/local-yjs-provider.ts` (sanctioned)
     - `page-editor/no-unfiltered-blocks-read` — `server/internal/forest-writer.ts`, `server/internal/handle-patch-blocks.ts`, `server/internal/live-blocks.ts`, `server/internal/page-forest.ts`, `server/internal/trash-blocks.ts` (sanctioned)

@@ -1,4 +1,3 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { defineTrashSource } from "@plugins/infra/plugins/trash/server";
 import { IdKinds } from "@plugins/ids/server";
@@ -16,7 +15,7 @@ import { handleSetPageKind } from "./internal/handle-set-page-kind";
 import { handleApplyBlockOp } from "./internal/handle-apply-block-op";
 import { handlePatchBlocks } from "./internal/handle-patch-blocks";
 import {
-  pagesLiveResource,
+  pagesTreeServed,
   pageBlocksServed,
   pageEditedAtServed,
 } from "./internal/resources";
@@ -27,6 +26,7 @@ import {
 import { blocksChanged } from "./internal/tables-events";
 import { Editor } from "./internal/block-registry";
 import { resolvePageTitleAnnotations } from "./internal/page-title-annotations";
+import { reconcileDocRanksAndAnnounceDrift } from "./internal/doc-rank-drift-sink";
 import {
   pageBlockHandle,
   PAGES_TRASH_SOURCE,
@@ -52,7 +52,6 @@ export { _blocks } from "./internal/tables";
 // the predicate never spelled). `_blocks` itself is for the trash machinery —
 // `page-editor/no-unfiltered-blocks-read` flags any other read of it.
 export { liveBlocks } from "./internal/live-blocks";
-export { pagesLiveResource } from "./internal/resources";
 export { blocksChanged } from "./internal/tables-events";
 export type { BlocksChangedPayload } from "./internal/tables-events";
 export { BlockLifecycle } from "./internal/document-hooks";
@@ -67,6 +66,11 @@ export type {
   DeletedBlockRow,
 } from "./internal/document-hooks";
 export type { PageForestTx } from "./internal/page-forest";
+// Where the boot reconcile announces doc-rank drift (`reports/page-doc-rank-drift`
+// files it): a sink, so this barrel — loaded by drizzle-kit through `_blocks` —
+// never imports `reports`.
+export { docRankDriftSink } from "./internal/doc-rank-drift-sink";
+export type { DocRankDrift } from "./internal/doc-rank-drift-sink";
 // The delete chokepoint and its inverse: every block delete is a trash, and a
 // consumer that trashed through the chokepoint restores through this.
 export { deleteBlocksSubtree } from "./internal/trash-blocks";
@@ -111,6 +115,15 @@ export {
 
 export default {
   description: "Block-based document editor — tables, routes, and live state.",
+  // Bring every sidebar group's `doc_rank` to document order before this
+  // backend serves: the first boot of a database backfills the column, and any
+  // later boot that still finds work has found a writer that bypassed the
+  // doc-order marks — repaired here, and announced on `docRankDriftSink`.
+  // After `database`'s barrier (a `dependsOn` edge), so the column exists;
+  // idempotent.
+  async onReadyBlocking() {
+    await reconcileDocRanksAndAnnounceDrift();
+  },
   httpRoutes: {
     [listPages.route]: handleListPages,
     [listBlocks.route]: handleListBlocks,
@@ -147,7 +160,7 @@ export default {
   ],
   contributions: [
     IdKinds.Kind({ kind: blockIdKind }),
-    Resource.Declare(pagesLiveResource),
+    ...pagesTreeServed.declare,
     ...pageBlocksServed.declare,
     ...pageEditedAtServed.declare,
     // `page` is owned here, not by the `sub-page` renderer: page rows are written

@@ -1,15 +1,13 @@
 import { type ReactElement } from "react";
-import {
-  ResourceErrorInline,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   Breadcrumb,
   type BreadcrumbSegment,
 } from "@plugins/primitives/plugins/breadcrumb/web";
 import {
-  pagesResource,
+  pagesTree,
   pageData,
   type Block,
 } from "@plugins/page/plugins/editor/core";
@@ -57,7 +55,8 @@ export function PageBreadcrumb({
   leaf?: BreadcrumbSegment;
 }): ReactElement | null {
   const openPane = useOpenPane();
-  const result = useResource(pagesResource);
+  // The whole set: the trail walks the `pageId` chain up through it.
+  const result = useLive(pagesTree);
   if (result.status === "loading") return null;
   if (result.status === "error") {
     return (

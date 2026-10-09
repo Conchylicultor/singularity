@@ -292,8 +292,7 @@ function resolveForm<Data, Vars>(
     };
   }
   // A collection's `{ ids }` read: the `:rows` point sibling at the canonical
-  // encoding of the id set. That descriptor carries a `[]` placeholder for its
-  // legacy readers; this form never takes it as a base.
+  // encoding of the id set.
   const rows = (source as LiveCollection<unknown, unknown, string>).rows;
   return {
     resource: rows as unknown as ResourceDescriptor<
@@ -483,13 +482,14 @@ function useOptimisticCore<Data, Vars>(
       if (JSON.stringify(event.query.queryKey) !== targetKey) return;
       // A cache "updated" event does NOT mean a value arrived: query-core emits
       // one for EVERY state action (`fetch`, `error`, `invalidate`, `setState`,
-      // …), all of which leave `state.data` untouched — for a collection's
-      // `:rows` read, often still its `[]` placeholder. Only the `success`
-      // action bumps `dataUpdateCount`, so an increase is the exact "a push
-      // landed" signal.
+      // …), all of which leave `state.data` untouched — still `undefined`
+      // before the first value, or the previous snapshot after it. Only the
+      // `success` action bumps `dataUpdateCount`, so an increase is the exact
+      // "a push landed" signal.
       // Ungated, a plain refetch or invalidate would (a) coarse-confirm every
-      // resolved op, (b) content-confirm an op against a placeholder base (an
-      // empty base "reflects" a remove), and (c) charge a divergence MISS for a
+      // resolved op, (b) content-confirm an op against a snapshot the push has
+      // not moved (an op the server has not applied yet would read as absorbed
+      // or denied against stale truth), and (c) charge a divergence MISS for a
       // snapshot that never arrived — filing bogus stalled reports.
       //
       // `dataUpdateCount` is monotonic for a query's lifetime, and `useResource`
@@ -578,14 +578,12 @@ function useOptimisticCore<Data, Vars>(
           // is the only push this write will ever generate.
           //
           // `state.data` is only a SNAPSHOT once an authoritative value has
-          // landed. Before the first push it is the descriptor's placeholder, if
-          // it has one (a collection's `:rows` seeds `[]`; a params re-baseline
-          // can resolve an op before the new tuple's base lands) — which
-          // `isConfirmedBy` would happily accept (an empty base "reflects" a
-          // remove, and vacuously absorbs an update-only patch), dropping the
-          // op against data the server never sent. `dataUpdatedAt`
-          // is 0 until the first real write (`useResource` derives its own
-          // `pending` flag from exactly this), so gate on it.
+          // landed (a params re-baseline can resolve an op before the new
+          // tuple's base lands). Confirming against anything else — an empty
+          // base "reflects" a remove, and vacuously absorbs an update-only
+          // patch — would drop the op against data the server never sent.
+          // `dataUpdatedAt` is 0 until the first real write (`useResource`
+          // derives its own `pending` flag from exactly this), so gate on it.
           const state = queryClient.getQueryState<Data>(queryKeyRef.current);
           const hasAuthoritative = (state?.dataUpdatedAt ?? 0) > 0;
           const next = resolvePass(

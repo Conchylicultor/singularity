@@ -1,9 +1,16 @@
 /**
- * Real-DB suite for the `pages` loader's derived document order (`docRank`).
- * Headless — drives the db-parametrized `loadPages` / `docOrderPaths` against a
- * throwaway Postgres (db-test-fixture) with the REAL migration chain, so the
- * `page_blocks` self-FK and the partial unique rank indexes are exactly what
- * production applies.
+ * Real-DB suite for the sidebar's document order (`docRank`): the order
+ * `docOrderRows` derives and the `doc_rank` column the reconcile stores from
+ * it, read back through `loadPages`. Headless — drives the db-parametrized
+ * functions against a throwaway Postgres (db-test-fixture) with the REAL
+ * migration chain, so the `page_blocks` self-FK and the partial unique rank
+ * indexes are exactly what production applies.
+ *
+ * The seeds and the corruption shapes below write `page_blocks` by hand,
+ * bypassing the chokepoint's doc-order marks on purpose, so every read goes
+ * through {@link orderedPages}: the boot reconcile first (what a backend does
+ * before it serves), then the loader. The writers' own maintenance of the
+ * column is `doc-rank.test.ts`'s oracle.
  *
  * Run: `bun test plugins/page/plugins/editor/server/internal/page-doc-order.test.ts`
  * (requires the running embedded cluster — `./singularity build` first).
@@ -28,7 +35,8 @@ import {
   type EntryContext,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { getReadSetIndex } from "@plugins/framework/plugins/server-core/core/testing";
-import { pagesResource } from "../../core/resources";
+import { compileCollection } from "@plugins/network/plugins/live/server/testing";
+import { pagesTree } from "../../core/resources";
 import {
   createTestDb,
   type TestDb,
@@ -47,7 +55,9 @@ import { _blocks } from "./tables";
 import { Editor } from "./block-registry";
 import { parseBlockData } from "./parse-block-data";
 import { docOrderPaths } from "./page-doc-order";
+import { reconcileDocRanksAtBoot } from "./doc-rank-boot";
 import { loadPages } from "./resources";
+import { pageRowsServeOptions } from "./page-rows";
 
 // Stand-ins for the content block types the seeds nest sub-pages under. The
 // concrete `page/text` + `page/toggle` plugins import THIS plugin, so importing
@@ -126,9 +136,18 @@ async function seedBlock(args: {
   });
 }
 
+/**
+ * The loader's rows after the boot reconcile has brought the hand-written
+ * state to invariant I-DR — what a backend serves.
+ */
+async function orderedPages(): Promise<Awaited<ReturnType<typeof loadPages>>> {
+  await reconcileDocRanksAtBoot(t.db);
+  return loadPages(t.db);
+}
+
 /** Page ids in the loader's array order, restricted to one sidebar group. */
 async function orderIn(pageId: string | null): Promise<string[]> {
-  const rows = await loadPages(t.db);
+  const rows = await orderedPages();
   return rows.filter((r) => r.pageId === pageId).map((r) => r.id);
 }
 
@@ -190,14 +209,14 @@ describe("document order across rank spaces", () => {
   });
 
   test("docRank is strictly ascending in array order within a group", async () => {
-    const rows = (await loadPages(t.db)).filter((r) => r.pageId === "W");
+    const rows = (await orderedPages()).filter((r) => r.pageId === "W");
     for (let i = 1; i < rows.length; i++) {
       expect(Rank.compare(rows[i - 1]!.docRank, rows[i]!.docRank)).toBe(-1);
     }
   });
 
   test("docRank is unique within a group even where raw rank collides", async () => {
-    const rows = (await loadPages(t.db)).filter((r) => r.pageId === "W");
+    const rows = (await orderedPages()).filter((r) => r.pageId === "W");
     // The precondition this whole change exists for.
     expect(rows.filter((r) => r.rank.toString() === "a1")).toHaveLength(2);
     const docRanks = rows.map((r) => r.docRank.toString());
@@ -205,17 +224,17 @@ describe("document order across rank spaces", () => {
   });
 
   test("docRank derives from ranks, not content — a data.text write yields an identical result", async () => {
-    const before = await loadPages(t.db);
+    const before = await orderedPages();
     await t.db.execute(
       sql`UPDATE page_blocks SET data = '{"text":"typing…"}'::jsonb WHERE id = 'toggle'`,
     );
-    const after = await loadPages(t.db);
+    const after = await orderedPages();
     expect(after.map((r) => [r.id, r.docRank.toString()])).toEqual(
       before.map((r) => [r.id, r.docRank.toString()]),
     );
   });
 
-  test("a trashed page leaves the group and its docRanks re-mint contiguously", async () => {
+  test("a trashed page leaves the group, the rest keep their order", async () => {
     await flagTrashed("nestedA");
     expect(await orderIn("W")).toEqual(["nestedB", "direct"]);
   });
@@ -224,8 +243,8 @@ describe("document order across rank spaces", () => {
 describe("membership is never a function of the traversal", () => {
   // Hole B. A live page whose ancestor chain is broken (its `parentId` points at
   // a trashed row) must still APPEAR — otherwise it vanishes not just from the
-  // sidebar but from the `[[` picker, breadcrumbs and the story gallery. It is
-  // kept and deterministically placed last in its group.
+  // sidebar but from the `[[` picker and breadcrumbs, and would never be given
+  // a `doc_rank`. It is kept and deterministically placed last in its group.
   test("a page with a broken ancestor chain still appears, sorted last in its group", async () => {
     await seedBlock({
       id: "W",
@@ -305,25 +324,26 @@ describe("cycle guard", () => {
       sql`UPDATE page_blocks SET parent_id = 'cycled' WHERE id = 'x'`,
     );
 
-    const rows = await loadPages(t.db);
+    const rows = await orderedPages();
     expect(rows.map((r) => r.id).sort()).toEqual(["W", "cycled"]);
   });
 });
 
 /**
- * Hole A, and the one test that MUST exist: this failure mode is silent.
+ * Hole A, and the tests that MUST exist: this failure mode is silent.
  *
- * The read-set extractor matches only DOUBLE-QUOTED identifiers
- * (`\b(from|join)\s+"([^"]+)"`, `plugins/database/server/internal/client.ts`).
- * Raw SQL writing `FROM page_blocks` unquoted captures NOTHING — the
- * `page_blocks → pages` edge never registers in `tableToResources()`,
- * `applyLegacyFullChange` early-outs, and the sidebar just stops updating. No error, no
- * log, every other test still green.
+ * A live read that never learns it read `page_blocks` never refreshes — no
+ * error, no log, every other test still green; the sidebar just stops
+ * updating. The page tree is a ROUTED collection now (`pagesTree`), so the
+ * edge is a ROUTE its compile emits, never a loader read-set: pinned first.
  *
- * Capture happens in the instrumented `pool.query` wrapper keyed on the ambient
- * `loader` entry, so this runs the real loader against the REAL worktree DB
- * (read-only — the loader is a pure select) rather than the fixture's own
- * uninstrumented pool.
+ * The raw doc-order CTE is no live read, but the same quoting rule decides
+ * whether any loader built on it keeps its edge. The read-set extractor
+ * matches only DOUBLE-QUOTED identifiers (`\b(from|join)\s+"([^"]+)"`,
+ * `plugins/database/server/internal/client.ts`), and capture happens in the
+ * instrumented `pool.query` wrapper keyed on the ambient `loader` entry, so
+ * that probe runs against the REAL worktree DB (read-only — a pure select)
+ * rather than the fixture's own uninstrumented pool.
  */
 describe("read-set (Hole A)", () => {
   // Inject the recorder's ambient runtime and the read-set sink exactly the way
@@ -344,23 +364,41 @@ describe("read-set (Hole A)", () => {
   // report on every change). Remove what this describe recorded.
   afterAll(() => {
     const index = getReadSetIndex();
-    const mine = [pagesResource.key, "doc-order-paths-probe"];
+    const mine = ["doc-order-paths-probe"];
     const others = Object.keys(index).filter((k) => !mine.includes(k));
     for (const table of new Set(mine.flatMap((k) => index[k] ?? []))) {
       removeReadSetTable(table, others);
     }
   });
 
-  test("the pages loader's read-set contains page_blocks", async () => {
-    await recordEntrySpan("loader", pagesResource.key, () => loadPages());
-    expect(getReadSetIndex()[pagesResource.key]).toContain("page_blocks");
+  test("pages.tree routes every page_blocks column its rows read", () => {
+    const { routes } = compileCollection(pagesTree, pageRowsServeOptions).all
+      .routes;
+    const blocks = routes.filter((r) => r.table === "page_blocks");
+    expect(blocks.length).toBeGreaterThan(0);
+    const columns = new Set(blocks.flatMap((r) => r.columns));
+    // Membership (`type`, `deleted_at`), the order (`created_at`), the stored
+    // document-order key and the payload a rename / icon / kind write moves.
+    for (const column of [
+      "type",
+      "deleted_at",
+      "created_at",
+      "doc_rank",
+      "data",
+    ]) {
+      expect(columns).toContain(column);
+    }
+    // The trash correlation is read by no field: a write of it alone routes
+    // nowhere.
+    expect(columns).not.toContain("trash_entry_id");
+    // Routed, not read-set driven: the key never enters the legacy index.
+    expect(getReadSetIndex()[pagesTree.key]).toBeUndefined();
   });
 
-  // The test above is the CONTRACT, but it cannot discriminate: the drizzle
-  // membership select captures the edge on its own (the belt to the CTE's
-  // braces), so it stays green even if the raw CTE goes unquoted. This one pins
-  // the CTE in isolation — it is what actually fails if `${_blocks}` is ever
-  // "simplified" to a bare `page_blocks`.
+  // That CTE is no live-state loader, but the same quoting rule decides
+  // whether any loader built on it keeps its edge — this pins it in
+  // isolation, failing if `${_blocks}` is ever "simplified" to a bare
+  // `page_blocks`.
   test("docOrderPaths' raw CTE names the table quotably on its own", async () => {
     await recordEntrySpan("loader", "doc-order-paths-probe", () =>
       docOrderPaths(),

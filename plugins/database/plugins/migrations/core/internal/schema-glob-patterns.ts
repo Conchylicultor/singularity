@@ -26,7 +26,8 @@ export const SCHEMA_GLOBS = [
  * This plugin's repo-relative dir — drizzle-kit's cwd for every sanctioned
  * invocation. Re-exported from `../index.ts`: three consumers outside this file
  * need it, two of them in other plugins.
- *   1. `../../check/internal/schema-files-loadable.ts` — the require-probe's cwd.
+ *   1. `./schema-load-probe.ts` — the require-probe's cwd (read by the
+ *      `schema-files-loadable` check and by `generateMigration`).
  *   2. `framework/tooling/plugins/checks/plugins/migrations-in-sync` — spawns
  *      `drizzle-kit generate` from here.
  *   3. `framework/cli/plugins/migrations/cli/migrations.ts` — likewise, for the real build.

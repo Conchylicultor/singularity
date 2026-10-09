@@ -12,7 +12,7 @@ import {
   foldResource,
   ResourceView,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
@@ -51,11 +51,12 @@ async function patchAgent(id: string, patch: Patch) {
 }
 
 export function AgentDetail({ agentId }: { agentId: string }) {
-  const agentsResult = useLive(agentRows);
+  const agentResult = mapRow(useLiveRow(agentRows, agentId), (row) => row);
   return (
-    <ResourceView resource={agentsResult} fallback={<Loading variant="text" />}>
-      {(agents) => {
-        const agent = agents.find((a) => a.id === agentId) ?? null;
+    <ResourceView resource={agentResult} fallback={<Loading variant="text" />}>
+      {(agent) => {
+        // Not in the roster: the pane's resolve guard answers that (the side
+        // pane has none, and keeps the loading state).
         if (!agent) return <Loading />;
         return (
           <AgentDetailInner key={agentId} agentId={agentId} agent={agent} />

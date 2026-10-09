@@ -11,8 +11,8 @@ cannot tell them apart and does not try — the chip asks page-tree's shared
 resolver, `useBlockTarget`, what the id opens:
 
 - a **page** id opens `pageDetailPane` (`page/:pageId`), labelled with the
-  page's title. `pagesResource` answers it for free (already subscribed
-  app-wide, live titles, zero requests) — the common case.
+  page's title. The page's live row in `pagesTree` answers it (live titles,
+  no endpoint request) — the common case.
 - a **content block** id opens `blockDetailPane` (`block/:blockId`) — that block
   and its nested lines as a page of their own — labelled "<page> › <block
   type>". `GET /api/blocks/:id/page` is the reverse lookup, fired only on a
@@ -50,10 +50,9 @@ read-surface chip for a bare id written anywhere active-data renders.
     - `apps/pages/page-tree.useBlockTarget`
     - `apps/pages/page-tree.useBlockTargetTitle`
     - `apps/pages/page-tree.useOpenBlockTarget`
+    - `network/live.useLiveRow`
     - `page/editor.PageIcon`
     - `primitives/css/link-chip.LinkChip`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
   - Exports (values): `PageLinkChip`
 - Server:
@@ -64,8 +63,6 @@ read-surface chip for a bare id written anywhere active-data renders.
     - `active-data/id-chip.idChipServer`
     - `database.db`
     - `page/editor.liveBlocks`
-- Exemptions:
-  - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-link-chip.tsx` (debt)
 - Core:
   - Exports (values): `BLOCK_CHIP_SURFACES`
 

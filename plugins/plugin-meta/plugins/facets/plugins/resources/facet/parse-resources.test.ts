@@ -30,9 +30,10 @@ describe("buildDescriptorIndex", () => {
         all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree" } },
         preload: "boot",
       });
-      export const taskDetailResource = resourceDescriptor<Task | null, { id: string }>(
-        "task-detail", TaskSchema.nullable(), null,
-      );
+      export const taskDetailResource = liveValue("task-detail", {
+        schema: TaskSchema.nullable(),
+        params: ["id"],
+      });
       export const authState = liveValue("auth-state", {
         schema: AuthStateValueSchema,
         origin: "central",
@@ -193,7 +194,7 @@ describe("buildDescriptorIndex", () => {
 
   it("resolves a local (non-exported) const and ignores factory names in strings/comments", () => {
     const src = `
-      const localDesc = resourceDescriptor("local", S, null);
+      const localDesc = liveValue("local", { schema: S });
       // export const commented = liveValue("commented", …)
       const label = "liveValue(\\"fake\\", …)";
     `;
@@ -211,14 +212,12 @@ describe("buildDescriptorIndex", () => {
   });
 
   it("throws on a declaration whose key is not a literal, naming file and expression", () => {
-    const src = `export const hoisted = resourceDescriptor(RESOURCE_KEY, S, null);`;
+    const src = `export const hoisted = liveValue(RESOURCE_KEY, { schema: S });`;
     expect(() =>
       buildDescriptorIndex([file(src, "/repo/plugins/example/core/r.ts")], {
         ownerPlugin: false,
       }),
-    ).toThrow(
-      /\/repo\/plugins\/example\/core\/r\.ts:1: resourceDescriptor\(…\) id/,
-    );
+    ).toThrow(/\/repo\/plugins\/example\/core\/r\.ts:1: liveValue\(…\) id/);
     expect(() =>
       buildDescriptorIndex([file(src)], { ownerPlugin: false }),
     ).toThrow(/RESOURCE_KEY/);
@@ -229,7 +228,7 @@ describe("buildDescriptorIndex", () => {
     // implementation of a factory, not a declaration.
     const src = `
       export function pagedDescriptor(key, rowSchema, opts) {
-        const descriptor = resourceDescriptor(key, z.array(rowSchema), [], opts);
+        const descriptor = liveValue(key, { schema: z.array(rowSchema), ...opts });
         return Object.assign(descriptor, { paged: true });
       }
     `;
@@ -239,7 +238,7 @@ describe("buildDescriptorIndex", () => {
   });
 
   it("skips a factory call not bound to a const rather than raising", () => {
-    const src = `export function make() { return resourceDescriptor(k, S, null); }`;
+    const src = `export function make() { return liveValue(k, { schema: S }); }`;
     expect(buildDescriptorIndex([file(src)], { ownerPlugin: false }).size).toBe(
       0,
     );
@@ -652,7 +651,7 @@ describe("parseRegisterCalls (end to end over runtime sources)", () => {
         row: S, id: "id",
         all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree" } },
       });
-      export const pushesResource = resourceDescriptor<P[]>("pushes", S, []);
+      export const pushesResource = liveValue("pushes", { schema: S });
       export const notifications = liveCollection("notifications", {
         row: S, id: "id", filterable: {}, sortable: ["createdAt"],
         default: { orderBy: [["createdAt", "desc"]], limit: 200 }, maxLimit: 500,

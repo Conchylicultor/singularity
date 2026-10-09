@@ -176,7 +176,8 @@ describe("preloadedKeysIn", () => {
     // A wrapper forwarding a literal preload flag to a factory under a
     // computed key — the shape of a vocabulary owner implementing one.
     const src = `
-      const descriptor = resourceDescriptor<Row[]>(key, z.array(rowSchema), [], {
+      const descriptor = liveValue(key, {
+        schema: z.array(rowSchema),
         preload: "boot",
       });
     `;
@@ -184,7 +185,7 @@ describe("preloadedKeysIn", () => {
       preloadedKeysIn(src, "descriptor.ts", { ownerPlugin: true }),
     ).toEqual([]);
     expect(() => preloadedKeysIn(src, "descriptor.ts", NOT_OWNER)).toThrow(
-      /descriptor\.ts:2: resourceDescriptor/,
+      /descriptor\.ts:2: liveValue/,
     );
   });
 
@@ -193,20 +194,16 @@ describe("preloadedKeysIn", () => {
     // kept its own four-name list and the bounded factories were never added, so
     // a preloaded resource under `apps/plugins/**` silently stayed deferred.
     const src = `
-      export const pagesResource = resourceDescriptor<T[]>(
-        "pages", S, [], { preload: "boot" },
-      );
       export const unread = liveValue("unread", { schema: S, preload: "boot-and-keep" });
       export const tasks = liveCollection("tasks", {
         row: S, id: "id",
         all: { orderBy: [["rank", "asc"]], unbounded: { reason: "the task tree" } },
         preload: "boot",
       });
-      export const quietResource = resourceDescriptor<Q>("quiet", S, null);
-      export const offResource = resourceDescriptor<Q>("off", S, null, { preload: "none" });
+      export const quiet = liveValue("quiet", { schema: S });
+      export const off = liveValue("off", { schema: S, preload: "none" });
     `;
     expect(preloadedKeysIn(src, "a.ts", NOT_OWNER)).toEqual([
-      "pages",
       "unread",
       "tasks",
     ]);
@@ -283,14 +280,10 @@ describe("preloadedKeysIn", () => {
     );
   });
 
-  test("throws on a liveValue or old factory whose preload is not a literal", () => {
+  test("throws on a liveValue whose preload is not a literal", () => {
     const value = `export const v = liveValue("v", { schema: S, preload: mode });`;
     expect(() => preloadedKeysIn(value, "v.ts", NOT_OWNER)).toThrow(
       /v\.ts:1: liveValue\(…\) `preload:` is not a static string literal — got `mode`/,
-    );
-    const old = `export const r = resourceDescriptor("r", S, null, { preload: mode });`;
-    expect(() => preloadedKeysIn(old, "r.ts", NOT_OWNER)).toThrow(
-      /r\.ts:1: resourceDescriptor\(…\) `preload:` is not a static string literal/,
     );
   });
 
@@ -302,21 +295,21 @@ describe("preloadedKeysIn", () => {
   });
 
   test("a factory's own declaration is not a preloaded call", () => {
-    // `opts?: { preload?: ResourcePreload }` is a type position — `preload?:` is
-    // not the `preload:` field the scan reads.
+    // `spec: { …; preload?: ResourcePreload }` is a type position — `preload?:`
+    // is not the `preload:` field the scan reads.
     const src = `
-      export function resourceDescriptor<T>(
-        key: string, schema: ZodParser<T>, initialData: T,
-        opts?: { preload?: ResourcePreload },
-      ): ResourceDescriptor<T> { return d; }
+      export function liveValue<T>(
+        key: string,
+        spec: { schema: ZodParser<T>; preload?: ResourcePreload },
+      ): LiveValue<T> { return d; }
     `;
     expect(preloadedKeysIn(src, "descriptor.ts", NOT_OWNER)).toEqual([]);
   });
 
   test("throws on a preloaded declaration whose key is not a literal", () => {
-    const src = `export const r = resourceDescriptor(RESOURCE_KEY, S, null, { preload: "boot" });`;
+    const src = `export const r = liveValue(RESOURCE_KEY, { schema: S, preload: "boot" });`;
     expect(() => preloadedKeysIn(src, "r.ts", NOT_OWNER)).toThrow(
-      /r\.ts:1: resourceDescriptor/,
+      /r\.ts:1: liveValue/,
     );
     expect(() => preloadedKeysIn(src, "r.ts", NOT_OWNER)).toThrow(
       /RESOURCE_KEY/,
@@ -325,8 +318,8 @@ describe("preloadedKeysIn", () => {
 
   test("ignores a factory call written inside a string or comment", () => {
     const src = `
-      // export const x = resourceDescriptor("commented", S, null, { preload: "boot" });
-      const label = "resourceDescriptor(\\"fake\\", S, null, { preload: \\"boot\\" })";
+      // export const x = liveValue("commented", { schema: S, preload: "boot" });
+      const label = "liveValue(\\"fake\\", { schema: S, preload: \\"boot\\" })";
     `;
     expect(preloadedKeysIn(src, "s.ts", NOT_OWNER)).toEqual([]);
   });
@@ -420,7 +413,7 @@ describe("the scan over a file set", () => {
       {
         [`plugins/${APP}/sync/web/index.ts`]: WEB_ENTRY,
         [`plugins/${APP}/sync/core/resource.ts`]:
-          'export const d = resourceDescriptor("mailSync", S, null, { preload: "boot" });\n',
+          'export const d = liveValue("mailSync", { schema: S, preload: "boot" });\n',
       },
       [`${APP}/sync`],
     );

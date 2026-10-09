@@ -548,8 +548,7 @@ export interface ResourceContract<
    * registration and any read (WS and HTTP alike), so a mismatched sub — a tab
    * running an older bundle after a deploy — is refused as
    * `contract-mismatch` and never registered: no push, revalidate or scoped
-   * recompute ever reruns it. Required so every descriptor factory decides
-   * (the legacy ones state `acceptAnyParams` by name).
+   * recompute ever reruns it. Required so every descriptor factory decides.
    */
   validateParams: (params: ResourceParams) => void;
   /** Phantom — carries `P` for inference, mirroring the client descriptor. */

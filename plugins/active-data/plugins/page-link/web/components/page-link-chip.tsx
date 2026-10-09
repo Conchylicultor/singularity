@@ -1,9 +1,6 @@
-import {
-  foldResource,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
-import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
+import { pagesTree, pageData } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import {
   blockDetailPane,
@@ -20,9 +17,9 @@ import type { IdReferentState } from "@plugins/ids/web";
  * opens the page, a content-block id opens that block as a page of its own (the
  * block view), both as a column beside the surface holding the text.
  *
- * Resolution is page-tree's `useBlockTarget` — a page id answered from the live
- * pages list for free, a content block by one reverse lookup fired only on a
- * miss, so a transcript full of page links costs zero requests.
+ * Resolution is page-tree's `useBlockTarget` — a page id answered from its live
+ * page row, a content block by one reverse lookup fired only on a miss, so a
+ * transcript full of page links costs no lookup.
  *
  * Unresolvable ids render as the plain raw string: the pattern is a guess about
  * prose, and a chip that opens nothing is worse than the text the model wrote.
@@ -36,21 +33,20 @@ export function PageLinkChip({
   const blockId = content.trim();
   const target = useBlockTarget(blockId);
   const title = useBlockTargetTitle(target);
-  const pages = useResource(pagesResource);
+  const opens = target.kind === "page" || target.kind === "block";
+  const page = useLiveRow(pagesTree, opens ? target.pageId : null);
   const open = useOpenBlockTarget();
 
   // Nothing to open, or not resolved yet: the raw string exactly as written,
   // unstyled — a font change would advertise an affordance that isn't there.
   // Until it resolves that is also all we honestly know.
-  if (target.kind !== "page" && target.kind !== "block") return <>{blockId}</>;
-  // A failed pages read is the same: the id is a guess about prose, so the
+  if (!opens) return <>{blockId}</>;
+  // A failed page read is the same: the id is a guess about prose, so the
   // text as written beats an error inside a sentence.
-  const page = foldResource(pages, {
-    loading: () => undefined,
-    error: () => undefined,
-    ready: (list) => list.find((p) => p.id === target.pageId),
-  });
-  if (title === undefined || page === undefined) return <>{blockId}</>;
+  if (page.status === "loading" || page.status === "error") {
+    return <>{blockId}</>;
+  }
+  if (title === undefined || !page.found) return <>{blockId}</>;
 
   return (
     <LinkChip
@@ -65,7 +61,9 @@ export function PageLinkChip({
       }
       // `icon-auto`: the chip's slot owns the glyph size (PageIcon otherwise
       // defaults to a fixed size-4, which would override it).
-      leading={<PageIcon icon={pageData(page).icon} className="icon-auto" />}
+      leading={
+        <PageIcon icon={pageData(page.row).icon} className="icon-auto" />
+      }
     >
       {title}
     </LinkChip>

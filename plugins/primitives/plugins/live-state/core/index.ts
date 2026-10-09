@@ -1,11 +1,9 @@
 export {
-  resourceDescriptor,
   resourceDescriptorByKey,
   registerResourceDescriptor,
 } from "./resource";
 export type {
   ResourceDescriptor,
-  ResourceDescriptorOptions,
   ResourceOrigin,
   ResourcePreload,
 } from "./resource";

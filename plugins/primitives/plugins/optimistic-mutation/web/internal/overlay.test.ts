@@ -800,11 +800,11 @@ describe("resolvePass (the resolve edge)", () => {
   });
 
   test("content-based: an op an EMPTY base would 'confirm' must not confirm on no snapshot", () => {
-    // The `initialData` hazard. `isConfirmedBy([], remove 9)` is TRUE — an empty
-    // base vacuously reflects a removal. The caller must pass `undefined` until
-    // an authoritative snapshot lands (the hook gates on `dataUpdatedAt > 0`);
-    // were the placeholder passed through, this op would be dropped as confirmed
-    // against data the server never sent. Same shape as the page editor's
+    // The stand-in-base hazard. `isConfirmedBy([], remove 9)` is TRUE — an
+    // empty base vacuously reflects a removal. The caller must pass `undefined`
+    // until an authoritative snapshot lands (the hook gates on
+    // `dataUpdatedAt > 0`); were an empty stand-in passed through, this op would
+    // be dropped as confirmed against data the server never sent. Same shape as the page editor's
     // `isReflected([], {kind:"remove"})` and its update-only `isPatchReflected`.
     expect(isConfirmedBy([], { kind: "remove", n: 9 })).toBe(true);
 

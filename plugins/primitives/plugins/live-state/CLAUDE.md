@@ -51,11 +51,10 @@ React Query's `skipToken`, on a per-key skip key), and no pending-mount count; t
 result is `{ pending: true, error: null }`. Public spellings: `useLive(value, null)` and
 `useLiveRow(c, null)` (network/live).
 
-**`initialData` is optional.** It was only ever a typed placeholder seeded at
-`dataUpdatedAt: 0` (always `loading`). A descriptor without one (a `liveValue`, and a
-`liveCollection`'s window, `:rows` and `:groups`) seeds nothing and is still `loading`
-until the first value; its query stays disabled until a value lands, so it makes no
-HTTP fetch on mount (the WS sub-ack fills it). The
+**No descriptor has a placeholder.** Not known yet is a state, never a stand-in
+value: a query holds no data until the first value and reads `loading`
+(`dataUpdatedAt === 0`). A pushed query stays disabled until a value lands, so it
+makes no HTTP fetch on mount (the WS sub-ack fills it). The
 exception is an on-demand descriptor (`load: "on-demand"`, the server's `invalidate`
 mode): its value never rides the socket, so HTTP is its read path and it fetches on
 mount. `load` sits on the shared descriptor so server and client cannot disagree.
@@ -63,13 +62,12 @@ A disabled query is skipped by `invalidateQueries`, so a `sub-error` does not
 invalidate: the client fetches that query directly (`prefetchQuery`, the same
 version-guarded read), and its failure is the query's error — never a read left
 `pending` with no error. It stays in that error until a push, a reconnect replay
-or a `refetch()`: React Query's retry-on-mount does not reach a disabled query
-(a placeholder query used to retry when remounted). The descriptors that still carry a placeholder are the
-two page ones (`pagesResource`, `pageLinksResource`; Resources page item 9), for
-their plain readers only: no optimistic read takes a placeholder.
+or a `refetch()`: React Query's retry-on-mount does not reach a disabled query.
 `useOptimisticResource` reads a declaration (a `liveValue`, or a collection's
 `{ ids }`), whose overlay has no base — and no `dispatch` — until a real value
-lands, so it stays `loading` instead.
+lands, so it stays `loading` instead. (The old `resourceDescriptor` factory and
+its `initialData` placeholder are deleted —
+`research/2026-10-08-global-page-tree-and-agents-routed.md`.)
 
 For non-resource query data there is `hydrateQuery(queryKey, data)` — a raw
 seeder on the same default client. Don't call it with a hand-built key; go
@@ -84,7 +82,7 @@ live-state already sits downstream of endpoints (via log-channels).
 whose length changes over time (network/live's segmented scroll: one window per
 segment), which a hook call per tuple cannot express. Each tuple is read exactly
 as `useResource` reads it — one shared `tupleQueryOptions` builds the query (key,
-HTTP fallback, placeholder rule, GC rule), the same `observe` / `unobserve`
+HTTP fallback, enabled rule, GC rule), the same `observe` / `unobserve`
 refcount (a tuple another component also reads is subscribed once), the same
 cold-start prime, the same pending-mount count until its first value, the same
 once-per-tuple mount→settle report (one shared `reportTupleSettled` feeds
@@ -163,10 +161,9 @@ pacing.
 **Recovery resubs never echo state** (`forceFullResub`): a delta with no base or
 with drift clears the etag AND resets `version`/`lastAckVersion` to -1 before
 sending a version-less sub. "No base" means no server-vouched value
-(`hasAppliedValue`), never merely an `undefined` cache: a placeholder
-(`initialData`) is not a base, and a scoped delta merged onto it — which another
-tab's subscription on the shared socket can draw before this tab's sub-ack —
-would settle the read on a false empty list. The baseline reset is load-bearing — the broken
+(`hasAppliedValue`), never merely a defined cache: a scoped delta merged onto
+anything else — which another tab's subscription on the shared socket can draw
+before this tab's sub-ack — would settle the read on a false partial list. The baseline reset is load-bearing — the broken
 delta already advanced `entry.version` (the guard adopts before dispatch), so
 without it the recovery sub-ack at that same version would be `<=`-dropped and
 the cache would never heal (pinned by the "BUG A" tests).
@@ -211,7 +208,7 @@ registered, so the apply paths can parse safely — dropping the gate reintroduc
 the "no schema registered for key=…" crash (pinned by the `no-sub gate` test).
 
 **`entry.version`/`etag` must always name a value THIS tab currently holds** —
-the WS twin of `fetchOverHttp`'s never-settle-with-a-placeholder rule, gated on
+the WS twin of `fetchOverHttp`'s never-settle-unvouched rule, gated on
 the same `hasAppliedValue` predicate at three points: `handleServerMessage`
 ignores a value-less `up-to-date` for a never-applied entry, and
 `replaySubs`/`sendSub` echo `version`/`etag` only when backed by a cached value.
@@ -237,7 +234,7 @@ legacy frame won't match a live sub → safe drop). When the entry exists the
 client records a contract refusal (`noteContractRefusal`) and calls
 `fetchAfterSubError`: the HTTP fallback read runs on that query —
 `prefetchQuery`, which, unlike `invalidateQueries`, also reaches a query
-disabled for lack of a placeholder — and **its own outcome** sets `q.error` (the
+disabled until its first value — and **its own outcome** sets `q.error` (the
 failed read's typed JSON body — 500 `loader-failed`, 404 `unknown-key`, 409
 `contract-mismatch` — surfaces as `ResourceHttpError` with `reason` /
 `verdict`) or heals a transient failure — reusing the single existing error
@@ -333,10 +330,10 @@ server keeps strict-`<` byte-for-byte):
    baseline to -1 before any WS frame applies, so a post-adopt frame can't
    mis-compare.
 
-**Never settle with a placeholder (`ResourceStaleReadError`).** On a drop (or a
-`304`), `hasAppliedValue(key, params)` (`dataUpdatedAt !== 0`; `initialData` is
-seeded at `0`) decides: already applied ⇒ return the cached value; **never-applied**
-⇒ **throw** a typed `ResourceStaleReadError`. Never return the placeholder — RQ
+**Never settle unvouched (`ResourceStaleReadError`).** On a drop (or a
+`304`), `hasAppliedValue(key, params)` (`dataUpdatedAt !== 0`) decides: already
+applied ⇒ return the cached value; **never-applied**
+⇒ **throw** a typed `ResourceStaleReadError`. Never return an unvouched value — RQ
 would mark the queryFn a success and settle a value the server never vouched for
 (the "Close (state unknown)" wedge) — and never apply the stale body, which could
 render old-boot data under destructive buttons. The throw drives RQ's `retry: 1`;
@@ -398,8 +395,8 @@ frame can no longer be backed by a pre-commit read):
 
 ## Descriptor registry (`resourceDescriptorByKey`)
 
-Every descriptor factory (`resourceDescriptor`, and `network/live`'s
-`liveValue` / `liveCollection`) self-registers its result into a module-level
+Every descriptor factory (`network/live`'s `liveValue` / `liveCollection`)
+self-registers its result into a module-level
 key→descriptor map at **descriptor-module evaluation time** (the factory call runs
 on import, before first paint); `resourceDescriptorByKey(key)` reads it back.
 boot-snapshot uses it to resolve the snapshot's boot-critical keys to their client
@@ -642,7 +639,7 @@ Every *other* git failure still throws.
 
 The resource-payload form of the repo-wide `api-design` rule "Failure must be a
 type, not an absorbable value". "Not loaded yet" is never an `unresolved(…)`: a
-`liveValue` has no placeholder, so it is `loading` until the first value.
+read is `loading` until the first value.
 
 ## Readiness gates — every state gets its own answer
 
@@ -726,7 +723,7 @@ useInfiniteQueryResource({ queryKey, queryFn, initialPageParam, getNextPageParam
 
 All three — and `useResource` itself — map (data, error) through one
 `queryResult` (`web/query-result.ts`; `useResource` passes its own "a value
-landed" flag so the `initialData` placeholder stays `loading`): `error` whenever the last
+landed" flag, because a selector may answer `undefined` for a landed value): `error` whenever the last
 fetch failed (the previous value as `stale`), `loading` while nothing landed,
 `ready` otherwise; the failure goes through `toResourceError` (an
 `EndpointError` 404 → `not-found`, other status → `loader-failed`). `enabled`
@@ -771,9 +768,8 @@ pass `gate: true` (next section).
 
 ## Slice selectors (`useResource(resource, params, { select })`)
 
-**`useResource`, and `useLive(all, { select })`** — the two page resources'
-readers (Resources page item 9) and a collection declared `all` (its
-whole set held in one tuple; `network/live`, always `gate: true`). A window or
+**`useResource`, and `useLive(all, { select })`** — a collection declared `all`
+(its whole set held in one tuple; `network/live`, always `gate: true`). A window or
 value `useLive` has no `select`: one row of a collection is `useLiveRow(c, id)`
 (a point read, so a change elsewhere never reaches it), and a derivation of a
 value is a `useMemo` over its settled data.
@@ -806,7 +802,9 @@ present (plain `useResource` is byte-for-byte unchanged):
   `notifyOnChangeProps` is an explicit list.
 
 Caveat: with `select`, the read turns `ready` **silently** (no re-render) if
-the selected slice is identical across the initialData→first-real-data boundary.
+the selected slice is identical across the no-value→first-value boundary — a
+selector answering `undefined` for the first value (the query held no data
+before it).
 Harmless for point lookups — the caller sees the same value either way. Pass a
 **stable** selector (`useCallback`) so it is not re-run every render.
 
@@ -831,7 +829,7 @@ already cached — boot-hydrated, or held by another observer — renders ONCE,
 narrowed, on its first render; a params change re-gates exactly when the new
 tuple has no value yet; and there is no settle effect whose `setState` costs a
 render. Only the notifications are gated: the selector runs on every render
-(placeholder included), so the slice is always the current tuple's — a
+so the slice is always the current tuple's — a
 selector switched off and on across a params change let React Query hand back
 the slice it had memoized for the PREVIOUS tuple. Pinned by
 `web/__tests__/use-resource-gate-latch.test.tsx`.
@@ -957,16 +955,16 @@ keeps every row's identity rather than re-minting each moved row.
     - `useResourceContractMismatches`
     - `useResources`
 - Cross-plugin:
-  - Imported by: 197 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×50
-    - `conversations` ×39
+  - Imported by: 194 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×49
+    - `conversations` ×38
     - `ui` ×22
     - `tasks` ×18
     - `debug` ×11
     - `page` ×11
     - `primitives` ×9
-    - `active-data` ×6
     - `infra` ×6
+    - `active-data` ×5
     - `auth` ×4
     - `build` ×4
     - `plugin-meta` ×3
@@ -990,7 +988,6 @@ keeps every row's identity rather than re-minting each moved row.
     - `PointResourceDescriptor`
     - `Resolvable`
     - `ResourceDescriptor`
-    - `ResourceDescriptorOptions`
     - `ResourceErrorKind`
     - `ResourceOrigin`
     - `ResourcePreload`
@@ -1004,7 +1001,6 @@ keeps every row's identity rather than re-minting each moved row.
     - `registerResourceDescriptor`
     - `resolvableSchema`
     - `resolved`
-    - `resourceDescriptor`
     - `resourceDescriptorByKey`
     - `ResourceError`
     - `tolerantEnum`

@@ -1,13 +1,11 @@
 import type { Ref, RefObject } from "react";
-import {
-  useResource,
-  ResourceView,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
-  pagesResource,
+  pagesTree,
   pageData,
   updateBlock,
   type Block,
@@ -44,20 +42,22 @@ export function PageHeader({
   /** The title's own caret surface, so the body can hand the caret back up. */
   titleRef?: Ref<CaretSurface>;
 }) {
-  const result = useResource(pagesResource);
+  // The page's own row; a page the set does not hold renders the header with
+  // nothing to add to (`page` undefined).
+  const result = mapRow(
+    useLiveRow(pagesTree, pageId),
+    (row): Block | undefined => row ?? undefined,
+  );
   return (
     <ResourceView resource={result} fallback={<Loading variant="rows" />}>
-      {(pages) => {
-        const page = pages.find((d) => d.id === pageId);
-        return (
-          <PageHeaderInner
-            pageId={pageId}
-            page={page}
-            body={body}
-            titleRef={titleRef}
-          />
-        );
-      }}
+      {(page) => (
+        <PageHeaderInner
+          pageId={pageId}
+          page={page}
+          body={body}
+          titleRef={titleRef}
+        />
+      )}
     </ResourceView>
   );
 }

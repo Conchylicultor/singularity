@@ -12,14 +12,29 @@ drag-reparent behavior. Do not reintroduce it; see
 `plugins/primitives/plugins/data-view/CLAUDE.md` § State split and
 `research/2026-07-28-global-tree-collapse-state-as-view-state.md`.
 
-## The roster is one live value
+## The roster is an `all` collection over the `agents` table
 
-`agentRows` (`shared/resources.ts`, key `"agents"`, `preload: "boot"`) is a
-`liveValue` of every `agents_v` row, served whole by `agentRowsServed`
-(`serveValue({ source: "db", unbounded: { reason } })`) and read with
-`useLive(agentRows)`. It is a value, not a `liveCollection`, on purpose: the
-sidebar renders the whole tree, the roster grows only by hand, and `agents_v` is
-a view with a computed `isFolder` that `serveCollection` cannot bind.
+`agentRows` (`shared/resources.ts`, key `"agents.roster"`, `preload: "boot"`)
+is the whole ordered roster (`rank`, then `createdAt`), served by
+`serveCollection(agentRows, agentRowsServeOptions)`
+(`server/internal/agent-rows.ts`, the one spelling the server and the tests
+compile) over the `agents` TABLE — never `agents_v`: every row field binds to
+its column by name, and `isFolder` is an `expr` of `prompt IS NULL`, the
+definition `agents_v.is_folder` spells. The sidebar and the avatars' lookups
+read it whole with `useLive(agentRows)`; a pane that names one agent reads
+`useLiveRow(agentRows, id)` (`:rows`).
+
+- **What a write costs.** A rename, a prompt / model / avatar edit or a
+  reparent is that row's refill; a rank move the refill and one `orderOf`; an
+  insert an entrant, a delete an exit; a write to any other table (launches,
+  the task tree) nothing. Pinned by
+  `server/internal/agents-roster-oracle.test.ts` on tasks-core's tree oracle,
+  which also holds the compiled set equal to `agents_v` row for row and in
+  order (the five REST handlers still read the view).
+- **The key was renamed** from the value `agents`: a tab on an older bundle
+  subscribing `agents` gets `unknown-key` (the skew / Reload prompt) instead of
+  keyed deltas its non-keyed read cannot apply, and the old key's L2 row is
+  swept as unusable. The same oracle file pins the `unknown-key`.
 
 ## Launches are an `all` collection over a rollup
 
@@ -87,12 +102,13 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `Item.Avatar` → `AgentAvatarRow`
     - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
     - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-  - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×7
+  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×8
     - `primitives/avatar` ×4
     - `primitives/collapsible` ×4
     - `primitives/live-state` ×4
     - `conversations/conversation-ui/item` ×3
+    - `network/live` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/data-view` ×3
     - `primitives/css/spacing` ×2
@@ -104,7 +120,6 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `fields/avatar/table.avatarFieldDef`
     - `ids.IdKinds`
     - `infra/endpoints.fetchEndpoint`
-    - `network/live.useLive`
     - `primitives/app-shell.opensPane`
     - `primitives/css/center.Center`
     - `primitives/css/placeholder.Placeholder`
@@ -133,17 +148,17 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `ids.kind` "launch"
     - `resource.declare` "agent-launches"
     - `resource.declare` "agent-launches:rows"
-    - `resource.declare` "agents"
+    - `resource.declare` "agents.roster"
+    - `resource.declare` "agents.roster:rows"
     - `derived-view` "agents_v"
     - `derived-table` "task_latest_conversation"
     - `taskCategory` "agents"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/rank` ×4
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×4
+    - `primitives/rank` ×3
     - `database/sql-projection` ×2
     - `ids` ×2
     - `infra/endpoints` ×2
-    - `network/live` ×2
     - `tasks/task-category` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
     - `conversations.createConversation`
@@ -154,6 +169,7 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `database.db`
     - `infra/attachments.Attachments`
     - `infra/claude-cli/availability.assertClaudeCodeReady`
+    - `network/live.serveCollection`
     - `ui/icons/sprites.defineSavedIconSource`
   - DB schema:
     - `plugins/conversations/plugins/agents/server/internal/rollup-table.ts`
@@ -176,7 +192,8 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
   - Resources:
     - `agent-launches` (keyed)
     - `agent-launches:rows` (keyed, point)
-    - `agents` (push, unbounded: the user's hand-written agent roster (agents_v) — the Agents sidebar renders the whole tree; grows only by hand)
+    - `agents.roster` (keyed)
+    - `agents.roster:rows` (keyed, point)
   - Routes:
     - `GET /api/agents`
     - `POST /api/agents`

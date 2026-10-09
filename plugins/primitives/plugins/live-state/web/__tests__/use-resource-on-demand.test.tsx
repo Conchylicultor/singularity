@@ -1,5 +1,5 @@
 /**
- * A placeholder-less descriptor (a `liveValue`) waits for the WS sub-ack to
+ * A pushed descriptor (a `liveValue`) waits for the WS sub-ack to
  * fill its cache — its HTTP `queryFn` is only the fallback, so the query stays
  * disabled until a value lands. An on-demand descriptor (`load: "on-demand"`,
  * the server's `invalidate` mode) never gets that value over the socket: HTTP is
@@ -77,7 +77,7 @@ function mount<R>(
   return { ...rendered, fetchOverHttp };
 }
 
-describe("useResource — placeholder-less descriptors", () => {
+describe("useResource — pushed and on-demand descriptors", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("an on-demand value is read over HTTP on mount and settles", async () => {

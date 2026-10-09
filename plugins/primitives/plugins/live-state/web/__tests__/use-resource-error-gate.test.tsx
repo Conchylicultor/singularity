@@ -47,14 +47,14 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import {
   ResourceError,
-  resourceDescriptor,
+  type ResourceDescriptor,
 } from "@plugins/primitives/plugins/live-state/core";
 
-const rowsResource = resourceDescriptor<number[]>(
-  "test.error-gate.rows",
-  z.array(z.number()),
-  [],
-);
+const rowsResource: ResourceDescriptor<number[]> = {
+  key: "test.error-gate.rows",
+  schema: z.array(z.number()),
+  validateParams: () => {},
+};
 const rowsKey = queryKeyFor(rowsResource.key, undefined);
 
 function makeClient(): QueryClient {

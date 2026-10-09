@@ -31,8 +31,8 @@ export const LiveStateStaleDropPayloadSchema = z.object({
   // Which fetch path dropped the body: `prime` (best-effort sub-ack prime) or
   // `fallback` (the WS-down HTTP fallback refetch).
   source: z.enum(["prime", "fallback"]),
-  // The wedge discriminator: true when the query still holds only its
-  // placeholder `initialData` (never settled by a server-vouched value). A
+  // The wedge discriminator: true when the query has never settled on a
+  // server-vouched value (`dataUpdatedAt` still at epoch 0). A
   // never-applied drop is the "Close (state unknown)" wedge; an applied one is a
   // benign transient (the cache already holds newer truth).
   neverApplied: z.boolean(),

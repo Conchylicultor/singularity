@@ -1,4 +1,7 @@
 export { liveCollection } from "./internal/live-collection";
+// Whether a point id set can carry an id (non-empty, comma-free) — what
+// `useLiveRow` answers `found: false` for instead of encoding.
+export { isPointId } from "./internal/window-descriptor";
 export type { LiveColumnRef, LiveColumnRefOwner } from "./internal/column-ref";
 export {
   liveArmColumns,

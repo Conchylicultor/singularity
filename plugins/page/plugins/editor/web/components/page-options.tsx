@@ -5,10 +5,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   mapResource,
-  useResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
-import { pagesResource, pageData, type Block } from "../../core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { pagesTree, pageData, type Block } from "../../core";
 import { PageIcon } from "./page-icon";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -25,7 +25,7 @@ export type PageOptionsResult = ResourceResult<PageOption[]>;
 /**
  * Ordered picker options for a query: pages whose title matches, followed by an
  * optional "Create '<query>'" row when `allowCreate` and the query is non-empty.
- * Backed by the live `pagesResource`, so the full list is always in memory and
+ * Backed by the live `pagesTree` set, so the full list is always in memory and
  * filtering is local. Shared by the page-link block picker and the inline `[[`
  * typeahead so both surfaces stay identical.
  *
@@ -37,7 +37,7 @@ export function usePageOptions(
   query: string,
   opts?: { allowCreate?: boolean },
 ): PageOptionsResult {
-  const resourceResult = useResource(pagesResource);
+  const resourceResult = useLive(pagesTree);
   const allowCreate = opts?.allowCreate ?? false;
   return useMemo(
     () =>

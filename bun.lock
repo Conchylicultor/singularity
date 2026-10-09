@@ -5275,6 +5275,10 @@
       "name": "@singularity/plugin-reports-outbox",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/page-doc-rank-drift": {
+      "name": "@singularity/plugin-reports-page-doc-rank-drift",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/page-undo-conflict": {
       "name": "@singularity/plugin-reports-page-undo-conflict",
       "version": "0.0.1",
@@ -8892,6 +8896,8 @@
     "@singularity/plugin-reports-optimistic-rejection": ["@singularity/plugin-reports-optimistic-rejection@workspace:plugins/reports/plugins/optimistic-rejection"],
 
     "@singularity/plugin-reports-outbox": ["@singularity/plugin-reports-outbox@workspace:plugins/reports/plugins/outbox"],
+
+    "@singularity/plugin-reports-page-doc-rank-drift": ["@singularity/plugin-reports-page-doc-rank-drift@workspace:plugins/reports/plugins/page-doc-rank-drift"],
 
     "@singularity/plugin-reports-page-undo-conflict": ["@singularity/plugin-reports-page-undo-conflict@workspace:plugins/reports/plugins/page-undo-conflict"],
 

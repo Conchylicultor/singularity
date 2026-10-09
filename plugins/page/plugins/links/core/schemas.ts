@@ -29,11 +29,12 @@ export const BacklinkRowSchema = z.object({
 });
 export type BacklinkRow = z.infer<typeof BacklinkRowSchema>;
 
-// One raw (source page → target page) edge from the page_links index.
-// Consumers needing the hierarchy-wide link graph (the pages sidebar showing
-// linked pages as reference children) subscribe to the full edge list.
-export const PageLinkEdgeSchema = z.object({
-  sourcePageId: z.string(),
-  targetPageId: z.string(),
+// One live page and the pages that link TO it: the distinct source pages of
+// its `page_links` edges, a self-link excluded, in id order (`[]` for a page
+// nothing links to). The row of `pageLinkSources` — the pages sidebar draws
+// each source as a reference parent of the page.
+export const PageLinkSourcesRowSchema = z.object({
+  id: z.string(),
+  linkedFrom: z.array(z.string()),
 });
-export type PageLinkEdge = z.infer<typeof PageLinkEdgeSchema>;
+export type PageLinkSourcesRow = z.infer<typeof PageLinkSourcesRowSchema>;

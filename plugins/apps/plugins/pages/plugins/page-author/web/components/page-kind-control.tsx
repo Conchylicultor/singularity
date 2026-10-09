@@ -1,7 +1,5 @@
-import {
-  ResourceErrorInline,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -16,7 +14,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
-  pagesResource,
+  pagesTree,
   pageData,
   pageKindOf,
   setPageKind,
@@ -115,16 +113,16 @@ function kindFor(k: PageKind["kind"]): PageKind {
  * trailing tick — plus the switch. A
  * choice asks the server to change the page's kind (`setPageKind`, the one way a
  * kind changes after a page is born). It is deliberately not optimistic: the
- * trigger changes when the live `pagesResource` push lands — the same push that
- * re-tints the parent page's row and the sidebar.
+ * trigger changes when the live `pagesTree` push of this page's row lands — the
+ * same row that re-tints the parent page's row and the sidebar.
  *
- * While the pages resource is still loading it renders a placeholder the size of
- * the pill, never the pill: that would claim a kind before anything is known.
+ * While the page row is still loading it renders a placeholder the size of the
+ * pill, never the pill: that would claim a kind before anything is known.
  */
 export function PageKindControl() {
   const { pageId } = pageDetailPane.useParams();
   const size = useControlSize();
-  const result = useResource(pagesResource);
+  const result = useLiveRow(pagesTree, pageId);
   const { mutateAsync } = useEndpointMutation(setPageKind);
 
   if (result.status === "loading") {
@@ -141,9 +139,8 @@ export function PageKindControl() {
       />
     );
   }
-  const page = result.data.find((p) => p.id === pageId);
-  if (!page) return null;
-  const kind = pageKindOf(pageData(page));
+  if (!result.found) return null;
+  const kind = pageKindOf(pageData(result.row));
   const look = KIND_LOOK[kind.kind];
 
   const choose = async (next: PageKind) => {

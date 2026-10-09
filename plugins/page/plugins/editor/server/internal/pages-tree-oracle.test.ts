@@ -1,0 +1,445 @@
+/**
+ * `pages.tree` as an `all` collection, on the TREE ORACLE (tasks-core's
+ * `server/testing`): the real declaration compiled with the real serve options
+ * (`./page-rows.ts`) against a throwaway database, through the real feed, with
+ * the `page_blocks` derived `updated_at` trigger installed as a backend
+ * installs it. Not preloaded, so not persisted: the set is subscribed, never
+ * an L2 alias.
+ *
+ * The workload is the page tree's own (the oracle's task script is not run):
+ * a page W whose sub-pages span two rank spaces — A and B under a toggle, D a
+ * direct child — beside a root page X. The forest is seeded, and the drag is
+ * made, through the REAL writers (`withPageForest`, `applyPageBlockOp`), so
+ * `doc_rank` is what the structural-write chokepoint stores. The other steps
+ * are one SQL transaction each, in the shape a writer emits.
+ *
+ * After every step:
+ *
+ * - the subscribed `{}` view and the `:rows` point view (over A, D) equal a
+ *   fresh FULL load;
+ * - each `pageId` group of the set, sorted by `docRank`, is document order —
+ *   `docOrderRows` + `compareDocOrder`, the order the old `pages` loader
+ *   derived on every load (parity);
+ * - both readers' costs are exact: a keystroke's projection on a content block
+ *   loads nothing; a rename is that page's refill; a toggle drag refills
+ *   exactly the pages the reconcile re-minted; an insert or a restore is one
+ *   refill and one `orderOf`; a trash an exit after its one-id probe;
+ * - nothing is ever loaded FULL after the subscribe.
+ *
+ * Then C39: a tab still running a bundle that subscribed the old key `pages`
+ * is refused `unknown-key`, a `skew` verdict (the Reload prompt).
+ *
+ * Requires a running Postgres cluster (started by ./singularity build).
+ * Run: `./singularity test plugins/page/plugins/editor`.
+ */
+
+import {
+  afterAll,
+  beforeAll,
+  describe,
+  expect,
+  setDefaultTimeout,
+  test,
+} from "bun:test";
+import { eq, sql } from "drizzle-orm";
+import { z } from "zod";
+import {
+  installDerivedUpdatedAt,
+  registeredDerivedUpdatedAt,
+} from "@plugins/database/plugins/derived-updated-at/server";
+import { collectContributions } from "@plugins/framework/plugins/server-core/core";
+import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
+import {
+  compileCollection,
+  subscribeAsOldDescriptor,
+} from "@plugins/network/plugins/live/server/testing";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
+import {
+  createTreeOracle,
+  type TreeLoad,
+  type TreeOracle,
+  type TreeStep,
+} from "@plugins/tasks/plugins/tasks-core/server/testing";
+import { defineBlock, textBlockSchema } from "../../core";
+import { pagesTree } from "../../core/resources";
+import {
+  pageBlockHandle,
+  PageRowSchema,
+  type PageRow,
+} from "../../core/schemas";
+import { Editor } from "./block-registry";
+import { insertBlocks } from "./forest-writer";
+import { applyPageBlockOp } from "./handle-apply-block-op";
+import { compareDocOrder, docOrderRows } from "./page-doc-order";
+import { withPageForest } from "./page-forest";
+import { pageRowsServeOptions } from "./page-rows";
+import { parseBlockData } from "./parse-block-data";
+import { _blocks } from "./tables";
+
+setDefaultTimeout(120_000);
+
+const KEY = pagesTree.key;
+const ROWS_KEY = pagesTree.rows.key;
+/** The key the page tree had as a legacy push resource, before the rename. */
+const OLD_KEY = "pages";
+
+// Stand-ins for the content block types (each concrete one imports this
+// plugin, so importing it back would be a cycle).
+const paraStub = defineBlock({
+  type: "pages-tree-para",
+  schema: textBlockSchema({}),
+  empty: () => ({ text: [] }),
+  defaultText: true,
+});
+const toggleStub = defineBlock({
+  type: "pages-tree-toggle",
+  schema: textBlockSchema({}),
+  empty: () => ({ text: [] }),
+});
+
+/** W holds `p`, a toggle T holding A and B, then D; X sits at the root. */
+const [W, X, P, T, A, B, D, E] = [
+  "page-w",
+  "page-x",
+  "para-p",
+  "toggle-t",
+  "page-a",
+  "page-b",
+  "page-d",
+  "page-e",
+] as const;
+
+let oracle: TreeOracle;
+let specs: ReturnType<typeof compilePagesTree>;
+
+/** The real declaration and serve options, compiled against the throwaway. */
+function compilePagesTree() {
+  return compileCollection(pagesTree, {
+    ...pageRowsServeOptions,
+    db: oracle.queryDb as unknown as QueryDb,
+  });
+}
+
+/** Insert one row through the REAL mutator, so the reconcile places it. */
+async function seed(args: {
+  id: string;
+  parentId: string | null;
+  pageId: string | null;
+  type: string;
+  rank: string;
+}): Promise<void> {
+  await withPageForest(
+    args.pageId,
+    async (ctx) => {
+      await insertBlocks(ctx.tx, [
+        {
+          id: args.id,
+          parentId: args.parentId,
+          pageId: args.pageId,
+          type: args.type,
+          rank: args.rank,
+          data: parseBlockData(
+            args.type,
+            args.type === pageBlockHandle.type
+              ? { title: args.id, icon: null }
+              : { text: [{ text: args.id }] },
+          ),
+        },
+      ]);
+    },
+    oracle.db,
+  );
+}
+
+async function docRanks(): Promise<Map<string, string | null>> {
+  const rows = await oracle.db
+    .select({ id: _blocks.id, docRank: _blocks.docRank })
+    .from(_blocks)
+    .where(eq(_blocks.type, pageBlockHandle.type));
+  return new Map(rows.map((r) => [r.id, r.docRank]));
+}
+
+/** Page ids per group: the set's rows sorted by `docRank`. */
+function setOrder(rows: readonly PageRow[]): Record<string, string[]> {
+  const out: Record<string, PageRow[]> = {};
+  for (const row of rows) (out[row.pageId ?? "<root>"] ??= []).push(row);
+  return Object.fromEntries(
+    Object.entries(out).map(([group, list]) => [
+      group,
+      [...list]
+        .sort((a, b) => Rank.compare(a.docRank, b.docRank))
+        .map((r) => r.id),
+    ]),
+  );
+}
+
+/** Page ids per group in document order — the old loader's derivation. */
+async function documentOrder(): Promise<Record<string, string[]>> {
+  const out: Record<string, Awaited<ReturnType<typeof docOrderRows>>> = {};
+  for (const row of await docOrderRows(oracle.db)) {
+    (out[row.pageId ?? "<root>"] ??= []).push(row);
+  }
+  return Object.fromEntries(
+    Object.entries(out).map(([group, list]) => [
+      group,
+      [...list].sort(compareDocOrder).map((r) => r.id),
+    ]),
+  );
+}
+
+async function expectParity(label: string): Promise<void> {
+  const view = PageRowSchema.array().parse(oracle.view(KEY));
+  expect({ step: label, order: setOrder(view) }).toEqual({
+    step: label,
+    order: await documentOrder(),
+  });
+}
+
+/** What a step must cost: the set's loads and `orderOf` calls, and the `:rows` (A, D) reader's loads. */
+interface StepCost {
+  loads: TreeLoad[];
+  orderOf: number;
+  rowLoads: TreeLoad[];
+}
+const NOTHING: StepCost = { loads: [], orderOf: 0, rowLoads: [] };
+
+async function runSql(step: TreeStep, cost: StepCost): Promise<void> {
+  const got = await oracle.run(step);
+  await oracle.converged(step.label);
+  await expectParity(step.label);
+  expect({
+    step: step.label,
+    loads: got.loads[KEY] ?? [],
+    orderOf: got.orderOf[KEY] ?? 0,
+    rowLoads: got.loads[ROWS_KEY] ?? [],
+  }).toEqual({ step: step.label, ...cost });
+}
+
+/**
+ * Run a REAL writer, then a no-cost sync write (a fold toggle on the content
+ * paragraph: no member, so it loads nothing) through the oracle so the
+ * runtime has gone quiet over both. The writer's own changes commit — and so
+ * route — first; the loads since the writer started are its cost. (`orderOf`
+ * is counted per `run`, so a writer step pins loads only.)
+ */
+async function runWriter(
+  label: string,
+  write: () => Promise<unknown>,
+): Promise<{ loads: readonly TreeLoad[]; rowLoads: readonly TreeLoad[] }> {
+  const from = oracle.loadsOf(KEY).length;
+  const rowsFrom = oracle.loadsOf(ROWS_KEY).length;
+  await write();
+  await oracle.run({
+    label: `${label}.sync`,
+    statements: [
+      `UPDATE page_blocks SET expanded = NOT expanded WHERE id = '${P}'`,
+    ],
+  });
+  await oracle.converged(label);
+  await expectParity(label);
+  return {
+    loads: oracle.loadsOf(KEY).slice(from),
+    rowLoads: oracle.loadsOf(ROWS_KEY).slice(rowsFrom),
+  };
+}
+
+const pagePayload = (title: string) =>
+  JSON.stringify({ title, icon: null }).replace(/'/g, "''");
+
+beforeAll(async () => {
+  collectContributions([
+    {
+      id: "pages-tree-oracle",
+      contributions: [
+        Editor.BlockData(pageBlockHandle),
+        Editor.BlockData(paraStub),
+        Editor.BlockData(toggleStub),
+      ],
+    },
+  ]);
+  oracle = await createTreeOracle({
+    prefix: "pages_tree_oracle",
+    persisted: [],
+  });
+  // The derived `updated_at` trigger, as a backend installs it at boot: a
+  // rename moves `updatedAt` in the same row, as in production.
+  await installDerivedUpdatedAt(
+    oracle.db,
+    registeredDerivedUpdatedAt().filter((spec) => spec.table === "page_blocks"),
+  );
+  specs = compilePagesTree();
+  oracle.registerAll(pagesTree, specs);
+  // The seed, through the real writers (before the feed starts: nothing is
+  // subscribed yet).
+  await seed({ id: W, parentId: null, pageId: null, type: "page", rank: "a0" });
+  await seed({ id: X, parentId: null, pageId: null, type: "page", rank: "a1" });
+  await seed({
+    id: P,
+    parentId: W,
+    pageId: W,
+    type: paraStub.type,
+    rank: "a0",
+  });
+  await seed({
+    id: T,
+    parentId: W,
+    pageId: W,
+    type: toggleStub.type,
+    rank: "a1",
+  });
+  await seed({ id: A, parentId: T, pageId: W, type: "page", rank: "a0" });
+  await seed({ id: B, parentId: T, pageId: W, type: "page", rank: "a1" });
+  await seed({ id: D, parentId: W, pageId: W, type: "page", rank: "a2" });
+  await oracle.start();
+});
+
+afterAll(async () => {
+  await oracle?.stop();
+});
+
+describe("pages.tree — an `all` collection on the tree oracle", () => {
+  test("every step converges to a fresh FULL load at its exact cost, in document order; nothing loads FULL", async () => {
+    await oracle.subscribe(KEY);
+    const pointParams = pagesTree.rows.point.encode([A, D]);
+    await oracle.subscribe(ROWS_KEY, pointParams);
+    await oracle.converged("seed");
+    await expectParity("seed");
+    expect(setOrder(PageRowSchema.array().parse(oracle.view(KEY)))).toEqual({
+      "<root>": [W, X],
+      [W]: [A, B, D],
+    });
+    const baseline = oracle.loadsOf(KEY).length;
+
+    // A keystroke burst's `data.text` projection on a content block: no page
+    // row changed, so nothing loads — the cost the legacy loader paid twice
+    // (membership select + doc-order CTE) on every one.
+    await runSql(
+      {
+        label: "typing",
+        statements: [
+          `UPDATE page_blocks SET data = '{"text":[{"text":"typing…"}]}'::jsonb WHERE id = '${P}'`,
+        ],
+      },
+      NOTHING,
+    );
+
+    // A rename is the page row's refill, in both readers.
+    await runSql(
+      {
+        label: "rename",
+        statements: [
+          `UPDATE page_blocks SET data = '${pagePayload("renamed")}'::jsonb WHERE id = '${D}'`,
+        ],
+      },
+      { loads: [{ ids: [D] }], orderOf: 0, rowLoads: [{ ids: [D] }] },
+    );
+
+    // Drag the toggle (holding A and B) after D: no page row is named, yet
+    // the group's document order becomes D, A, B. The reconcile re-mints the
+    // fewest keys that restore it, and exactly those pages are refilled.
+    const before = await docRanks();
+    const drag = await runWriter("toggle.drag", () =>
+      applyPageBlockOp(
+        W,
+        {
+          kind: "move",
+          blockId: T,
+          parentId: W,
+          targetId: D,
+          zone: "after",
+        },
+        oracle.db,
+      ),
+    );
+    const after = await docRanks();
+    const reminted = [...after.keys()]
+      .filter((id) => after.get(id) !== before.get(id))
+      .sort();
+    expect(reminted.length).toBeGreaterThan(0);
+    expect(drag.loads).toEqual([{ ids: reminted }]);
+    expect(drag.rowLoads).toEqual(
+      reminted.some((id) => id === A || id === D)
+        ? [{ ids: reminted.filter((id) => id === A || id === D) }]
+        : [],
+    );
+    expect(setOrder(PageRowSchema.array().parse(oracle.view(KEY)))[W]).toEqual([
+      D,
+      A,
+      B,
+    ]);
+
+    // A page created at the end of W, as a writer emits it: the row, then its
+    // `doc_rank`, in one transaction. One refill and one `orderOf`.
+    const lastKey = [...(await docRanks()).entries()]
+      .filter(([id]) => [A, B, D].includes(id as typeof A))
+      .map(([, k]) => k!)
+      .sort()
+      .at(-1)!;
+    await runSql(
+      {
+        label: "insert",
+        statements: [
+          "BEGIN",
+          `INSERT INTO page_blocks (id, page_id, parent_id, type, data, rank)
+           VALUES ('${E}', '${W}', '${W}', 'page', '${pagePayload(E)}'::jsonb, 'a8')`,
+          `UPDATE page_blocks SET doc_rank = '${Rank.between(Rank.from(lastKey), null).toString()}' WHERE id = '${E}'`,
+          "COMMIT",
+        ],
+      },
+      { loads: [{ ids: [E] }], orderOf: 1, rowLoads: [] },
+    );
+
+    // A trash is a where-flip exit: the row is probed by id (the base
+    // `where` reads `deleted_at`), found gone, and leaves — one one-id load, no
+    // `orderOf`. Its restore is an entrant.
+    await runSql(
+      {
+        label: "trash",
+        statements: [
+          `UPDATE page_blocks SET deleted_at = now(), trash_entry_id = 'te-x' WHERE id = '${X}'`,
+        ],
+      },
+      { loads: [{ ids: [X] }], orderOf: 0, rowLoads: [] },
+    );
+    await runSql(
+      {
+        label: "restore",
+        statements: [
+          `UPDATE page_blocks SET deleted_at = NULL, trash_entry_id = NULL WHERE id = '${X}'`,
+        ],
+      },
+      { loads: [{ ids: [X] }], orderOf: 1, rowLoads: [] },
+    );
+
+    expect(
+      oracle
+        .loadsOf(KEY)
+        .slice(baseline)
+        .some((l) => l.ids === "FULL"),
+    ).toBe(false);
+    oracle.unsubscribe(ROWS_KEY, pointParams);
+    oracle.unsubscribe(KEY);
+  });
+
+  test("a live page with no doc_rank fails the load loudly — never sorted anywhere", async () => {
+    await oracle.db.execute(
+      sql.raw(`UPDATE page_blocks SET doc_rank = NULL WHERE id = '${D}'`),
+    );
+    const rows = await specs.all.loader({});
+    expect(() => pagesTree.all.schema.parse(rows)).toThrow();
+  });
+});
+
+describe("C39 — a tab on the old `pages` resource", () => {
+  test("is refused `unknown-key`, a `skew` verdict", async () => {
+    const old = await subscribeAsOldDescriptor(
+      { key: OLD_KEY, schema: z.array(PageRowSchema) },
+      { handler: oracle.runtime.notificationsWsHandler },
+    );
+    expect(old).toEqual({
+      kind: "refused",
+      reason: "unknown-key",
+      verdict: "skew",
+    });
+  });
+});

@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
 
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
-  pagesResource,
+  pagesTree,
   updateBlock,
   pageData,
   type Block,
@@ -45,13 +45,12 @@ const closeIcon = symbol("close");
  * reposition (images only), or remove it.
  */
 export function PageCover({ pageId }: { pageId: string }) {
-  const result = useResource(pagesResource);
-  // Loading or failed: no band. The cover is decoration, and the page body
-  // reads the same resource and renders the failure.
+  const result = useLiveRow(pagesTree, pageId);
+  // Loading or failed: no band. The cover is decoration, and the page header
+  // reads the same row and renders the failure.
   if (result.status === "loading" || result.status === "error") return null;
-  const page = result.data.find((d) => d.id === pageId);
-  if (!page) return null;
-  return <PageCoverInner page={page} pageId={pageId} />;
+  if (!result.found) return null;
+  return <PageCoverInner page={result.row} pageId={pageId} />;
 }
 
 function PageCoverInner({ page, pageId }: { page: Block; pageId: string }) {

@@ -11,8 +11,8 @@ module types, filtered by return type:
 - `core/` — `resourceDescriptorFactories satisfies Record<MintingFactoryName,
   DescriptorFactory>`, where `MintingFactoryName` is every export of
   `live-state/core`, `query-resource/core` and `network/live/core` returning a
-  resource descriptor (matched on `key` + `schema`, so a `liveValue`, which has no
-  `initialData`, counts) — or a collection (matched on `rows`, the point
+  resource descriptor (matched on `key` + `schema`, the two fields every
+  descriptor carries; `live-state/core` exports none any more) — or a collection (matched on `rows`, the point
   descriptor every form mints — window, lookup-only, `all`, union — i.e.
   `liveCollection`).
   Add a factory to any of those barrels and omit it here → `tsc` fails with the
