@@ -14,6 +14,7 @@ import {
   pathUrl,
   report,
   withBrowser,
+  waitForNetworkIdle,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const URL = pathUrl("/agents");
@@ -26,7 +27,8 @@ const r = report();
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ viewport: { width: VW, height: VH } });
-  await page.goto(URL, { waitUntil: "networkidle" });
+  await page.goto(URL, { waitUntil: "domcontentloaded" });
+  await waitForNetworkIdle(page);
   await page.waitForTimeout(2500);
 
   const result = await page.evaluate(

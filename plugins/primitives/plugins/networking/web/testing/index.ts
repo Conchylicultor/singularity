@@ -1,12 +1,11 @@
 export {
   FakeWebSocket,
   FakeWsServer,
-  FakeBroadcastChannel,
-  FakeBroadcastChannelBus,
+  FakeMessagePort,
   FakeLockManager,
+  FakeSharedWorkers,
+  FakePageLifecycle,
   createTransportHub,
-  HUB_HEARTBEAT_MS,
-  HUB_TIMEOUT_MS,
 } from "./transport-fakes";
 export type {
   FakeWsServerOptions,

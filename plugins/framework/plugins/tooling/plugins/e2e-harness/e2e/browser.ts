@@ -29,6 +29,7 @@ import { onBeforeFinish } from "./report";
 import { repairAgentWrites, settleAgentWrites } from "./agent-writes";
 import { assertDeployIdentity } from "./deploy-identity";
 import { isTargetOrigin, unconsumedPage } from "./target";
+import { trackContextNetwork, waitForNetworkIdle } from "./network-idle";
 
 export const DEFAULT_VIEWPORT = { width: 1400, height: 900 } as const;
 
@@ -295,6 +296,9 @@ export async function withBrowser<T>(
           extraHTTPHeaders: agentOriginHeaders(originSource()),
         });
         await keepOriginHeadersOnTarget(context);
+        // Before the first page, so every page is tracked from its first
+        // request (see `network-idle.ts`).
+        trackContextNetwork(context);
         const page = await context.newPage();
         const label = opts.label ?? "";
         return {
@@ -348,7 +352,9 @@ export async function boot(
       .first()
       .waitFor({ state: "visible", timeout: timeoutMs });
   } else {
-    await page.waitForLoadState("networkidle", { timeout: timeoutMs });
+    // Not Playwright's `networkidle`: it never fires on this app (a
+    // SharedWorker's script load never finishes as far as the page can see).
+    await waitForNetworkIdle(page, { timeoutMs });
   }
   if (opts.settleMs) await page.waitForTimeout(opts.settleMs);
 }

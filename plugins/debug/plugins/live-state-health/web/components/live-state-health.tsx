@@ -4,10 +4,13 @@ import {
   type ChannelStatuses,
   type DebugSnapshot,
   type DebugSub,
-  type LeaderInfo,
+  type TransportInfo,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -25,7 +28,7 @@ const SOCKET_DOT: Record<WsStatus, string> = {
 
 export function LiveStateHealth(): ReactElement {
   const client = useNotificationsClient();
-  // subscribeDebug fires on any sub/version/socket/leader change; bump a counter
+  // subscribeDebug fires on any sub/version/socket/transport change; bump a counter
   // to re-read the snapshot. RelativeTime self-ticks for age, so no manual timer.
   const [, bump] = useState(0);
   useEffect(() => client.subscribeDebug(() => bump((n) => n + 1)), [client]);
@@ -43,7 +46,7 @@ export function LiveStateHealth(): ReactElement {
     <Scroll className="h-full p-lg">
       <Stack gap="xl">
         <SocketsSection sockets={snapshot.sockets} />
-        <LeaderSection leader={snapshot.leader} />
+        <TransportSection transport={snapshot.transport} />
         <ResourcesSection subs={subs} />
         <ServerResourcesSection />
       </Stack>
@@ -51,7 +54,11 @@ export function LiveStateHealth(): ReactElement {
   );
 }
 
-function SocketsSection({ sockets }: { sockets: ChannelStatuses }): ReactElement {
+function SocketsSection({
+  sockets,
+}: {
+  sockets: ChannelStatuses;
+}): ReactElement {
   return (
     <Stack as="section" gap="sm">
       <SectionLabel>Sockets</SectionLabel>
@@ -63,11 +70,19 @@ function SocketsSection({ sockets }: { sockets: ChannelStatuses }): ReactElement
   );
 }
 
-function SocketRow({ label, status }: { label: string; status: WsStatus }): ReactElement {
+function SocketRow({
+  label,
+  status,
+}: {
+  label: string;
+  status: WsStatus;
+}): ReactElement {
   return (
     <Stack direction="row" gap="sm" align="center">
       <StatusDot colorClass={SOCKET_DOT[status]} />
-      <Text variant="body" className="w-24">{label}</Text>
+      <Text variant="body" className="w-24">
+        {label}
+      </Text>
       <Text
         variant="caption"
         tone={status === "open" ? "muted" : "destructive"}
@@ -78,34 +93,47 @@ function SocketRow({ label, status }: { label: string; status: WsStatus }): Reac
   );
 }
 
-function LeaderSection({
-  leader,
+function TransportSection({
+  transport,
 }: {
-  leader: { worktree: LeaderInfo; central: LeaderInfo };
+  transport: { worktree: TransportInfo; central: TransportInfo };
 }): ReactElement {
   return (
     <Stack as="section" gap="sm">
-      <SectionLabel>Leader</SectionLabel>
+      <SectionLabel>Shared transport</SectionLabel>
       <Stack gap="xs">
-        <LeaderRow label="Worktree" info={leader.worktree} />
-        <LeaderRow label="Central" info={leader.central} />
+        <TransportRow label="Worktree" info={transport.worktree} />
+        <TransportRow label="Central" info={transport.central} />
       </Stack>
     </Stack>
   );
 }
 
-function LeaderRow({ label, info }: { label: string; info: LeaderInfo }): ReactElement {
-  // No leader is the prime wedge signal — surface it in error tone, loudly.
-  const state = info.isLeader
-    ? { text: "this tab is leader", tone: "muted" as const, dot: "bg-success" }
-    : info.hasLeader
-      ? { text: "follower (leader elsewhere)", tone: "muted" as const, dot: "bg-success" }
-      : { text: "NO LEADER", tone: "destructive" as const, dot: "bg-destructive" };
+function TransportRow({
+  label,
+  info,
+}: {
+  label: string;
+  info: TransportInfo;
+}): ReactElement {
+  // How many tabs share the worker's socket: a count that only grows as tabs
+  // close means ports are leaking.
+  const tabs =
+    info.attachedTabs === null
+      ? "not attached"
+      : `${info.attachedTabs} ${info.attachedTabs === 1 ? "tab" : "tabs"} attached`;
+  const conn =
+    info.connection === null
+      ? ""
+      : ` · connection ${info.connection.slice(0, 8)}`;
   return (
     <Stack direction="row" gap="sm" align="center">
-      <StatusDot colorClass={state.dot} />
-      <Text variant="body" className="w-24">{label}</Text>
-      <Text variant="caption" tone={state.tone}>{state.text}</Text>
+      <Text variant="body" className="w-24">
+        {label}
+      </Text>
+      <Text variant="caption" tone="muted">
+        {tabs + conn}
+      </Text>
     </Stack>
   );
 }
@@ -121,7 +149,9 @@ function ResourcesSection({ subs }: { subs: DebugSub[] }): ReactElement {
         Resources <span className="opacity-60">{subs.length}</span>
       </SectionLabel>
       {subs.length === 0 ? (
-        <Text variant="caption" tone="muted">No active subscriptions.</Text>
+        <Text variant="caption" tone="muted">
+          No active subscriptions.
+        </Text>
       ) : (
         <Stack gap="none">
           {/* eslint-disable layout/no-adhoc-layout -- weighted (flex-[2]) + fixed-width column header row; not a single content/meta Frame */}
@@ -135,7 +165,10 @@ function ResourcesSection({ subs }: { subs: DebugSub[] }): ReactElement {
           </div>
           {/* eslint-enable layout/no-adhoc-layout */}
           {subs.map((sub) => (
-            <ResourceRow key={`${sub.socket}:${sub.key}:${sub.paramsKey}`} sub={sub} />
+            <ResourceRow
+              key={`${sub.socket}:${sub.key}:${sub.paramsKey}`}
+              sub={sub}
+            />
           ))}
         </Stack>
       )}
@@ -143,10 +176,14 @@ function ResourcesSection({ subs }: { subs: DebugSub[] }): ReactElement {
   );
 }
 
-function HeadCell({ children, className }: { children: React.ReactNode; className?: string }): ReactElement {
-  return (
-    <SectionLabel className={className}>{children}</SectionLabel>
-  );
+function HeadCell({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}): ReactElement {
+  return <SectionLabel className={className}>{children}</SectionLabel>;
 }
 
 function ResourceRow({ sub }: { sub: DebugSub }): ReactElement {
@@ -160,19 +197,39 @@ function ResourceRow({ sub }: { sub: DebugSub }): ReactElement {
       </SingleLineProvider>
       <SingleLineProvider value={true}>
         <Text className="flex-[2]" title={sub.paramsKey}>
-          <Text variant="caption" tone="muted">{sub.paramsKey}</Text>
+          <Text variant="caption" tone="muted">
+            {sub.paramsKey}
+          </Text>
         </Text>
       </SingleLineProvider>
-      <Text variant="caption" tone="muted" className="w-16 text-right tabular-nums">
+      <Text
+        variant="caption"
+        tone="muted"
+        className="w-16 text-right tabular-nums"
+      >
         {sub.version}
       </Text>
-      <Text variant="caption" tone="muted" className="w-24 text-right tabular-nums">
-        {sub.lastAppliedAt > 0 ? <RelativeTime date={new Date(sub.lastAppliedAt)} /> : "never"}
+      <Text
+        variant="caption"
+        tone="muted"
+        className="w-24 text-right tabular-nums"
+      >
+        {sub.lastAppliedAt > 0 ? (
+          <RelativeTime date={new Date(sub.lastAppliedAt)} />
+        ) : (
+          "never"
+        )}
       </Text>
-      <Text variant="caption" tone="muted" className="w-14 text-right tabular-nums">
+      <Text
+        variant="caption"
+        tone="muted"
+        className="w-14 text-right tabular-nums"
+      >
         {sub.refcount}
       </Text>
-      <Text variant="caption" tone="muted" className="w-20">{sub.socket}</Text>
+      <Text variant="caption" tone="muted" className="w-20">
+        {sub.socket}
+      </Text>
     </div>
   );
   /* eslint-enable layout/no-adhoc-layout */

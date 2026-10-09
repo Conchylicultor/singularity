@@ -77,6 +77,7 @@ describe("NotificationsClient — reconnect + resync", () => {
     const socket = hub.server.all()[0]!;
     socket.open(); // leader socket open
     return { hub, qc, client, socket };
+    await flush();
   }
 
   // The single connecting socket the SharedWebSocket just created for reconnect.
@@ -111,6 +112,7 @@ describe("NotificationsClient — reconnect + resync", () => {
   test("H1: frames lost during the reopen gap are recovered by one sub-batch replay converging", async () => {
     const { client, hub, socket, qc } = await setup();
     client.observe("k", {}, undefined, pushSchema);
+    await flush();
     socket.serverSend({
       kind: "sub-ack",
       key: "k",
@@ -118,11 +120,13 @@ describe("NotificationsClient — reconnect + resync", () => {
       value: { status: "v1" },
       version: 1,
     });
+    await flush();
     expect(qc.getQueryData(["k"])).toEqual({ status: "v1" });
 
     // Socket drops; a v2 frame lands on the now-closed socket and is silently lost
     // (serverSend is guarded on OPEN — the exact reopen gap).
     socket.serverClose();
+    await flush();
     socket.serverSend({
       kind: "update",
       key: "k",
@@ -130,6 +134,7 @@ describe("NotificationsClient — reconnect + resync", () => {
       value: { status: "v2-lost" },
       version: 2,
     });
+    await flush();
     expect(qc.getQueryData(["k"])).toEqual({ status: "v1" }); // never delivered
 
     // Backoff reconnect (exactly 500ms), then a fresh socket. The replay is ONE
@@ -137,6 +142,7 @@ describe("NotificationsClient — reconnect + resync", () => {
     await vi.advanceTimersByTimeAsync(500);
     const socket2 = nextSocket(hub);
     socket2.open();
+    await flush();
     const batches = batchFrames(socket2);
     expect(batches).toHaveLength(1);
     expect(batches[0]!.entries.map((e) => e.key)).toEqual(["k"]);
@@ -149,6 +155,7 @@ describe("NotificationsClient — reconnect + resync", () => {
       value: { status: "v3" },
       version: 3,
     });
+    await flush();
     expect(qc.getQueryData(["k"])).toEqual({ status: "v3" });
   });
 
@@ -156,10 +163,11 @@ describe("NotificationsClient — reconnect + resync", () => {
     const { client, hub, socket } = await setup();
     const keys = Array.from({ length: 8 }, (_, i) => `k${i}`);
     for (const k of keys) client.observe(k, {}, undefined, pushSchema);
+    await flush();
     expect(subFrames(socket)).toHaveLength(8); // fresh observes are single subs
 
     // Ack each sub at its own version, carrying the boot epoch the client learns.
-    keys.forEach((k, i) => {
+    for (const [i, k] of keys.entries()) {
       socket.serverSend({
         kind: "sub-ack",
         key: k,
@@ -168,13 +176,15 @@ describe("NotificationsClient — reconnect + resync", () => {
         version: i + 1,
         epoch: "boot-1",
       });
-    });
+      await flush();
+    }
 
     // Drop → reconnect → fresh socket; the open triggers ONE synchronous batch.
     socket.serverClose();
     await vi.advanceTimersByTimeAsync(500);
     const socket2 = nextSocket(hub);
     socket2.open();
+    await flush();
 
     const batches = batchFrames(socket2);
     expect(batches).toHaveLength(1); // the whole set in one frame — no stagger
@@ -202,6 +212,7 @@ describe("NotificationsClient — reconnect + resync", () => {
     const { client, hub, socket, qc } = await setup();
     for (const k of ["gcd", "kept"])
       client.observe(k, {}, undefined, pushSchema);
+    await flush();
     for (const k of ["gcd", "kept"]) {
       socket.serverSend({
         kind: "sub-ack",
@@ -212,6 +223,7 @@ describe("NotificationsClient — reconnect + resync", () => {
         epoch: "boot-1",
         etag: `e-${k}`,
       });
+      await flush();
     }
     qc.removeQueries({ queryKey: ["gcd"] }); // gcTime elapsed for the unobserved query
 
@@ -219,6 +231,7 @@ describe("NotificationsClient — reconnect + resync", () => {
     await vi.advanceTimersByTimeAsync(500);
     const socket2 = nextSocket(hub);
     socket2.open();
+    await flush();
 
     const batch = batchFrames(socket2)[0]!;
     const gcd = batch.entries.find((e) => e.key === "gcd")!;
@@ -237,6 +250,7 @@ describe("NotificationsClient — reconnect + resync", () => {
       version: 4,
       epoch: "boot-1",
     });
+    await flush();
     expect(qc.getQueryData(["gcd"])).toEqual({ status: "refetched" });
   });
 
@@ -253,6 +267,7 @@ describe("NotificationsClient — reconnect + resync", () => {
         version: 5,
         epoch: "boot-1",
       });
+      await flush();
     }
     expect(qc.getQueryData(["k0"])).toEqual({ status: "k0-old" });
 
@@ -261,6 +276,7 @@ describe("NotificationsClient — reconnect + resync", () => {
     await vi.advanceTimersByTimeAsync(500);
     const socket2 = nextSocket(hub);
     socket2.open();
+    await flush();
 
     // The batch can only echo the OLD epoch (the client hasn't heard from the
     // new boot yet) — so the server takes the full path for every entry.
@@ -279,6 +295,7 @@ describe("NotificationsClient — reconnect + resync", () => {
         version: 1,
         epoch: "boot-2",
       });
+      await flush();
     }
     expect(qc.getQueryData(["k0"])).toEqual({ status: "k0-new" });
     expect(qc.getQueryData(["k2"])).toEqual({ status: "k2-new" });
@@ -288,6 +305,7 @@ describe("NotificationsClient — reconnect + resync", () => {
     await vi.advanceTimersByTimeAsync(500);
     const socket3 = nextSocket(hub);
     socket3.open();
+    await flush();
     expect(batchFrames(socket3)[0]!.epoch).toBe("boot-2");
   });
 
@@ -295,6 +313,7 @@ describe("NotificationsClient — reconnect + resync", () => {
     const { client, hub, socket, qc } = await setup();
     for (const k of ["a", "b"]) {
       client.observe(k, {}, undefined, pushSchema);
+      await flush();
       socket.serverSend({
         kind: "sub-ack",
         key: k,
@@ -303,6 +322,7 @@ describe("NotificationsClient — reconnect + resync", () => {
         version: 1,
         epoch: "boot-1",
       });
+      await flush();
     }
     const cachedA = qc.getQueryData(["a"]);
 
@@ -312,6 +332,7 @@ describe("NotificationsClient — reconnect + resync", () => {
     await vi.advanceTimersByTimeAsync(500);
     const socket2 = nextSocket(hub);
     socket2.open();
+    await flush();
     const batch = batchFrames(socket2)[0]!;
     expect(batch.epoch).toBe("boot-1");
 
@@ -323,6 +344,7 @@ describe("NotificationsClient — reconnect + resync", () => {
         { key: "b", params: {}, version: 1 },
       ],
     });
+    await flush();
 
     // Caches untouched — the exact same object reference survives.
     expect(qc.getQueryData(["a"])).toBe(cachedA);
@@ -335,6 +357,7 @@ describe("NotificationsClient — reconnect + resync", () => {
       value: { status: "a-stale" },
       version: 1,
     });
+    await flush();
     expect(qc.getQueryData(["a"])).toBe(cachedA); // v1 ≤ adopted 1 → dropped
     socket2.serverSend({
       kind: "update",
@@ -343,12 +366,14 @@ describe("NotificationsClient — reconnect + resync", () => {
       value: { status: "a-v2" },
       version: 2,
     });
+    await flush();
     expect(qc.getQueryData(["a"])).toEqual({ status: "a-v2" });
   });
 
   test("H7: a lost intermediate level-state frame still converges on the next full frame", async () => {
     const { client, socket, qc } = await setup();
     client.observe("k", {}, undefined, pushSchema);
+    await flush();
     socket.serverSend({
       kind: "sub-ack",
       key: "k",
@@ -356,6 +381,7 @@ describe("NotificationsClient — reconnect + resync", () => {
       value: { status: "working" },
       version: 1,
     });
+    await flush();
     expect(qc.getQueryData(["k"])).toEqual({ status: "working" });
 
     // The v2 frame never arrives (lost). Level state carries full truth, so the
@@ -367,12 +393,14 @@ describe("NotificationsClient — reconnect + resync", () => {
       value: { status: "gone" },
       version: 3,
     });
+    await flush();
     expect(qc.getQueryData(["k"])).toEqual({ status: "gone" });
   });
 
   test("H7: probeMissedUpdates surfaces a silently-missed gap end-to-end over the batch replay", async () => {
     const { client, socket, qc } = await setup();
     client.observe("k", {}, undefined, pushSchema);
+    await flush();
     socket.serverSend({
       kind: "sub-ack",
       key: "k",
@@ -380,6 +408,7 @@ describe("NotificationsClient — reconnect + resync", () => {
       value: { status: "v1" },
       version: 1,
     });
+    await flush();
     socket.serverSend({
       kind: "update",
       key: "k",
@@ -387,12 +416,14 @@ describe("NotificationsClient — reconnect + resync", () => {
       value: { status: "v3" },
       version: 3,
     });
+    await flush();
     expect(qc.getQueryData(["k"])).toEqual({ status: "v3" });
 
-    // Start the probe: it forces a resync via the SAME synchronous batch replay
-    // (the frame is on the wire before the returned promise even settles), then
+    // Start the probe: it forces a resync via the SAME batch replay (the frame
+    // is handed to the shared socket before the returned promise settles), then
     // awaits a fixed settle window for the acks.
     const probe = client.probeMissedUpdates(200);
+    await flush();
     const batches = batchFrames(socket);
     expect(batches).toHaveLength(1);
     expect(batches[0]!.entries.map((e) => e.key)).toEqual(["k"]);
@@ -407,6 +438,7 @@ describe("NotificationsClient — reconnect + resync", () => {
       value: { status: "v9" },
       version: 9,
     });
+    await flush();
     expect(qc.getQueryData(["k"])).toEqual({ status: "v9" }); // cache converged
 
     await vi.advanceTimersByTimeAsync(200); // settle elapses
@@ -426,6 +458,7 @@ describe("NotificationsClient — reconnect + resync", () => {
     // version even though nothing changed — a re-baseline, not a dropped frame.
     const { client, hub, socket, qc } = await setup();
     client.observe("k", {}, undefined, pushSchema);
+    await flush();
     socket.serverSend({
       kind: "sub-ack",
       key: "k",
@@ -433,14 +466,17 @@ describe("NotificationsClient — reconnect + resync", () => {
       value: { status: "v1" },
       version: 1,
     });
+    await flush();
 
     socket.serverClose();
+    await flush();
     const probe = client.probeMissedUpdates(1_500);
 
     // The reconnect lands inside the settle window (backoff = 500ms here).
     await vi.advanceTimersByTimeAsync(500);
     const socket2 = nextSocket(hub);
     socket2.open();
+    await flush();
     socket2.serverSend({
       kind: "sub-ack",
       key: "k",
@@ -448,6 +484,7 @@ describe("NotificationsClient — reconnect + resync", () => {
       value: { status: "v1" },
       version: 2, // the new span's version: nothing changed
     });
+    await flush();
     expect(qc.getQueryData(["k"])).toEqual({ status: "v1" });
 
     await vi.advanceTimersByTimeAsync(1_500);

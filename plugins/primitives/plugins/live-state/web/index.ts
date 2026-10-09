@@ -78,7 +78,7 @@ export type {
   LiveStateSocketKind,
   DebugSub,
   DebugSnapshot,
-  LeaderInfo,
+  TransportInfo,
   MissedFrame,
 } from "./notifications-client";
 export { resourceDescriptorByKey, ResourceError } from "../core";
@@ -97,7 +97,7 @@ export type {
 
 export default {
   description:
-    "Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel. useQueryResource / useInfiniteQueryResource read a plain TanStack query (e.g. a POST endpoint via fetchEndpoint) as a ResourceResult.",
+    "Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource / useInfiniteQueryResource read a plain TanStack query (e.g. a POST endpoint via fetchEndpoint) as a ResourceResult.",
   loadBearing: true,
   contributions: [],
 } satisfies PluginDefinition;

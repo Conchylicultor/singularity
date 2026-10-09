@@ -11,7 +11,7 @@
  *   - a ping's `flushOpenMs` lands in the channel status and notifies listeners;
  *   - a ping without it (a server that predates the field) reads as 0;
  *   - an unchanged value (an idle server's 0 → 0) notifies nobody;
- *   - a follower tab records it too (the leader broadcasts every frame);
+ *   - every tab on the shared socket records it (the worker fans out every frame);
  *   - a socket drop clears it, so a restarted server's first quiet seconds are
  *     never reported as the dead server's stall.
  *
@@ -56,6 +56,7 @@ describe("NotificationsClient — heartbeat flushOpenMs", () => {
     await flush(); // elected → worktree socket created (connecting)
     const socket = hub.server.all()[0]!;
     socket.open();
+    await flush();
     return { hub, client, socket };
   }
 
@@ -85,6 +86,7 @@ describe("NotificationsClient — heartbeat flushOpenMs", () => {
     seen.length = 0; // drop the synchronous initial call
 
     socket.serverSend({ kind: "ping", flushOpenMs: 45_000 });
+    await flush();
     expect(client.getChannelStatuses().serverFlushOpenMs.worktree).toBe(45_000);
     expect(client.getChannelStatuses().worktree).toBe("open");
     expect(seen).toHaveLength(1);
@@ -94,13 +96,16 @@ describe("NotificationsClient — heartbeat flushOpenMs", () => {
     });
 
     socket.serverSend({ kind: "ping", flushOpenMs: 65_000 });
+    await flush();
     expect(seen.at(-1)!.serverFlushOpenMs.worktree).toBe(65_000);
   });
 
   test("a ping without flushOpenMs (an older server) reads as 0", async () => {
     const { client, socket } = await setup();
     socket.serverSend({ kind: "ping", flushOpenMs: 45_000 });
+    await flush();
     socket.serverSend({ kind: "ping" });
+    await flush();
     expect(client.getChannelStatuses().serverFlushOpenMs.worktree).toBe(0);
   });
 
@@ -110,43 +115,46 @@ describe("NotificationsClient — heartbeat flushOpenMs", () => {
     client.subscribeChannelStatuses(listener);
     listener.mockClear();
     socket.serverSend({ kind: "ping", flushOpenMs: 0 });
+    await flush();
     socket.serverSend({ kind: "ping" });
+    await flush();
     expect(listener).not.toHaveBeenCalled();
   });
 
-  test("a follower tab records the leader's ping too", async () => {
+  test("every tab on the shared socket records the ping", async () => {
     const hub = createTransportHub();
     const tabA = hub.tab();
-    const leader = new NotificationsClient(new QueryClient(), {
+    const first = new NotificationsClient(new QueryClient(), {
       makeSocket: hub.makeSocket(tabA),
     });
-    clients.push(leader);
+    clients.push(first);
     await flush();
     const socket = hub.server.all()[0]!;
     socket.open();
+    await flush();
     const tabB = hub.tab();
-    const follower = new NotificationsClient(new QueryClient(), {
+    const second = new NotificationsClient(new QueryClient(), {
       makeSocket: hub.makeSocket(tabB),
     });
-    clients.push(follower);
-    await flush(); // B is a follower, relaying through A's socket
-    expect(follower.debugSnapshot().leader.worktree.isLeader).toBe(false);
+    clients.push(second);
+    await flush(); // B attached to the same worker socket
+    expect(second.debugSnapshot().transport.worktree.attachedTabs).toBe(2);
 
     socket.serverSend({ kind: "ping", flushOpenMs: 90_000 });
-    await flush(); // the leader's rx broadcast reaches the follower
-    expect(leader.getChannelStatuses().serverFlushOpenMs.worktree).toBe(90_000);
-    expect(follower.getChannelStatuses().serverFlushOpenMs.worktree).toBe(
-      90_000,
-    );
+    await flush(); // the worker's fan-out reaches both tabs
+    expect(first.getChannelStatuses().serverFlushOpenMs.worktree).toBe(90_000);
+    expect(second.getChannelStatuses().serverFlushOpenMs.worktree).toBe(90_000);
   });
 
   test("a socket drop clears it", async () => {
     const { client, socket } = await setup();
     socket.serverSend({ kind: "ping", flushOpenMs: 120_000 });
+    await flush();
     expect(client.getChannelStatuses().serverFlushOpenMs.worktree).toBe(
       120_000,
     );
     socket.serverClose();
+    await flush();
     expect(client.getChannelStatuses().worktree).not.toBe("open");
     expect(client.getChannelStatuses().serverFlushOpenMs.worktree).toBe(0);
   });

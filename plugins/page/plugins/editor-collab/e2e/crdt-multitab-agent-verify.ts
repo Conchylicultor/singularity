@@ -28,6 +28,7 @@ import {
   editableBlocks,
   openBlankPage,
 } from "@plugins/page/plugins/editor/e2e";
+import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 import { fetchBlockDoc } from "./support/ydoc";
 
 const out = arg("out", "/tmp/crdt-multitab");
@@ -47,11 +48,11 @@ const readAll = (page: Page): Promise<string[]> =>
 await withBrowser(async (h) => {
   const { context: ctx, page: tabA } = await h.session({ label: "A" });
 
-  // Count live-state notification sockets opened across ALL tabs of the context.
-  const wsOpened: string[] = [];
-  tabA.on("websocket", (ws) => {
-    if (ws.url().includes("/ws/notifications")) wsOpened.push(`A:${ws.url()}`);
-  });
+  // Which live-state server connection each tab is bound to — through the
+  // shared socket's tap (the socket lives in a SharedWorker, out of
+  // `page.on("websocket")`'s reach).
+  const WS = "/ws/notifications";
+  const tapA = await tapSharedSocket(tabA);
 
   const {
     pageUrl,
@@ -66,12 +67,10 @@ await withBrowser(async (h) => {
   await tabA.keyboard.type("second block", { delay: 10 });
   await tabA.waitForTimeout(1500);
 
-  // --- Second tab, SAME context (shares the leader-elected socket) --------------
+  // --- Second tab, SAME context (shares the SharedWorker's socket) -------------
   const tabB = await ctx.newPage();
   capture(tabB, "B");
-  tabB.on("websocket", (ws) => {
-    if (ws.url().includes("/ws/notifications")) wsOpened.push(`B:${ws.url()}`);
-  });
+  const tapB = await tapSharedSocket(tabB);
   await tabB.goto(pageUrl);
   // Was a fixed `waitForTimeout(4000)`. This one is worse than a bad read: tab B
   // goes on to CLICK AND TYPE into block 2, so if it has not hydrated the edit
@@ -151,9 +150,11 @@ await withBrowser(async (h) => {
 
   // One shared notifications socket for the whole context (leader-elected).
   r.ok(
-    "ONE shared /ws/notifications socket across both tabs",
-    wsOpened.length === 1,
-    JSON.stringify(wsOpened),
+    "ONE shared /ws/notifications connection across both tabs",
+    tapA.connections(WS).length === 1 &&
+      JSON.stringify(tapA.connections(WS)) ===
+        JSON.stringify(tapB.connections(WS)),
+    JSON.stringify({ A: tapA.connections(WS), B: tapB.connections(WS) }),
   );
   await snap(tabA, out, "multitab");
 

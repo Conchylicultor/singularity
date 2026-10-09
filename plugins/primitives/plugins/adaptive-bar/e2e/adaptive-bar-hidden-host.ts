@@ -41,6 +41,7 @@ import {
   report,
   snap,
   withBrowser,
+  waitForNetworkIdle,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const OUT = "/tmp/adaptive-bar-hidden-host";
@@ -251,7 +252,7 @@ await withBrowser(async (h) => {
   }
 
   await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
-  await page.waitForLoadState("networkidle", { timeout: 30_000 });
+  await waitForNetworkIdle(page, { timeoutMs: 30_000 });
   await page.waitForTimeout(500);
 
   // ── 1. narrow until a bar actually relocates something ──────────────────

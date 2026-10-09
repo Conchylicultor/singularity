@@ -1,9 +1,3 @@
-import {
-  exponential,
-  withJitter,
-  type DelayStrategy,
-} from "@plugins/packages/plugins/retry/core";
-
 /**
  * The one reconnect delay every transport in this plugin uses: 500 ms doubling
  * to a 5 s cap, each delay jittered by a fresh 0.5–1.5× factor.
@@ -12,11 +6,17 @@ import {
  * in the same instant; a fixed schedule would wake them all in the same
  * millisecond and re-herd the backend on every cycle. A fresh random spread
  * per call de-synchronizes them.
+ *
+ * Spelled out here rather than composed from `packages/retry`: this module runs
+ * inside the SharedWorker bundle (via `socket-owner.ts`), and a worker can only
+ * bundle files its artifact's address hashes — its own plugin's — since import
+ * maps do not reach workers. The web-artifacts inline audit fails the build on
+ * any other first-party import.
  */
-export const RECONNECT_DELAY: DelayStrategy = withJitter(
-  exponential({ initial: 500, max: 5000 }),
-  1,
-);
+export function RECONNECT_DELAY(attempt: number): number {
+  const base = Math.min(500 * 2 ** attempt, 5000);
+  return base * (0.5 + Math.random());
+}
 
 /**
  * The reconnect half of a reconnecting transport: the attempt counter, the one

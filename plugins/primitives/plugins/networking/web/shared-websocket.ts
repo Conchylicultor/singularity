@@ -1,41 +1,87 @@
+import { wsTestHook, type WsTestHook } from "../core";
 import { publishWsStatus, type WsStatus } from "./ws-status-bus";
 import { publishNetDiag } from "./net-diag-bus";
-import { CrossTabElection } from "./cross-tab-election";
-import { ReconnectSchedule } from "./reconnect-backoff";
+import {
+  SHARED_WS_PROTO,
+  portLivenessLockName,
+  sharedWsWorkerName,
+  type TabToWorker,
+  type WorkerToTab,
+} from "./shared-ws-protocol";
 import type {
-  WebSocketLike,
-  MakeWebSocket,
-  MakeBroadcastChannel,
   LockManagerLike,
+  MakeSharedWorker,
+  MessagePortLike,
+  SharedWorkerLike,
 } from "./transport-types";
 
+/** The page-lifecycle events a tab detaches and re-attaches its port on. */
+export interface PageLifecycleLike {
+  addEventListener(
+    type: "pagehide" | "pageshow",
+    listener: (ev: { persisted: boolean }) => void,
+  ): void;
+  removeEventListener(
+    type: "pagehide" | "pageshow",
+    listener: (ev: { persisted: boolean }) => void,
+  ): void;
+}
+
 /**
- * Injection seam for the three OS globals this stack touches. All optional —
+ * Injection seam for the OS globals this stack touches. All optional —
  * production passes nothing and the globals are used; tests wire the fakes from
- * `./test-support`. `heartbeatMs`/`timeoutMs` scale the election timers down for
- * fake-timer tests. See
- * `research/2026-07-03-global-live-state-client-transport-harness.md`.
+ * `./testing`. See
+ * `research/2026-10-08-networking-shared-worker-transport.md`.
  */
 export interface SharedWebSocketHooks {
-  makeWebSocket?: MakeWebSocket;
-  makeBroadcastChannel?: MakeBroadcastChannel;
-  locks?: LockManagerLike | null;
-  heartbeatMs?: number;
-  timeoutMs?: number;
+  makeSharedWorker?: MakeSharedWorker;
+  locks?: LockManagerLike;
+  /** `null` ⇒ no page lifecycle (never detaches on its own). Default: `window`. */
+  pageLifecycle?: PageLifecycleLike | null;
+}
+
+function defaultMakeSharedWorker(name: string): SharedWorkerLike {
+  if (typeof SharedWorker === "undefined") {
+    throw new Error(
+      "SharedWebSocket needs SharedWorker, which this browser does not provide " +
+        "(Chrome for Android before 148, some embedded webviews).",
+    );
+  }
+  return new SharedWorker(new URL("./shared-ws.worker.ts", import.meta.url), {
+    type: "module",
+    name,
+  });
+}
+
+function defaultLocks(): LockManagerLike {
+  const locks =
+    typeof navigator !== "undefined"
+      ? (navigator as Navigator & { locks?: LockManagerLike }).locks
+      : undefined;
+  if (!locks) {
+    throw new Error("SharedWebSocket needs navigator.locks (Web Locks API).");
+  }
+  return locks;
+}
+
+/** One attachment of this tab to the worker: a port plus its liveness lock. */
+interface PortSession {
+  worker: SharedWorkerLike;
+  port: MessagePortLike;
+  portId: string;
+  /** True once `attach` was posted (after the liveness lock is held). */
+  attached: boolean;
+  /** Frames sent before the attach handshake, flushed right after it. */
+  queue: TabToWorker[];
+  /** Ends the liveness hold; null until the lock is granted. */
+  releaseLock: (() => void) | null;
 }
 
 // Drop-in replacement for the string-message subset of the native WebSocket
-// API, shared across all tabs of the same origin via CrossTabElection. One tab
-// is elected leader and owns the real socket; others send/receive through the
-// leader transparently. On leader failure (tab frozen/closed), a follower
-// takes over within ~12 seconds.
-
-type WsRelayMsg =
-  | { kind: "rx"; data: string }
-  | { kind: "tx"; data: string }
-  | { kind: "open"; conn: string }
-  | { kind: "close" };
-
+// API, shared across all tabs of the same origin: the real socket lives in a
+// SharedWorker (one per URL per networking build), and every tab talks to it
+// through a MessagePort. No tab owns the socket, so closing or freezing any tab
+// never interrupts the others.
 export class SharedWebSocket {
   static readonly CONNECTING = 0;
   static readonly OPEN = 1;
@@ -50,125 +96,78 @@ export class SharedWebSocket {
   onclose: ((ev: CloseEvent) => void) | null = null;
   onerror: ((ev: Event) => void) | null = null;
 
-  private election: CrossTabElection<WsRelayMsg>;
-  private makeWebSocket: MakeWebSocket;
-  private ws: WebSocketLike | null = null;
-  private queue: string[] = [];
-  private reconnect = new ReconnectSchedule();
+  private readonly absUrl: string;
+  private readonly makeSharedWorker: MakeSharedWorker;
+  private readonly locks: LockManagerLike;
+  private readonly lifecycle: PageLifecycleLike | null;
+  private session: PortSession | null = null;
+  private will: string | null = null;
   private closed = false;
+  /** An e2e test's hook (`core/ws-test-hook.ts`); undefined in every real session. */
+  private readonly testHook: WsTestHook | undefined = wsTestHook();
   private lastStatus: WsStatus | null = null;
+  private portCount: number | null = null;
   /**
    * Identity of the server connection this tab last dispatched `onopen` for —
    * the one its consumers' state (NotificationsClient's subs) is registered
-   * on. Every real socket open mints a fresh id, carried on the leader's
-   * `open` relay. `null` = not bound to any connection (never opened, or a
-   * `close` / demotion since).
+   * on. The worker mints a fresh id per real socket open. `null` = not bound to
+   * any connection (never opened, a drop since, or a re-attach).
    */
   private boundConn: string | null = null;
 
   constructor(url: string | URL, hooks?: SharedWebSocketHooks) {
     this.url = typeof url === "string" ? url : url.toString();
-    this.makeWebSocket = hooks?.makeWebSocket ?? ((u) => new WebSocket(u));
-    const name = `singularity:shared-ws:${this.url}`;
+    this.makeSharedWorker = hooks?.makeSharedWorker ?? defaultMakeSharedWorker;
+    this.locks = hooks?.locks ?? defaultLocks();
+    this.lifecycle =
+      hooks?.pageLifecycle !== undefined
+        ? hooks.pageLifecycle
+        : typeof window !== "undefined"
+          ? window
+          : null;
 
-    // Forward only the election-relevant hooks that are actually present, so an
-    // omitted key keeps its "use the global default" meaning inside the election
-    // (`locks: null` is a real value — explicitly absent — and must forward).
-    const electionOpts: {
-      heartbeatMs?: number;
-      timeoutMs?: number;
-      makeBroadcastChannel?: MakeBroadcastChannel;
-      locks?: LockManagerLike | null;
-    } = {};
-    if (hooks?.heartbeatMs !== undefined)
-      electionOpts.heartbeatMs = hooks.heartbeatMs;
-    if (hooks?.timeoutMs !== undefined)
-      electionOpts.timeoutMs = hooks.timeoutMs;
-    if (hooks?.makeBroadcastChannel !== undefined) {
-      electionOpts.makeBroadcastChannel = hooks.makeBroadcastChannel;
+    const proto =
+      typeof location !== "undefined" && location.protocol === "https:"
+        ? "wss"
+        : "ws";
+    const host = typeof location !== "undefined" ? location.host : "";
+    this.absUrl = /^wss?:\/\//i.test(this.url)
+      ? this.url
+      : `${proto}://${host}${this.url}`;
+
+    this.lifecycle?.addEventListener("pagehide", this.onPageHide);
+    this.lifecycle?.addEventListener("pageshow", this.onPageShow);
+    if (this.testHook) {
+      const fault = (f: "drop" | "hold" | "release") => () =>
+        this.postToWorker({ kind: "test-fault", fault: f });
+      this.testHook.controls[this.url] = {
+        drop: fault("drop"),
+        hold: fault("hold"),
+        release: fault("release"),
+      };
     }
-    if (hooks?.locks !== undefined) electionOpts.locks = hooks.locks;
-
-    this.election = new CrossTabElection<WsRelayMsg>(
-      name,
-      {
-        onElected: () => this.startLeading(),
-        onDemoted: () => this.onDemoted(),
-        onFollowerMessage: (msg) => {
-          if (msg.kind === "tx") this.writeOrQueue(msg.data);
-        },
-        onLeaderMessage: (msg) => {
-          switch (msg.kind) {
-            case "rx":
-              this.dispatchMessage(msg.data);
-              break;
-            case "open": {
-              // Consumers treat onopen as "fresh connection, replay state"
-              // (NotificationsClient replays its whole sub set onto it), so it
-              // dispatches exactly once per server connection — decided by the
-              // connection's identity, not by this tab's readyState:
-              //  - the leader rebroadcasts "open" for the SAME connection to
-              //    ALL followers whenever a tab joins (onFollowerJoined below);
-              //    an already-bound follower must not re-replay on every join;
-              //  - a NEW connection must always dispatch, even to a follower
-              //    that never left OPEN. A leader that dies or freezes
-              //    broadcasts no "close", so on failover the new leader's
-              //    socket is the first thing followers hear — and the server
-              //    holds none of their subs on it. Gating on readyState
-              //    stranded every follower's subs until the next
-              //    missed-update probe.
-              this.readyState = SharedWebSocket.OPEN;
-              this.setStatus("open");
-              publishNetDiag({ type: "ws-open", url: this.url });
-              if (msg.conn !== this.boundConn) {
-                this.boundConn = msg.conn;
-                this.dispatchOpen();
-              }
-              break;
-            }
-            case "close":
-              this.boundConn = null;
-              this.readyState = SharedWebSocket.CONNECTING;
-              this.setStatus("reconnecting");
-              publishNetDiag({ type: "ws-close", url: this.url });
-              break;
-            case "tx":
-              break;
-          }
-        },
-        onFollowerJoined: () => {
-          if (
-            this.ws?.readyState === SharedWebSocket.OPEN &&
-            this.boundConn !== null
-          ) {
-            this.election.broadcast({ kind: "open", conn: this.boundConn });
-          }
-        },
-      },
-      electionOpts,
-    );
-  }
-
-  /**
-   * This tab was demoted (its leader lock was stolen by a follower that saw it go
-   * silent). It no longer owns the real socket — the new leader does — so drop
-   * ours and reset to a follower-waiting state. Deliberately does NOT schedule a
-   * reconnect: as a follower we now receive frames relayed by the leader, and if
-   * we are ever re-elected `onElected` → `startLeading` opens a fresh socket.
-   */
-  private onDemoted(): void {
-    this.teardownWs();
-    this.boundConn = null;
-    this.readyState = SharedWebSocket.CONNECTING;
-    this.setStatus("reconnecting");
+    this.attach();
   }
 
   send(data: string): void {
     if (this.closed) return;
-    if (this.election.isLeader) {
-      this.writeOrQueue(data);
-    } else {
-      this.election.sendToLeader({ kind: "tx", data });
+    this.testHook?.onEvent({ url: this.url, kind: "tx", data });
+    this.postToWorker({ kind: "tx", data });
+  }
+
+  /**
+   * The frame the worker sends the server when this tab leaves — on `close()`,
+   * on pagehide, or when the tab dies without either (crash, kill). `null`
+   * clears it. Lets a consumer release its server-side state for a departed tab
+   * however it departed.
+   */
+  setLastWill(data: string | null): void {
+    this.will = data;
+    if (this.session?.attached) {
+      this.session.port.postMessage({
+        kind: "will",
+        data,
+      } satisfies TabToWorker);
     }
   }
 
@@ -176,8 +175,9 @@ export class SharedWebSocket {
     if (this.closed) return;
     this.closed = true;
     this.readyState = SharedWebSocket.CLOSED;
-    this.teardownWs();
-    this.election.close();
+    this.lifecycle?.removeEventListener("pagehide", this.onPageHide);
+    this.lifecycle?.removeEventListener("pageshow", this.onPageShow);
+    this.detach();
     /* eslint-disable promise-safety/no-bare-catch -- a throwing onclose listener must not break close() */
     try {
       this.onclose?.(
@@ -193,142 +193,152 @@ export class SharedWebSocket {
     /* eslint-enable promise-safety/no-bare-catch */
   }
 
-  // --- leader: WebSocket management -----------------------------------------
+  // --- port session -----------------------------------------------------------
 
-  private startLeading(): void {
-    if (this.closed) return;
-    this.teardownWs();
-    this.reconnect.reset();
-    this.setStatus("connecting");
-    this.connectWs();
+  private attach(): void {
+    const portId = crypto.randomUUID();
+    const worker = this.makeSharedWorker(sharedWsWorkerName(this.absUrl));
+    const session: PortSession = {
+      worker,
+      port: worker.port,
+      portId,
+      attached: false,
+      queue: [],
+      releaseLock: null,
+    };
+    this.session = session;
+    worker.onerror = () => this.onWorkerError(session);
+    session.port.onmessage = (ev: MessageEvent<WorkerToTab>) =>
+      this.onWorkerMessage(session, ev.data);
+
+    // Hold the liveness lock for the port's whole life, and attach only once it
+    // is held: the worker queues for the same lock, so a grant before ours
+    // would read as "this tab is already gone".
+    void this.locks.request(
+      portLivenessLockName(portId),
+      { mode: "exclusive" },
+      () =>
+        new Promise<void>((resolve) => {
+          if (this.session !== session) {
+            resolve(); // detached before the grant: nothing to hold
+            return;
+          }
+          session.releaseLock = resolve;
+          const post = (msg: TabToWorker): void =>
+            session.port.postMessage(msg);
+          post({
+            kind: "attach",
+            url: this.absUrl,
+            portId,
+            proto: SHARED_WS_PROTO,
+            holdConnects:
+              this.testHook?.holdFromStart.includes(this.url) ?? false,
+          });
+          if (this.will !== null) post({ kind: "will", data: this.will });
+          session.attached = true;
+          for (const msg of session.queue.splice(0)) post(msg);
+        }),
+    );
   }
 
-  private connectWs = (): void => {
-    if (this.closed) return;
-    this.reconnect.cancel();
-
-    const proto =
-      typeof location !== "undefined" && location.protocol === "https:"
-        ? "wss"
-        : "ws";
-    const host = typeof location !== "undefined" ? location.host : "";
-    const absUrl = /^wss?:\/\//i.test(this.url)
-      ? this.url
-      : `${proto}://${host}${this.url}`;
-
-    let ws: WebSocketLike;
-    try {
-      ws = this.makeWebSocket(absUrl);
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) throw err;
-      this.scheduleReconnect();
-      return;
+  private detach(): void {
+    const session = this.session;
+    if (!session) return;
+    this.session = null;
+    if (session.attached) {
+      session.port.postMessage({ kind: "detach" } satisfies TabToWorker);
     }
-    this.ws = ws;
+    session.port.onmessage = null;
+    session.worker.onerror = null;
+    session.port.close();
+    session.releaseLock?.();
+  }
 
-    ws.onopen = () => {
-      this.reconnect.reset();
-      this.readyState = SharedWebSocket.OPEN;
-      while (this.queue.length > 0) {
-        const msg = this.queue.shift()!;
-        /* eslint-disable promise-safety/no-bare-catch -- a throwing listener or a dead socket must not break the relay */
-        try {
-          ws.send(msg);
-        } catch {
-          /* ignore */
-        }
-        /* eslint-enable promise-safety/no-bare-catch */
-      }
-      const conn = crypto.randomUUID();
-      this.boundConn = conn;
-      this.setStatus("open");
-      publishNetDiag({ type: "ws-open", url: this.url });
-      this.election.broadcast({ kind: "open", conn });
-      this.dispatchOpen();
-    };
+  private postToWorker(msg: TabToWorker): void {
+    const session = this.session;
+    if (!session) return; // detached (bfcache): nothing reaches the server
+    if (session.attached) session.port.postMessage(msg);
+    else session.queue.push(msg);
+  }
 
-    ws.onmessage = (ev) => {
-      const data = typeof ev.data === "string" ? ev.data : "";
-      this.election.broadcast({ kind: "rx", data });
-      this.dispatchMessage(data);
-    };
-
-    ws.onerror = () => {
-      /* eslint-disable promise-safety/no-bare-catch -- a throwing listener or a dead socket must not break the relay */
-      try {
-        this.onerror?.(new Event("error"));
-      } catch {
-        /* ignore */
-      }
-      /* eslint-enable promise-safety/no-bare-catch */
-    };
-
-    ws.onclose = () => {
-      this.ws = null;
-      this.boundConn = null;
-      if (this.closed) return;
-      this.readyState = SharedWebSocket.CONNECTING;
-      this.setStatus("reconnecting");
-      publishNetDiag({ type: "ws-close", url: this.url });
-      this.election.broadcast({ kind: "close" });
-      this.scheduleReconnect();
-    };
+  // Always detach on pagehide: a page entering the bfcache is frozen, and a
+  // port it still held would look alive to the worker. Restored ⇒ a fresh port,
+  // and `boundConn = null` so the attach reply re-dispatches `onopen` — the
+  // will released this tab's server state on the way out.
+  private onPageHide = (): void => {
+    if (this.closed) return;
+    this.detach();
+    this.boundConn = null;
+    this.readyState = SharedWebSocket.CONNECTING;
   };
 
-  private scheduleReconnect(): void {
-    const attempt = this.reconnect.schedule(this.connectWs);
-    publishNetDiag({ type: "ws-reconnect-scheduled", url: this.url, attempt });
-  }
+  private onPageShow = (ev: { persisted: boolean }): void => {
+    if (this.closed || !ev.persisted || this.session) return;
+    this.attach();
+  };
 
-  private writeOrQueue(data: string): void {
-    if (this.ws && this.ws.readyState === SharedWebSocket.OPEN) {
-      /* eslint-disable promise-safety/no-bare-catch -- a throwing listener or a dead socket must not break the relay */
-      try {
-        this.ws.send(data);
-      } catch {
-        /* ignore */
-      }
-      /* eslint-enable promise-safety/no-bare-catch */
-    } else {
-      this.queue.push(data);
+  private onWorkerMessage(session: PortSession, msg: WorkerToTab): void {
+    if (session !== this.session) return; // a message for a detached port
+    switch (msg.kind) {
+      case "status":
+        this.testHook?.onEvent({
+          url: this.url,
+          kind: "status",
+          status: msg.status,
+          conn: msg.conn,
+        });
+        this.portCount = msg.ports;
+        if (msg.status === "open" && msg.conn !== null) {
+          this.readyState = SharedWebSocket.OPEN;
+          this.setStatus("open");
+          // Consumers treat onopen as "fresh connection, replay state"
+          // (NotificationsClient replays its whole sub set), so it dispatches
+          // exactly once per server connection — keyed by the connection's
+          // identity: the worker re-sends status on every port join/leave, and
+          // only a NEW connection (or a re-attach) may re-dispatch.
+          if (msg.conn !== this.boundConn) {
+            this.boundConn = msg.conn;
+            this.dispatch(() => this.onopen?.(new Event("open")));
+          }
+        } else {
+          this.boundConn = null;
+          this.readyState = SharedWebSocket.CONNECTING;
+          this.setStatus(msg.status);
+        }
+        return;
+      case "rx":
+        this.testHook?.onEvent({ url: this.url, kind: "rx", data: msg.data });
+        this.dispatch(() =>
+          this.onmessage?.(new MessageEvent("message", { data: msg.data })),
+        );
+        return;
+      case "ws-error":
+        this.dispatch(() => this.onerror?.(new Event("error")));
+        return;
+      case "diag":
+        publishNetDiag(msg.event);
+        return;
+      case "fatal":
+        this.detach();
+        this.setStatus("closed");
+        throw new Error(`SharedWebSocket ${this.url}: ${msg.message}`);
     }
   }
 
-  private teardownWs(): void {
-    this.reconnect.cancel();
-    if (this.ws) {
-      const ws = this.ws;
-      this.ws = null;
-      ws.onopen = null;
-      ws.onmessage = null;
-      ws.onerror = null;
-      ws.onclose = null;
-      /* eslint-disable promise-safety/no-bare-catch -- a throwing listener or a dead socket must not break the relay */
-      try {
-        ws.close();
-      } catch {
-        /* ignore */
-      }
-      /* eslint-enable promise-safety/no-bare-catch */
-    }
+  private onWorkerError(session: PortSession): void {
+    if (session !== this.session) return;
+    this.detach();
+    this.setStatus("closed");
+    throw new Error(
+      `SharedWebSocket ${this.url}: the shared-ws worker failed to load or crashed`,
+    );
   }
 
-  // --- dispatchers ----------------------------------------------------------
-
-  private dispatchOpen(): void {
-    /* eslint-disable promise-safety/no-bare-catch -- a throwing listener or a dead socket must not break the relay */
+  /** A throwing consumer listener must not break the transport. */
+  private dispatch(fn: () => void): void {
+    /* eslint-disable promise-safety/no-bare-catch -- a throwing listener must not break the transport */
     try {
-      this.onopen?.(new Event("open"));
-    } catch {
-      /* ignore */
-    }
-    /* eslint-enable promise-safety/no-bare-catch */
-  }
-
-  private dispatchMessage(data: string): void {
-    /* eslint-disable promise-safety/no-bare-catch -- a throwing listener or a dead socket must not break the relay */
-    try {
-      this.onmessage?.(new MessageEvent("message", { data }));
+      fn();
     } catch {
       /* ignore */
     }
@@ -342,14 +352,14 @@ export class SharedWebSocket {
     return this.lastStatus;
   }
 
-  /** Whether this tab currently owns the real socket (is the election leader). */
-  get isLeader(): boolean {
-    return this.election.isLeader;
+  /** Tabs attached to the shared socket, as last reported by the worker (null before attach). */
+  get attachedTabs(): number | null {
+    return this.portCount;
   }
 
-  /** Whether a live leader signal exists (this tab is leader or a leader's heartbeat is fresh). */
-  get hasLeader(): boolean {
-    return this.election.hasLeader();
+  /** The server connection this tab is bound to (null while not open). */
+  get connection(): string | null {
+    return this.boundConn;
   }
 
   // --- status bus -----------------------------------------------------------

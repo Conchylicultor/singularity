@@ -101,22 +101,23 @@ The client transport hazards are pinned by named vitest tests under
 `web/__tests__/`; the test names are the authoritative index of what each pins.
 `notifications-subs.test.ts` — H4 (duplicate subs + keep-alive), the `no-sub`
 broadcast gate, the version guard, the delta-no-base/drift forced resubs, per-tab
-frame tagging + pagehide `unsub-tab`, watermark adoption.
+frame tagging + the `unsub-tab` last will, watermark adoption.
 `notifications-reconnect.test.ts` — H1/H1b (reopen-gap convergence via one
 `sub-batch`, version/epoch echoes, baseline reset at send), H2 (restart
 version-counter reset), the same-boot `up-to-date-batch` resync, H7 (level-state
 convergence + `probeMissedUpdates`). `notifications-cross-tab.test.ts` — H6
-(leader handover + per-tab replay batches). `notifications-http-fetch.test.ts` —
+(a tab dying leaves the others' subs live + per-tab replay batches). `notifications-http-fetch.test.ts` —
 the `fetchOverHttp` guard matrix. They run real `NotificationsClient` +
 `SharedWebSocket` stacks on `createTransportHub`'s deterministic fakes from
-`@plugins/primitives/plugins/networking/web`; only
-`WebSocket`/`BroadcastChannel`/`navigator.locks` are faked. Server-half siblings
+`@plugins/primitives/plugins/networking/web/testing`, which run the real
+SharedWorker host in-process; only `WebSocket`/`SharedWorker`/`MessagePort`/
+`navigator.locks` are faked. Server-half siblings
 (H5, the version short-circuit, gate dedup, sub-batch) live in
 `plugins/framework/plugins/resource-runtime/core/`. Design:
 `research/2026-07-03-global-live-state-client-transport-harness.md`. Run them
 whenever you touch `notifications-client.ts`, `shared-websocket.ts`, or
-`cross-tab-election.ts`:
-`bun run test:dom plugins/primitives/plugins/networking plugins/primitives/plugins/live-state`.
+`shared-ws-host.ts`:
+`./singularity test plugins/primitives/plugins/networking plugins/primitives/plugins/live-state`.
 
 ## Replay is ONE `sub-batch` frame; recovery resubs never echo state
 
@@ -135,9 +136,11 @@ missed-update probe (`probeMissedUpdates`) never counts a sub whose channel's
 socket reopened during its settle window (`SocketChannel.opens`): that higher
 version is a re-baseline, not a frame the live socket dropped. `complete:true` makes
 the batch the server's whole truth for THIS tab, so subs the tab dropped while
-disconnected are reconciled away; a `pagehide` listener sends a best-effort
-`{op:"unsub-tab"}` per channel so a closing tab's subs release immediately
-instead of leaking until the socket cycles.
+disconnected are reconciled away; each channel registers `{op:"unsub-tab"}` as
+its socket's last will (`SharedWebSocket.setLastWill`), which the SharedWorker
+sends when the tab leaves — closed, hidden into the bfcache, or crashed — so a
+departed tab's subs release immediately instead of leaking until the socket
+cycles.
 
 ## Standalone acks are asked for, per tuple
 
@@ -177,7 +180,7 @@ is wedged (the exact failure this instruments).
 
 Always-on lines are low-volume transitions and silent-drop anomalies:
 `observe`/`unobserve`, `sendSub`, `sub-ack`, `replaySubs`, `probeMissedUpdates`,
-net-diag socket/election transitions, and every `drop reason=…` (`no-sub`,
+net-diag socket/port transitions, and every `drop reason=…` (`no-sub`,
 `stale-version`, `parse-error`, `delta-no-base-resub`).
 
 The per-frame successful `applyUpdate` line is **high-volume**, silent unless you
@@ -192,9 +195,9 @@ switch, not user config.
 
 ## One socket per origin, shared across tabs
 
-The `NotificationsClient` talks to the server over a `SharedWebSocket`: a single
-tab is elected leader and owns the real socket; every received frame is
-broadcast to **all** tabs (and dispatched to the leader itself). So a given
+The `NotificationsClient` talks to the server over a `SharedWebSocket`: the real
+socket lives in a SharedWorker every tab attaches to; every received frame is
+fanned out to **all** tabs. So a given
 tab's `handleServerMessage` runs for **every** server frame — including pushes
 for resources only *other* tabs subscribed to.
 
@@ -250,7 +253,7 @@ an older bundle sees after a deploy. Both the `sub-error` handler and
 `useReloadAdvice` turns the `skew`-verdict ones into the red "out of date"
 Reload segment, so the fix (reload) is offered once, not by every failed read.
 Every `sub` / `sub-batch` frame carries `build` (`VITE_BUILD_GRAPH ?? "dev"`) —
-per frame, because a shared socket's leader relays tabs running other bundles —
+per frame, because one shared socket carries tabs running other bundles —
 and every HTTP read the `BUILD_GRAPH_HEADER`, so the server can judge the
 verdict. `useResource` does not retry a `contract-mismatch` / `unknown-key`
 error (`isTerminalResourceError`): the same bundle is refused the same way.
@@ -861,7 +864,7 @@ keeps every row's identity rather than re-minting each moved row.
 
 ## Plugin reference
 
-- Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel. useQueryResource / useInfiniteQueryResource read a plain TanStack query (e.g. a POST endpoint via fetchEndpoint) as a ResourceResult.
+- Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource / useInfiniteQueryResource read a plain TanStack query (e.g. a POST endpoint via fetchEndpoint) as a ResourceResult.
 - Load-bearing: yes
 - Web:
   - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
@@ -888,7 +891,6 @@ keeps every row's identity rather than re-minting each moved row.
     - `GateInput`
     - `HttpStaleDropReport`
     - `InfiniteQueryResourceOptions`
-    - `LeaderInfo`
     - `LiveStateSocketKind`
     - `MatchResourceHandlers`
     - `MissedFrame`
@@ -910,6 +912,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `ResourceStatus`
     - `ResourceViewProps`
     - `SlowResourceInfo`
+    - `TransportInfo`
     - `UpdateDelayInfo`
     - `WindowParams`
     - `WindowResourceDescriptor`

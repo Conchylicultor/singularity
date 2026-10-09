@@ -66,6 +66,7 @@ describe("NotificationsClient — failing reads", () => {
     await flush();
     const socket = hub.server.all()[0]!;
     socket.open();
+    await flush();
     return { hub, qc, client, socket };
   }
 
@@ -84,7 +85,11 @@ describe("NotificationsClient — failing reads", () => {
     return observer;
   }
 
-  function subAck(socket: FakeWebSocket, key: string, version = 1): void {
+  async function subAck(
+    socket: FakeWebSocket,
+    key: string,
+    version = 1,
+  ): Promise<void> {
     socket.serverSend({
       kind: "sub-ack",
       key,
@@ -93,6 +98,7 @@ describe("NotificationsClient — failing reads", () => {
       version,
       epoch: "boot-1",
     });
+    await flush();
   }
 
   beforeEach(() => {
@@ -113,7 +119,7 @@ describe("NotificationsClient — failing reads", () => {
   test("an up-to-date reply clears a sticky error without rewriting the data", async () => {
     const { hub, qc, client, socket } = await setup();
     client.observe("k", {}, undefined, schema);
-    subAck(socket, "k");
+    await subAck(socket, "k");
     const observer = watch(qc, "k", () =>
       Promise.reject(new ResourceHttpError("k", 500, "loader-failed")),
     );
@@ -127,11 +133,13 @@ describe("NotificationsClient — failing reads", () => {
     await vi.advanceTimersByTimeAsync(500);
     const socket2 = hub.server.all().find((s) => s.readyState === 0)!;
     socket2.open();
+    await flush();
     socket2.serverSend({
       kind: "up-to-date-batch",
       epoch: "boot-1",
       entries: [{ key: "k", params: {}, version: 1 }],
     });
+    await flush();
 
     const after = qc.getQueryState(["k"])!;
     expect(after.error).toBeNull();
@@ -146,8 +154,8 @@ describe("NotificationsClient — failing reads", () => {
     const { qc, client, socket } = await setup();
     client.observe("bad", {}, undefined, schema);
     client.observe("good", {}, undefined, schema);
-    subAck(socket, "bad");
-    subAck(socket, "good");
+    await subAck(socket, "bad");
+    await subAck(socket, "good");
     const badFn = vi.fn(() => Promise.reject(new TypeError("offline")));
     const goodFn = vi.fn(() => Promise.resolve({ status: "fine" }));
     const bad = watch(qc, "bad", badFn);
@@ -177,7 +185,7 @@ describe("NotificationsClient — failing reads", () => {
   test("a retry that succeeds clears the failure", async () => {
     const { qc, client, socket } = await setup();
     client.observe("k", {}, undefined, schema);
-    subAck(socket, "k");
+    await subAck(socket, "k");
     let fail = true;
     const observer = watch(qc, "k", () =>
       fail
@@ -196,7 +204,7 @@ describe("NotificationsClient — failing reads", () => {
   test("the sink fires once per failure episode, however many observers, and re-arms after it clears", async () => {
     const { qc, client, socket } = await setup();
     client.observe("k", {}, undefined, schema);
-    subAck(socket, "k");
+    await subAck(socket, "k");
     const fn = () =>
       Promise.reject(new ResourceHttpError("k", 500, "loader-failed"));
     const a = watch(qc, "k", fn);
@@ -214,7 +222,7 @@ describe("NotificationsClient — failing reads", () => {
     expect(client.getFailingResources()).toHaveLength(1);
 
     // A push heals it (RQ's success action resets the error)…
-    subAck(socket, "k", 2);
+    await subAck(socket, "k", 2);
     expect(client.getFailingResources()).toEqual([]);
     // …so the next failure is a new episode.
     await a.refetch();

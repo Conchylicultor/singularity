@@ -4,8 +4,9 @@ On-demand inspector pane for the client live-state pipeline (Layer 2 of the
 live-state observability work). Surfaces, from the push-based
 `NotificationsClient.debugSnapshot()` / `subscribeDebug()` introspection API,
 what's normally invisible when a tab's resource updates wedge: socket status
-(worktree + central), leader-election state (a missing leader is shown in error
-tone — the prime wedge signal), and a per-resource table of every active
+(worktree + central), the shared transport (how many tabs are attached to each
+socket's SharedWorker, and the server connection this tab is bound to), and a
+per-resource table of every active
 subscription with its applied version, last-update age, refcount, and owning
 socket. The pane subscribes to `subscribeDebug` and re-renders on any change;
 ages self-tick via the `relative-time` primitive, so there is no polling.
@@ -17,7 +18,7 @@ instrumentation of its own.
 
 ## Plugin reference
 
-- Description: Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.
+- Description: Live health inspector for the client live-state pipeline (sockets, shared transport, per-resource subscriptions), opened from the Debug sidebar.
 - Web:
   - Slots: `liveStateHealthPane.Actions`
   - Slot contributors: `liveStateHealthPane.Actions` ← `primitives.pane`

@@ -3,10 +3,10 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "no-raw-websocket",
-    paths: ["web/shared-websocket.ts", "web/use-reconnecting-ws.ts"],
+    paths: ["web/shared-ws.worker.ts", "web/use-reconnecting-ws.ts"],
     kind: "sanctioned",
     reason:
-      "The networking primitive is where the one shared socket is built: every other client goes through SharedWebSocket or useReconnectingWs.",
+      "The networking primitive is where the one shared socket is built (inside its SharedWorker): every other client goes through SharedWebSocket or useReconnectingWs.",
   },
   {
     rule: "no-raw-event-source",

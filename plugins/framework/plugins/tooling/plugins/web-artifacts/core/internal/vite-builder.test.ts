@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   assertCoEntriesOffHostPath,
+  assertWorkersSelfContained,
   ownFolderBarrelPlugin,
   parseEmittedImports,
 } from "./vite-builder";
@@ -128,5 +129,50 @@ describe("assertCoEntriesOffHostPath (exhibits.js never on the boot path)", () =
         },
       }),
     ).toThrow("statically reaches exhibits.js");
+  });
+});
+
+// A module worker resolves imports against its own URL — the page's import map
+// never reaches it — so a worker chunk must arrive fully bundled.
+describe("assertWorkersSelfContained", () => {
+  let dir: string;
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  function setup(workerSource: string): string {
+    dir = mkdtempSync(join(tmpdir(), "web-artifacts-worker-"));
+    mkdirSync(join(dir, "assets"));
+    writeFileSync(join(dir, "index.js"), `import "@plugins/x/core";\n`);
+    writeFileSync(join(dir, "assets", "w.worker-abc.js"), workerSource);
+    writeFileSync(join(dir, "assets", "w.worker-abc.js.map"), "{}");
+    return dir;
+  }
+
+  test("a self-contained worker passes and is listed", async () => {
+    const outDir = setup(`self.onconnect = () => {};\n`);
+    expect(
+      await assertWorkersSelfContained({ dirName: "demo", outDir }),
+    ).toEqual(["assets/w.worker-abc.js"]);
+  });
+
+  test("an artifact with no worker passes", async () => {
+    dir = mkdtempSync(join(tmpdir(), "web-artifacts-worker-"));
+    expect(
+      await assertWorkersSelfContained({ dirName: "demo", outDir: dir }),
+    ).toEqual([]);
+  });
+
+  test("a worker importing anything — static or dynamic — throws, naming it", async () => {
+    const outDir = setup(
+      `import { a } from "@plugins/x/core";\nconst b = () => import("./lazy.js");\n`,
+    );
+    let message = "";
+    try {
+      await assertWorkersSelfContained({ dirName: "demo", outDir });
+    } catch (err) {
+      message = err instanceof Error ? err.message : String(err);
+    }
+    expect(message).toContain(
+      "assets/w.worker-abc.js imports @plugins/x/core, ./lazy.js",
+    );
   });
 });

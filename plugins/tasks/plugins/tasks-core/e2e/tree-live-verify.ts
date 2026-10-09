@@ -82,6 +82,7 @@ import {
   type Harness,
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 
 const OUT = arg("out") ?? "/tmp/tree-live";
 /** Every seeded id starts with this, so a crashed run's leftovers are swept by prefix. */
@@ -111,18 +112,16 @@ interface Frame {
   deletes?: string[];
 }
 
-/** Every live frame the page receives, parsed, in order. */
-function recordFrames(page: Page): Frame[] {
+/**
+ * Every live frame the page receives, parsed, in order. Through the shared
+ * socket's tap: the socket lives in a SharedWorker, out of `page.on("websocket")`'s
+ * reach. Call before the page's first navigation.
+ */
+async function recordFrames(page: Page): Promise<Frame[]> {
   const frames: Frame[] = [];
-  page.on("websocket", (ws) => {
-    ws.on("framereceived", (f) => {
-      if (typeof f.payload !== "string") return;
-      try {
-        frames.push(JSON.parse(f.payload) as Frame);
-      } catch (err) {
-        if (!(err instanceof SyntaxError)) throw err;
-      }
-    });
+  const tap = await tapSharedSocket(page);
+  tap.onFrame((f) => {
+    frames.push(JSON.parse(f.data) as Frame);
   });
   return frames;
 }
@@ -547,7 +546,7 @@ async function launchesPhase(
     [agentId, agentName, `zz${agentId}`],
   );
   const { page } = await h.session();
-  const frames = recordFrames(page);
+  const frames = await recordFrames(page);
   const httpReads = recordHttpReads(page, [KEY]);
   await boot(page, pathUrl(`/agents/agents/ag/${agentId}`), {
     marker: `text=${agentName}`,
@@ -722,7 +721,7 @@ async function conversationsPhase(
   );
 
   const { page } = await h.session();
-  const frames = recordFrames(page);
+  const frames = await recordFrames(page);
   const httpReads = recordHttpReads(page, [
     ACTIVE,
     GONE,
@@ -895,20 +894,12 @@ async function bootCostOfByIdPane(
     else if (path.startsWith("/api/resources/conversations.by-id"))
       answered("http");
   });
-  page.on("websocket", (ws) => {
-    ws.on("framereceived", (f) => {
-      if (typeof f.payload !== "string" || !f.payload.includes(bootId)) return;
-      try {
-        const frame = JSON.parse(f.payload) as Frame;
-        if (
-          frame.kind === "sub-ack" &&
-          frame.key === "conversations.by-id:rows"
-        )
-          answered("sub-ack");
-      } catch (err) {
-        if (!(err instanceof SyntaxError)) throw err;
-      }
-    });
+  const tap = await tapSharedSocket(page);
+  tap.onFrame((f) => {
+    if (!f.data.includes(bootId)) return;
+    const frame = JSON.parse(f.data) as Frame;
+    if (frame.kind === "sub-ack" && frame.key === "conversations.by-id:rows")
+      answered("sub-ack");
   });
   await page.goto(pathUrl(`/agents/c/${bootId}`), {
     waitUntil: "domcontentloaded",
@@ -957,7 +948,7 @@ try {
   await withBrowser(async (h) => {
     const r = report("task tree — live end to end");
     const { page } = await h.session();
-    const frames = recordFrames(page);
+    const frames = await recordFrames(page);
     const httpReads = recordHttpReads(page);
 
     // The task's detail pane: its attempt sections read the `attempts` set.

@@ -20,24 +20,22 @@
  * with one HTTP call (`POST /api/notifications`), harmless and reversible
  * (the created row is dismissed in a `finally`).
  *
- * Mechanism: `page.routeWebSocket(/\/ws\/notifications/, …)` proxies every
- * connection the page opens to the real server via `ws.connectToServer()`, so
- * the app behaves normally except for the one thing this script controls:
+ * Mechanism: the shared socket's e2e tap (`tapSharedSocket`,
+ * `@plugins/primitives/plugins/networking/e2e`) — the socket lives in a
+ * SharedWorker, out of Playwright's `routeWebSocket` reach — so the app behaves
+ * normally except for the one thing this script controls:
  *
- *   1. drop the socket SERVER-side (`server.close()` on the first
- *      connection) — the backend sees a real close and releases the tab's
- *      subs, ending the tracking span for every tuple it held;
- *   2. HOLD the client's reconnect — the routed-WebSocket handler for the
- *      NEXT connection `await`s a gate before ever calling
- *      `connectToServer()`, so the page's new `WebSocket` stays pending
- *      (Playwright only decides mocked-vs-real once the handler's returned
- *      promise settles — see the "Intercepting" section of
- *      https://playwright.dev/docs/api/class-websocketroute);
+ *   1. drop the connection (`tap.drop`) — the backend sees a real close and
+ *      releases the tab's subs, ending the tracking span for every tuple it
+ *      held;
+ *   2. HOLD the reconnect — `tap.hold` (armed before the drop) parks every new
+ *      connection attempt in the worker until `tap.release`;
  *   3. make the HTTP change while the reconnect is held, wait ~1s, then
- *      release the gate;
+ *      release;
  *   4. assert the page shows the change within a few seconds, and record
- *      which frame answered the `notifications` replay — the fixed server
- *      must answer `sub-ack` (fresh data), never `up-to-date-batch`.
+ *      which frame answered the `notifications` replay on the new connection
+ *      — the fixed server must answer `sub-ack` (fresh data), never
+ *      `up-to-date-batch`.
  *
  * WRITES: creates one notification via the app's own endpoint and dismisses
  * it in a `finally`, whatever the run's outcome.
@@ -54,7 +52,8 @@ import {
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import type { Page, WebSocketRoute } from "playwright";
+import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
+import type { Page } from "playwright";
 
 const OUT = "/tmp/claude-501/reconnect-after-gap";
 const r = report(
@@ -66,7 +65,7 @@ const RECONNECT_HOLD_MS = 1000;
 /** How long the DOM may take to reflect the reconnect's replay. */
 const SETTLE_TIMEOUT_MS = 10_000;
 
-const NOTIFICATIONS_WS = /\/ws\/notifications(\?|$)/;
+const NOTIFICATIONS_WS = "/ws/notifications";
 
 const bell = (page: Page) =>
   page.getByRole("button", { name: /^Notifications/ });
@@ -76,7 +75,7 @@ const rows = (page: Page) =>
 /** One frame that answered a resource's replay on a given connection. */
 interface ReplayFrame {
   kind: "sub-ack" | "up-to-date-batch";
-  socketIndex: number;
+  conn: string | null;
 }
 
 await withBrowser(async (h) => {
@@ -87,55 +86,30 @@ await withBrowser(async (h) => {
     if (!res.ok()) throw new Error(`POST ${path} — ${res.status()}`);
   };
 
-  // --- take control of /ws/notifications ---------------------------------
-  // Every connection is proxied to the real server (default forwarding both
-  // ways once `connectToServer()` runs), except: the connection at
-  // `holdAtIndex` is held — its handler parks on `holdGate` BEFORE calling
-  // `connectToServer()` — and every server→page frame is inspected (then
-  // manually forwarded, since registering `onMessage` disables the default
-  // relay) to record which frame answered which resource's replay.
-  let socketIndex = -1;
-  let holdAtIndex: number | null = null;
-  let releaseHold!: () => void;
-  const holdGate = new Promise<void>((resolve) => {
-    releaseHold = resolve;
-  });
-  const servers: WebSocketRoute[] = [];
+  // --- tap /ws/notifications --------------------------------------------
+  // Every server→page frame is inspected to record which frame answered which
+  // resource's replay, on which server connection.
+  const tap = await tapSharedSocket(page);
   const replaysFor: Record<string, ReplayFrame[]> = {};
-
-  await page.routeWebSocket(NOTIFICATIONS_WS, async (ws) => {
-    const idx = ++socketIndex;
-    if (idx === holdAtIndex) await holdGate;
-    const server = ws.connectToServer();
-    servers[idx] = server;
-    server.onMessage((message) => {
-      const text =
-        typeof message === "string" ? message : message.toString("utf8");
-      // Every live-state frame is one JSON object.
-      const msg = JSON.parse(text) as {
-        kind?: string;
-        key?: string;
-        entries?: Array<{ key?: string }>;
-      };
-      if (msg.kind === "sub-ack" && msg.key) {
-        (replaysFor[msg.key] ??= []).push({
-          kind: "sub-ack",
-          socketIndex: idx,
+  tap.onFrame((f) => {
+    if (f.url !== NOTIFICATIONS_WS) return;
+    // Every live-state frame is one JSON object.
+    const msg = JSON.parse(f.data) as {
+      kind?: string;
+      key?: string;
+      entries?: Array<{ key?: string }>;
+    };
+    if (msg.kind === "sub-ack" && msg.key) {
+      (replaysFor[msg.key] ??= []).push({ kind: "sub-ack", conn: f.conn });
+    } else if (msg.kind === "up-to-date-batch" && Array.isArray(msg.entries)) {
+      for (const e of msg.entries) {
+        if (!e.key) continue;
+        (replaysFor[e.key] ??= []).push({
+          kind: "up-to-date-batch",
+          conn: f.conn,
         });
-      } else if (
-        msg.kind === "up-to-date-batch" &&
-        Array.isArray(msg.entries)
-      ) {
-        for (const e of msg.entries) {
-          if (!e.key) continue;
-          (replaysFor[e.key] ??= []).push({
-            kind: "up-to-date-batch",
-            socketIndex: idx,
-          });
-        }
       }
-      ws.send(message);
-    });
+    }
   });
 
   const stamp = Date.now();
@@ -156,38 +130,37 @@ await withBrowser(async (h) => {
     // cache, so the live socket may not have connected yet even once the
     // list is visible — poll for it rather than asserting immediately.
     const opened = await waitFor(
-      () => Promise.resolve(socketIndex),
-      (v) => v >= 0,
+      () => Promise.resolve(tap.connections(NOTIFICATIONS_WS)),
+      (conns) => conns.length > 0,
       { timeoutMs: SETTLE_TIMEOUT_MS, intervalMs: 100 },
     );
     r.ok(
       "the app opened its /ws/notifications connection",
       opened.ok,
-      `socketIndex=${opened.value}`,
+      `connections=${opened.value.length}`,
     );
+    const dropped = opened.value.at(-1);
 
-    // Arm the hold for the RECONNECT (the next connection, index 1), then
-    // drop the CURRENT connection's server side: the backend sees a real
-    // close and releases this tab's subs — every tuple it held (including
-    // `notifications`) ends its tracking span right here.
-    holdAtIndex = socketIndex + 1;
-    const dropped = socketIndex;
-    r.note(`dropping connection ${dropped} server-side`);
-    await servers[dropped]!.close();
+    // Arm the hold for the RECONNECT, then drop the CURRENT connection: the
+    // backend sees a real close and releases this tab's subs — every tuple it
+    // held (including `notifications`) ends its tracking span right here.
+    await tap.hold(NOTIFICATIONS_WS);
+    r.note(`dropping connection ${dropped}`);
+    await tap.drop(NOTIFICATIONS_WS);
 
-    // Confirm the reconnect attempt has actually begun and is now held
-    // (its handler incremented `socketIndex` synchronously before parking on
-    // `holdGate`) before making the change — so the change is guaranteed
-    // to land entirely inside the gap.
+    // Confirm the drop reached the page (the worker reports the lost
+    // connection) before making the change — with the hold armed, no new
+    // connection can open until the release, so the change is guaranteed to
+    // land entirely inside the gap.
     const held = await waitFor(
-      () => Promise.resolve(socketIndex),
-      (v) => v === holdAtIndex,
+      () => Promise.resolve(tap.status(NOTIFICATIONS_WS)),
+      (status) => status === "reconnecting",
       { timeoutMs: SETTLE_TIMEOUT_MS, intervalMs: 100 },
     );
     r.ok(
-      "the client's reconnect attempt is held before connecting to the server",
+      "the connection dropped and the reconnect is held",
       held.ok,
-      `socketIndex=${held.value}`,
+      `status=${held.value}`,
     );
 
     // The HTTP change, made entirely inside the gap: nobody is subscribed to
@@ -206,8 +179,8 @@ await withBrowser(async (h) => {
 
     await page.waitForTimeout(RECONNECT_HOLD_MS);
 
-    r.note(`releasing connection ${holdAtIndex}`);
-    releaseHold();
+    r.note("releasing the reconnect");
+    await tap.release(NOTIFICATIONS_WS);
 
     // The page shows the change within a few seconds — poll (read, then
     // re-read to a deadline), never a fixed sleep.
@@ -224,11 +197,12 @@ await withBrowser(async (h) => {
     await snap(page, OUT, "2-after");
 
     // Which frame answered the `notifications` replay on the reconnect?
+    const reconnected = tap.connections(NOTIFICATIONS_WS).at(-1);
     const onReconnect = (replaysFor["notifications"] ?? []).filter(
-      (f) => f.socketIndex === holdAtIndex,
+      (f) => f.conn !== null && f.conn === reconnected && f.conn !== dropped,
     );
     r.note(
-      `notifications replay frame(s) on connection ${holdAtIndex}: ${JSON.stringify(onReconnect)}`,
+      `notifications replay frame(s) on connection ${reconnected}: ${JSON.stringify(onReconnect)}`,
     );
     r.ok(
       "the `notifications` resource replayed on the reconnect",

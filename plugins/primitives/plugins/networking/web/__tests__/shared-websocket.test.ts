@@ -1,22 +1,19 @@
 /**
- * SharedWebSocket hazard tests — the socket-owning half of the client transport
- * stack, driven on a full `createTransportHub()` (fake server + BroadcastChannel
- * bus + lock manager). The REAL SharedWebSocket runs: election, queue-until-open,
- * reconnect backoff, cross-tab relay, and the demote handler are all exercised;
- * only the three OS globals are faked.
+ * SharedWebSocket + its SharedWorker host, driven on a full
+ * `createTransportHub()`: the REAL tab client and the REAL worker host
+ * (`createSharedWsHost`, in-process) run end to end — attach handshake behind
+ * the liveness lock, queue-until-open, reconnect backoff, fan-out, wills — and
+ * only the OS globals are faked.
  *
- * Pins, cross-referencing the v3 mental-model doc §9 and
- * `research/2026-07-03-global-live-state-client-transport-harness.md`:
- *   - queue-until-open + rx dispatch (the basic leader socket contract);
- *   - reconnect backoff index (500 → advance → 1000; reset on open) — the herd
- *     de-sync mechanic, with Math.random pinned so delay == base exactly;
- *   - a makeWebSocket SyntaxError schedules a reconnect instead of crashing;
- *   - follower-joined → the leader rebroadcasts `open` (pins the
- *     `WebSocket.OPEN` → `SharedWebSocket.OPEN` global-read swap);
- *   - H6-socket: killing the leader tab elects a follower with exactly one live
- *     server socket throughout;
- *   - H6c: a demoted leader closes its socket (the §4 structural fix — without
- *     `onDemoted` the stolen-from tab would keep a second live socket).
+ * Pins (see `research/2026-10-08-networking-shared-worker-transport.md`):
+ *   - one real socket per URL however many tabs attach;
+ *   - onopen dispatches exactly once per server connection per tab (consumers
+ *     replay their subs there): a joining tab does not re-dispatch the others,
+ *     a reconnect re-dispatches everyone;
+ *   - a tab dying (no detach) or leaving never interrupts the others' socket;
+ *   - a departing tab's will reaches the server, whichever way it departed;
+ *   - the last tab leaving closes the socket;
+ *   - bfcache: pagehide detaches, a persisted pageshow re-attaches and replays.
  *
  * Conventions: fake timers per test; advance only via the async variants;
  * Math.random pinned to 0.5 (delay = base·(0.5+0.5) = base); every constructed
@@ -25,14 +22,18 @@
 
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import {
-  SharedWebSocket,
-  type SharedWebSocketHooks,
-} from "../shared-websocket";
+  WS_TEST_HOOK_GLOBAL,
+  type WsTestEvent,
+  type WsTestHook,
+} from "../../core";
+import { SharedWebSocket } from "../shared-websocket";
+import { createSharedWsHost } from "../shared-ws-host";
+import { SHARED_WS_PROTO, type WorkerToTab } from "../shared-ws-protocol";
 import {
   createTransportHub,
-  FakeWsServer,
-  FakeBroadcastChannelBus,
   FakeLockManager,
+  FakeMessagePort,
+  FakeWsServer,
 } from "../testing";
 
 const URL_PATH = "/ws/test";
@@ -61,48 +62,73 @@ describe("SharedWebSocket", () => {
     vi.useRealTimers();
   });
 
-  test("queue-until-open flushes queued frames in order on open()", async () => {
-    const hub = createTransportHub();
-    const tab = hub.tab();
-    const sws = track(new SharedWebSocket(URL_PATH, tab.hooks));
-    await flush(); // elected → startLeading → socket created (still connecting)
+  function counter(sws: SharedWebSocket): { opens: number } {
+    const c = { opens: 0 };
+    sws.onopen = () => {
+      c.opens++;
+    };
+    return c;
+  }
 
-    const ws = hub.server.all()[0]!;
-    sws.send("a");
+  test("frames sent before the attach handshake and before open flush in order", async () => {
+    const hub = createTransportHub();
+    const sws = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    sws.send("a"); // before the liveness lock is even granted
+    await flush(); // attach → worker creates the socket (connecting)
     sws.send("b");
     sws.send("c");
-    expect(ws.sent).toEqual([]); // connecting → queued, nothing on the wire
+    await flush();
 
+    const ws = hub.server.all()[0]!;
+    expect(ws.sent).toEqual([]); // connecting → queued in the worker
     ws.open();
-    expect(ws.sent).toEqual(["a", "b", "c"]); // flushed in order
+    expect(ws.sent).toEqual(["a", "b", "c"]);
+    await flush();
     expect(sws.status).toBe("open");
+    expect(sws.readyState).toBe(SharedWebSocket.OPEN);
   });
 
-  test("an incoming server frame is dispatched to onmessage", async () => {
+  test("an incoming server frame reaches every tab's onmessage", async () => {
     const hub = createTransportHub();
-    const tab = hub.tab();
-    const sws = track(new SharedWebSocket(URL_PATH, tab.hooks));
+    const a = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    const b = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
     await flush();
-    const ws = hub.server.all()[0]!;
-    ws.open();
+    hub.server.all()[0]!.open();
+    await flush();
 
     const got: string[] = [];
-    sws.onmessage = (ev) => got.push(ev.data);
-    ws.serverSend("frame-1");
-    expect(got).toEqual(["frame-1"]);
+    a.onmessage = (ev) => got.push(`a:${ev.data}`);
+    b.onmessage = (ev) => got.push(`b:${ev.data}`);
+    hub.server.all()[0]!.serverSend("frame-1");
+    await flush();
+    expect(got).toEqual(["a:frame-1", "b:frame-1"]);
+  });
+
+  test("one real socket per URL however many tabs attach; a second URL gets its own worker", async () => {
+    const hub = createTransportHub();
+    for (let i = 0; i < 3; i++) {
+      track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    }
+    await flush();
+    expect(hub.server.all()).toHaveLength(1);
+
+    track(new SharedWebSocket("/ws/other", hub.tab().hooks));
+    await flush();
+    expect(hub.workers.count()).toBe(2);
+    expect(hub.server.all()).toHaveLength(2);
   });
 
   test("reconnect backoff: 500 → new socket, index advances to 1000, resets on open", async () => {
     const hub = createTransportHub();
-    const tab = hub.tab();
-    const sws = track(new SharedWebSocket(URL_PATH, tab.hooks));
+    const sws = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
     await flush();
     const ws1 = hub.server.all()[0]!;
     ws1.open();
+    await flush();
     expect(sws.status).toBe("open");
 
-    // First drop → backoff index 0 = 500ms. Nothing before 500; a new socket at 500.
     ws1.serverClose();
+    await flush();
     expect(sws.status).toBe("reconnecting");
     await vi.advanceTimersByTimeAsync(499);
     expect(hub.server.all()).toHaveLength(1);
@@ -110,8 +136,7 @@ describe("SharedWebSocket", () => {
     expect(hub.server.all()).toHaveLength(2);
 
     // ws2 drops WITHOUT opening → the backoff index advanced to 1 = 1000ms.
-    const ws2 = hub.server.all()[1]!;
-    ws2.serverClose();
+    hub.server.all()[1]!.serverClose();
     await vi.advanceTimersByTimeAsync(999);
     expect(hub.server.all()).toHaveLength(2);
     await vi.advanceTimersByTimeAsync(1);
@@ -129,10 +154,9 @@ describe("SharedWebSocket", () => {
 
   test("a makeWebSocket SyntaxError schedules a reconnect instead of crashing", async () => {
     const server = new FakeWsServer();
-    const bus = new FakeBroadcastChannelBus();
     const locks = new FakeLockManager();
     let throwNext = true;
-    const hooks: SharedWebSocketHooks = {
+    const host = createSharedWsHost({
       makeWebSocket: (url) => {
         if (throwNext) {
           throwNext = false;
@@ -140,209 +164,277 @@ describe("SharedWebSocket", () => {
         }
         return server.connect(url);
       },
-      makeBroadcastChannel: bus.channel,
       locks,
-      heartbeatMs: 40,
-      timeoutMs: 120,
-    };
-    track(new SharedWebSocket(URL_PATH, hooks));
-    await flush(); // elected → connectWs throws SyntaxError → scheduleReconnect
+    });
+    track(
+      new SharedWebSocket(URL_PATH, {
+        makeSharedWorker: () => {
+          const [tabPort, workerPort] = FakeMessagePort.pair();
+          host.connect(workerPort);
+          return { port: tabPort, onerror: null };
+        },
+        locks,
+        pageLifecycle: null,
+      }),
+    );
+    await flush();
     expect(server.all()).toHaveLength(0); // did not crash, no socket yet
 
     await vi.advanceTimersByTimeAsync(500); // backoff retry succeeds
     expect(server.all()).toHaveLength(1);
   });
 
-  test("follower-joined makes an open leader rebroadcast 'open' (pins the SharedWebSocket.OPEN swap)", async () => {
+  test("onopen: once per connection per tab — a join re-dispatches nobody, a reconnect re-dispatches everyone", async () => {
     const hub = createTransportHub();
-    const tabA = hub.tab();
-    const swsA = track(new SharedWebSocket(URL_PATH, tabA.hooks));
-    await flush();
-    hub.server.all()[0]!.open();
-    expect(swsA.isLeader).toBe(true);
-
-    const tabB = hub.tab();
-    const swsB = track(new SharedWebSocket(URL_PATH, tabB.hooks));
-    let bOpened = false;
-    swsB.onopen = () => {
-      bOpened = true;
-    };
-    await flush(); // B hello → A.onFollowerJoined → rebroadcast open → B learns open
-
-    expect(swsB.isLeader).toBe(false);
-    expect(swsB.status).toBe("open");
-    expect(bOpened).toBe(true);
-    expect(hub.server.openSockets()).toHaveLength(1); // B opened no socket of its own
-  });
-
-  test("follower-join open dedup: a third tab joining does NOT re-dispatch onopen to an already-open follower", async () => {
-    // onFollowerJoined broadcasts "open" to ALL followers (BroadcastChannel has
-    // no unicast). An already-OPEN follower must not re-dispatch onopen —
-    // consumers treat onopen as "fresh connection, replay state"
-    // (NotificationsClient replays its whole sub set), so an unconditional
-    // dispatch made every existing tab re-replay on every tab join (BUG B of
-    // the 2026-07-11 replay-storm forensics). A genuine reconnect still
-    // dispatches: the leader's "close" broadcast resets followers to CONNECTING
-    // first.
-    const hub = createTransportHub();
-    const tabA = hub.tab();
-    const swsA = track(new SharedWebSocket(URL_PATH, tabA.hooks));
+    const a = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    const ca = counter(a);
     await flush();
     const s1 = hub.server.all()[0]!;
     s1.open();
-    expect(swsA.isLeader).toBe(true);
-
-    const tabB = hub.tab();
-    const swsB = track(new SharedWebSocket(URL_PATH, tabB.hooks));
-    let bOpens = 0;
-    swsB.onopen = () => {
-      bOpens++;
-    };
-    await flush(); // B joins → leader rebroadcasts open → B's FIRST dispatch
-    expect(bOpens).toBe(1);
-    expect(swsB.status).toBe("open");
-
-    // C joins: the rebroadcast reaches B too, but B is already OPEN → no
-    // re-dispatch (no re-replay).
-    const tabC = hub.tab();
-    const swsC = track(new SharedWebSocket(URL_PATH, tabC.hooks));
-    let cOpened = false;
-    swsC.onopen = () => {
-      cOpened = true;
-    };
     await flush();
-    expect(cOpened).toBe(true); // the joiner itself still learns "open"
-    expect(bOpens).toBe(1); // the existing follower did NOT re-dispatch
+    expect(ca.opens).toBe(1);
 
-    // A genuine reconnect still re-dispatches to B: close resets followers to
-    // CONNECTING, so the next open is a real transition.
+    // B attaches to the already-open socket: B dispatches, A does not.
+    const b = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    const cb = counter(b);
+    await flush();
+    expect(cb.opens).toBe(1);
+    expect(b.status).toBe("open");
+    expect(ca.opens).toBe(1);
+    expect(a.attachedTabs).toBe(2);
+
+    // A genuine reconnect is a new connection: everyone re-dispatches.
     s1.serverClose();
     await flush();
-    expect(swsB.status).toBe("reconnecting");
-    await vi.advanceTimersByTimeAsync(500); // leader backoff → new socket
-    const s2 = hub.server.all().find((s) => s.readyState === 0)!;
-    s2.open();
+    expect(a.status).toBe("reconnecting");
+    expect(b.status).toBe("reconnecting");
+    await vi.advanceTimersByTimeAsync(500);
+    hub.server.all()[1]!.open();
     await flush();
-    expect(bOpens).toBe(2);
+    expect(ca.opens).toBe(2);
+    expect(cb.opens).toBe(2);
   });
 
-  test("H6-socket: killing the leader tab elects the follower with exactly one live socket throughout", async () => {
+  test("killing the tab that attached first leaves the others on the same open socket", async () => {
     const hub = createTransportHub();
     const tabA = hub.tab();
-    const swsA = track(new SharedWebSocket(URL_PATH, tabA.hooks));
+    track(new SharedWebSocket(URL_PATH, tabA.hooks));
+    const b = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    const cb = counter(b);
     await flush();
-    hub.server.all()[0]!.open();
-    expect(swsA.isLeader).toBe(true);
-    expect(hub.server.openSockets()).toHaveLength(1);
-
-    const tabB = hub.tab();
-    const swsB = track(new SharedWebSocket(URL_PATH, tabB.hooks));
+    const ws = hub.server.all()[0]!;
+    ws.open();
     await flush();
-    expect(swsB.isLeader).toBe(false);
-    expect(hub.server.openSockets()).toHaveLength(1); // still only A's
+    expect(cb.opens).toBe(1);
 
-    hub.kill(tabA); // silent socket close + lock release → B granted
+    hub.kill(tabA);
     await flush();
-    expect(swsB.isLeader).toBe(true);
-    expect(hub.server.openSockets()).toHaveLength(0); // A's gone, B's not open yet
+    expect(hub.server.all()).toHaveLength(1); // no new socket, no reconnect
+    expect(hub.server.openSockets()).toEqual([ws]);
+    expect(b.status).toBe("open");
+    expect(cb.opens).toBe(1); // same connection: no replay
+    expect(b.attachedTabs).toBe(1);
 
-    const bSocket = hub.server.all().find((s) => s.readyState === 0)!;
-    bSocket.open();
-    expect(hub.server.openSockets()).toHaveLength(1); // exactly one
+    const got: string[] = [];
+    b.onmessage = (ev) => got.push(ev.data);
+    ws.serverSend("still-live");
+    await flush();
+    expect(got).toEqual(["still-live"]);
   });
 
-  test("H6c: a demoted leader closes its socket (no two-socket violation)", async () => {
+  test("a departing tab's will reaches the server — on kill and on close — and null clears it", async () => {
     const hub = createTransportHub();
     const tabA = hub.tab();
-    const swsA = track(new SharedWebSocket(URL_PATH, tabA.hooks));
+    const a = track(new SharedWebSocket(URL_PATH, tabA.hooks));
+    const b = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    const c = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    a.setLastWill("bye-a"); // set before the handshake: sent with the attach
+    b.setLastWill("bye-b");
     await flush();
-    const aSocket = hub.server.all()[0]!;
-    aSocket.open();
-    expect(swsA.isLeader).toBe(true);
-
-    const tabB = hub.tab();
-    const swsB = track(new SharedWebSocket(URL_PATH, tabB.hooks));
+    const ws = hub.server.all()[0]!;
+    ws.open();
     await flush();
-    expect(swsB.isLeader).toBe(false);
+    c.setLastWill("bye-c"); // set after: sent on its own
+    c.setLastWill(null); // …and cleared
+    await flush();
 
-    // Freeze A (its lock stays held → B must STEAL) and let B time out.
-    hub.freeze(tabA);
-    await vi.advanceTimersByTimeAsync(hub.timeoutMs);
+    hub.kill(tabA); // dies without a word: the lock frees
+    await flush();
+    expect(ws.sent).toEqual(["bye-a"]);
 
-    // A demoted → onDemoted tore its socket down; it does NOT reconnect its own.
-    expect(swsA.isLeader).toBe(false);
-    expect(swsA.status).toBe("reconnecting");
-    expect(aSocket.readyState).toBe(CLOSED);
-    expect(swsB.isLeader).toBe(true);
+    b.close(); // clean departure: detach
+    await flush();
+    expect(ws.sent).toEqual(["bye-a", "bye-b"]);
 
-    // B (new leader) opens exactly one socket.
-    expect(hub.server.openSockets()).toHaveLength(0);
-    const bSocket = hub.server.all().find((s) => s.readyState === 0)!;
-    bSocket.open();
-    expect(hub.server.openSockets()).toHaveLength(1);
+    c.close(); // no will; last tab out closes the socket
+    await flush();
+    expect(ws.sent).toEqual(["bye-a", "bye-b"]);
+    expect(ws.readyState).toBe(CLOSED);
   });
 
-  // A leader that dies or freezes broadcasts no "close", so its followers never
-  // leave OPEN. The new leader's socket is a NEW server connection holding none
-  // of their state, so every follower must re-dispatch onopen (NotificationsClient
-  // replays its subs there) — the crash-1781222633896-s41myj wedge: followers
-  // stayed bound to the dead connection and every sub went silently stale.
-  for (const failover of ["freeze", "kill"] as const) {
-    test(`leader ${failover} failover re-dispatches onopen to an already-open follower`, async () => {
+  test("the last tab leaving closes the socket; the next tab opens a fresh one", async () => {
+    const hub = createTransportHub();
+    const a = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    await flush();
+    const ws1 = hub.server.all()[0]!;
+    ws1.open();
+    await flush();
+
+    a.close();
+    await flush();
+    expect(ws1.readyState).toBe(CLOSED);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(hub.server.all()).toHaveLength(1); // closed, not reconnecting
+
+    const b = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    const cb = counter(b);
+    await flush();
+    expect(hub.server.all()).toHaveLength(2);
+    hub.server.all()[1]!.open();
+    await flush();
+    expect(cb.opens).toBe(1);
+  });
+
+  test("bfcache: pagehide detaches (will sent), a persisted pageshow re-attaches and re-dispatches onopen once", async () => {
+    const hub = createTransportHub();
+    const tabA = hub.tab();
+    const a = track(new SharedWebSocket(URL_PATH, tabA.hooks));
+    a.setLastWill("bye-a");
+    const ca = counter(a);
+    track(new SharedWebSocket(URL_PATH, hub.tab().hooks)); // keeps the socket alive
+    await flush();
+    const ws = hub.server.all()[0]!;
+    ws.open();
+    await flush();
+    expect(ca.opens).toBe(1);
+
+    tabA.lifecycle.hide(true);
+    await flush();
+    expect(ws.sent).toEqual(["bye-a"]); // server released A's state
+    a.send("while-frozen"); // dropped: a frozen page reaches nothing
+    await flush();
+    expect(ws.sent).toEqual(["bye-a"]);
+
+    tabA.lifecycle.show(true);
+    await flush();
+    expect(ca.opens).toBe(2); // same connection, but A must replay its state
+    expect(a.status).toBe("open");
+    expect(hub.server.all()).toHaveLength(1);
+  });
+
+  test("the worker host rejects a port speaking another protocol version", async () => {
+    const host = createSharedWsHost({
+      makeWebSocket: new FakeWsServer().connect,
+      locks: new FakeLockManager(),
+    });
+    const [tabPort, workerPort] = FakeMessagePort.pair();
+    host.connect(workerPort);
+    const got: WorkerToTab[] = [];
+    tabPort.onmessage = (ev) => got.push(ev.data as WorkerToTab);
+    tabPort.postMessage({
+      kind: "attach",
+      url: "ws://x/ws/test",
+      portId: "p1",
+      proto: SHARED_WS_PROTO + 1,
+      holdConnects: false,
+    });
+    await flush();
+    expect(workerPort.closed).toBe(true);
+    expect(got).toEqual([
+      {
+        kind: "fatal",
+        message: `shared-ws protocol mismatch: tab speaks ${SHARED_WS_PROTO + 1}, worker ${SHARED_WS_PROTO}`,
+      },
+    ]);
+  });
+
+  describe("e2e test hook (core/ws-test-hook.ts)", () => {
+    function installHook(holdFromStart: string[] = []): {
+      hook: WsTestHook;
+      events: WsTestEvent[];
+    } {
+      const events: WsTestEvent[] = [];
+      const hook: WsTestHook = {
+        holdFromStart,
+        controls: {},
+        onEvent: (e) => events.push(e),
+      };
+      Object.assign(globalThis, { [WS_TEST_HOOK_GLOBAL]: hook });
+      return { hook, events };
+    }
+    afterEach(() => {
+      Reflect.deleteProperty(globalThis, WS_TEST_HOOK_GLOBAL);
+    });
+
+    test("with no hook installed, nothing is reported and no controls exist", async () => {
       const hub = createTransportHub();
-      const tabA = hub.tab();
-      const swsA = track(new SharedWebSocket(URL_PATH, tabA.hooks));
-      await flush();
-      hub.server.all()[0]!.open();
-      expect(swsA.isLeader).toBe(true);
-
-      const tabB = hub.tab();
-      const swsB = track(new SharedWebSocket(URL_PATH, tabB.hooks));
-      const tabC = hub.tab();
-      const swsC = track(new SharedWebSocket(URL_PATH, tabC.hooks));
-      let bOpens = 0;
-      let cOpens = 0;
-      swsB.onopen = () => {
-        bOpens++;
-      };
-      swsC.onopen = () => {
-        cOpens++;
-      };
-      await flush();
-      expect(bOpens).toBe(1);
-      expect(cOpens).toBe(1);
-
-      if (failover === "freeze") {
-        hub.freeze(tabA);
-        await vi.advanceTimersByTimeAsync(hub.timeoutMs);
-      } else {
-        hub.kill(tabA);
-        await flush();
-      }
-      const leader = swsB.isLeader ? swsB : swsC;
-      const follower = leader === swsB ? swsC : swsB;
-      expect(leader.isLeader).toBe(true);
-      expect(follower.isLeader).toBe(false);
-      // On a kill no "close" ever reaches the follower. (On a freeze both
-      // followers race the steal, so the loser may pass through demotion.)
-      if (failover === "kill") expect(follower.status).toBe("open");
-
-      hub.server
-        .all()
-        .find((s) => s.readyState === 0)!
-        .open();
-      await flush();
-      // Both tabs are now bound to the new connection: the leader via its own
-      // socket, the still-OPEN follower via the relayed open's new identity.
-      expect(bOpens).toBe(2);
-      expect(cOpens).toBe(2);
-
-      // …and a later tab join still re-broadcasts the SAME connection: no
-      // re-dispatch to either.
       track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
       await flush();
-      expect(bOpens).toBe(2);
-      expect(cOpens).toBe(2);
+      expect(WS_TEST_HOOK_GLOBAL in globalThis).toBe(false);
+      expect(hub.server.all()).toHaveLength(1);
     });
-  }
+
+    test("reports status, rx and tx, and registers controls by URL", async () => {
+      const { hook, events } = installHook();
+      const hub = createTransportHub();
+      const sws = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+      expect(Object.keys(hook.controls)).toEqual([URL_PATH]);
+      await flush();
+      const ws = hub.server.all()[0]!;
+      ws.open();
+      await flush();
+      sws.send("up");
+      ws.serverSend("down");
+      await flush();
+      expect(events.map((e) => e.kind)).toEqual([
+        "status",
+        "status",
+        "tx",
+        "rx",
+      ]);
+      expect(events[1]).toMatchObject({ kind: "status", status: "open" });
+      expect(events.slice(2)).toEqual([
+        { url: URL_PATH, kind: "tx", data: "up" },
+        { url: URL_PATH, kind: "rx", data: "down" },
+      ]);
+    });
+
+    test("drop + hold: the connection is lost, no reconnect dials until release, then onopen re-dispatches", async () => {
+      const { hook } = installHook();
+      const hub = createTransportHub();
+      const sws = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+      const c = counter(sws);
+      await flush();
+      const ws1 = hub.server.all()[0]!;
+      ws1.open();
+      await flush();
+      expect(c.opens).toBe(1);
+
+      hook.controls[URL_PATH]!.hold();
+      hook.controls[URL_PATH]!.drop();
+      await flush();
+      expect(ws1.readyState).toBe(CLOSED);
+      expect(sws.status).toBe("reconnecting");
+      await vi.advanceTimersByTimeAsync(30_000); // backoff fires, then parks
+      expect(hub.server.all()).toHaveLength(1);
+
+      hook.controls[URL_PATH]!.release();
+      await flush();
+      expect(hub.server.all()).toHaveLength(2);
+      hub.server.all()[1]!.open();
+      await flush();
+      expect(c.opens).toBe(2);
+    });
+
+    test("holdFromStart: the socket never dials until released", async () => {
+      const { hook } = installHook([URL_PATH]);
+      const hub = createTransportHub();
+      track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(hub.server.all()).toHaveLength(0);
+      hook.controls[URL_PATH]!.release();
+      await flush();
+      expect(hub.server.all()).toHaveLength(1);
+    });
+  });
 });

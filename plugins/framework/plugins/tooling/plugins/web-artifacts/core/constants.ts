@@ -84,3 +84,28 @@ export function isBareSpecifier(id: string): boolean {
 export function isInlinedPackage(specifier: string): boolean {
   return INLINE_PACKAGES.has(packageNameOf(specifier));
 }
+
+/**
+ * Where vite emits a worker chunk (`new SharedWorker(new URL(…), …)`) inside an
+ * artifact dir — the ONLY thing an artifact keeps under it. Served as
+ * `/artifacts/<dir>/assets/<name>-<hash>.js`.
+ */
+export const WORKER_ASSETS_DIR = "assets";
+
+/**
+ * Whether a served URL path is an artifact's worker chunk. The e2e harness uses
+ * it to leave a worker's script load out of its network-idle count: Playwright
+ * reports that load as the page's request but never sees it finish (the
+ * response lands in the worker's target).
+ */
+export function isWorkerChunkPath(pathname: string): boolean {
+  const parts = pathname.split("/");
+  // ["", "artifacts", <dir>, "assets", <file>.js]
+  return (
+    parts.length === 5 &&
+    parts[0] === "" &&
+    parts[1] === "artifacts" &&
+    parts[3] === WORKER_ASSETS_DIR &&
+    parts[4]!.endsWith(".js")
+  );
+}

@@ -182,6 +182,23 @@ refusing main, whose database is the user's — and the script deletes what it
 seeded itself (`onBeforeFinish`, with a run-unique id prefix and a sweep of a
 killed run's leftovers first).
 
+## Network idle is measured here, not by Playwright
+
+Playwright's `networkidle` never fires on this app. The live sockets run in a
+SharedWorker (networking's `SharedWebSocket`); Playwright reports the worker's
+script load as a request of the page that started it, but the response lands in
+the worker's target, which Playwright does not attach to — so that request never
+finishes. `waitForNetworkIdle(page)` (`e2e/network-idle.ts`, and `boot()`
+without a marker) counts the page's in-flight requests itself and leaves out a
+worker-chunk load (`isWorkerChunkPath` from web-artifacts, the one place worker
+scripts are emitted). Every page a session creates is tracked from its first
+request; a page the harness never saw is refused. The `e2e-harness/no-networkidle`
+lint rule rejects the literal in e2e scripts.
+
+For the same reason, `page.on("websocket")` and `routeWebSocket` see nothing of
+the live sockets: frame assertions and socket faults go through
+`tapSharedSocket` (`@plugins/primitives/plugins/networking/e2e`).
+
 ## Chromium arrives on demand
 
 No browser is installed at `bun install`. Chromium is the `chromium`

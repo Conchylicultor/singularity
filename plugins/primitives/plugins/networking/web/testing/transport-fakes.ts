@@ -2,25 +2,27 @@
  * Deterministic transport fakes for the client live-state harness. Plain `.ts`
  * (NOT `.test.ts`, and NO `vitest`/`bun:test` import) so neither runner ever
  * collects it as a suite and BOTH plugins' suites (networking's own
- * cross-tab-election / shared-websocket tests, and live-state's notifications
- * tests) can import the identical fakes. Published from this plugin's testing
- * barrel (`@plugins/primitives/plugins/networking/web/testing`), which only test
- * code may import — never from the public `web` barrel.
+ * shared-websocket tests, and live-state's notifications tests) can import the
+ * identical fakes. Published from this plugin's testing barrel
+ * (`@plugins/primitives/plugins/networking/web/testing`), which only test code
+ * may import — never from the public `web` barrel.
  *
  * The design mirrors resource-runtime's server-side `test-support.ts`: the fakes
  * are dumb and *scriptable*, never smart mocks. A test drives them by hand
  * (`open()`, `serverSend(frame)`, `kill(tab)`) and asserts on what the REAL
- * production classes did in response — the version guard, keyed-delta merge,
- * election handover, backoff, and keep-alive timers are all exercised for real;
- * only the three OS globals (`WebSocket`, `BroadcastChannel`, `navigator.locks`)
- * are faked. See
- * `research/2026-07-03-global-live-state-client-transport-harness.md`.
+ * production code did in response — the SharedWorker host (`createSharedWsHost`
+ * runs in-process, exactly the logic the real worker runs), the tab client, the
+ * version guard, keyed-delta merge and backoff are all exercised for real; only
+ * the OS globals (`WebSocket`, `SharedWorker` + `MessagePort`,
+ * `navigator.locks`, the page lifecycle) are faked. See
+ * `research/2026-07-03-global-live-state-client-transport-harness.md` and
+ * `research/2026-10-08-networking-shared-worker-transport.md`.
  *
  * Two mechanics are load-bearing for correct fake-timer interleaving (vitest
  * fakes `setTimeout`/`setInterval`/`Date` but NEVER microtasks):
- *   - BroadcastChannel delivery and lock grants happen on the REAL microtask
- *     queue (`Promise.resolve().then` / `queueMicrotask`), so a test flushes them
- *     with `await vi.advanceTimersByTimeAsync(0)` between faked timers.
+ *   - port delivery and lock grants happen on the REAL microtask queue, so a
+ *     test flushes them with `await vi.advanceTimersByTimeAsync(0)` between
+ *     faked timers.
  *   - `serverSend` is dropped unless the socket is OPEN — modelling the reopen
  *     gap (a frame to a closed/connecting socket is silently lost), the exact
  *     hazard H1 pins.
@@ -28,24 +30,24 @@
 
 import {
   SharedWebSocket,
+  type PageLifecycleLike,
   type SharedWebSocketHooks,
 } from "../shared-websocket";
-import type { WebSocketLike, LockManagerLike } from "../transport-types";
+import { createSharedWsHost, type SharedWsHost } from "../shared-ws-host";
+import type {
+  LockManagerLike,
+  MessagePortLike,
+  SharedWorkerLike,
+  WebSocketLike,
+} from "../transport-types";
 
 const WS_OPEN = 1;
 const WS_CLOSED = 3;
 
-// Test-scaled election timers (production: 4_000 / 12_000). Small so a fake-timer
-// test advances a handover in a couple of `advanceTimersByTimeAsync` calls; the
-// 1:3 heartbeat:timeout ratio is preserved so a live heartbeat still refreshes
-// the follower well inside its staleness window.
-export const HUB_HEARTBEAT_MS = 40;
-export const HUB_TIMEOUT_MS = 120;
-
 // --- FakeWebSocket + FakeWsServer ------------------------------------------
 
 /**
- * A `WebSocketLike` with no network. Handlers are assigned by `SharedWebSocket`
+ * A `WebSocketLike` with no network. Handlers are assigned by the socket owner
  * AFTER construction (never fired synchronously in the constructor), so a test
  * drives lifecycle explicitly: `open()` fires `onopen`, `serverSend` fires
  * `onmessage` (only while OPEN), `serverClose` fires `onclose` (→ reconnect).
@@ -134,7 +136,7 @@ export class FakeWsServer {
     this.onFrame = opts.onFrame;
   }
 
-  /** Bound WebSocket factory — pass as a `makeWebSocket` hook. */
+  /** Bound WebSocket factory — pass as a `makeWebSocket` dependency. */
   connect = (url: string): FakeWebSocket => {
     const ws = new FakeWebSocket(url, this);
     this.sockets.push(ws);
@@ -162,81 +164,44 @@ export class FakeWsServer {
   }
 }
 
-// --- FakeBroadcastChannelBus ------------------------------------------------
+// --- FakeMessagePort --------------------------------------------------------
 
 /**
- * A single `BroadcastChannel` endpoint. `postMessage` fans out to every OTHER
- * same-name channel (never self — the real API never echoes to the sender, and
- * the election's hello/hb frames rely on that), asynchronously on the real
- * microtask queue.
+ * One end of an entangled `MessageChannel`. `postMessage` delivers a
+ * `structuredClone` to the other end on a REAL microtask. A closed port posts
+ * nothing and receives nothing; a message posted BEFORE its sender closed is
+ * still delivered (a tab's `detach` followed by `close()` arrives).
  */
-export class FakeBroadcastChannel {
+export class FakeMessagePort implements MessagePortLike {
   onmessage: ((ev: MessageEvent) => void) | null = null;
   closed = false;
-
-  constructor(
-    readonly name: string,
-    private bus: FakeBroadcastChannelBus,
-  ) {}
+  other: FakeMessagePort | null = null;
 
   postMessage(data: unknown): void {
     if (this.closed) return;
-    this.bus.post(this, data);
+    const to = this.other!;
+    const payload: unknown = structuredClone(data);
+    queueMicrotask(() => {
+      if (to.closed) return;
+      if (!to.onmessage) {
+        throw new Error(
+          "FakeMessagePort: delivery to a port with no onmessage",
+        );
+      }
+      to.onmessage(new MessageEvent("message", { data: payload }));
+    });
   }
 
   close(): void {
     this.closed = true;
-    this.bus.remove(this);
-  }
-}
-
-/**
- * A cross-tab BroadcastChannel fabric: `channel(name)` is the bound
- * `makeBroadcastChannel` factory. Payloads are `structuredClone`d per recipient
- * so "tabs" can never share a reference. `freeze(channel)` models a frozen tab:
- * the channel stays registered (so its lock is still held — steal-required
- * handover) but goes silent in BOTH directions.
- */
-export class FakeBroadcastChannelBus {
-  private groups = new Map<string, Set<FakeBroadcastChannel>>();
-  private frozen = new Set<FakeBroadcastChannel>();
-
-  /** Bound factory — pass as a `makeBroadcastChannel` hook. */
-  channel = (name: string): FakeBroadcastChannel => {
-    const ch = new FakeBroadcastChannel(name, this);
-    let group = this.groups.get(name);
-    if (!group) {
-      group = new Set();
-      this.groups.set(name, group);
-    }
-    group.add(ch);
-    return ch;
-  };
-
-  /** Silence a channel in both directions (its lock stays held elsewhere). */
-  freeze(channel: FakeBroadcastChannel): void {
-    this.frozen.add(channel);
   }
 
-  post(from: FakeBroadcastChannel, data: unknown): void {
-    if (this.frozen.has(from)) return; // a frozen tab cannot send
-    const group = this.groups.get(from.name);
-    if (!group) return;
-    for (const ch of group) {
-      if (ch === from) continue; // never echo to the sender
-      // Deliver on a REAL microtask; re-check liveness at delivery time (a tab
-      // may have closed or frozen between post and delivery).
-      void Promise.resolve().then(() => {
-        if (ch.closed || this.frozen.has(ch)) return;
-        ch.onmessage?.(
-          new MessageEvent("message", { data: structuredClone(data) }),
-        );
-      });
-    }
-  }
-
-  remove(channel: FakeBroadcastChannel): void {
-    this.groups.get(channel.name)?.delete(channel);
+  static pair(): [FakeMessagePort, FakeMessagePort] {
+    const a = new FakeMessagePort();
+    const b = new FakeMessagePort();
+    a.other = b;
+    b.other = a;
+    return [a, b];
   }
 }
 
@@ -245,8 +210,7 @@ export class FakeBroadcastChannelBus {
 interface LockRequest {
   cb: () => Promise<void> | void;
   resolve: () => void;
-  reject: (err: unknown) => void;
-  /** Set once the request has been resolved or rejected (guards double-settle). */
+  /** Set once the request has been resolved (guards double-settle). */
   settled: boolean;
 }
 
@@ -257,56 +221,30 @@ interface LockState {
 
 /**
  * A `navigator.locks`-shaped exclusive lock, promise-based like the real API.
- * Grants happen on a microtask (a synchronous grant would re-enter the
- * `SharedWebSocket`/`CrossTabElection` constructor in a way real code never
- * sees). One holder per name — enforced by an invariant that THROWS on
- * violation, so a handover bug surfaces loudly instead of silently double-leading.
- *
- * Handover models:
- *   - `steal: true` — rejects the current holder's outer request promise with
- *     `DOMException("stolen","AbortError")` (→ `demoteToFollower`) and installs
- *     the stealer; queued waiters stay queued.
- *   - `releaseTab(name)` — a cleanly-closed tab: the holder is released WITHOUT
- *     an AbortError (its promise resolves, no demotion), and the next queued
- *     waiter is granted.
+ * Grants happen on a microtask. One holder per name — enforced by an invariant
+ * that THROWS on violation. The lock is held until the callback's returned
+ * promise settles; `releaseTab(name)` models the browser freeing a dead tab's
+ * locks (the holder is released and the next waiter granted).
  */
 export class FakeLockManager implements LockManagerLike {
   private states = new Map<string, LockState>();
 
   request(
     name: string,
-    options: { mode?: "exclusive" | "shared"; steal?: boolean },
+    _options: { mode: "exclusive" },
     callback: () => Promise<void> | void,
   ): Promise<void> {
-    const steal = options.steal ?? false;
     const state = this.state(name);
-    return new Promise<void>((resolve, reject) => {
-      const entry: LockRequest = {
-        cb: callback,
-        resolve,
-        reject,
-        settled: false,
-      };
-      if (steal) {
-        queueMicrotask(() => {
-          const cur = state.holder;
-          if (cur && !cur.settled) {
-            cur.settled = true;
-            state.holder = null;
-            cur.reject(new DOMException("stolen", "AbortError"));
-          }
-          this.grant(name, entry); // queued waiters stay queued; stealer jumps in
-        });
-      } else {
-        queueMicrotask(() => {
-          if (state.holder) state.queue.push(entry);
-          else this.grant(name, entry);
-        });
-      }
+    return new Promise<void>((resolve) => {
+      const entry: LockRequest = { cb: callback, resolve, settled: false };
+      queueMicrotask(() => {
+        if (state.holder) state.queue.push(entry);
+        else this.grant(name, entry);
+      });
     });
   }
 
-  /** Clean-close release: resolve the holder (no AbortError) and grant the next. */
+  /** A dead tab: its hold on `name` ends, whatever its callback was awaiting. */
   releaseTab(name: string): void {
     const state = this.state(name);
     if (state.holder) this.release(name, state.holder);
@@ -332,9 +270,6 @@ export class FakeLockManager implements LockManagerLike {
       );
     }
     state.holder = entry;
-    // Native semantics: the lock is held until the callback's returned promise
-    // settles. The leader callback returns a never-resolving promise (holds
-    // forever until stolen); a `void` return (the closed path) releases at once.
     void Promise.resolve(entry.cb()).then(() => {
       if (state.holder === entry && !entry.settled) this.release(name, entry);
     });
@@ -360,69 +295,138 @@ export class FakeLockManager implements LockManagerLike {
   }
 }
 
+// --- FakeSharedWorkers ------------------------------------------------------
+
+/**
+ * The browser's SharedWorker registry: one REAL `createSharedWsHost` per worker
+ * name (the production worker's logic, in-process), shared by every tab;
+ * `make(name)` is the `makeSharedWorker` factory, connecting a fresh
+ * `MessageChannel` to that host like the worker's `connect` event.
+ */
+export class FakeSharedWorkers {
+  private hosts = new Map<string, SharedWsHost>();
+
+  constructor(
+    private server: FakeWsServer,
+    private locks: FakeLockManager,
+  ) {}
+
+  make = (name: string): SharedWorkerLike & { port: FakeMessagePort } => {
+    let host = this.hosts.get(name);
+    if (!host) {
+      host = createSharedWsHost({
+        makeWebSocket: this.server.connect,
+        locks: this.locks,
+      });
+      this.hosts.set(name, host);
+    }
+    const [tabPort, workerPort] = FakeMessagePort.pair();
+    host.connect(workerPort);
+    return { port: tabPort, onerror: null };
+  };
+
+  /** How many distinct workers exist (one per URL). */
+  count(): number {
+    return this.hosts.size;
+  }
+}
+
+// --- FakePageLifecycle ------------------------------------------------------
+
+type LifecycleListener = (ev: { persisted: boolean }) => void;
+
+/** A page's `pagehide` / `pageshow` events, fired by hand. */
+export class FakePageLifecycle implements PageLifecycleLike {
+  private listeners = new Map<"pagehide" | "pageshow", Set<LifecycleListener>>([
+    ["pagehide", new Set()],
+    ["pageshow", new Set()],
+  ]);
+
+  addEventListener(
+    type: "pagehide" | "pageshow",
+    listener: LifecycleListener,
+  ): void {
+    this.listeners.get(type)!.add(listener);
+  }
+
+  removeEventListener(
+    type: "pagehide" | "pageshow",
+    listener: LifecycleListener,
+  ): void {
+    this.listeners.get(type)!.delete(listener);
+  }
+
+  /** `pagehide`; `persisted` = entering the back/forward cache. */
+  hide(persisted: boolean): void {
+    for (const fn of [...this.listeners.get("pagehide")!]) fn({ persisted });
+  }
+
+  /** `pageshow`; `persisted` = restored from the back/forward cache. */
+  show(persisted: boolean): void {
+    for (const fn of [...this.listeners.get("pageshow")!]) fn({ persisted });
+  }
+}
+
 // --- Transport hub ----------------------------------------------------------
 
 /**
- * A per-"tab" handle: the `SharedWebSocketHooks` to construct one tab's transport
- * on the shared server/bus/locks, plus the sockets/channels it created (tracked
- * so `kill`/`freeze` can act on exactly this tab's resources).
+ * A per-"tab" handle: the `SharedWebSocketHooks` to construct one tab's
+ * transport on the shared server/workers/locks, plus what it created (tracked
+ * so `kill` acts on exactly this tab).
  */
 export interface TabHandle {
   hooks: SharedWebSocketHooks;
-  sockets: FakeWebSocket[];
-  channels: FakeBroadcastChannel[];
+  ports: FakeMessagePort[];
+  lockNames: string[];
+  lifecycle: FakePageLifecycle;
 }
 
 export interface TransportHub {
   server: FakeWsServer;
-  bus: FakeBroadcastChannelBus;
   locks: FakeLockManager;
-  heartbeatMs: number;
-  timeoutMs: number;
-  /** A fresh tab's hooks on the shared transport (test-scaled election timers). */
+  workers: FakeSharedWorkers;
+  /** A fresh tab's hooks on the shared transport. */
   tab(): TabHandle;
   /** A `NotificationsClient` `makeSocket` hook building real sockets on this tab. */
   makeSocket(tab: TabHandle): (url: string) => SharedWebSocket;
-  /** Clean tab close: server-close its sockets, release its locks, close its channels. */
+  /**
+   * The tab dies without a word (crash, kill, OS discard): its ports go silent
+   * — no `detach` — and the browser frees its locks, which is how the worker
+   * learns it is gone.
+   */
   kill(tab: TabHandle): void;
-  /** Freeze a tab: silence its channels (steal-required handover); locks stay held. */
-  freeze(tab: TabHandle): void;
 }
 
-/**
- * Compose one server + bus + locks into a multi-tab transport. Every tab shares
- * them; each tab's channels/sockets are tracked on its handle so `kill` and
- * `freeze` target exactly one tab. The election's lock name equals its
- * BroadcastChannel name (both `singularity:shared-ws:<url>`), so `kill` derives
- * the lock names from the tab's channels.
- */
+/** Compose one server + worker registry + lock manager into a multi-tab transport. */
 export function createTransportHub(): TransportHub {
   const server = new FakeWsServer();
-  const bus = new FakeBroadcastChannelBus();
   const locks = new FakeLockManager();
+  const workers = new FakeSharedWorkers(server, locks);
 
-  const hub: TransportHub = {
+  return {
     server,
-    bus,
     locks,
-    heartbeatMs: HUB_HEARTBEAT_MS,
-    timeoutMs: HUB_TIMEOUT_MS,
+    workers,
     tab(): TabHandle {
-      const handle: TabHandle = { hooks: {}, sockets: [], channels: [] };
+      const handle: TabHandle = {
+        hooks: {},
+        ports: [],
+        lockNames: [],
+        lifecycle: new FakePageLifecycle(),
+      };
       handle.hooks = {
-        makeWebSocket: (url) => {
-          const ws = server.connect(url);
-          handle.sockets.push(ws);
-          return ws;
+        makeSharedWorker: (name) => {
+          const worker = workers.make(name);
+          handle.ports.push(worker.port);
+          return worker;
         },
-        makeBroadcastChannel: (name) => {
-          const ch = bus.channel(name);
-          handle.channels.push(ch);
-          return ch;
+        locks: {
+          request: (name, options, callback) => {
+            handle.lockNames.push(name);
+            return locks.request(name, options, callback);
+          },
         },
-        locks,
-        heartbeatMs: HUB_HEARTBEAT_MS,
-        timeoutMs: HUB_TIMEOUT_MS,
+        pageLifecycle: handle.lifecycle,
       };
       return handle;
     },
@@ -430,19 +434,8 @@ export function createTransportHub(): TransportHub {
       return (url: string) => new SharedWebSocket(url, tab.hooks);
     },
     kill(tab: TabHandle): void {
-      // A killed tab's JS context is gone: its sockets vanish WITHOUT firing the
-      // dead tab's onclose (a `close()`, not a `serverClose()` — otherwise the
-      // dead SharedWebSocket would run its reconnect handler, which a real dead
-      // tab never does), and the OS releases its locks (grants the next waiter).
-      for (const ws of tab.sockets) ws.close();
-      for (const ch of tab.channels) {
-        locks.releaseTab(ch.name);
-        ch.close();
-      }
-    },
-    freeze(tab: TabHandle): void {
-      for (const ch of tab.channels) bus.freeze(ch);
+      for (const port of tab.ports) port.close();
+      for (const name of tab.lockNames) locks.releaseTab(name);
     },
   };
-  return hub;
 }

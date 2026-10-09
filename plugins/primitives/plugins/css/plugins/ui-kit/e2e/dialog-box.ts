@@ -36,6 +36,7 @@ import {
   snap,
   waitFor,
   withBrowser,
+  waitForNetworkIdle,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const OUT = "/tmp/dialog-box";
@@ -52,7 +53,7 @@ const r = report("dialog box");
 await withBrowser(async (h) => {
   const { page } = await h.session();
   await page.goto(pathUrl("/"));
-  await page.waitForLoadState("networkidle");
+  await waitForNetworkIdle(page);
 
   const panel = page.locator(PANEL).first();
   const panelCount = (): Promise<number> => page.locator(PANEL).count();
@@ -218,7 +219,7 @@ await withBrowser(async (h) => {
 
   // The Pages Trash dialog takes the default, so it carries the ✕.
   await page.goto(pathUrl("/pages"));
-  await page.waitForLoadState("networkidle");
+  await waitForNetworkIdle(page);
   await page.getByText("Trash", { exact: true }).first().click();
   await panel.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
   await snap(page, OUT, "4-close-button");

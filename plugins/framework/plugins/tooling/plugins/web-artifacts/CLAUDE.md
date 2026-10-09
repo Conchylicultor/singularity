@@ -80,6 +80,20 @@ Key invariants:
   joins the modulepreload closure — asserted per build by
   `assertCoEntriesOffHostPath` (`index.js` must not statically reach a
   co-entry file).
+- **A worker is bundled whole, from its own plugin only.** A
+  `new SharedWorker(new URL("./x.worker.ts", import.meta.url), { type: "module" })`
+  (networking's shared socket is the one user) is built by vite's nested
+  worker pass into `assets/<name>-<hash>.js` inside the artifact, its URL
+  resolved against `import.meta.url` (hence `base: "./"`; the default emitted an
+  origin-absolute `/assets/…` that 404s). Import maps do not reach workers, so
+  the worker build has no externals; the inline audit runs on it too
+  (`worker.plugins`), so a worker reaching another plugin's file fails the build
+  instead of fossilising unhashed bytes, and `assertWorkersSelfContained`
+  hard-fails on any import left in a worker chunk. Worker chunks never join the
+  import map or the preload closure (`parseEmittedImports` reads the top level
+  only); `scanStagedModules` still re-lexes them. Being inside the artifact's
+  content-addressed dir, a worker's URL changes exactly when its plugin's code
+  does — so a SharedWorker instance is per plugin version by construction.
 - **An artifact's address covers exactly what its bytes inline.** The store
   reuses an artifact whenever its address matches, so any source file whose
   content reaches the bundle but not the hash fossilises the artifact: it is
@@ -192,12 +206,14 @@ Key invariants:
     - `isBareSpecifier`
     - `isBrowserUnreachableDynamic`
     - `isInlinedPackage`
+    - `isWorkerChunkPath`
     - `makeArtifactExternal`
     - `packageNameOf`
     - `readFleetVendorMeta`
     - `runWebArtifactsPipeline`
     - `sha256Hex`
     - `SHARED_ROOT`
+    - `WORKER_ASSETS_DIR`
 - Cross-plugin:
   - Imported by: `framework/cli/build`
 - Exemptions:

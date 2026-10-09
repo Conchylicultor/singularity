@@ -38,6 +38,7 @@ import {
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 import {
   frameOf,
   renameTask,
@@ -86,11 +87,9 @@ try {
       localStorage.setItem("conversations-sidebar:active-view", "history");
     });
     const frames: string[] = [];
-    page.on("websocket", (ws) => {
-      ws.on("framereceived", (f) => {
-        if (typeof f.payload === "string") frames.push(f.payload);
-      });
-    });
+    // Through the shared socket's tap: the socket lives in a SharedWorker, out
+    // of `page.on("websocket")`'s reach.
+    (await tapSharedSocket(page)).onFrame((f) => frames.push(f.data));
     // Every HTTP read of the list's live resource (its window or `:rows`):
     // the cold-boot prime may make one before the socket is up; after that,
     // rows must arrive ONLY over the socket — a read here is a refetch.

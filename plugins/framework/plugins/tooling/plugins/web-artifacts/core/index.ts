@@ -7,7 +7,9 @@ export {
   isBareSpecifier,
   isBrowserUnreachableDynamic,
   isInlinedPackage,
+  isWorkerChunkPath,
   packageNameOf,
+  WORKER_ASSETS_DIR,
 } from "./constants";
 export { makeArtifactExternal } from "./externals";
 export {

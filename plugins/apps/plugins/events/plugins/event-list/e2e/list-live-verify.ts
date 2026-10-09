@@ -35,6 +35,7 @@ import {
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 
 const OUT = arg("out") ?? "/tmp/events-list-live";
 const db = openDeployDb();
@@ -102,11 +103,9 @@ try {
     const { page } = await h.session();
     // Every live frame the tab receives, as text: what reached the list.
     const frames: string[] = [];
-    page.on("websocket", (ws) => {
-      ws.on("framereceived", (f) => {
-        if (typeof f.payload === "string") frames.push(f.payload);
-      });
-    });
+    // Through the shared socket's tap: the socket lives in a SharedWorker, out
+    // of `page.on("websocket")`'s reach.
+    (await tapSharedSocket(page)).onFrame((f) => frames.push(f.data));
     const listFramesSince = (at: number) =>
       frames.slice(at).filter((f) => LIST_FRAME.test(f));
 

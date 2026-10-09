@@ -147,3 +147,46 @@ Object.defineProperty(globalThis, "localStorage", {
   value: memoryStorage,
   configurable: true,
 });
+
+// jsdom ships neither SharedWorker nor the Web Locks API, both of which the
+// shared live-state socket (networking's `SharedWebSocket`) needs: every suite
+// mounting a `NotificationsProvider` would throw on construction. Inert, like
+// `ResizeObserver` above: the worker never answers, so the socket stays
+// "connecting" forever — exactly what jsdom's never-connecting `WebSocket` gave
+// these suites before. A suite exercising the transport injects the
+// deterministic fakes from `@plugins/primitives/plugins/networking/web/testing`
+// instead, which win over these globals.
+class InertMessagePort {
+  onmessage: ((ev: MessageEvent) => void) | null = null;
+  postMessage(): void {}
+  close(): void {}
+}
+
+class InertSharedWorker {
+  readonly port = new InertMessagePort();
+  onerror: ((ev: ErrorEvent) => void) | null = null;
+}
+
+Object.defineProperty(globalThis, "SharedWorker", {
+  value: InertSharedWorker,
+  configurable: true,
+  writable: true,
+});
+
+// Grants every request at once (on a microtask, like the real API) and holds it
+// until the callback's promise settles. No queueing: nothing in a jsdom suite
+// contends for a lock — the transport's lock names are unique per port.
+const inertLocks = {
+  request(
+    _name: string,
+    _options: unknown,
+    callback: () => unknown,
+  ): Promise<unknown> {
+    return Promise.resolve().then(callback);
+  },
+};
+
+Object.defineProperty(navigator, "locks", {
+  value: inertLocks,
+  configurable: true,
+});

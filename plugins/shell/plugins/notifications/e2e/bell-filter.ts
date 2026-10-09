@@ -33,8 +33,11 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 import type { Page } from "playwright";
 
+/** Both live-state sockets (worktree + central). */
+const LIVE_SOCKETS = ["/ws/notifications", "/ws/central-notifications"];
 const OUT = "/tmp/claude-501/bell-filter";
 const r = report("Notifications · bell filters, grouping, boot preload");
 
@@ -132,9 +135,9 @@ await withBrowser(async (h) => {
 
     // A page whose live socket never connects: only the preload can settle the bell.
     const offline = await h.session({ label: "no-ws", capture: false });
-    await offline.page.routeWebSocket(/\/ws\//, () => {
-      // Accept nothing and forward nothing: no sub-ack ever arrives.
-    });
+    // The live sockets never connect (held in their SharedWorker from the
+    // start): no sub-ack ever arrives.
+    await tapSharedSocket(offline.page, { holdFromStart: LIVE_SOCKETS });
     await boot(offline.page, pathUrl("/"), { settleMs: 1500 });
     const badge = await bell(offline.page)
       .locator("xpath=..")
@@ -293,9 +296,9 @@ await withBrowser(async (h) => {
     // No live socket, and every bell label ever rendered recorded from the
     // document's start: the first frame must already be the settled count.
     const noWs = await h.session({ label: "no-ws-unread", capture: false });
-    await noWs.page.routeWebSocket(/\/ws\//, () => {
-      // Accept nothing and forward nothing: no sub-ack ever arrives.
-    });
+    // The live sockets never connect (held in their SharedWorker from the
+    // start): no sub-ack ever arrives.
+    await tapSharedSocket(noWs.page, { holdFromStart: LIVE_SOCKETS });
     await noWs.page.addInitScript(() => {
       const seen: string[] = [];
       Object.assign(window, { __bellLabels: seen });

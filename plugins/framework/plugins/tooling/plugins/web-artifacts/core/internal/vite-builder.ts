@@ -17,6 +17,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Plugin as VitePlugin } from "vite";
 import { init as esLexerInit, parse as esLexerParse } from "es-module-lexer";
 import type { BabelPluginItem } from "@plugins/framework/plugins/web-core/core";
+import { WORKER_ASSETS_DIR } from "../constants";
 import { makeArtifactExternal } from "../externals";
 import { inlinedRootsFor } from "../own-roots";
 import { createInlineAudit } from "./inline-audit";
@@ -258,6 +259,40 @@ function cssInjectionSnippet(css: string, dirName: string): string {
 }
 
 /**
+ * Rung-4 guard of "a worker bundle is self-contained": a module worker resolves
+ * its imports against its own URL — the page's import map does not reach it —
+ * so any import left in a worker chunk would 404 (a bare specifier) or load a
+ * second, unhashed copy of a sibling file. Vite's worker pass bundles the
+ * worker's whole closure; this asserts it did. Throws on any import, static or
+ * dynamic. Returns the worker chunk names (relative to the artifact dir).
+ */
+export async function assertWorkersSelfContained(opts: {
+  dirName: string;
+  outDir: string;
+}): Promise<string[]> {
+  const dir = join(opts.outDir, WORKER_ASSETS_DIR);
+  if (!existsSync(dir)) return [];
+  await esLexerInit;
+  const workers: string[] = [];
+  for (const name of readdirSync(dir).sort()) {
+    if (!name.endsWith(".js")) continue;
+    const rel = `${WORKER_ASSETS_DIR}/${name}`;
+    const [imports] = esLexerParse(readFileSync(join(dir, name), "utf8"), rel);
+    const specs = imports.map((imp) => imp.n ?? "<dynamic expression>");
+    if (specs.length > 0) {
+      throw new Error(
+        `web-artifact ${opts.dirName}: worker chunk ${rel} imports ${specs.join(", ")}. ` +
+          `A worker cannot use the page's import map, so its bundle must be ` +
+          `self-contained: import only the plugin's own files (no other plugin, ` +
+          `no dynamic import).`,
+      );
+    }
+    workers.push(rel);
+  }
+  return workers;
+}
+
+/**
  * Parse EVERY emitted module's external imports. An artifact with internal
  * dynamic imports (lazy-component) code-splits into `.mjs` chunks next to
  * `index.js` — the chunks' imports are as load-bearing as the entry's (a bare
@@ -317,6 +352,17 @@ export async function buildArtifact(
     hashedRoots: hashedRootsFor(pluginDir, target.kind),
     kind: target.kind,
   });
+  // A worker (`new SharedWorker(new URL("./x.worker.ts", import.meta.url))`) is
+  // built by vite's own nested rollup pass, which runs `worker.plugins` — not
+  // the main build's. It bundles its whole closure (no externals: import maps
+  // do not reach workers), so the same address-covers-content audit must watch
+  // it: a worker reaching another plugin's file fails here instead of
+  // fossilising unhashed bytes.
+  const workerAudit = createInlineAudit({
+    dirName: `${target.dirName} (worker)`,
+    hashedRoots: hashedRootsFor(pluginDir, target.kind),
+    kind: target.kind,
+  });
 
   const plugins: VitePlugin[] = [audit.plugin];
   if (target.kind === "entry") plugins.push(stripGlobalCssPlugin());
@@ -353,6 +399,11 @@ export async function buildArtifact(
       esbuild: { keepNames: true },
       define: ARTIFACT_DEFINE,
       resolve: { alias: { "@plugins": ctx.pluginsRoot } },
+      // Relative: an artifact is served from a content-addressed store dir, so
+      // a worker chunk's URL must resolve against `import.meta.url`; the
+      // default "/" emitted an origin-absolute `/assets/…` that 404s.
+      base: "./",
+      worker: { format: "es", plugins: () => [workerAudit.plugin] },
       build: {
         lib,
         outDir: tmpDir,
@@ -368,6 +419,7 @@ export async function buildArtifact(
     // Before anything reads the output: prove the bytes inline only what this
     // artifact's address hashed (see `inline-audit.ts`).
     audit.verify();
+    workerAudit.verify();
 
     // Fold any extracted CSS (plugin-local + npm package CSS; lib mode inlines
     // url() assets as data URIs) into the module so styles load atomically.
@@ -411,6 +463,10 @@ export async function buildArtifact(
       }
     }
 
+    await assertWorkersSelfContained({
+      dirName: target.dirName,
+      outDir: tmpDir,
+    });
     const { staticImportsByFile, dynamicImports } =
       await parseEmittedImports(tmpDir);
     assertCoEntriesOffHostPath({

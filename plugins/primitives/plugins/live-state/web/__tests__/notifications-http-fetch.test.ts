@@ -119,6 +119,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
     const socket = hub.server.all()[0]!;
     socket.open(); // leader socket open
     return { hub, qc, client, socket, fetchQueue, fetchCalls };
+    await flush();
   }
 
   beforeEach(() => {
@@ -174,6 +175,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       version: 2,
       etag: "etag-2",
     });
+    await flush();
     fetchQueue.push(
       makeResponse({
         body: { value: { status: "b" }, version: 2, epoch: "b1" },
@@ -204,6 +206,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       epoch: "b1",
       etag: "e1",
     });
+    await flush();
     const cached = qc.getQueryData(queryKeyFor("k", {}));
 
     fetchQueue.push(makeResponse({ status: 304 }));
@@ -268,6 +271,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       version: 5,
       epoch: "b1",
     });
+    await flush();
     const cached = qc.getQueryData(queryKeyFor("k", {}));
 
     fetchQueue.push(
@@ -316,6 +320,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       version: 5,
       epoch: "b1",
     });
+    await flush();
     qc.setQueryData(
       queryKeyFor("k", {}),
       { status: "unvouched" },
@@ -348,6 +353,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       version: 5,
       epoch: "b1",
     });
+    await flush();
 
     // GET reports the counter without bumping it — the invalidate-mode refetch
     // returns the SAME version. `<` accepts it.
@@ -381,6 +387,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       version: 5,
       epoch: "b1",
     });
+    await flush();
 
     // Server restarts to b2: learn the new epoch via a second sub's ack, leaving
     // k's entry stamped at the stale b1.
@@ -393,6 +400,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       version: 1,
       epoch: "b2",
     });
+    await flush();
 
     // The HTTP body carries the live b2 identity → adopt even though version 2 < 5.
     fetchQueue.push(
@@ -447,6 +455,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       version: 5,
       epoch: "b1",
     });
+    await flush();
     const cached = qc.getQueryData(queryKeyFor("k", {}));
 
     // Body is from an OLDER boot b0 → the body is stale, not the entry → drop.
@@ -487,6 +496,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       version: 5,
       epoch: "b1",
     });
+    await flush();
     qc.setQueryData(
       queryKeyFor("k", {}),
       { status: "unvouched" },
@@ -520,6 +530,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       version: 5,
       epoch: "b1",
     });
+    await flush();
     // Move serverEpoch to b2 via another sub — k stays stamped b1.
     client.observe("other", {}, undefined, pushSchema);
     socket.serverSend({
@@ -530,6 +541,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       version: 1,
       epoch: "b2",
     });
+    await flush();
 
     // Body epoch b3 matches NEITHER entry (b1) NOR serverEpoch (b2) → adopt.
     fetchQueue.push(
@@ -560,6 +572,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       version: 5,
       epoch: "b1",
     });
+    await flush();
 
     // Two consecutive stale drops → counts 1, then 2.
     fetchQueue.push(
@@ -599,6 +612,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       version: 6,
       epoch: "b1",
     });
+    await flush();
     fetchQueue.push(
       makeResponse({
         body: { value: { status: "s2" }, version: 2, epoch: "b1" },
@@ -619,6 +633,7 @@ describe("NotificationsClient — HTTP fetch path", () => {
       version: 5,
       epoch: "b1",
     });
+    await flush();
     const cached = qc.getQueryData(queryKeyFor("k", {}));
 
     // Older, no epoch → dropped (kept cached), sink emitted.

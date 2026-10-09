@@ -8,7 +8,7 @@ export { liveStateHealthPane } from "./panes";
 
 export default {
   description:
-    "Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.",
+    "Live health inspector for the client live-state pipeline (sockets, shared transport, per-resource subscriptions), opened from the Debug sidebar.",
   contributions: [
     Pane.Register({ pane: liveStateHealthPane }),
     DebugApp.Sidebar({

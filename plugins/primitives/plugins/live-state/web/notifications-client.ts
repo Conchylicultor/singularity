@@ -128,9 +128,9 @@ function verboseTraceOn(): boolean {
 
 // Drives the TanStack Query cache off server resource notifications. Uses
 // SharedWebSocket, which transparently shares the connection across all tabs
-// of the origin. On every (re)open of the real socket (including leader
-// handoff and backend restart), `replaySubs` resends every active
-// subscription — the server's sub state is per-connection and this client is
+// of the origin (the real socket lives in a SharedWorker). On every new server
+// connection (backend restart, network drop, a tab restored from the bfcache),
+// `replaySubs` resends every active subscription — the server's sub state is per-connection and this client is
 // the source of truth for what the UI wants to observe.
 //
 // The client maintains one socket per *resource origin*: the per-worktree
@@ -403,12 +403,15 @@ export interface DebugSub {
 export interface DebugSnapshot {
   subs: DebugSub[];
   sockets: ChannelStatuses;
-  leader: { worktree: LeaderInfo; central: LeaderInfo };
+  transport: { worktree: TransportInfo; central: TransportInfo };
 }
 
-export interface LeaderInfo {
-  isLeader: boolean;
-  hasLeader: boolean;
+/** One socket's shared-transport view (null fields: channel never opened / not attached yet). */
+export interface TransportInfo {
+  /** Tabs attached to the shared socket, as last reported by its worker. */
+  attachedTabs: number | null;
+  /** The server connection this tab is bound to, while open. */
+  connection: string | null;
 }
 
 /** One genuinely-missed sub returned by `probeMissedUpdates()` (watchdog). */
@@ -501,7 +504,7 @@ export class NotificationsClient {
   };
   private statusListeners = new Set<(s: WsStatus) => void>();
   private channelStatusListeners = new Set<(s: ChannelStatuses) => void>();
-  /** Fired on any sub/version/socket/leader change for the Layer-2 inspector. */
+  /** Fired on any sub/version/socket/transport change for the Layer-2 inspector. */
   private debugListeners = new Set<() => void>();
   private unsubscribeFromBus: () => void;
   /** Net-diag bus unsubscriber, captured so `destroy()` can release it (a test
@@ -527,8 +530,6 @@ export class NotificationsClient {
    * that run two "tabs" in one jsdom realm, which would otherwise share it.
    */
   private tabId: string;
-  /** `pagehide` handler (best-effort tab departure), removed in `destroy()`. */
-  private pagehideListener: (() => void) | null = null;
   /**
    * `${key}\0${paramsKey}` → the live read currently failing on that tuple (its
    * query holds an error). Kept from the query cache's own events — never from
@@ -604,7 +605,7 @@ export class NotificationsClient {
       for (const fn of this.channelStatusListeners) fn(channels);
       this.emitDebug();
     });
-    // Net-diag forwarder: the networking layer publishes socket/election
+    // Net-diag forwarder: the networking layer publishes socket/port
     // transitions to an event bus (it must not depend on log-channels — that
     // would form networking ↔ log-channels). Forward every event to the trace
     // channel here, where importing clientLog is legal. In production the client
@@ -614,21 +615,7 @@ export class NotificationsClient {
       trace(`net-diag ${JSON.stringify(ev)}`);
       this.emitDebug();
     });
-    // Best-effort tab departure: tell the server to release every sub THIS tab
-    // holds, so a closed follower tab's subs stop fanning out immediately
-    // instead of leaking until the whole socket cycles. For a follower the send
-    // relays to the leader over BroadcastChannel — a fire-and-forget post that
-    // usually survives pagehide. Accepted residue: a tab killed without
-    // pagehide leaks until the next socket cycle (the pre-existing bound).
     if (typeof window !== "undefined") {
-      this.pagehideListener = () => {
-        for (const channel of Object.values(this.channels) as SocketChannel[]) {
-          channel.ws.send(
-            JSON.stringify({ op: "unsub-tab", tabId: this.tabId }),
-          );
-        }
-      };
-      window.addEventListener("pagehide", this.pagehideListener);
       // Event-driven retry for failed reads — no timer, no polling: the two
       // moments a failure is likely to have healed are the network coming back
       // and the user coming back to the tab. Only tuples in error are refetched
@@ -797,7 +784,7 @@ export class NotificationsClient {
   }
 
   /**
-   * Push-based snapshot of all active subs plus socket + leader state, for the
+   * Push-based snapshot of all active subs plus socket + transport state, for the
    * live-state-health inspector. Pair with `subscribeDebug` to re-render on
    * change.
    */
@@ -818,26 +805,26 @@ export class NotificationsClient {
     return {
       subs,
       sockets: this.getChannelStatuses(),
-      leader: {
-        worktree: this.leaderInfo("worktree"),
-        central: this.leaderInfo("central"),
+      transport: {
+        worktree: this.transportInfo("worktree"),
+        central: this.transportInfo("central"),
       },
     };
   }
 
-  /** Fires whenever a sub/version/socket/leader state changes. */
+  /** Fires whenever a sub/version/socket/transport state changes. */
   subscribeDebug(listener: () => void): () => void {
     this.debugListeners.add(listener);
     return () => this.debugListeners.delete(listener);
   }
 
-  private leaderInfo(kind: SocketKind): LeaderInfo {
+  private transportInfo(kind: SocketKind): TransportInfo {
     // Read without creating: a never-opened channel (e.g. central on an app with
-    // no central resources) has no leader — report it as such, never open it.
+    // no central resources) reports nothing — never open it to answer.
     const channel = this.channels[kind];
-    if (!channel) return { isLeader: false, hasLeader: false };
+    if (!channel) return { attachedTabs: null, connection: null };
     const ws = channel.ws;
-    return { isLeader: ws.isLeader, hasLeader: ws.hasLeader };
+    return { attachedTabs: ws.attachedTabs, connection: ws.connection };
   }
 
   private emitDebug(): void {
@@ -853,10 +840,6 @@ export class NotificationsClient {
   destroy(): void {
     this.unsubscribeFromBus();
     this.unsubscribeFromNetDiag();
-    if (this.pagehideListener !== null) {
-      window.removeEventListener("pagehide", this.pagehideListener);
-      this.pagehideListener = null;
-    }
     if (this.retryListeners !== null) {
       window.removeEventListener("online", this.retryListeners.online);
       document.removeEventListener(
@@ -1493,6 +1476,12 @@ export class NotificationsClient {
       ackInterest: new Map(),
       opens: 0,
     };
+    // However this tab leaves — close, pagehide, crash — the worker tells the
+    // server to release every sub it holds, so a departed tab's subs stop
+    // fanning out at once instead of leaking until the socket cycles.
+    channel.ws.setLastWill(
+      JSON.stringify({ op: "unsub-tab", tabId: this.tabId }),
+    );
     channel.ws.onopen = () => {
       channel.opens++;
       this.replaySubs(channel);
@@ -1672,7 +1661,7 @@ export class NotificationsClient {
           ? { acks: true }
           : {}),
         tabId: this.tabId,
-        // Per frame: a shared socket's leader relays follower tabs, whose
+        // Per frame: one shared socket carries every tab's frames, and their
         // bundles may differ (see `clientBuild`).
         build: clientBuild(),
       }),
@@ -1705,7 +1694,7 @@ export class NotificationsClient {
   private handleServerMessage(channel: SocketChannel, msg: ServerMsg): void {
     if (msg.kind === "ping") {
       // Server keepalive: never answered (per-tab duplicate `pong`s would be N×
-      // writes through the leader for nothing). It does carry the server's
+      // writes through the shared socket for nothing). It does carry the server's
       // flush age, which the health report reads as "live updates stuck".
       this.noteServerFlushOpenMs(
         channel === this.channels.central ? "central" : "worktree",

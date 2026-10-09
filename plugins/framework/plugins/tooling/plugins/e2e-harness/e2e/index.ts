@@ -23,6 +23,9 @@ export { openDeployDb } from "./deploy-db";
 export type { DeployDb } from "./deploy-db";
 export { withBrowser, boot, DEFAULT_VIEWPORT } from "./browser";
 export { waitFor, ELEMENT_TIMEOUT_MS } from "./wait";
+// Playwright's own `networkidle` never fires on this app — see network-idle.ts.
+export { waitForNetworkIdle } from "./network-idle";
+export type { NetworkIdleOptions } from "./network-idle";
 export type { Settled } from "./wait";
 export type { Harness, Session, SessionOptions, BootOptions } from "./browser";
 export { capture, requestFailure } from "./capture";

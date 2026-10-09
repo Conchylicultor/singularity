@@ -1,101 +1,136 @@
-// End-to-end regression test for SharedWebSocket.
+// End-to-end check of the shared socket (`SharedWebSocket` + its SharedWorker).
 //
-// Exercises the multi-tab live-update behavior that `NotificationsClient`
-// relies on. The bug this test guards against: followers failing to subscribe
-// on the leader's socket, so tabs on pages whose resources the leader isn't
-// already observing stop receiving live updates and only catch up on reload.
+// Every tab of a browser context attaches to ONE server connection owned by
+// the SharedWorker, and a tab closing never interrupts the others — there is
+// no leader to fail over from. Observed through the shared socket's tap
+// (`tapSharedSocket`): the socket lives in the worker, out of Playwright's
+// `page.on("websocket")` reach.
+//
+// The push it watches for is a notification created with the app's own
+// endpoint (the bell's `notifications` collection, which every page holds
+// live) and dismissed at the end, whatever the outcome.
 //
 // Usage:
 //   1. `./singularity build` (to deploy the current worktree)
-//   2. `bun plugins/primitives/plugins/networking/e2e/shared-websocket.ts [--url <deploy>]`
+//   2. `./singularity run plugins/primitives/plugins/networking/e2e/shared-websocket.ts [--headed]`
 //
 // Exits non-zero on any failure.
 import {
+  boot,
   capture,
   pathUrl,
   report,
+  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
+import { tapSharedSocket, type SocketTap } from "./index";
 
-const post = async (page: Page): Promise<unknown> =>
-  page.evaluate(() =>
-    fetch("/api/tasks", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ folderId: null }),
-    }),
-  );
+const WS = "/ws/notifications";
+/** How long a push may take to reach a tab over a live connection. */
+const PUSH_TIMEOUT_MS = 1_000;
+const SETTLE_TIMEOUT_MS = 10_000;
 
-const r = report();
+const r = report("networking · one shared socket across tabs");
+
+/** Whether any recorded frame mentions `id`. */
+const sawFrameFor = (frames: string[], id: string): boolean =>
+  frames.some((f) => f.includes(id));
 
 await withBrowser(async (h) => {
-  // ── scenario 1: single tab, live updates from a cross-tab POST ─────────────
-  {
-    const { context: ctx, page } = await h.session({ label: "s1" });
-    await page.goto(pathUrl("/tasks"), { waitUntil: "domcontentloaded" });
-    await page.waitForTimeout(1500);
-    const before = await page.locator("input").count();
-    await post(page);
-    await page.waitForTimeout(1500);
-    const after = await page.locator("input").count();
-    r.ok(
-      "single tab — POST delivers a live update",
-      after === before + 1,
-      `${before} -> ${after}`,
-    );
-    await ctx.close();
-  }
+  const { context: ctx, page: a } = await h.session({ label: "a" });
+  const created: string[] = [];
 
-  // ── scenario 2: leader on a page that doesn't sub `tasks`, follower on /tasks.
-  //    The original bug reproduces here: follower never subscribes through the
-  //    leader, so its list doesn't update until reload.
-  {
-    // Both tabs must share ONE BrowserContext — leader election runs over
-    // BroadcastChannel + navigator.locks, which are per-origin-per-context. A
-    // second `h.session()` would be a separate context and elect its own leader.
-    const { context: ctx, page: leader } = await h.session({ label: "leader" });
-    await leader.goto(pathUrl("/"), { waitUntil: "domcontentloaded" });
-    await leader.waitForTimeout(1500);
-    const follower = await ctx.newPage();
-    capture(follower, "follower");
-    await follower.goto(pathUrl("/tasks"), { waitUntil: "domcontentloaded" });
-    await follower.waitForTimeout(2000);
-    const before = await follower.locator("input").count();
-    await post(follower);
-    await follower.waitForTimeout(2500);
-    const after = await follower.locator("input").count();
-    r.ok(
-      "follower tab receives live update when leader isn't subscribed",
-      after === before + 1,
-      `${before} -> ${after}`,
-    );
-    await ctx.close();
-  }
+  const push = async (page: Page, id: string): Promise<void> => {
+    const res = await page.request.post(pathUrl("/api/notifications"), {
+      data: {
+        id,
+        type: "e2e-shared-websocket",
+        title: id,
+        description: "seeded by networking/e2e/shared-websocket.ts",
+        variant: "info",
+      },
+    });
+    if (!res.ok()) throw new Error(`POST /api/notifications — ${res.status()}`);
+    created.push(id);
+  };
 
-  // ── scenario 3: leader handoff — close the leader, surviving tab takes over
-  //    and replays its subs on `onopen` of the new socket.
-  {
-    const { context: ctx, page: a } = await h.session({ label: "a" });
-    await a.goto(pathUrl("/tasks"), { waitUntil: "domcontentloaded" });
-    await a.waitForTimeout(1500);
+  const open = async (
+    page: Page,
+  ): Promise<{ tap: SocketTap; frames: string[] }> => {
+    const tap = await tapSharedSocket(page);
+    const frames: string[] = [];
+    tap.onFrame((f) => {
+      if (f.url === WS) frames.push(f.data);
+    });
+    await boot(page, pathUrl("/"), { settleMs: 1500 });
+    const bound = await waitFor(
+      () => Promise.resolve(tap.connections(WS)),
+      (conns) => conns.length > 0,
+      { timeoutMs: SETTLE_TIMEOUT_MS, intervalMs: 100 },
+    );
+    if (!bound.ok) throw new Error(`a tab never bound to a ${WS} connection`);
+    return { tap, frames };
+  };
+
+  try {
+    const tabA = await open(a);
     const b = await ctx.newPage();
     capture(b, "b");
-    await b.goto(pathUrl("/tasks"), { waitUntil: "domcontentloaded" });
-    await b.waitForTimeout(1500);
-    await a.close();
-    await b.waitForTimeout(1500);
-    const before = await b.locator("input").count();
-    await post(b);
-    await b.waitForTimeout(2500);
-    const after = await b.locator("input").count();
-    r.ok(
-      "leader handoff — new leader replays subs and stays live",
-      after === before + 1,
-      `${before} -> ${after}`,
+    const tabB = await open(b);
+
+    // ── one connection, shared ────────────────────────────────────────────
+    r.eq(
+      "both tabs are bound to the SAME server connection",
+      tabB.tap.connections(WS),
+      tabA.tap.connections(WS),
     );
+    const conn = tabA.tap.connections(WS).at(-1);
+
+    // ── a push reaches the second tab ─────────────────────────────────────
+    const first = `e2e-shared-ws-${Date.now()}-1`;
+    await push(b, first);
+    const reachedB = await waitFor(
+      () => Promise.resolve(sawFrameFor(tabB.frames, first)),
+      (seen) => seen,
+      { timeoutMs: SETTLE_TIMEOUT_MS, intervalMs: 50 },
+    );
+    r.ok(
+      "a push reaches the tab that did not open the connection",
+      reachedB.ok,
+      `${reachedB.waitedMs}ms`,
+    );
+
+    // ── closing the first tab leaves the survivor live, with no gap ───────
+    await a.close();
+    const second = `e2e-shared-ws-${Date.now()}-2`;
+    await push(b, second);
+    const survived = await waitFor(
+      () => Promise.resolve(sawFrameFor(tabB.frames, second)),
+      (seen) => seen,
+      { timeoutMs: PUSH_TIMEOUT_MS, intervalMs: 50 },
+    );
+    r.ok(
+      `closing the first tab — the survivor gets the next push within ${PUSH_TIMEOUT_MS}ms`,
+      survived.ok,
+      `${survived.waitedMs}ms`,
+    );
+    r.eq(
+      "…on the same connection (no reconnect, no replay)",
+      tabB.tap.connections(WS).at(-1),
+      conn,
+    );
+    r.eq("…which stayed open", tabB.tap.status(WS), "open");
+  } finally {
+    for (const id of created) {
+      const res = await ctx.request.post(
+        pathUrl(`/api/notifications/${id}/dismiss`),
+        { data: {} },
+      );
+      r.ok(`cleanup dismissed ${id}`, res.ok(), `HTTP ${res.status()}`);
+    }
     await ctx.close();
   }
-
-  await r.finish();
 });
+
+await r.finish();

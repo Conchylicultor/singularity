@@ -1,35 +1,64 @@
 # networking
 
+## SharedWebSocket: one socket per URL, owned by a SharedWorker
+
+`SharedWebSocket` shares one server WebSocket per URL across every tab of the
+origin. The real socket lives in a SharedWorker (`web/shared-ws.worker.ts`, one
+instance per URL via the worker `name`); each tab is a thin port client. No tab
+owns the socket, so closing, freezing or crashing a tab never interrupts the
+others — there is no leader to lose. Design:
+`research/2026-10-08-networking-shared-worker-transport.md`.
+
+- **Layout.** `shared-ws-protocol.ts` (the tab ↔ worker messages, `proto`),
+  `socket-owner.ts` (the real socket: queue-until-open, reconnect backoff, a fresh
+  connection id per open), `shared-ws-host.ts` (`createSharedWsHost`: the
+  worker's logic, free of worker globals), `shared-ws.worker.ts` (the thin entry
+  wiring the real `WebSocket` / `navigator.locks`), `shared-websocket.ts` (the
+  tab client).
+- **The worker bundles only this plugin's own files.** Import maps do not reach
+  workers, and an artifact's address hashes only its own plugin, so
+  web-artifacts' inline audit fails the build on any other first-party import
+  from the worker's closure. That is why `reconnect-backoff.ts` spells its delay
+  out instead of using `packages/retry`.
+- **One worker per networking build.** The worker script is content-addressed
+  next to the tab code naming it, so a tab only ever talks to a worker of its own
+  build; during a rollout old and new tabs hold one socket each.
+- **`onopen` fires once per server connection per tab** (consumers replay their
+  state there): the worker re-sends its status on every port join/leave, and the
+  tab dispatches only when the connection id changes (or after a re-attach).
+- **Tab liveness.** A SharedWorker gets no port-close event, so each tab holds a
+  Web Lock per port and attaches only once it is held; the worker queues for the
+  same lock and, when granted, knows the tab is gone. `pagehide` always detaches
+  (a bfcache'd page must not look alive); a persisted `pageshow` re-attaches.
+- **Last will.** `setLastWill(frame)` — the worker sends it to the server when
+  the port leaves, however it leaves. live-state registers its `unsub-tab` there.
+- **Fail loudly.** No SharedWorker / Web Locks, a worker load error, or a
+  protocol mismatch throws; there is no fallback transport.
+
 ## Transport injection seams + deterministic fakes
 
-`SharedWebSocket` and `CrossTabElection` never touch the three OS globals
-(`WebSocket`, `BroadcastChannel`, `navigator.locks`) directly — they go through
-all-optional injected factories that default to the globals (mirroring
-`createResourceRuntime`'s hook injection on the server):
+`SharedWebSocket` and the worker host never touch the OS globals directly — they
+go through injected factories that default to the globals:
 
 - `new SharedWebSocket(url, hooks?)` — `SharedWebSocketHooks` carries
-  `makeWebSocket`, `makeBroadcastChannel`, `locks`, `heartbeatMs`, `timeoutMs`.
-  Production passes nothing; behavior is byte-identical.
-- `CrossTabElectionOptions.locks` is tri-state: `undefined` ⇒ the global
-  `navigator.locks ?? null`; `null` ⇒ explicitly absent (solo-leader fallback);
-  an instance ⇒ use it. The structural types (`WebSocketLike`,
-  `BroadcastChannelLike`, `LockManagerLike`) live in `web/transport-types.ts`.
-- `CrossTabElectionCallbacks.onDemoted()` is **required**: when a follower
-  steals the lock (frozen-tab takeover), the stolen-from leader must drop the
-  socket it no longer owns — `SharedWebSocket` implements it with
-  `teardownWs()` and does *not* self-reconnect (the new leader owns the
-  socket; re-election reconnects via `onElected`).
+  `makeSharedWorker`, `locks`, `pageLifecycle` (`null` ⇒ none). Production
+  passes nothing.
+- `createSharedWsHost({ makeWebSocket, locks })` — the worker entry passes the
+  real ones; tests pass fakes. The structural types (`WebSocketLike`,
+  `SharedWorkerLike`, `MessagePortLike`, `LockManagerLike`) live in
+  `web/transport-types.ts`.
 
 `web/testing/transport-fakes.ts` (published as `@plugins/primitives/plugins/networking/web/testing`, no vitest dependency) provides the
 deterministic fakes: `FakeWebSocket`/`FakeWsServer` (scripted server frames,
-captured sent frames, restart), `FakeBroadcastChannelBus` (real-microtask
-delivery, self-skip, `freeze()`), `FakeLockManager` (async microtask grant,
-FIFO queue, steal→`AbortError`, clean release), and `createTransportHub()`
-composing them per-"tab" with `kill()`/`freeze()` affordances. The hazard tests
-in `web/__tests__/` (election + shared-websocket halves of H6) and live-state's
-`web/__tests__/` (H1/H2/H4/H6/H7) are built on them — see
+captured sent frames, restart), `FakeMessagePort` (real-microtask delivery,
+structured clone), `FakeLockManager` (async microtask grant, FIFO queue,
+`releaseTab`), `FakeSharedWorkers` (one REAL `createSharedWsHost` per worker
+name, in-process), `FakePageLifecycle`, and `createTransportHub()` composing
+them per-"tab" with a `kill()` affordance (ports go silent, locks free). The
+tests in `web/__tests__/` and live-state's `web/__tests__/` (H1/H2/H4/H6/H7) are
+built on them — see
 `research/2026-07-03-global-live-state-client-transport-harness.md`. Run with
-`bun run test:dom plugins/primitives/plugins/networking plugins/primitives/plugins/live-state`.
+`./singularity test plugins/primitives/plugins/networking plugins/primitives/plugins/live-state`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -40,23 +69,21 @@ in `web/__tests__/` (election + shared-websocket halves of H6) and live-state's
 - Web:
   - Uses: `primitives/latest-ref.useLatestRef`
   - Exports (types):
-    - `BroadcastChannelLike`
-    - `CrossTabElectionCallbacks`
     - `FetchWithRetryOptions`
     - `LockManagerLike`
-    - `MakeBroadcastChannel`
-    - `MakeWebSocket`
+    - `MakeSharedWorker`
+    - `MessagePortLike`
     - `NetDiagEvent`
+    - `PageLifecycleLike`
     - `ReconnectingEventSourceOptions`
     - `ReconnectingWsHandle`
     - `ReconnectingWsOptions`
     - `SharedWebSocketHooks`
+    - `SharedWorkerLike`
     - `UrlStatus`
-    - `WebSocketLike`
     - `WsStatus`
     - `WsStatusEvent`
   - Exports (values):
-    - `CrossTabElection`
     - `fetchWithRetry`
     - `probeUrlStatus`
     - `publishNetDiag`
@@ -69,30 +96,44 @@ in `web/__tests__/` (election + shared-websocket halves of H6) and live-state's
     - `wsUrl`
 - Cross-plugin:
   - Imported by:
+    - `apps/events/event-list`
+    - `conversations/all-conversations`
+    - `conversations/conversations-view/data-view/history`
     - `debug/logs`
     - `infra/endpoints`
     - `infra/health`
+    - `network/live`
     - `page/editor`
+    - `page/editor-collab`
     - `primitives/live-state`
     - `primitives/log-channels`
     - `primitives/optimistic-mutation`
     - `primitives/overlay/image-viewer`
     - `primitives/terminal`
+    - `shell/notifications`
+    - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from:
-    - `no-raw-websocket` — `web/shared-websocket.ts`, `web/use-reconnecting-ws.ts` (sanctioned)
+    - `no-raw-websocket` — `web/shared-ws.worker.ts`, `web/use-reconnecting-ws.ts` (sanctioned)
     - `no-raw-event-source` — `.` (sanctioned)
     - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
+- Core:
+  - Exports (types):
+    - `WsTestControls`
+    - `WsTestEvent`
+    - `WsTestHook`
+  - Exports (values):
+    - `WS_TEST_HOOK_GLOBAL`
+    - `wsTestHook`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/networking/web/testing`
-    - `createTransportHub` — Compose one server + bus + locks into a multi-tab transport.
-    - `FakeBroadcastChannel` — A single `BroadcastChannel` endpoint. `postMessage` fans out to every OTHER same-name channel (never self — the real API never echoes to the sender, and the election's hello/hb frames rely on that), asynchronously on the real microtask queue.
-    - `FakeBroadcastChannelBus` — A cross-tab BroadcastChannel fabric: `channel(name)` is the bound `makeBroadcastChannel` factory.
+    - `createTransportHub` — Compose one server + worker registry + lock manager into a multi-tab transport.
     - `FakeLockManager` — A `navigator.locks`-shaped exclusive lock, promise-based like the real API.
+    - `FakeMessagePort` — One end of an entangled `MessageChannel`. `postMessage` delivers a `structuredClone` to the other end on a REAL microtask.
+    - `FakePageLifecycle` — A page's `pagehide` / `pageshow` events, fired by hand.
+    - `FakeSharedWorkers` — The browser's SharedWorker registry: one REAL `createSharedWsHost` per worker name (the production worker's logic, in-process), shared by every tab; `make(name)` is the `makeSharedWorker` factory, connecting a fresh `MessageChannel` to that host like the worker's `connect` event.
     - `FakeWebSocket` — A `WebSocketLike` with no network.
     - `FakeWsServer` — A no-network WebSocket server: `connect` is the bound `makeWebSocket` factory; every socket it ever handed out is retained for introspection (`all`), and the currently-OPEN subset (`openSockets`) is derived live from `readyState` so it is the single source of truth for the one-socket invariant.
-    - `HUB_HEARTBEAT_MS`
-    - `HUB_TIMEOUT_MS`
     - Types: `FakeWsServerOptions`, `TabHandle`, `TransportHub`
 
 <!-- AUTOGENERATED:END -->

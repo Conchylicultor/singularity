@@ -1,21 +1,24 @@
 // Network-diagnostics event bus. Mirrors ws-status-bus.ts: a module-level
-// listener Set with publish/subscribe. The networking layer (shared-websocket,
-// cross-tab-election) only *publishes* transition events here; a subscriber
-// living *above* networking (live-state) forwards them to the persistent log
-// channel. This keeps networking free of any log-channels dependency, avoiding
-// the networking ↔ log-channels import cycle.
+// listener Set with publish/subscribe. The networking layer only *publishes*
+// transition events here (shared-websocket republishes the events its
+// SharedWorker reports, since the worker realm has no bus of its own); a
+// subscriber living *above* networking (live-state) forwards them to the
+// persistent log channel. This keeps networking free of any log-channels
+// dependency, avoiding the networking ↔ log-channels import cycle.
 
 export type NetDiagEvent =
-  // --- socket lifecycle (shared-websocket.ts) ---
+  // --- socket lifecycle (socket-owner.ts, inside the SharedWorker) ---
   | { type: "ws-open"; url: string }
   | { type: "ws-close"; url: string }
   | { type: "ws-reconnect-scheduled"; url: string; attempt: number }
-  // --- cross-tab election transitions (cross-tab-election.ts) ---
-  | { type: "elected"; name: string }
-  | { type: "demoted"; name: string }
-  | { type: "steal-attempt"; name: string }
-  | { type: "leader-timeout"; name: string }
-  | { type: "follower-joined"; name: string };
+  // --- tab ports joining / leaving the SharedWorker (shared-ws-host.ts) ---
+  | { type: "port-attached"; url: string; ports: number }
+  | {
+      type: "port-released";
+      url: string;
+      ports: number;
+      reason: "detach" | "gone";
+    };
 
 type Listener = (ev: NetDiagEvent) => void;
 
