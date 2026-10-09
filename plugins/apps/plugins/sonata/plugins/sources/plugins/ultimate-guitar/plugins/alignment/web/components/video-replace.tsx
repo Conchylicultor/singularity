@@ -20,7 +20,7 @@ import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   resolveUgAlignment,
@@ -31,7 +31,7 @@ import { candidateTitle } from "../internal/recording-state";
 import { useInlineAction } from "../internal/use-inline-action";
 import { ChipBadge, outcomeChip } from "./outcome-chip";
 
-const openIcon = symbol("open-in-new");
+const openIcon = navIcons.newTab;
 
 const watchUrl = (videoId: string) =>
   `https://www.youtube.com/watch?v=${videoId}`;

@@ -1,8 +1,8 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { navIcons } from "@plugins/ui/plugins/icons/core";
 
-const rightPanelIcon = symbol("right-panel-open");
+const rightPanelIcon = navIcons.sidePane;
 
 /**
  * Whether the player's section column is hidden — one device-local choice
