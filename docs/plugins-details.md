@@ -250,9 +250,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/page-tree.useBlockTarget`
           - `apps/pages/page-tree.useBlockTargetTitle`
           - `apps/pages/page-tree.useOpenBlockTarget`
+          - `network/live.useLive`
           - `network/live.useLiveRow`
           - `page/editor.PageIcon`
           - `primitives/css/link-chip.LinkChip`
+          - `primitives/live-state.foldResource`
           - `primitives/pane.useOpenPane`
         - Exports (values): `PageLinkChip`
       - Server:
@@ -30522,7 +30524,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 194 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 195 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×49
           - `conversations` ×38
           - `ui` ×22
@@ -30530,8 +30532,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×11
           - `page` ×11
           - `primitives` ×9
+          - `active-data` ×6
           - `infra` ×6
-          - `active-data` ×5
           - `auth` ×4
           - `build` ×4
           - `plugin-meta` ×3

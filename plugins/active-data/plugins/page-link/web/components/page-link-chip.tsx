@@ -1,4 +1,5 @@
-import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { pagesTree, pageData } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
@@ -93,7 +94,7 @@ export function useBlockReferent(blockId: string): IdReferentState {
  * does not hold is a content block, whose view resolves its own page.
  */
 export function useOpenBlock(): (blockId: string) => void {
-  const pages = useResource(pagesResource);
+  const pages = useLive(pagesTree);
   const openPane = useOpenPane();
   return (blockId) => {
     const isPage = foldResource(pages, {
