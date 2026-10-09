@@ -1,4 +1,5 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
+import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { ComponentType } from "react";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { LaunchOptionDef } from "../core";
@@ -93,6 +94,13 @@ export interface LaunchOptionPill<V> {
    * wraps them in the headed section, titled with the option's `label`.
    */
   MenuGroup: ComponentType<LaunchControlProps<V>>;
+  /**
+   * The config the menu's rows come from (a library such as the preprompts),
+   * if any. The host then puts a gear on this option's menu heading that opens
+   * its settings, so the choices can be edited from where they are picked —
+   * the pill's twin of `ConfigSelectContent` on a select.
+   */
+  configure?: ConfigDescriptor;
   /** Options sharing a cluster fuse into ONE pill, in registry order. */
   cluster?: string;
   /** Which end of the bar. Defaults to "start". */

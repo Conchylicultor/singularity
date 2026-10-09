@@ -9769,6 +9769,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/prompt-templates`
           - `conversations/preprompts`
           - `stats/commits`
+          - `tasks/launch-options`
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Web:
         - Slots:
@@ -29062,6 +29063,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ButtonIconSize`
               - `ControlSize`
               - `DensityControlled`
+              - `MenuRowAction`
               - `OverlayPanelProps`
               - `PopoverMaxHeight`
               - `PopoverPadding`
@@ -33113,6 +33115,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit.DropdownMenuSection`
                   - `primitives/css/ui-kit.DropdownMenuSeparator`
                   - `primitives/css/ui-kit.DropdownMenuTrigger`
+                  - `primitives/css/ui-kit.MenuRowAction`
                   - `primitives/overlay/tooltip.WithTooltip`
                   - `ui/icons.Icon`
                 - Exports (types):
@@ -35899,6 +35902,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskLaunch.Option` ← `tasks.task-effort`
           - `TaskLaunch.Option` ← `tasks.task-preprompt`
         - Uses:
+          - `config_v2/config-link.useOpenConfig`
           - `primitives/css/spacing.Stack`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/overlay/overlay-boundary.OverlayBoundary`
@@ -36432,6 +36436,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `TaskLaunch.Option` "Preprompt" → `PrepromptLaunchControl`
         - Uses:
           - `conversations/preprompts.PrepromptGlyph`
+          - `conversations/preprompts.prepromptsConfig`
           - `conversations/preprompts.PrepromptSelect`
           - `conversations/preprompts.usePrepromptItems`
           - `infra/endpoints.fetchEndpoint`

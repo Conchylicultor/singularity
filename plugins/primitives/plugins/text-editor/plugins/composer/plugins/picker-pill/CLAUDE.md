@@ -46,6 +46,7 @@ hand-rolled its own checkmarks.
     - `primitives/css/ui-kit.DropdownMenuSection`
     - `primitives/css/ui-kit.DropdownMenuSeparator`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
+    - `primitives/css/ui-kit.MenuRowAction`
     - `primitives/overlay/tooltip.WithTooltip`
     - `ui/icons.Icon`
   - Exports (types):

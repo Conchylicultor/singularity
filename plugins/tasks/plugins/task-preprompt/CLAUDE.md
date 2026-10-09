@@ -9,6 +9,7 @@
   - Contributes: `TaskLaunch.Option` "Preprompt" → `PrepromptLaunchControl`
   - Uses:
     - `conversations/preprompts.PrepromptGlyph`
+    - `conversations/preprompts.prepromptsConfig`
     - `conversations/preprompts.PrepromptSelect`
     - `conversations/preprompts.usePrepromptItems`
     - `infra/endpoints.fetchEndpoint`

@@ -8,6 +8,7 @@ import {
   DropdownMenuSection,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  type MenuRowAction,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -57,6 +58,11 @@ export interface PickerPillValueProps {
 export interface PickerPillGroupProps {
   /** Section heading inside the menu. */
   title: string;
+  /**
+   * A trailing action on the heading — typically a gear to the settings the
+   * group's rows come from, so a library-backed picker can be edited from it.
+   */
+  action?: MenuRowAction;
   children?: React.ReactNode;
 }
 
@@ -165,8 +171,12 @@ function PickerPillValue({ muted, children }: PickerPillValueProps) {
 }
 
 /** One headed section of the menu. */
-function PickerPillGroup({ title, children }: PickerPillGroupProps) {
-  return <DropdownMenuSection label={title}>{children}</DropdownMenuSection>;
+function PickerPillGroup({ title, action, children }: PickerPillGroupProps) {
+  return (
+    <DropdownMenuSection label={title} action={action}>
+      {children}
+    </DropdownMenuSection>
+  );
 }
 
 /** One row of a group. */

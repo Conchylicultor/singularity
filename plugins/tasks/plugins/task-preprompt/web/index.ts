@@ -8,6 +8,7 @@ import {
 } from "./components/preprompt-pill";
 import { useTaskPrepromptBinding } from "./internal/binding";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { prepromptsConfig } from "@plugins/conversations/plugins/preprompts/web";
 
 export { useTaskPreprompt } from "./hooks";
 
@@ -32,6 +33,8 @@ export default {
         icon: symbol("article"),
         Value: PrepromptPillValue,
         MenuGroup: PrepromptPillMenu,
+        // The rows are the preprompts library: a gear on the heading opens it.
+        configure: prepromptsConfig,
         side: "start",
       },
       useTaskBinding: useTaskPrepromptBinding,

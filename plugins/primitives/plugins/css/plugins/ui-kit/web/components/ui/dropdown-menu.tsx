@@ -188,6 +188,7 @@ function DropdownMenuLabel({
 function DropdownMenuSection({
   label,
   inset,
+  action,
   children,
   ...props
 }: MenuPrimitive.Group.Props & {
@@ -195,12 +196,55 @@ function DropdownMenuSection({
   label: React.ReactNode;
   /** Indent the label to align with inset items. */
   inset?: boolean;
+  /**
+   * A section-wide action pinned to the heading's trailing edge — "configure
+   * where these rows come from". Always visible (a row's action reveals on
+   * highlight; a heading is never highlighted), and kept OUTSIDE the
+   * `GroupLabel` so the group's accessible name stays the heading text alone.
+   */
+  action?: MenuRowAction;
 }) {
   return (
     <DropdownMenuGroup {...props}>
-      <DropdownMenuLabel inset={inset}>{label}</DropdownMenuLabel>
+      {action ? (
+        <span className="flex items-center gap-sm pr-2xs">
+          <DropdownMenuLabel inset={inset} className="min-w-0 flex-1">
+            {label}
+          </DropdownMenuLabel>
+          <MenuSectionAction action={action} />
+        </span>
+      ) : (
+        <DropdownMenuLabel inset={inset}>{label}</DropdownMenuLabel>
+      )}
       {children}
     </DropdownMenuGroup>
+  );
+}
+
+/**
+ * A section heading's trailing action: the menu row action's look, always
+ * shown. It is a menu ITEM rendered as that button, so the arrow keys reach it
+ * and activating it closes the menu like any other command — the action
+ * usually navigates away (to the settings behind the rows), and a menu left
+ * hanging over its destination would hide it.
+ */
+function MenuSectionAction({ action }: { action: MenuRowAction }) {
+  return (
+    <ControlSizeProvider size="xs">
+      <MenuPrimitive.Item
+        aria-label={action.label}
+        title={action.label}
+        data-slot="dropdown-menu-section-action"
+        onClick={(e) => action.onAction(e)}
+        render={
+          // Keyboard highlight moves focus onto it, so the Button's own focus
+          // ring marks it — no menu-row paint for a heading's icon button.
+          <Button variant="ghost" aspect="icon" />
+        }
+      >
+        <Icon icon={action.icon} />
+      </MenuPrimitive.Item>
+    </ControlSizeProvider>
   );
 }
 
@@ -211,7 +255,7 @@ function DropdownMenuSection({
  * the `xs` control density, so it fits inside the row's height and every
  * menu's action looks the same; a click on it never selects the row.
  */
-interface MenuRowAction {
+export interface MenuRowAction {
   icon: IconRef;
   /** The action's name: its aria-label and hover title. */
   label: string;

@@ -438,6 +438,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ButtonIconSize`
     - `ControlSize`
     - `DensityControlled`
+    - `MenuRowAction`
     - `OverlayPanelProps`
     - `PopoverMaxHeight`
     - `PopoverPadding`

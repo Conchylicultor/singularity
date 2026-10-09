@@ -6,8 +6,12 @@ import { OverlayBoundary } from "@plugins/primitives/plugins/overlay/plugins/ove
 import { PickerPill } from "@plugins/primitives/plugins/text-editor/plugins/composer/plugins/picker-pill/web";
 import { TooltipDoc } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { useOpenConfig } from "@plugins/config_v2/plugins/config-link/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { TaskLaunch } from "../slots";
 import { launchOptionValue, type LaunchOptionValues } from "../internal/values";
+
+const settingsIcon = symbol("settings");
 
 /** One registered launch option, as the slot hands it over. */
 type OptionItem = ReturnType<typeof TaskLaunch.Option.useContributions>[number];
@@ -116,6 +120,7 @@ function LaunchOptionGroup({
   onChange: (next: LaunchOptionValues) => void;
   disabled: boolean;
 }) {
+  const openConfig = useOpenConfig();
   const members = group.members;
   const lead = members[0]!;
   const pill = lead.pill;
@@ -173,9 +178,19 @@ function LaunchOptionGroup({
         );
       })}
       {members.map((option) => {
-        const MenuGroup = option.pill!.MenuGroup;
+        const { MenuGroup, configure } = option.pill!;
         return (
-          <PickerPill.Group key={`group:${option.id}`} title={option.label}>
+          <PickerPill.Group
+            key={`group:${option.id}`}
+            title={option.label}
+            action={
+              configure && {
+                icon: settingsIcon,
+                label: `Configure: ${option.label}`,
+                onAction: () => openConfig(configure),
+              }
+            }
+          >
             {/* The menu half is overlay content, so it takes the boundary
                 built for that. The panel already carries one around the whole
                 menu; one per option makes THIS the nearest, so a bad option
