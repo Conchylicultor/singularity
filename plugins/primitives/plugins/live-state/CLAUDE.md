@@ -957,9 +957,9 @@ keeps every row's identity rather than re-minting each moved row.
     - `useResourceContractMismatches`
     - `useResources`
 - Cross-plugin:
-  - Imported by: 196 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 197 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×50
-    - `conversations` ×38
+    - `conversations` ×39
     - `ui` ×22
     - `tasks` ×18
     - `debug` ×11

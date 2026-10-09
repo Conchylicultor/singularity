@@ -14,6 +14,8 @@
  * signal that separates them.
  */
 
+import type { TerminalMenu } from "@plugins/conversations/plugins/terminal-menu/core";
+
 // Every interactive menu footer — question OR rewind — terminates in the
 // segment "Esc to cancel". Finding it is step one; step two is proving the menu
 // it belongs to is still on screen (see composerBelow).
@@ -72,36 +74,134 @@ const REWIND_FOOTER_RE = /Enter to continue\b.*\bEsc to cancel\b/i;
 // anything else below the footer is by definition not the composer.
 const COMPOSER_RE = /^\s*(?:❯|[─━]{8,})/u;
 
-export type PaneMenu = "question" | "rewind" | "idle";
+// A numbered option line of any menu: "❯ 1. Stop and wait…" (the cursor on
+// it) or "  2. Wait here, then…". Checked BEFORE the composer rule, whose `❯`
+// prefix an option line under the cursor also carries.
+const OPTION_RE = /^\s*(❯\s*)?(\d+)\.\s+(.*\S)\s*$/u;
+
+// A horizontal rule the CLI draws between blocks — chrome, never content.
+const RULE_RE = /^\s*[─━]{8,}\s*$/u;
+
+// How far above the footer a menu's options may start. Bounds the walk so
+// numbered prose far up the scrollback can never be read as a menu.
+const MENU_MAX_LINES = 40;
+
+export type PaneMenu =
+  | { kind: "idle" }
+  | { kind: "question" }
+  | { kind: "rewind" }
+  /** Any other numbered menu, read in full so the web can answer it. */
+  | { kind: "menu"; menu: TerminalMenu };
 
 /**
  * Which interactive menu (if any) is on screen in this pane capture.
  *
  * Walks UP from the bottom to the nearest footer terminator. Crossing a
  * composer line on the way means the footer is scrollback from a menu that has
- * already been answered, so the pane is idle.
+ * already been answered, so the pane is idle. A live footer that is neither the
+ * question's nor the rewind's is read as a numbered menu; one whose options
+ * cannot be read is left `idle` rather than guessed at.
  */
 export function classifyPaneText(paneText: string): PaneMenu {
-  const footer = liveMenuFooter(paneText);
-  if (footer == null) return "idle";
-  if (QUESTION_FOOTER_RE.test(footer)) return "question";
-  if (REWIND_FOOTER_RE.test(footer)) return "rewind";
-  return "idle";
+  const lines = paneText.split("\n");
+  const end = liveFooterEnd(lines);
+  if (end == null) return { kind: "idle" };
+  const footer = rejoinFooter(lines, end);
+  if (QUESTION_FOOTER_RE.test(footer)) return { kind: "question" };
+  if (REWIND_FOOTER_RE.test(footer)) return { kind: "rewind" };
+  const menu = readNumberedMenu(lines, end);
+  return menu ? { kind: "menu", menu } : { kind: "idle" };
 }
 
-/** The open menu's footer as one logical line, or null if no menu is open. */
-function liveMenuFooter(paneText: string): string | null {
-  const lines = paneText.split("\n");
+/** Index of the open menu's footer terminator line, or null if none is open. */
+function liveFooterEnd(lines: readonly string[]): number | null {
   let end = lines.length - 1;
   while (end >= 0 && !FOOTER_TERMINATOR_RE.test(lines[end]!)) {
     if (COMPOSER_RE.test(lines[end]!)) return null;
     end--;
   }
-  if (end < 0) return null;
+  return end < 0 ? null : end;
+}
+
+/** The footer ending at `end`, rejoined across its hard wraps into one line. */
+function rejoinFooter(lines: readonly string[], end: number): string {
   const start = Math.max(0, end + 1 - FOOTER_MAX_WRAP_LINES);
-  return lines
-    .slice(start, end + 1)
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return squash(lines.slice(start, end + 1).join(" "));
+}
+
+/**
+ * The numbered menu whose footer ends at `end`: the footer's own lines (the
+ * terminator and the `·`-separated hint lines wrapped above it), the options
+ * above them — each option's indented lines below it are its description — and
+ * the title, the first content line above option 1.
+ *
+ * Null unless the options read as 1..k in order with the cursor on one of them:
+ * anything less is not a menu this can answer safely.
+ */
+function readNumberedMenu(
+  lines: readonly string[],
+  end: number,
+): TerminalMenu | null {
+  let footerStart = end;
+  while (
+    footerStart > 0 &&
+    end - footerStart + 1 < FOOTER_MAX_WRAP_LINES &&
+    lines[footerStart - 1]!.includes("·") &&
+    !OPTION_RE.test(lines[footerStart - 1]!)
+  )
+    footerStart--;
+  const footer = squash(lines.slice(footerStart, end + 1).join(" "));
+
+  // Walk up to option 1, keeping the lines in between (bottom-up).
+  const body: string[] = [];
+  let first: number | null = null;
+  for (
+    let i = footerStart - 1;
+    i >= 0 && footerStart - i <= MENU_MAX_LINES;
+    i--
+  ) {
+    const line = lines[i]!;
+    body.push(line);
+    const option = OPTION_RE.exec(line);
+    if (option?.[2] === "1") {
+      first = i;
+      break;
+    }
+    if (!option && COMPOSER_RE.test(line) && !RULE_RE.test(line)) return null;
+  }
+  if (first === null) return null;
+  const i = first;
+
+  // The title: the nearest content line above option 1.
+  let title = "";
+  for (let j = i - 1; j >= 0 && i - j <= 3; j--) {
+    const line = lines[j]!;
+    if (line.trim() === "") continue;
+    if (!RULE_RE.test(line) && !COMPOSER_RE.test(line)) title = squash(line);
+    break;
+  }
+
+  const options: TerminalMenu["options"] = [];
+  let highlighted: number | null = null;
+  for (const line of body.reverse()) {
+    const option = OPTION_RE.exec(line);
+    if (option) {
+      const n = Number(option[2]);
+      if (n !== options.length + 1) return null;
+      if (option[1]) highlighted = n;
+      options.push({ n, label: squash(option[3]!), description: null });
+      continue;
+    }
+    if (line.trim() === "" || RULE_RE.test(line)) continue;
+    const last = options.at(-1)!;
+    last.description = last.description
+      ? `${last.description} ${squash(line)}`
+      : squash(line);
+  }
+  if (highlighted === null) return null;
+  return { title, options, highlighted, footer };
+}
+
+function squash(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
 }

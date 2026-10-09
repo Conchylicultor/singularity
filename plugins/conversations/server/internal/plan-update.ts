@@ -3,6 +3,10 @@ import type {
   ConversationStatus,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import type { UpdateConversationPatch } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  sameTerminalMenu,
+  TERMINAL_MENU_WAITING_FOR,
+} from "@plugins/conversations/plugins/terminal-menu/core";
 import { decideMissingProcessAction } from "./hibernation-decision";
 import type { RuntimeInfo } from "./runtime";
 import type { QuestionHold } from "./question-hold";
@@ -40,6 +44,7 @@ export type PlanRow = Pick<
   | "title"
   | "claudeSessionId"
   | "waitingFor"
+  | "waitingMenu"
   | "createdAt"
   | "hibernatedAt"
 >;
@@ -192,14 +197,28 @@ function planLive(
     candidate && ctx.sessionAccepted ? candidate : row.claudeSessionId;
   const sessionChanged = desiredSessionId !== row.claudeSessionId;
   const statusChanged = desiredStatus !== row.status;
+  // A terminal menu on screen is what the conversation waits on, whatever
+  // the CLI's own (opaque) reason says: its key is derived here from the menu,
+  // so `waitingFor` names the menu exactly while `waitingMenu` carries one.
+  const desiredMenu =
+    !heldOpen && desiredStatus === "waiting" ? info.menu : null;
   const desiredWaitingFor = heldOpen
     ? "question"
-    : desiredStatus === "waiting"
-      ? (info.waitingFor ?? null)
-      : null;
+    : desiredMenu
+      ? TERMINAL_MENU_WAITING_FOR
+      : desiredStatus === "waiting"
+        ? (info.waitingFor ?? null)
+        : null;
   const waitingForChanged =
     (desiredWaitingFor ?? null) !== (row.waitingFor ?? null);
-  if (!titleChanged && !sessionChanged && !statusChanged && !waitingForChanged)
+  const menuChanged = !sameTerminalMenu(desiredMenu, row.waitingMenu);
+  if (
+    !titleChanged &&
+    !sessionChanged &&
+    !statusChanged &&
+    !waitingForChanged &&
+    !menuChanged
+  )
     return { kind: "noop" };
 
   const patch: UpdateConversationPatch = {};
@@ -207,6 +226,7 @@ function planLive(
   if (sessionChanged) patch.claudeSessionId = desiredSessionId;
   if (statusChanged) patch.status = desiredStatus;
   if (waitingForChanged) patch.waitingFor = desiredWaitingFor;
+  if (menuChanged) patch.waitingMenu = desiredMenu;
   // A live session on a `gone` row resurrects it.
   if (row.status === "gone") patch.endedAt = null;
   return {

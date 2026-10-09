@@ -76,11 +76,13 @@
     - `QuestionHoldSource`
     - `RuntimeInfo`
     - `RuntimeSignal`
+    - `TerminalMenuChoice`
     - `Turn`
     - `UserTurnSentPayload`
   - Exports (values):
     - `afterTurn`
     - `answerPrompt`
+    - `answerTerminalMenu`
     - `conversationCreated`
     - `conversationTurnCompleted`
     - `createConversation`
@@ -173,8 +175,8 @@
     - `RewindRefusalSchema`
     - `stopConversation`
 - Cross-plugin:
-  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×48
+  - Imported by: 63 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×49
     - `tasks` ×4
     - `review` ×3
     - `active-data` ×2
@@ -284,6 +286,9 @@
       - **`queue`** — Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); a user-set pin lifts a waiting task group into…
   - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
   - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation policy: a scheduled idle-kill job, the viewed/resume endpoint, and…
+  - **`menu-relay`** — Answers the numbered menu open in a conversation's terminal from the web: owns the transcript's `"menu"` pending prompt — a card with the menu's title and one button per option, plus Cancel — and…
+    - Plugins:
+      - **`usage-limit`** — Claude Code's usage-limit menu, drawn by the terminal-menu card: when the limit resets (with a countdown) and Wait & continue automatically / Stop / Use usage credits buttons that answer it.
   - **`model-provider`** — Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's…
     - Plugins:
       - **`catalog`** — The host-global model catalog: getModelCatalog() (catalog.json in memory, re-read by a file watcher, the baseline until the first discovery), the model-provider.catalog live value, and the…
@@ -295,6 +300,7 @@
   - **`runtime-tmux`** [exempt] — Runs Claude CLI sessions inside tmux panes.
   - **`session-chain`** — Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
   - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags…
+  - **`terminal-menu`** — The shape of an interactive numbered menu a conversation's terminal has open (title, options, highlighted option, footer): the value the runtime reads off the screen, the conversation row carries as…
   - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the ordered on-disk JSONL paths of a conversation's Claude session chain.
   - **`transcript-retention`** — Keeps retained conversations' Claude session JSONL alive by refreshing their mtime daily — active rows plus every conversation of a held task — so Claude Code's cleanupPeriodDays sweep never deletes…
   - **`transcript-watcher`** — Foreign-session report renderer: a one-line Debug, Reports summary for the conversation-foreign-session kind — which conversation holds a session id that belongs to another, and how it was seen.…

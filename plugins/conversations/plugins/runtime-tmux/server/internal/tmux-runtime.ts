@@ -2,7 +2,13 @@ import type {
   ConversationRuntime,
   RuntimeInfo,
   RuntimeSignal,
+  TerminalMenuChoice,
 } from "@plugins/conversations/server";
+import {
+  sameTerminalMenu,
+  TerminalMenuChangedError,
+  type TerminalMenu,
+} from "@plugins/conversations/plugins/terminal-menu/core";
 import {
   cliFlagFor,
   type ConversationModel,
@@ -311,7 +317,7 @@ async function typeTurn(conversationId: string, text: string): Promise<void> {
 async function awaitPromptMenu(conversationId: string): Promise<boolean> {
   const deadline = Date.now() + MENU_APPEAR_TIMEOUT_MS;
   for (;;) {
-    if ((await classifyPaneMenu(conversationId)) !== "idle") return true;
+    if ((await classifyPaneMenu(conversationId)).kind !== "idle") return true;
     if (Date.now() + FORM_CLEAR_POLL_INTERVAL_MS >= deadline) return false;
     await Bun.sleep(FORM_CLEAR_POLL_INTERVAL_MS);
   }
@@ -344,7 +350,7 @@ async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
   const deadline = Date.now() + FORM_CLEAR_TIMEOUT_MS;
   let lastEscapeAt = -Infinity;
   for (;;) {
-    if ((await classifyPaneMenu(conversationId)) === "idle") return;
+    if ((await classifyPaneMenu(conversationId)).kind === "idle") return;
     // A menu (question or rewind) is up. Press Escape only if we haven't pressed
     // within the last gap — long enough for a prior Escape's re-render to land,
     // so we never Esc-Esc a pane that has already reached idle under render lag.
@@ -367,6 +373,107 @@ async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
     `tmux escapeUntilPromptCleared for ${conversationId}: prompt menu did not clear ` +
       `within ${FORM_CLEAR_TIMEOUT_MS}ms despite repeated Escape; refusing to send`,
   );
+}
+
+// answerMenu() — each keystroke is followed by a FRESH capture until the menu
+// shows its effect, for the same async-TUI reason typeTurn() verifies its
+// submit: keys written in one PTY chunk can outrun the render, so an Enter sent
+// straight after the arrows could confirm the option the cursor was on before.
+const MENU_STEP_TIMEOUT_MS = 3_000;
+
+async function tmuxKeys(conversationId: string, keys: string[]): Promise<void> {
+  // Named keys (Down, Enter, Escape), never `-l`: literal mode types the names.
+  await Bun.spawn([TMUX, "send-keys", "-t", conversationId, ...keys], {
+    stdout: "pipe",
+    stderr: "pipe",
+  }).exited;
+}
+
+/** The numbered menu on screen, or null when the pane shows anything else. */
+async function readOpenMenu(
+  conversationId: string,
+): Promise<TerminalMenu | null> {
+  const read = await classifyPaneMenu(conversationId);
+  return read.kind === "menu" ? read.menu : null;
+}
+
+/**
+ * Poll fresh captures until `done` holds of the pane's menu (null = no
+ * numbered menu on screen), at most MENU_STEP_TIMEOUT_MS. Throws on timeout —
+ * the caller must not send its next key against a screen it has not seen.
+ */
+async function awaitMenu(
+  conversationId: string,
+  what: string,
+  done: (menu: TerminalMenu | null) => boolean,
+): Promise<void> {
+  const deadline = Date.now() + MENU_STEP_TIMEOUT_MS;
+  for (;;) {
+    if (done(await readOpenMenu(conversationId))) return;
+    if (Date.now() + FORM_CLEAR_POLL_INTERVAL_MS >= deadline) break;
+    await Bun.sleep(FORM_CLEAR_POLL_INTERVAL_MS);
+  }
+  throw new Error(
+    `tmux answerMenu for ${conversationId}: ${what} within ${MENU_STEP_TIMEOUT_MS}ms`,
+  );
+}
+
+/**
+ * Answer the numbered menu on screen: re-read it, refuse unless it still offers
+ * the chosen label at the chosen number, move the cursor there (one arrow per
+ * step, verified on screen), press Enter, and wait for the menu to go. Cancel is
+ * one Escape, sent only while a menu is up — at an idle prompt a second Escape
+ * opens the rewind menu.
+ */
+async function answerOpenMenu(
+  conversationId: string,
+  choice: TerminalMenuChoice,
+): Promise<void> {
+  await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
+    stdout: "pipe",
+    stderr: "pipe",
+  }).exited;
+  const menu = await readOpenMenu(conversationId);
+  if (!menu) {
+    throw new TerminalMenuChangedError(
+      "The menu is no longer open in the terminal.",
+    );
+  }
+  // Answered: this menu is off the screen (another may have replaced it).
+  const gone = (now: TerminalMenu | null) =>
+    now === null || !sameOptions(now, menu);
+  if (choice.kind === "cancel") {
+    await tmuxKeys(conversationId, ["Escape"]);
+    await awaitMenu(conversationId, "the menu did not close", gone);
+    return;
+  }
+  const option = menu.options.find((o) => o.n === choice.n);
+  if (option?.label !== choice.label) {
+    throw new TerminalMenuChangedError(
+      `The menu changed: option ${choice.n} is now ` +
+        `${option ? `"${option.label}"` : "gone"}, not "${choice.label}". Nothing was sent.`,
+    );
+  }
+  let at = menu.highlighted;
+  while (at !== choice.n) {
+    const step = at < choice.n ? 1 : -1;
+    await tmuxKeys(conversationId, [step > 0 ? "Down" : "Up"]);
+    const target = at + step;
+    await awaitMenu(
+      conversationId,
+      `the cursor did not reach option ${target}`,
+      (now) =>
+        now !== null && sameOptions(now, menu) && now.highlighted === target,
+    );
+    at = target;
+  }
+  await tmuxKeys(conversationId, ["Enter"]);
+  await awaitMenu(conversationId, "the menu did not close after Enter", gone);
+}
+
+/** The same menu, wherever its cursor is. */
+function sameOptions(a: TerminalMenu, b: TerminalMenu): boolean {
+  return sameTerminalMenu(a, { ...b, highlighted: a.highlighted });
 }
 
 /**
@@ -475,14 +582,19 @@ async function describePanes(
     const { rawTitle, dead, worktreePath } = panes.get(id)!;
     const state = states[i]!;
     const resolved = resolvePaneStatus(rawTitle, state, opActives[i]!);
-    const question = menus[i] === "question";
+    const menu = menus[i] ?? null;
+    const question = menu?.kind === "question";
+    // Any other numbered menu stops the turn the same way: the CLI sits on it
+    // until someone answers, whatever its title or session file say.
+    const numbered = menu?.kind === "menu" ? menu.menu : null;
     out.set(id, {
       title: resolved.title,
-      working: resolved.working && !dead && !question,
+      working: resolved.working && !dead && !question && !numbered,
       dead,
       claudeSessionId: state.sessionId ?? null,
       worktreePath,
       waitingFor: dead ? null : question ? "question" : resolved.waitingFor,
+      menu: dead ? null : numbered,
     });
   });
   return out;
@@ -765,4 +877,6 @@ export const tmuxRuntime: ConversationRuntime = {
       await escapeUntilPromptCleared(conversationId);
     }
   },
+
+  answerMenu: answerOpenMenu,
 };

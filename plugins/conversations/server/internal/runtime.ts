@@ -2,6 +2,7 @@ import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { getConversationRuntime } from "@plugins/tasks/plugins/tasks-core/server";
+import type { TerminalMenu } from "@plugins/conversations/plugins/terminal-menu/core";
 import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugins/transcript-watcher/server";
 import {
   readTurnsFromChain,
@@ -19,7 +20,21 @@ export interface RuntimeInfo {
   claudeSessionId: string | null;
   worktreePath: string;
   waitingFor: string | null;
+  /**
+   * The numbered menu open on the session's screen, other than the question
+   * menu (which has its own flow and reads as `waitingFor: "question"`). While
+   * one is open the reconciler records it and the session waits on it.
+   */
+  menu: TerminalMenu | null;
 }
+
+/**
+ * Which way to answer an open terminal menu: an option, named by its number
+ * AND its label so a menu that changed since the user saw it is refused rather
+ * than answered with whatever now sits at that number — or cancel it.
+ */
+export type TerminalMenuChoice =
+  { kind: "option"; n: number; label: string } | { kind: "cancel" };
 
 /**
  * A runtime's push signal: "the live state of these conversations may have
@@ -113,6 +128,14 @@ export interface ConversationRuntime {
     conversationId: string,
     signal: AbortSignal,
   ): Promise<"ready" | "timeout">;
+  /**
+   * Answer the terminal menu reported as {@link RuntimeInfo.menu}. Implementers
+   * MUST re-read the menu first and throw unless it is still open and, for an
+   * option, still offers that label at that number — a key sent into a changed
+   * menu, or into an idle prompt, picks something the user never chose. Resolves
+   * once the menu has left the screen; throws if it never does.
+   */
+  answerMenu(conversationId: string, choice: TerminalMenuChoice): Promise<void>;
 }
 
 const registry = new Map<string, ConversationRuntime>();
@@ -186,6 +209,15 @@ export async function waitUntilReady(
   const row = await getConversationRuntime(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
   return Runtime.get(row.runtime).waitUntilReady(id, signal);
+}
+
+export async function answerTerminalMenu(
+  id: string,
+  choice: TerminalMenuChoice,
+): Promise<void> {
+  const row = await getConversationRuntime(id);
+  if (!row) throw new Error(`Conversation ${id} not found`);
+  await Runtime.get(row.runtime).answerMenu(id, choice);
 }
 
 export async function getConversationRow(id: string): Promise<{

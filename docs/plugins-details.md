@@ -9604,11 +9604,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `QuestionHoldSource`
       - `RuntimeInfo`
       - `RuntimeSignal`
+      - `TerminalMenuChoice`
       - `Turn`
       - `UserTurnSentPayload`
     - Exports (values):
       - `afterTurn`
       - `answerPrompt`
+      - `answerTerminalMenu`
       - `conversationCreated`
       - `conversationTurnCompleted`
       - `createConversation`
@@ -9701,8 +9703,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `RewindRefusalSchema`
       - `stopConversation`
   - Cross-plugin:
-    - Imported by: 62 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `conversations` ×48
+    - Imported by: 63 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `conversations` ×49
       - `tasks` ×4
       - `review` ×3
       - `active-data` ×2
@@ -10831,12 +10833,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.EventFilter`
               - `JsonlViewer.Overlay`
               - `JsonlViewer.PendingPromptAction`
-            - Slot contributors: 21 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 22 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.EventRenderer` ×13
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
+              - `JsonlViewer.PendingPrompt` ×2
               - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
-              - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
@@ -10907,8 +10909,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `eventKey`
               - `jsonlEvents`
           - Cross-plugin:
-            - Imported by: 37 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `conversations` ×37
+            - Imported by: 38 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `conversations` ×38
           - Plugins:
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Web:
@@ -12920,6 +12922,49 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes: `POST /api/conversations/:id/viewed`
       - Cross-plugin:
         - Imported by: `conversations/conversation-view`
+    - **`menu-relay`** — Answers the numbered menu open in a conversation's terminal from the web: owns the transcript's `"menu"` pending prompt — a card with the menu's title and one button per option, plus Cancel — and the MenuRelay.Variant slot, through which a plugin gives a menu it knows its own look. Answers a conversation's open terminal menu from the web: the answer endpoint, which re-reads the menu, refuses one that changed, and drives the terminal to the chosen option.
+      - Web:
+        - Slots: `MenuRelay.Variant`
+        - Slot contributors: `MenuRelay.Variant` ← `conversations.menu-relay.usage-limit`
+        - Contributes: `JsonlViewer.PendingPrompt` "menu" → `TerminalMenuCard`
+        - Uses:
+          - `conversations.useConversation`
+          - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+          - `infra/endpoints.useEndpointMutation`
+          - `primitives/css/card.Card`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/live-state.foldResource`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
+          - `primitives/slot-render.defineDispatchSlot`
+        - Exports (types): `MenuVariantProps`
+        - Exports (values): `MenuRelay`
+      - Server:
+        - Uses:
+          - `conversations.answerTerminalMenu`
+          - `conversations.requestStatusReconcile`
+          - `infra/endpoints.implement`
+        - Routes: `POST /api/conversations/:id/menu/answer`
+      - Core:
+        - Uses: `infra/endpoints.defineEndpoint`
+        - Exports (types): `AnswerMenuBody`
+        - Exports (values):
+          - `AnswerMenuBodySchema`
+          - `answerTerminalMenu`
+      - Cross-plugin:
+        - Imported by: `conversations/menu-relay/usage-limit`
+      - Plugins:
+        - **`usage-limit`** — Claude Code's usage-limit menu, drawn by the terminal-menu card: when the limit resets (with a countdown) and Wait & continue automatically / Stop / Use usage credits buttons that answer it.
+          - Web:
+            - Contributes: `MenuRelay.Variant` → `UsageLimitMenu`
+            - Uses:
+              - `conversations/menu-relay.MenuRelay`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/relative-time.useNow`
     - **`model-provider`** — Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's version as a hint, pinned versions the user turned on), and the corruption reporter for malformed stored models. Model ids, families and choices: the id grammar every concrete version follows (flag, label and family derive from the id alone), the catalog shape and its pure readers (resolveModel, choiceHint, selectableChoices), and the model-provider config.
       - Web:
         - Contributes:
@@ -13370,6 +13415,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PhaseSchema`
       - Shared:
         - Exports (values): `generateConversationSummary`
+    - **`terminal-menu`** — The shape of an interactive numbered menu a conversation's terminal has open (title, options, highlighted option, footer): the value the runtime reads off the screen, the conversation row carries as waitingMenu, and the web's menu card answers.
+      - Core:
+        - Uses: `infra/endpoints.HttpError`
+        - Exports (types):
+          - `TerminalMenu`
+          - `TerminalMenuOption`
+        - Exports (values):
+          - `sameTerminalMenu`
+          - `TERMINAL_MENU_WAITING_FOR`
+          - `TerminalMenuChangedError`
+          - `TerminalMenuOptionSchema`
+          - `TerminalMenuSchema`
+      - Cross-plugin:
+        - Imported by: `tasks/tasks-core`
     - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the ordered on-disk JSONL paths of a conversation's Claude session chain.
       - Server:
         - Uses:
@@ -17183,6 +17242,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli`
               - `infra/events`
               - `tasks/automations`
+              - `tasks/tasks-core`
         - **`storage`** — JSON field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so a jsonField<T>'s shape is derived rather than asserted.
           - Server:
             - Contributes: `fields.storage` "json"
@@ -20125,10 +20185,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isCodec`
           - `multipart`
       - Cross-plugin:
-        - Imported by: 225 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 227 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×59
+          - `conversations` ×26
           - `debug` ×26
-          - `conversations` ×24
           - `infra` ×17
           - `tasks` ×17
           - `page` ×13
@@ -27173,10 +27233,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `CardProps`
             - Exports (values): `Card`
           - Cross-plugin:
-            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
+            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
               - `apps` ×12
+              - `conversations` ×4
               - `primitives` ×4
-              - `conversations` ×3
               - `page` ×3
               - `active-data/task`
               - `debug/trace/contention`
@@ -27882,9 +27942,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 376 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 378 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×93
-              - `conversations` ×59
+              - `conversations` ×61
               - `primitives` ×50
               - `debug` ×34
               - `ui` ×28
@@ -28068,9 +28128,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 347 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 349 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×90
-              - `conversations` ×67
+              - `conversations` ×69
               - `primitives` ×39
               - `debug` ×32
               - `page` ×20
@@ -28318,10 +28378,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 381 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 383 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×100
               - `apps` ×69
-              - `conversations` ×50
+              - `conversations` ×52
               - `page` ×24
               - `debug` ×23
               - `ui` ×23
@@ -30125,9 +30185,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 196 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 197 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×50
-          - `conversations` ×38
+          - `conversations` ×39
           - `ui` ×22
           - `tasks` ×18
           - `debug` ×11
@@ -30199,11 +30259,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoadingVariant`
         - Exports (values): `Loading`
       - Cross-plugin:
-        - Imported by: 175 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 176 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×58
           - `ui` ×19
           - `primitives` ×17
-          - `conversations` ×15
+          - `conversations` ×16
           - `debug` ×14
           - `tasks` ×10
           - `page` ×8
@@ -31600,10 +31660,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×23
           - `debug` ×11
-          - `conversations` ×8
+          - `conversations` ×9
           - `build` ×3
           - `tasks` ×3
           - `infra` ×2
@@ -31938,10 +31998,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotItemLayout`
           - `useDispatchOutcome`
       - Cross-plugin:
-        - Imported by: 79 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 80 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×26
+          - `conversations` ×13
           - `primitives` ×13
-          - `conversations` ×12
           - `ui` ×5
           - `tasks` ×4
           - `apps-core` ×3
@@ -35840,10 +35900,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `conversations/model-provider.FALLBACK_MODEL`
           - `conversations/model-provider.StoredModelSchema`
+          - `conversations/terminal-menu.TerminalMenu`
+          - `conversations/terminal-menu.TerminalMenuSchema`
           - `fields.fieldsToZodObject`
           - `fields.nullable`
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
+          - `fields/json/config.jsonField`
           - `fields/rank/config.rankField`
           - `fields/text/config.enumTextField`
           - `fields/text/config.parsedTextField`

@@ -8,6 +8,7 @@ import {
   type PlanRow,
 } from "./plan-update";
 import type { RuntimeInfo } from "./runtime";
+import type { TerminalMenu } from "@plugins/conversations/plugins/terminal-menu/core";
 
 const NOW = Date.parse("2026-10-02T12:00:00Z");
 const SESSION = "a4ee9684-418d-4661-b372-2960760538a7";
@@ -20,6 +21,7 @@ function row(overrides: Partial<PlanRow> = {}): PlanRow {
     title: "Fix the thing",
     claudeSessionId: SESSION,
     waitingFor: null,
+    waitingMenu: null,
     createdAt: new Date(NOW - 60 * 60_000),
     hibernatedAt: null,
     ...overrides,
@@ -36,6 +38,7 @@ function live(overrides: Partial<RuntimeInfo> = {}): Liveness {
       claudeSessionId: SESSION,
       worktreePath: "/wt",
       waitingFor: null,
+      menu: null,
       ...overrides,
     },
   };
@@ -485,6 +488,83 @@ describe("planConversationUpdate — no live session", () => {
           ctx(),
         ),
       ).toEqual({ kind: "closed" });
+    });
+  });
+});
+
+describe("planConversationUpdate — a terminal menu on screen", () => {
+  const MENU: TerminalMenu = {
+    title: "What do you want to do?",
+    options: [
+      { n: 1, label: "Stop and wait for limit to reset", description: null },
+      { n: 2, label: "Switch to usage credits", description: null },
+    ],
+    highlighted: 1,
+    footer: "Enter to confirm · Esc to cancel",
+  };
+
+  test("records the menu and waits on it, over the CLI's own reason", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "working" }),
+        live({ waitingFor: "input needed", menu: MENU }),
+        ctx(),
+      ),
+    ).toMatchObject({
+      kind: "patch",
+      patch: { status: "waiting", waitingFor: "menu", waitingMenu: MENU },
+      menuOpened: false,
+    });
+  });
+
+  test("the same menu again is a noop", () => {
+    expect(
+      planConversationUpdate(
+        row({ waitingFor: "menu", waitingMenu: MENU }),
+        live({
+          menu: { ...MENU, options: MENU.options.map((o) => ({ ...o })) },
+        }),
+        ctx(),
+      ),
+    ).toEqual({ kind: "noop" });
+  });
+
+  test("a moved highlight updates the menu alone", () => {
+    expect(
+      planConversationUpdate(
+        row({ waitingFor: "menu", waitingMenu: MENU }),
+        live({ menu: { ...MENU, highlighted: 2 } }),
+        ctx(),
+      ),
+    ).toMatchObject({
+      kind: "patch",
+      patch: { waitingMenu: { ...MENU, highlighted: 2 } },
+    });
+  });
+
+  test("a menu that left the screen clears both", () => {
+    expect(
+      planConversationUpdate(
+        row({ waitingFor: "menu", waitingMenu: MENU }),
+        live({ working: true }),
+        ctx(),
+      ),
+    ).toMatchObject({
+      kind: "patch",
+      patch: { status: "working", waitingFor: null, waitingMenu: null },
+    });
+  });
+
+  test("a held question wins over a menu", () => {
+    expect(
+      planConversationUpdate(
+        row(),
+        live({ menu: MENU }),
+        ctx({ questionHold: "open" }),
+      ),
+    ).toMatchObject({
+      kind: "patch",
+      patch: { waitingFor: "question" },
     });
   });
 });

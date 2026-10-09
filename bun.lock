@@ -1913,6 +1913,14 @@
       "name": "@singularity/plugin-conversations-hibernation",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/menu-relay": {
+      "name": "@singularity/plugin-conversations-menu-relay",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/menu-relay/plugins/usage-limit": {
+      "name": "@singularity/plugin-conversations-menu-relay-usage-limit",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/model-provider": {
       "name": "@singularity/plugin-conversations-model-provider",
       "version": "0.0.1",
@@ -1951,6 +1959,10 @@
     },
     "plugins/conversations/plugins/summary": {
       "name": "@singularity/plugin-conversations-summary",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/terminal-menu": {
+      "name": "@singularity/plugin-conversations-terminal-menu",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/transcript-api": {
@@ -7289,6 +7301,10 @@
 
     "@singularity/plugin-conversations-hibernation": ["@singularity/plugin-conversations-hibernation@workspace:plugins/conversations/plugins/hibernation"],
 
+    "@singularity/plugin-conversations-menu-relay": ["@singularity/plugin-conversations-menu-relay@workspace:plugins/conversations/plugins/menu-relay"],
+
+    "@singularity/plugin-conversations-menu-relay-usage-limit": ["@singularity/plugin-conversations-menu-relay-usage-limit@workspace:plugins/conversations/plugins/menu-relay/plugins/usage-limit"],
+
     "@singularity/plugin-conversations-model-provider": ["@singularity/plugin-conversations-model-provider@workspace:plugins/conversations/plugins/model-provider"],
 
     "@singularity/plugin-conversations-model-provider-catalog": ["@singularity/plugin-conversations-model-provider-catalog@workspace:plugins/conversations/plugins/model-provider/plugins/catalog"],
@@ -7308,6 +7324,8 @@
     "@singularity/plugin-conversations-session-chain": ["@singularity/plugin-conversations-session-chain@workspace:plugins/conversations/plugins/session-chain"],
 
     "@singularity/plugin-conversations-summary": ["@singularity/plugin-conversations-summary@workspace:plugins/conversations/plugins/summary"],
+
+    "@singularity/plugin-conversations-terminal-menu": ["@singularity/plugin-conversations-terminal-menu@workspace:plugins/conversations/plugins/terminal-menu"],
 
     "@singularity/plugin-conversations-transcript-api": ["@singularity/plugin-conversations-transcript-api@workspace:plugins/conversations/plugins/transcript-api"],
 

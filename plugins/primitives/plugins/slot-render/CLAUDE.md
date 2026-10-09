@@ -255,10 +255,10 @@ the outcome too, with no separate code path.
     - `SlotItemLayout`
     - `useDispatchOutcome`
 - Cross-plugin:
-  - Imported by: 79 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 80 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×26
+    - `conversations` ×13
     - `primitives` ×13
-    - `conversations` ×12
     - `ui` ×5
     - `tasks` ×4
     - `apps-core` ×3

@@ -73,6 +73,7 @@ export type { Turn } from "./internal/claude-transcript";
 export {
   Runtime,
   answerPrompt,
+  answerTerminalMenu,
   flushInteractivePrompt,
   getConversationRow,
   interruptConversation,
@@ -83,6 +84,7 @@ export type {
   RuntimeInfo,
   RuntimeSignal,
   ConversationRuntime,
+  TerminalMenuChoice,
 } from "./internal/runtime";
 export { requestStatusReconcile } from "./internal/status-reconciler";
 export { QuestionHolds } from "./internal/question-hold";

@@ -167,6 +167,7 @@ const conversationsEntity = defineEntity("conversations", conversationFields, {
       closeRequested: false,
       hibernatedAt: false,
       lastViewedAt: false,
+      waitingMenu: false,
     },
   },
   columns: {

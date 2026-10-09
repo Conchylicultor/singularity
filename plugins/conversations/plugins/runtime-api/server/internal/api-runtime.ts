@@ -45,4 +45,7 @@ export const apiRuntime: ConversationRuntime = {
   async waitUntilReady(): Promise<"ready" | "timeout"> {
     throw new Error("api runtime: waitUntilReady() not implemented");
   },
+  async answerMenu(): Promise<void> {
+    throw new Error("api runtime: answerMenu() not implemented");
+  },
 };

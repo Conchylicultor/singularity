@@ -120,12 +120,12 @@ back.
     - `JsonlViewer.EventFilter`
     - `JsonlViewer.Overlay`
     - `JsonlViewer.PendingPromptAction`
-  - Slot contributors: 21 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 22 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `JsonlViewer.EventRenderer` ×13
     - `JsonlViewer.Overlay` ×4
     - `JsonlViewer.EventFilter` ×2
+    - `JsonlViewer.PendingPrompt` ×2
     - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
-    - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
@@ -196,8 +196,8 @@ back.
     - `eventKey`
     - `jsonlEvents`
 - Cross-plugin:
-  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×37
+  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×38
 - Sub-plugins:
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.

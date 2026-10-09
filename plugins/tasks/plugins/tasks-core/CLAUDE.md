@@ -440,10 +440,13 @@ serves them.
   - Uses:
     - `conversations/model-provider.FALLBACK_MODEL`
     - `conversations/model-provider.StoredModelSchema`
+    - `conversations/terminal-menu.TerminalMenu`
+    - `conversations/terminal-menu.TerminalMenuSchema`
     - `fields.fieldsToZodObject`
     - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
+    - `fields/json/config.jsonField`
     - `fields/rank/config.rankField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.parsedTextField`

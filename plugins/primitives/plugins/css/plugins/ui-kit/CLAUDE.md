@@ -544,10 +544,10 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useSidebar`
     - `useSingleLine`
 - Cross-plugin:
-  - Imported by: 381 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 383 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×100
     - `apps` ×69
-    - `conversations` ×50
+    - `conversations` ×52
     - `page` ×24
     - `debug` ×23
     - `ui` ×23

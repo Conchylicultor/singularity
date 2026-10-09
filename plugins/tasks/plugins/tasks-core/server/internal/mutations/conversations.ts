@@ -2,6 +2,7 @@ import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { ConversationStatus } from "../../../core/conversation-status";
+import type { TerminalMenu } from "@plugins/conversations/plugins/terminal-menu/core";
 import { _attempts, _conversations } from "../tables";
 import { conversations } from "../views";
 import { emitConversationStatusChange } from "../status-emit";
@@ -25,6 +26,7 @@ export interface UpdateConversationPatch {
   title?: string | null;
   claudeSessionId?: string | null;
   waitingFor?: string | null;
+  waitingMenu?: TerminalMenu | null;
   endedAt?: Date | null;
   closeRequested?: boolean;
 }
@@ -165,6 +167,7 @@ export async function updateConversation(
   if (patch.claudeSessionId !== undefined)
     dbPatch.claudeSessionId = patch.claudeSessionId;
   if (patch.waitingFor !== undefined) dbPatch.waitingFor = patch.waitingFor;
+  if (patch.waitingMenu !== undefined) dbPatch.waitingMenu = patch.waitingMenu;
   if (patch.endedAt !== undefined) dbPatch.endedAt = patch.endedAt;
   if (patch.closeRequested !== undefined)
     dbPatch.closeRequested = patch.closeRequested;
@@ -225,7 +228,12 @@ export async function markConversationGone(id: string): Promise<boolean> {
   const result = await withTaskStatusChange(taskId ?? [], db, async () =>
     db
       .update(_conversations)
-      .set({ status: "gone", endedAt: now, waitingFor: null })
+      .set({
+        status: "gone",
+        endedAt: now,
+        waitingFor: null,
+        waitingMenu: null,
+      })
       .where(
         and(
           eq(_conversations.id, id),
