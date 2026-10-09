@@ -38,6 +38,14 @@ describe("askedPositions", () => {
     expect(asked(LOOP, { practised, blanks: "half" })).toEqual([2]);
   });
 
+  test("first: every practised box but the loop's first", () => {
+    expect(asked(LOOP, { blanks: "first" })).toEqual([1, 2, 3]);
+    // The first box not practised: nothing more is given.
+    expect(
+      asked(LOOP, { blanks: "first", practised: new Set([IV, V]) }),
+    ).toEqual([1, 2]);
+  });
+
   test("half: the practised boxes starting in the second half", () => {
     expect(asked(LOOP, { blanks: "half" })).toEqual([2, 3]);
   });

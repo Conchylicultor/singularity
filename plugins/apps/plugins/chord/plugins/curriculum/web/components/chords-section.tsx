@@ -112,6 +112,7 @@ const NEXT_STATE: Record<ChordState | "mixed", ChordState> = {
 };
 const BLANKS_HELP: Record<Blanks, string> = {
   all: "Name every practised chord",
+  first: "Name every practised chord but the loop's first, given as an anchor",
   random: "Name half of them, drawn at random each loop",
   half: "Name the practised chords in the loop's second half, where the cadence is",
 };
@@ -409,6 +410,7 @@ function PillGroup<T extends string | number>({
 /** A tiny loop of four boxes: hollow ones are blank, filled ones given. */
 const GLYPH: Record<Blanks, readonly boolean[]> = {
   all: [true, true, true, true],
+  first: [false, true, true, true],
   random: [false, true, false, true],
   half: [false, false, true, true],
 };

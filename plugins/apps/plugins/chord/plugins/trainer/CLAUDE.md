@@ -66,7 +66,7 @@ prev, next)` between two playhead reads — a forward move finishes every box
 
 - **Everything comes from the learner's selection** (`useCurriculum`) **and
   the catalog** (`useCatalog`): which chords are practised, heard or off, the
-  blanks (all / random half / last half), how many other chords a loop may
+  blanks (all / all but first / random half / last half), how many other chords a loop may
   hold, and which practised chords no track lists (answered by the Rare
   button). Until both land — a `not-ready` catalog included — the screen shows
   its loading state: buttons that are about to change would be a claim about

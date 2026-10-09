@@ -33,12 +33,13 @@ export type AskedOptions = {
  * repeated for the same round.
  *
  * - `all`: every practised box;
+ * - `first`: every practised box but the round's first box, which is given;
  * - `random`: half of the practised boxes, rounded up, drawn at random;
  * - `half`: every practised box starting at or after the window's midpoint.
  *
  * **Never empty.** A rule that selects nothing — the second half of a loop
- * whose practised chords all sit in its first half — falls back to the last
- * practised box. A round with no practised box at all throws: the loop query
+ * whose practised chords all sit in its first half, or a loop whose one
+ * practised box is its first — falls back to the last practised box. A round with no practised box at all throws: the loop query
  * only returns loops holding a practised chord, so one would mean the round was
  * dealt for a different selection.
  */
@@ -63,6 +64,9 @@ export function askedPositions(
   switch (opts.blanks) {
     case "all":
       selected = practised;
+      break;
+    case "first":
+      selected = practised.filter((box) => box !== boxes[0]);
       break;
     case "random":
       selected = drawHalf(practised, opts.random ?? Math.random);

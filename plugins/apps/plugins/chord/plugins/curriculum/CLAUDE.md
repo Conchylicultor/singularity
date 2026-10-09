@@ -10,7 +10,8 @@ replaced the path of `research/2026-09-23-apps-chord-trainer-free-curriculum.md`
   an answer button, or the Rare joker answers it), `hear` (it can play in a
   loop, its boxes are always given) or `off`. The chords alone decide which
   loops fit, whatever key the song is labelled in: there are no key modes.
-- **How much is blank** (`Blanks`) — `all` (every practised box), `random`
+- **How much is blank** (`Blanks`) — `all` (every practised box), `first`
+  ("All but first": every practised box but the loop's first), `random`
   (half the practised boxes, rounded up, drawn when the loop is dealt), `half`
   ("Last half": the practised boxes in the loop's second half).
   `RecordedBlanks` adds `one`, which the path offered: recorded answers still
@@ -134,7 +135,7 @@ useCurriculumWrites()  → { setChords(changes, onDone?), setBlanks(blanks, onDo
   the "✓ from the next loop" flash, and **Clear** (every chord on sent as off)
   → **Undo clear** for 6 s (the snapshot replayed as one `changes` call, chords
   turned on since going off again). Open, top to bottom: the **Blanks** pills
-  (All · Random half · Last half, each with its loop glyph), **Other chords per
+  (All · All but first · Random half · Last half, each with its loop glyph), **Other chords per
   loop** (None · 1 · 2 · Any), then the **tracks** accordion. A track head:
   badge, name, "N practised · N heard · +N rare" (`trackStanding`) or "not
   started", chevron, and once started a thin bar of the track's chord use the
