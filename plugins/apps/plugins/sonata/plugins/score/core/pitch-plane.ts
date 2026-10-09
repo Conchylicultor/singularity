@@ -103,6 +103,18 @@ export interface PitchPlane {
   /** Exactly one per pitch in `[low, high]`, ascending, contiguous. */
   columns: readonly PitchColumn[];
   guides: readonly PitchGuide[];
+  /**
+   * How many key-widths wide the plane is — the piano's natural count, Jankó's
+   * pad count. The unit a surface caps a keyboard's width in, so one key never
+   * grows past a playable size however wide the box.
+   */
+  span: number;
+  /**
+   * Width ÷ height of the keyboard drawn at its keys' natural proportion. A
+   * surface that sizes a keyboard by `aspect-ratio` keeps every key the same
+   * shape: a narrower keyboard is a shorter one, never a squashed one.
+   */
+  aspect: number;
 }
 
 /**

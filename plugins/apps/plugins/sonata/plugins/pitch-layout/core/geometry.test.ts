@@ -132,15 +132,41 @@ test("geometry is pure — deep-equal across calls", () => {
   }
 });
 
-test("keybed and chip heights are positive integers, keybed the taller", () => {
+test("keybed heights are positive integers", () => {
   for (const id of LAYOUTS) {
-    for (const size of ["keybed", "chip"] as const) {
-      const h = pitchKeyboardHeight(id, size);
-      expect(Number.isInteger(h)).toBe(true);
-      expect(h).toBeGreaterThan(0);
-    }
-    expect(pitchKeyboardHeight(id, "keybed")).toBeGreaterThan(
-      pitchKeyboardHeight(id, "chip"),
-    );
+    const h = pitchKeyboardHeight(id, "keybed");
+    expect(Number.isInteger(h)).toBe(true);
+    expect(h).toBeGreaterThan(0);
   }
+});
+
+test("aspect is linear in span, at one key proportion per layout", () => {
+  for (const id of LAYOUTS) {
+    const ratios = RANGES.map(([low, high]) => {
+      const plane = pitchGeometry(id, low, high);
+      expect(plane.span).toBeGreaterThan(0);
+      expect(plane.aspect).toBeGreaterThan(0);
+      return plane.aspect / plane.span;
+    });
+    for (const r of ratios) expect(r).toBeCloseTo(ratios[0]!, 10);
+  }
+});
+
+test("piano: two octaves C..B span 14 naturals", () => {
+  const plane = pitchGeometry("piano", 48, 71);
+  expect(plane.span).toBe(14);
+  expect(plane.aspect).toBeCloseTo(14 / 4.4, 10);
+});
+
+test("proportion is taken over the SNAPPED range", () => {
+  // C#4..A#5 snaps out to C4..B5: the same 14 naturals as C4..B5.
+  const snapped = pitchGeometry("piano", 61, 82);
+  expect(snapped.low).toBe(60);
+  expect(snapped.high).toBe(83);
+  expect(snapped.span).toBe(pitchGeometry("piano", 60, 83).span);
+});
+
+test("janko: span is (N + 1) / 2 pads", () => {
+  const plane = pitchGeometry("janko", 60, 83);
+  expect(plane.span).toBe(12.5);
 });

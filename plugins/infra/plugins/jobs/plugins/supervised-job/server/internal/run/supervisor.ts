@@ -609,7 +609,13 @@ export type KillOutcome =
   /** Claimed, but no pid was ever recorded — nothing to signal. */
   | { readonly ok: false; readonly reason: "no-pid" }
   /** The pid was gone by the time we signalled; the reconciler will close the row. */
-  | { readonly ok: false; readonly reason: "already-exited" };
+  | { readonly ok: false; readonly reason: "already-exited" }
+  /**
+   * The row still holds the pid its claiming backend seeded it with — THIS
+   * process — so its child is not spawned yet. Signalling `-pid` would hit this
+   * backend's own process group.
+   */
+  | { readonly ok: false; readonly reason: "not-spawned" };
 
 /**
  * Cancel a supervised run by signalling it.
@@ -638,6 +644,7 @@ export async function killSupervisedRun(
   const row = (await kind.spec.listUnfinished()).find((r) => r.runId === runId);
   if (row === undefined) return { ok: false, reason: "not-running" };
   if (row.pid === null) return { ok: false, reason: "no-pid" };
+  if (row.pid === process.pid) return { ok: false, reason: "not-spawned" };
   try {
     process.kill(-row.pid, signal);
   } catch (err) {

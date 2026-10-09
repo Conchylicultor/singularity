@@ -59,13 +59,20 @@ const VARIANT_CLASS: Record<SectionHeaderVariant, string> = {
  *   pointer already is. `aria-expanded` and the click target are unchanged —
  *   only where the ink sits, and when, differs.
  *
+ * - **`none`** — no chevron at all, and no box reserved for one: the label
+ *   starts on the row's own padding. The row is still the disclosure control
+ *   (`aria-expanded`, `aria-controls`, the click target are unchanged), so the
+ *   open/closed state is carried by TONE instead of ink — a collapsed header's
+ *   label is muted, an open one reads at full strength. For an INSPECTOR stack
+ *   of flat, rule-divided sections, where a column of chevrons is noise.
+ *
  * The reveal is the `hover-reveal` primitive's per-instance state
  * (`useHoverReveal`), not a Tailwind group: `Row` already publishes
  * `group/row-actions` for its action cluster, and a chevron keyed off that
  * group would borrow a name another primitive owns. Headers are few (one per
  * section), so the per-row state costs nothing measurable.
  */
-export type SectionHeaderDisclosure = "lead" | "trailing";
+export type SectionHeaderDisclosure = "lead" | "trailing" | "none";
 
 /**
  * The passthrough ({@link Passthrough}) is handed straight to `Row`, which
@@ -131,6 +138,7 @@ export function SectionHeaderRow({
   const open = openProp ?? ctx?.open ?? false;
   const onClick = onClickProp ?? ctx?.toggle;
   const trailing = disclosure === "trailing";
+  const lead = disclosure === "lead";
   // Called unconditionally (hooks), but only WIRED on the trailing path: a lead
   // chevron is always visible, so its row carries no reveal handlers at all and
   // renders exactly the node it always has.
@@ -149,12 +157,10 @@ export function SectionHeaderRow({
         // spacer IS the thing it reserves space for — it cannot drift from the
         // chevron's size the way a hand-measured spacer box would.
         //
-        // A trailing disclosure has no lead column to keep, so a static header
-        // in that mode reserves nothing: its label starts where a collapsible
-        // trailing header's does.
-        icon={
-          trailing ? undefined : <CollapsibleChevron className="invisible" />
-        }
+        // A trailing (or absent) disclosure has no lead column to keep, so a
+        // static header in that mode reserves nothing: its label starts where a
+        // collapsible header of the same mode does.
+        icon={lead ? <CollapsibleChevron className="invisible" /> : undefined}
         actionsAlwaysVisible
         actions={actions}
         className={cn(VARIANT_CLASS[variant], className)}
@@ -213,6 +219,38 @@ export function SectionHeaderRow({
           open={open}
           className={hoverRevealClass(reveal.revealed)}
         />
+      </Row>
+    );
+  }
+
+  if (disclosure === "none") {
+    // No chevron, so TONE carries the state: the row (label and icon) is muted
+    // while collapsed. The actions are re-toned to the foreground they would
+    // inherit open, so a header toggle does not read as disabled just because
+    // its section is shut — the tone speaks for the section, not its controls.
+    // `contents` keeps the wrapper out of the actions cluster's layout.
+    return (
+      <Row
+        aria-expanded={open}
+        aria-controls={ctx?.contentId}
+        onClick={onClick}
+        actionsAlwaysVisible
+        hover="muted"
+        actions={
+          actions === undefined ? undefined : open ? (
+            actions
+          ) : (
+            <span className="contents text-foreground">{actions}</span>
+          )
+        }
+        className={cn(
+          VARIANT_CLASS[variant],
+          !open && "text-muted-foreground",
+          className,
+        )}
+        {...rest}
+      >
+        {children}
       </Row>
     );
   }

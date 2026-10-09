@@ -10,12 +10,11 @@
   - Uses:
     - `apps/sonata/audio/live-play.useChordAudition`
     - `apps/sonata/document.useHasChords`
-    - `apps/sonata/pitch-layout.usePitchGeometry`
-    - `apps/sonata/primitives/keyboard.Keyboard`
-    - `apps/sonata/primitives/keyboard.useSonataKeySkin`
     - `apps/sonata/rich/chord-label.chordBoxFace`
     - `apps/sonata/rich/chord-label.ChordBoxFace`
     - `apps/sonata/rich/chord-label.useChordDisplayMode`
+    - `apps/sonata/rich/readout-keyboard.ReadoutKeyboard`
+    - `apps/sonata/rich/readout-keyboard.useReadoutPlane`
     - `apps/sonata/session.useCursorSelector`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`

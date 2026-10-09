@@ -32,11 +32,29 @@ const ROWS = 4;
  * on a physical Jankó. That is the whole content of the offset: a player's
  * hand finds C on the bottom row in every octave.
  */
+/**
+ * A pad's height over its width. Pads are near-square, a touch shorter than
+ * wide — a tuned choice, like the piano's `WHITE_KEY_LENGTH`.
+ */
+const PAD_HEIGHT_RATIO = 0.9;
+
 const rowsForParity = (q: number): [number, number] => [1 - q, 3 - q];
 
 /** Jankó tiles any range flush, so there is nothing to widen to. */
 function snapRange(low: number, high: number): { low: number; high: number } {
   return { low, high };
+}
+
+/**
+ * A pad is two strides and the axis is `N + 1` strides, so the keyboard is
+ * `(N + 1) / 2` pads wide and `ROWS` pads of `PAD_HEIGHT_RATIO` tall.
+ */
+function proportion(
+  low: number,
+  high: number,
+): { span: number; aspect: number } {
+  const span = (high - low + 2) / 2;
+  return { span, aspect: span / (ROWS * PAD_HEIGHT_RATIO) };
 }
 
 function lay(
@@ -100,8 +118,8 @@ function lay(
 export const jankoLayout: PitchLayout = {
   snapRange,
   lay,
-  // Four rows need more room than the piano's single row of keys; the chip is
-  // sized so a four-row pad is still tappable. Both are deliberate choices to
-  // tune on screenshot, not a formula.
-  heights: { keybed: 140, chip: 64 },
+  proportion,
+  // Four rows need more room than the piano's single row of keys — a deliberate
+  // choice to tune on screenshot, not a formula.
+  heights: { keybed: 140 },
 };

@@ -105,15 +105,34 @@ export interface KeyboardProps {
    * (the chord/key readouts), with no pointer handlers attached.
    */
   interaction?: KeyboardInteraction;
+  /**
+   * Who decides the keyboard's box.
+   *  - `"fill"`: the CALLER does — a class or `style` height, or a full-bleed
+   *    layer (the roll's keybed gutter, the Chord app's card). The pads stretch
+   *    to whatever box they are given.
+   *  - `"proportional"`: the PRIMITIVE does — full width, `aspect-ratio` from
+   *    `plane.aspect` and a max width of `plane.span` keys at
+   *    {@link MAX_KEY_PX}, so every key keeps its natural shape: a narrower
+   *    keyboard is a shorter one. Applied after `style`, so a caller cannot
+   *    half-override it.
+   * Required, so no surface gets squashed keys by forgetting to choose.
+   */
+  sizing: KeyboardSizing;
   className?: string;
   /**
-   * Merged onto the frame, after its own fixed shape. For the one thing a class
-   * cannot say: the keybed height, which is a number the LAYOUT chooses
-   * (`pitchKeyboardHeight`) — four rows of Jankó pads need more room than one
-   * row of piano keys, and no size class can be picked ahead of the layout.
+   * Merged onto the frame, after its own fixed shape. Under `sizing="fill"`,
+   * for the one thing a class cannot say: the keybed height, which is a number
+   * the LAYOUT chooses (`pitchKeyboardHeight`) — four rows of Jankó pads need
+   * more room than one row of piano keys, and no size class can be picked ahead
+   * of the layout. Under `"proportional"` the box keys win over it.
    */
   style?: CSSProperties;
 }
+
+export type KeyboardSizing = "fill" | "proportional";
+
+/** The widest a key gets under `sizing="proportional"`, in px. */
+const MAX_KEY_PX = 24;
 
 /** A key counts as narrow below this share of the plane's widest key. */
 const NARROW_RATIO = 0.9;
@@ -141,8 +160,8 @@ function groupTiers(keys: readonly PitchKey[]): KeyTier[] {
  * content. The full projection-driven `PianoKeyboard` and the chord/key readouts
  * all compose this. The skin arrives as data — Sonata's surfaces hand it
  * `useSonataKeySkin()`, so one control still paints every keyboard in the app.
- * Height is set by the caller via `className` or a `style` height; the pads
- * fill it.
+ * The box is the caller's (`sizing="fill"`) or the plane's own proportion
+ * (`sizing="proportional"`); the pads fill it.
  */
 export function Keyboard({
   plane,
@@ -151,6 +170,7 @@ export function Keyboard({
   renderKey,
   accidentalColor = (c) => c,
   interaction,
+  sizing,
   className,
   style,
 }: KeyboardProps) {
@@ -252,6 +272,14 @@ export function Keyboard({
         borderRadius: "4px",
         ...(interaction ? { touchAction: "none", cursor: "pointer" } : null),
         ...style,
+        ...(sizing === "proportional"
+          ? {
+              width: "100%",
+              height: "auto",
+              aspectRatio: plane.aspect,
+              maxWidth: plane.span * MAX_KEY_PX,
+            }
+          : null),
       }}
     >
       {order.map((tier) => (

@@ -29,3 +29,22 @@ export const RAIL_HEIGHT = "0.625rem";
  * `<Placed x={{ center: pct(f), size: 1 }} y={RAIL_BAND_Y} />`.
  */
 export const RAIL_BAND_Y: Extent = { center: "50%", size: RAIL_HEIGHT };
+
+/**
+ * Height of the lane band above the rail (the chord lane's chips), as a LENGTH.
+ * The scrubber reserves exactly this much room above its rail region ALWAYS —
+ * whether or not any marker draws in the lane — so the transport strip's height
+ * never jumps when a song with (or without) chords loads.
+ */
+export const LANE_HEIGHT = "1rem";
+
+/**
+ * The vertical extent of the lane band above the rail: `LANE_HEIGHT` tall,
+ * its bottom edge on the top edge of the marker region (the rail region the
+ * on-rail marks centre in). It therefore sits in the room the scrubber reserves
+ * above that region, separated from the rail by the region's own headroom, and
+ * can never overlap the rail, the loop band or the section bands, which all
+ * live inside the region. Pair it with a horizontal extent, e.g.
+ * `<Placed x={{ start: pct(f), size: pct(w) }} y={LANE_ABOVE_Y} />`.
+ */
+export const LANE_ABOVE_Y: Extent = { end: "100%", size: LANE_HEIGHT };

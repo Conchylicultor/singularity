@@ -2,34 +2,33 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import {
   grooveSetting,
   SonataDocument,
-  useHasVoicedChords,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { ConfigV2 } from "@plugins/config_v2/web";
+import { groovePresetsConfig } from "../shared/groove-presets";
 import { RhythmObserver } from "./components/rhythm-observer";
-import { RhythmControls } from "./components/rhythm-controls";
-import { RhythmActions } from "./components/rhythm-actions";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+
+export { RhythmControls } from "./components/rhythm-controls";
+export { GrooveSwitch } from "./components/groove-switch";
 
 export { useSaveRhythm } from "./actions";
 export type { RhythmGroove } from "./actions";
+export { useGroove } from "./use-groove";
+export type { Groove, GrooveState } from "./use-groove";
+export { useGroovePresets } from "./use-groove-presets";
+export type { GroovePresetsController } from "./use-groove-presets";
+export { grooveEquals, grooveSummary, presetGroove } from "../shared/groove";
+export type { GrooveContent, GrooveFields } from "../shared/groove";
+export type { GroovePreset } from "../shared/groove-presets";
 
 export default {
   description:
-    "Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Shown only for songs whose chords the song document voices: a symbol source (authored chords), or chord mode on.",
+    "Sonata accompaniment part: the per-song groove. Exports its on/off switch (GrooveSwitch) and its body (RhythmControls: a groove preset picker, a left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, and one pattern/rhythm row per hand) for the Accompaniment section to compose; contributes no section of its own. Persists the groove per song and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the global groove presets (config sonata groove-presets: useGroovePresets) and the per-song preset provenance useGroove carries.",
   contributions: [
+    ConfigV2.WebRegister({ descriptor: groovePresetsConfig }),
     SonataDocument.SongSetting({
       id: "rhythm-sync",
       setting: grooveSetting,
       component: RhythmObserver,
-    }),
-    Sonata.Section({
-      id: "rhythm",
-      label: "Rhythm",
-      icon: symbol("graphic-eq"),
-      component: RhythmControls,
-      area: "player",
-      actions: RhythmActions,
-      useAvailable: useHasVoicedChords,
     }),
   ],
 } satisfies PluginDefinition;

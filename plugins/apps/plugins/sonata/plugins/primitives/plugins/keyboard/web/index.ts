@@ -4,6 +4,7 @@ export { Keyboard } from "./internal/keyboard";
 export { useSonataKeySkin } from "./internal/use-key-skin";
 export type {
   KeyboardProps,
+  KeyboardSizing,
   KeyHighlight,
   KeyRenderState,
 } from "./internal/keyboard";

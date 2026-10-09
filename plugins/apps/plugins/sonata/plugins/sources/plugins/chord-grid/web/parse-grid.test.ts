@@ -228,3 +228,103 @@ describe("parseGrid — the key: directive", () => {
     expect(symbols("key: Eb\nC G")).toEqual(["C", "G"]);
   });
 });
+
+/** Each token as `[text, kind]`, in source order. */
+const spans = (text: string) =>
+  parseGrid(text).tokens.map((t) => [text.slice(t.from, t.to), t.kind]);
+
+describe("parseGrid — token spans", () => {
+  it("classifies chords, degrees, holds and group parens", () => {
+    expect(spans("Am7 vi . (E E6)")).toEqual([
+      ["Am7", "chord"],
+      ["vi", "degree"],
+      [".", "hold"],
+      ["(", "group-open"],
+      ["E", "chord"],
+      ["E6", "chord"],
+      [")", "group-close"],
+    ]);
+  });
+
+  it("keeps an attached alteration inside the chord span", () => {
+    expect(spans("(G7(♯5) .)")).toEqual([
+      ["(", "group-open"],
+      ["G7(♯5)", "chord"],
+      [".", "hold"],
+      [")", "group-close"],
+    ]);
+  });
+
+  it("keeps comments as spans, at their source offsets — even inside a group", () => {
+    expect(spans("; Verse\nC ; aside\n(D ; x\n E)")).toEqual([
+      ["; Verse", "comment"],
+      ["C", "chord"],
+      ["; aside", "comment"],
+      ["(", "group-open"],
+      ["D", "chord"],
+      ["; x", "comment"],
+      ["E", "chord"],
+      [")", "group-close"],
+    ]);
+  });
+
+  it("splits a key directive into its keyword and value", () => {
+    expect(spans("key: Am\ni")).toEqual([
+      ["key:", "key-directive"],
+      ["Am", "key-value"],
+      ["i", "degree"],
+    ]);
+    expect(spans("key=G")).toEqual([
+      ["key=", "key-directive"],
+      ["G", "key-value"],
+    ]);
+  });
+
+  it("paints invalid exactly what was skipped", () => {
+    const text = "C Zx VIII ) key: H";
+    const { tokens, skipped } = parseGrid(text);
+    expect(skipped).toEqual([")", "Zx", "VIII", "key:H"]);
+    expect(
+      tokens
+        .filter((t) => t.kind === "invalid")
+        .map((t) => text.slice(t.from, t.to)),
+    ).toEqual(["Zx", "VIII", ")", "key:", "H"]);
+  });
+
+  it("paints an unterminated group's runs invalid, leaving its comments", () => {
+    const { tokens, skipped } = parseGrid("C (D ; open\n E");
+    expect(skipped).toEqual(["(D E"]);
+    expect(tokens.map((t) => t.kind)).toEqual([
+      "chord",
+      "invalid",
+      "comment",
+      "invalid",
+    ]);
+  });
+
+  it("reads a numeral under a modulated key as a degree", () => {
+    expect(spans("key: D I")).toEqual([
+      ["key:", "key-directive"],
+      ["D", "key-value"],
+      ["I", "degree"],
+    ]);
+  });
+});
+
+describe("parseGrid — bars", () => {
+  it("counts one bar per top-level cell", () => {
+    expect(parseGrid("C . (D E) ()").bars).toBe(4);
+  });
+
+  it("counts no bar for comments and key directives", () => {
+    expect(parseGrid("; intro\nkey: G\nI V ; tail").bars).toBe(2);
+  });
+
+  it("counts a bar for a skipped chord (it still occupies its cell)", () => {
+    expect(parseGrid("C Zx G").bars).toBe(3);
+  });
+
+  it("is zero for an empty grid", () => {
+    expect(parseGrid("").bars).toBe(0);
+  });
+});

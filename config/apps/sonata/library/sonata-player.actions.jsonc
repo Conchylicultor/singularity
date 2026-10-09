@@ -1,4 +1,4 @@
-// @hash f60169436a8c
+// @hash 1d76a77907c9
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -11,17 +11,17 @@
 // strip below the header (`config/apps/sonata/player/transport.jsonc`), not
 // this row.
 //
-// Leading: ← Library (the way out), then the song title, which is the pane's own
+// Leading: the back arrow (the way out), then the song title, which is the pane's own
 // title item and the row's give — it holds the slack and ellipsizes rather than
 // pushing the tools out.
 //
 // After the spacer, the tools, each named for its role: time — how fast (the
 // speed wheel) and the beat that goes with it (the metronome, whose popover
 // shows the live tempo) — then pitch (transpose), then output (volume), then the
-// view: its zoom (the spread wheel) and, far right after every tool, which view
-// it is (the display switcher). The wheels and volume fold to icon + value at
-// rest and open on hover, so the row stays short. There is no divider node for a
-// row; the controls' own pill borders separate the wheels.
+// view, after a divider: its zoom (the spread wheel, piano roll only), which view
+// it is (the display switcher), and the Song panels toggle that shows or hides
+// the right-hand panel. The wheels and volume fold to icon + value at rest and
+// open on hover, so the row stays short.
 //
 // Node forms:
 // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
@@ -39,7 +39,9 @@
     "apps.sonata.audio.metronome:metronome",
     "apps.sonata.transpose:transpose",
     "apps.sonata.audio.engine:volume",
+    { "type": "divider", "id": "divider-view" },
     "apps.sonata.piano-roll:spread",
-    "apps.sonata.library:display-picker"
+    "apps.sonata.library:display-picker",
+    "apps.sonata.library:panels"
   ]
 }

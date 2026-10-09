@@ -53,13 +53,42 @@ export function invertVoicing(pitches: readonly number[], k: number): number[] {
 }
 
 /**
+ * The chord as written: root position at octave 4 ({@link chordPitches}),
+ * rotated with {@link invertVoicing} until a slash bass is the lowest note — so
+ * C/E → [64, 67, 72], C → [60, 64, 67]. A slash bass that is not a chord tone
+ * (C/D) is added one note below the root-position stack, the nearest pitch of
+ * that class beneath it.
+ */
+export function chordVoicing(data: {
+  root: number;
+  quality: string;
+  bass?: number;
+  intervals?: readonly number[];
+}): number[] {
+  const root = chordPitches(data);
+  if (data.bass === undefined || pc12(data.bass) === pc12(data.root)) {
+    return root;
+  }
+  const bassPc = pc12(data.bass);
+  for (let k = 1; k < root.length; k++) {
+    const inv = invertVoicing(root, k);
+    if (pc12(inv[0]!) === bassPc) return inv;
+  }
+  const lowest = root[0]!;
+  return [lowest - pc12(lowest - bassPc), ...root];
+}
+
+/**
  * Distance of a candidate voicing to a previous one: the sum, over each note in
  * `cand`, of its distance to the nearest note in `prev` (an asymmetric
  * nearest-neighbour cost). This rewards landing each new note close to *some*
  * note the hand already played — the intuition behind smooth voice-leading —
  * and is cheap to evaluate over the small candidate set below.
  */
-function voicingDistance(cand: readonly number[], prev: readonly number[]): number {
+function voicingDistance(
+  cand: readonly number[],
+  prev: readonly number[],
+): number {
   let total = 0;
   for (const c of cand) {
     let best = Infinity;

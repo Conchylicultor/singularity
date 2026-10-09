@@ -1,10 +1,22 @@
 # detail-sections
 
 A detail pane is **one render slot whose sections are contributions**.
-`defineDetailSections("<id>")` → `{ Section, Host }`. Single-mode: the host paints
-every section as a [`SectionCard`](../section-card/CLAUDE.md), so a section never
-paints its own card, title, or chevron. `actions` + `summary` share the
-header-right slot (both stay visible while collapsed).
+`defineDetailSections("<id>")` → `{ Section, Host, SectionItem, SectionStack }`.
+The host paints every section as a [`SectionCard`](../section-card/CLAUDE.md), so
+a section never paints its own card, title, or chevron. `actions` + `summary`
+share the header-right slot (both stay visible while collapsed).
+
+## Chrome: one closed choice, made by the slot OWNER
+
+`defineDetailSections({ chrome: "card" | "inspector" })` (default `card`) picks
+which of `SectionCard`'s two variants EVERY section of the pane wears — never a
+section's choice. `card`: bordered cards, leading chevron, `gap-sm` stack inside
+the `inset` (default `lg`). `inspector`: flat sections divided by a bottom rule,
+chevron-free full-width headers (collapsed title muted), no gap, no inset — and
+`inset` is type-rejected on that arm. `SectionStack` is the stack that owns this
+rhythm; `Host` uses it, and a multi-zone pane wraps its `SectionItem` zones in it
+instead of hand-setting a gap or padding. Sonata's player column is the
+inspector pane.
 
 **There is no chrome opt-out**, not even for a pane's identity block — the
 entity's name lives in the pane header, so a collapsed identity card loses
@@ -33,10 +45,10 @@ over emptiness. Two recurring calls:
 
 ## More than one zone: `SectionItem`
 
-`Host` is one padded stack over one `.Render`. A pane whose sections split across
-several zones (Sonata's column: an `editor` zone above a `player` zone) lays them
-out itself and paints each one with `SectionItem` — the same chrome, so it still
-can't drift. Caller-defined contribution fields that drive such a split ride on
+`Host` is one `SectionStack` over one `.Render`. A pane whose sections split
+across several zones (Sonata's column: an `editor` zone above a `player` zone)
+lays them out itself inside `SectionStack` and paints each one with `SectionItem`
+— the same chrome and rhythm, so it still can't drift. Caller-defined contribution fields that drive such a split ride on
 the second type param, `defineDetailSections<Props, Extra>`; they widen the
 contribution type only. Such splits are render-time filters: `subId` does **not**
 partition reorder (layout is keyed by the base slot id), so all zones share one
@@ -67,7 +79,7 @@ persisted section order — pick factory ids that reproduce the existing string.
 
 ## The rail
 
-`Host` **opens the region** — `railClass({ pad: inset })`, which pads and
+`SectionStack` (and so `Host`) **opens the region** — `railClass({ rail: inset })`, which pads and
 publishes the same step in one declaration. Do not put `insetClass` back: it pads
 without publishing, so the stack would inset its sections by a number none of
 them could read.

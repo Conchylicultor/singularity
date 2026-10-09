@@ -1,0 +1,4 @@
+{ "extends": "./tsconfig.json", "include": [], "files": [
+ "plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/web/loader.tsx",
+ "plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/web/parse-grid.test.ts",
+ "plugins/primitives/plugins/syntax-highlight/plugins/overlay-textarea/web/index.ts"] }

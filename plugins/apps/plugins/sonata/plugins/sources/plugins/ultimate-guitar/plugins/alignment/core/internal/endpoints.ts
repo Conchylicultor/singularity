@@ -23,9 +23,26 @@ export const setUgAlignmentVideo = defineEndpoint({
   response: z.object({ videoId: z.string() }),
 });
 
-/** Align the song again to its current video (after a failure, or on demand). */
+/**
+ * Align the song again ("Retry", or on demand): to its current video, or — with
+ * no video and the resolver owning the choice — go on with the candidate walk
+ * from the next untried candidate (after a failure, a cancel, or a needs-video).
+ * 409 when there is nothing to align to.
+ */
 export const realignUg = defineEndpoint({
   route: "POST /api/sonata/songs/:id/ultimate-guitar/alignment/realign",
+  response: z.object({ ok: z.literal(true) }),
+});
+
+/**
+ * Stop the song's alignment (`queued`, `resolving` or `running`): the row
+ * becomes `cancelled`, a candidate being tried goes back to untried, and the
+ * running job is stopped and recorded as cancelled (no retry, no report).
+ * Nothing restarts it until the user retries (`realignUg`) or sets a video.
+ * 409 when nothing is in progress.
+ */
+export const cancelUgAlignment = defineEndpoint({
+  route: "POST /api/sonata/songs/:id/ultimate-guitar/alignment/cancel",
   response: z.object({ ok: z.literal(true) }),
 });
 

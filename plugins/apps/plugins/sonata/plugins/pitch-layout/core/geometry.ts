@@ -20,8 +20,15 @@ import { jankoLayout } from "./janko";
  * enumerable today, which per the root CLAUDE.md rule makes it plain data.
  */
 
-/** Which surface is asking for a keyboard: the roll's gutter, or a readout chip. */
-export type PitchKeyboardSize = "keybed" | "chip";
+/**
+ * Which surface is asking for a FIXED keyboard height: only the roll's gutter.
+ *
+ * There used to be a `"chip"` height too — a readout keyboard pinned to 44px
+ * whatever its width, so its keys squashed as the panel narrowed. A readout now
+ * sizes itself by the plane's `aspect` (the keyboard primitive's
+ * `sizing="proportional"`), and the fixed chip height has no spelling left.
+ */
+export type PitchKeyboardSize = "keybed";
 
 /**
  * One layout's whole answer. Internal — a consumer reaches every layout through
@@ -42,7 +49,13 @@ export interface PitchLayout {
     high: number,
   ): { keys: PitchKey[]; columns: PitchColumn[]; guides: PitchGuide[] };
   /**
-   * The keybed / chip height this layout wants, in px. A deliberate per-layout
+   * How wide, in key-widths, a snapped range lays out — and the width ÷ height
+   * of that keyboard at its keys' natural proportion. Written onto the plane so
+   * a surface can size a keyboard without knowing the layout.
+   */
+  proportion(low: number, high: number): { span: number; aspect: number };
+  /**
+   * The keybed height this layout wants, in px. A deliberate per-layout
    * CHOICE, not a formula: four rows of Jankó pads need more room than one row
    * of piano keys, and no ratio derives that.
    */
@@ -71,6 +84,8 @@ export function pitchGeometry(
   const impl = PITCH_LAYOUTS[layout];
   const range = impl.snapRange(low, high);
   const laid = impl.lay(range.low, range.high);
+  // From the SNAPPED range: the proportion describes the pads actually drawn.
+  const { span, aspect } = impl.proportion(range.low, range.high);
   return markLaidOut({
     layout,
     low: range.low,
@@ -78,10 +93,12 @@ export function pitchGeometry(
     keys: laid.keys,
     columns: laid.columns,
     guides: laid.guides,
+    span,
+    aspect,
   });
 }
 
-/** The keybed / chip height a layout wants, in px. */
+/** The keybed height a layout wants, in px. */
 export function pitchKeyboardHeight(
   layout: PitchLayoutId,
   size: PitchKeyboardSize,

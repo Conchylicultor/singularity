@@ -5,25 +5,36 @@ import {
   useSession,
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import {
-  SectionLabel,
-  Text,
-} from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import {
-  Keyboard,
-  useSonataKeySkin,
+import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import type {
+  KeyRenderState,
+  LabelTone,
 } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
-import { pitchKeyboardHeight } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/core";
 import { usePitchGeometry } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/web";
+import {
+  KeyboardCaption,
+  ReadoutKeyboard,
+  useReadoutPlane,
+} from "@plugins/apps/plugins/sonata/plugins/rich/plugins/readout-keyboard/web";
 import {
   accidentalGlyph,
   collectKeyEntries,
   makeKeySpeller,
+  type Annotation,
+  type ChordData,
   type KeySignature,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { tonicPc } from "@plugins/apps/plugins/sonata/plugins/theory/core";
+import {
+  chordVoicing,
+  diatonicChords,
+  tonicPc,
+} from "@plugins/apps/plugins/sonata/plugins/theory/core";
 
 /** The active key plus where it came from, for the source badge. */
 type ActiveKey = { key: KeySignature; source: "authored" | "derived" };
@@ -41,53 +52,81 @@ function sameActiveKey(
 }
 
 /**
- * Fixed keyboard window: C4 (60) … B6 (95), three octaves. Matches the chord
- * readout's window exactly so the two sibling section panels render piano keys
- * at an identical size (both keyboards are `w-full` in the same-width column, so
- * the key width is set by the octave span). The frame is content-independent on
- * purpose — changing key only re-lights keys, never re-lays-out the keyboard
- * (no flicker); the scale's repeating pattern reads across all three octaves.
+ * The scale keyboard's window: one octave, C4 (60) … B4 (71) — the one readout
+ * keyboard that is not the two-octave shape. A scale is a pitch-class set, so a
+ * single octave shows all of it; the frame is content-independent, so changing
+ * key only moves the dots, never re-lays-out the keyboard.
  */
-const KB_LOW = 60;
-const KB_HIGH = 95;
+const SCALE_LOW = 60;
+const SCALE_HIGH = 71;
 
-/** Tint for non-tonic scale notes — the theme accent, softened so the tonic
- *  (full accent) stands out as the tonal centre. */
-const SCALE_TINT = "color-mix(in srgb, var(--primary) 32%, transparent)";
+/** Nothing is lit on the scale keyboard — the scale is drawn as dots. */
+const NO_KEYS: readonly number[] = [];
+/** No voicings while no key is in force — a stable identity for the fit. */
+const NO_VOICINGS: readonly (readonly number[])[] = [];
 
 /**
- * The "current key" readout — the BODY of a `Sonata.Section` card whose chrome
- * (Card + collapsible "Current key" title) the host paints; sibling to the chord
- * readout. Reads the session's Score + cursor (`useSession()`) and shows the key
- * in force at the playhead (the song's `meta.key` plus mid-song `key`
- * annotations, reconciled by `effectiveKeyAt`). Where the chord readout lights a
- * chord's notes, this lights the key's *scale* notes — the tonic in the full
- * accent, the other six diatonic degrees in a softer tint.
+ * The muted dot a non-tonic scale degree wears, by the surface it sits on. A
+ * piano is a physical object, so these stay fixed across light/dark themes
+ * (the same reasoning as the piano keyboard's labels); the chrome's `tone` says
+ * whether the pad reads light or dark, so no skin is named here.
+ */
+const DEGREE_DOT: Record<LabelTone, string> = {
+  "on-light": "#71717a",
+  "on-dark": "#a1a1aa",
+};
+
+/** A scale-degree dot on a key: the tonic larger and in the theme accent. */
+function ScaleDot({ tonic, tone }: { tonic: boolean; tone: LabelTone }) {
+  const size = tonic ? 7 : 5;
+  return (
+    <span
+      className="block"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        background: tonic ? "var(--primary)" : DEGREE_DOT[tone],
+      }}
+    />
+  );
+}
+
+/**
+ * The "current key" readout — the BODY of a `Sonata.Section` whose chrome (the
+ * collapsible "Current key" header) the host paints. Reads the session's Score +
+ * cursor (`useSession()`) and shows the key in force at the playhead (the song's
+ * `meta.key` plus mid-song `key` annotations), tracking it through key changes.
+ *
+ * - The key's name, big; under it, visible rather than in a tooltip, its
+ *   relative key and where the key came from (the source badge).
+ * - A single-octave keyboard with a dot on every scale degree — the tonic in the
+ *   accent — and the scale's note names as chips beneath it.
+ * - A "Chords" toggle stacks the key's seven diatonic chords below, each a
+ *   caption (numeral · spelled name) over a readout keyboard lit with its notes;
+ *   the row whose root is the chord under the playhead is marked current.
  *
  * Always available (a key can be established without chords), so the section has
  * no `useAvailable` gate; the keyless case stays an in-body "No key detected."
- * (a loading state while the song's settings load — `scorePending`).
- * The per-song "Auto-detect key" toggle lives in the contribution's `actions`
- * (see `KeyReadoutActions`) so it stays reachable while the card is collapsed.
+ * (a loading state while the song's settings load). The per-song "Auto-detect"
+ * toggle lives in the contribution's `actions` (see `KeyReadoutActions`) so it
+ * stays reachable while the section is collapsed.
  */
 export function KeyReadout() {
-  // Sonata's own look paints its keys: one control, every keyboard in the app.
-  const skin = useSonataKeySkin();
   const { score } = useSession();
   const { content } = useSongDocument();
   const scorePending = content.kind === "pending";
   const scoreFailure = content.kind === "failed" ? content.failure : null;
+  const [showChords, setShowChords] = useDraft<boolean>(
+    "sonata:key-readout:chords",
+    true,
+  );
 
   // Beat-indexed key entries — recomputed only when the Score changes. Walking
   // the memoized list (rather than `effectiveKeyAt`, which rebuilds it each call)
   // yields STABLE `key` references, so `useCursorSelector` re-renders this panel
   // only when the key changes — not on every cursor frame.
   const entries = useMemo(() => collectKeyEntries(score), [score]);
-
-  // The pads the scale is lit on. Requested as the fixed window; a layout may
-  // snap it wider, and `plane.low`/`plane.high` below are what the lit map walks
-  // — so a snapped-open edge never sits there unlit.
-  const plane = usePitchGeometry(KB_LOW, KB_HIGH);
 
   // The active entry (key + source) at the playhead, with the same cursor-at-0
   // fallback the key chip uses so the panel is never blank on load. The selector
@@ -109,6 +148,28 @@ export function KeyReadout() {
   );
   const current = active?.key;
 
+  const chords = useMemo(
+    () =>
+      score.annotations.filter(
+        (a): a is Annotation<"chord", ChordData> => a.type === "chord",
+      ),
+    [score.annotations],
+  );
+
+  // The root pitch class of the chord under the playhead — a number, so the
+  // panel re-renders only when the chord's root changes, not every frame.
+  const currentRoot = useCursorSelector(
+    (cursorBeat) => {
+      const c =
+        chords.find((a) => cursorBeat >= a.start && cursorBeat < a.end) ??
+        (cursorBeat <= 0 ? chords[0] : undefined);
+      return c ? ((c.data.root % 12) + 12) % 12 : undefined;
+    },
+    [chords],
+  );
+
+  const scalePlane = usePitchGeometry(SCALE_LOW, SCALE_HIGH);
+
   const scale = useMemo(() => {
     if (!current) return null;
     const speller = makeKeySpeller(current);
@@ -123,14 +184,6 @@ export function KeyReadout() {
       const sp = speller.spell(pc + 60); // octave is irrelevant to step/alter
       ordered.push({ pc, name: sp.step + accidentalGlyph(sp.alter) });
     }
-    const inScale = new Set(ordered.map((d) => d.pc));
-
-    // pitch → color across the window: tonic full accent (""), others tinted.
-    const lit = new Map<number, string>();
-    for (let p = plane.low; p <= plane.high; p++) {
-      const pc = ((p % 12) + 12) % 12;
-      if (inScale.has(pc)) lit.set(p, pc === root ? "" : SCALE_TINT);
-    }
 
     // Relative key (shares the same notes): +3 semitones from a minor tonic to
     // its relative major, +9 from a major tonic to its relative minor.
@@ -141,8 +194,28 @@ export function KeyReadout() {
       mode: current.mode === "major" ? "minor" : "major",
     };
 
-    return { names: ordered.map((d) => d.name), lit, relative };
-  }, [current, plane]);
+    return {
+      root,
+      degrees: ordered,
+      inScale: new Set(ordered.map((d) => d.pc)),
+      relative,
+    };
+  }, [current]);
+
+  // The key's seven diatonic chords, each voiced as written, all fitted onto
+  // ONE readout plane so every row has the same two-octave shape.
+  const diatonic = useMemo(
+    () => (current ? diatonicChords(current) : []),
+    [current],
+  );
+  const voicings = useMemo(
+    () =>
+      diatonic.length === 0
+        ? NO_VOICINGS
+        : diatonic.map((d) => chordVoicing(d.chord)),
+    [diatonic],
+  );
+  const chordPlane = useReadoutPlane(voicings);
 
   // The song's settings are still loading (the score is withheld until they
   // settle): not "No key detected".
@@ -157,55 +230,80 @@ export function KeyReadout() {
     );
   if (scorePending) return <Loading variant="rows" count={2} />;
 
-  return (
-    <Stack gap="sm">
-      {current && scale ? (
-        <>
-          <Stack gap="2xs">
-            {/* eslint-disable-next-line text/no-adhoc-typography -- large display readout (36px) matching the chord readout; exceeds the title token (20px), no equivalent variant */}
-            <div className="text-4xl font-bold tracking-tight text-foreground">
-              {current.tonic}{" "}
-              <span className="font-semibold text-muted-foreground">
-                {current.mode}
-              </span>
-            </div>
-            <Stack direction="row" align="baseline" justify="between" gap="sm">
-              <Text
-                as="div"
-                variant="caption"
-                className="text-muted-foreground"
-              >
-                relative {scale.relative.tonic} {scale.relative.mode}
-              </Text>
-              <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                {active?.source === "derived" ? "Auto-detected" : "From MIDI"}
-              </span>
-            </Stack>
-          </Stack>
+  if (!current || !scale)
+    return (
+      <Text as="div" variant="body" tone="muted">
+        No key detected.
+      </Text>
+    );
 
-          <Stack gap="xs">
-            <Stack direction="row" align="center" justify="between" gap="none">
-              <SectionLabel>Scale</SectionLabel>
-              <div className="text-2xs tabular-nums text-muted-foreground/80 text-right">
-                {scale.names.join(" · ")}
-              </div>
+  const renderScaleDot = (key: { pitch: number }, state: KeyRenderState) => {
+    const pc = ((key.pitch % 12) + 12) % 12;
+    if (!scale.inScale.has(pc)) return null;
+    return <ScaleDot tonic={pc === scale.root} tone={state.tone} />;
+  };
+
+  return (
+    <Stack gap="md">
+      {/* Name row: the key and what it is, with the Chords toggle trailing. */}
+      <Stack direction="row" align="start" justify="between" gap="sm">
+        <Stack gap="2xs">
+          <Text as="div" variant="title">
+            {current.tonic} {current.mode}
+          </Text>
+          <Cluster gap="xs">
+            <Text variant="caption" tone="muted">
+              relative {scale.relative.tonic} {scale.relative.mode}
+            </Text>
+            <Badge>
+              {active?.source === "derived" ? "Auto-detected" : "From the song"}
+            </Badge>
+          </Cluster>
+        </Stack>
+        <ToggleChip
+          active={showChords}
+          onClick={() => setShowChords((v) => !v)}
+          title="Show the chord built on each degree of the scale"
+        >
+          Chords
+        </ToggleChip>
+      </Stack>
+
+      {/* The scale: dots on one octave, then its note names, tonic first. */}
+      <Stack gap="sm">
+        <ReadoutKeyboard
+          plane={scalePlane}
+          lit={NO_KEYS}
+          renderKey={renderScaleDot}
+        />
+        <Cluster gap="xs">
+          {scale.degrees.map((d) => (
+            <Badge
+              key={d.pc}
+              variant={d.pc === scale.root ? "primary" : "muted"}
+            >
+              {d.name}
+            </Badge>
+          ))}
+        </Cluster>
+      </Stack>
+
+      {showChords && (
+        <Stack gap="sm">
+          {diatonic.map((d, k) => (
+            <Stack key={d.degree} gap="xs">
+              <KeyboardCaption
+                lead={d.numeral}
+                trail={d.chord.spelledSymbol ?? d.chord.symbol}
+                current={currentRoot === d.chord.root}
+              />
+              <ReadoutKeyboard
+                plane={chordPlane.plane}
+                lit={chordPlane.voicings[k] ?? NO_KEYS}
+              />
             </Stack>
-            <Keyboard
-              plane={plane}
-              lit={scale.lit}
-              skin={skin}
-              className="w-full"
-              // The chip height is the layout's own choice — four rows of Jankó
-              // pads need more room than one row of piano keys — so it is a
-              // number from the geometry, not a size class here.
-              style={{ height: pitchKeyboardHeight(plane.layout, "chip") }}
-            />
-          </Stack>
-        </>
-      ) : (
-        <Text as="div" variant="body" className="text-muted-foreground">
-          No key detected.
-        </Text>
+          ))}
+        </Stack>
       )}
     </Stack>
   );

@@ -9,8 +9,9 @@ component, `RecordingVideo`, and whoever shows a song's recording renders it
 
 ## `RecordingVideo({ videoId })`
 
-The video (16:9), then its volume — on/off + a 0–100 slider — right below it,
-then either the sync offset or a "not synced" note:
+The video (16:9), then its volume row right below it — a mute button, a 0–100
+slider and the level as a number. There is no sync-offset control in the card
+(see the mix below). Two modes:
 
 - **Synced** — the open score is timed on this video
   (`score.meta.recording.videoId === videoId`). YouTube's controls are off (the
@@ -18,8 +19,9 @@ then either the sync offset or a "not synced" note:
   **transport driver** (`createVideoDriver`, `web/driver.ts`) with the session.
 - **Not synced** — any other video (the song's chosen video before it has an
   alignment, or one that failed to align). It plays on its own with YouTube's
-  controls and drives nothing; the synth keeps the score's own timing.
-  Switching between the two re-creates the player (`controls` is fixed at
+  controls and drives nothing; the synth keeps the score's own timing. A small
+  "Not synced" badge (dot + label on a translucent dark pill) sits over the
+  video's top-left corner, letting clicks through. Switching between the two re-creates the player (`controls` is fixed at
   creation).
 
 The driver:
@@ -47,6 +49,8 @@ volume and the **sync offset** (ms the synth and the playhead trail the video's
 reported time, −500…500, default 0; the iframe's sound comes out late by a
 machine-dependent amount, set it by ear) are the `sonata.recording` config
 (`shared/config.ts`, registered on web and server): one per app, not per song.
+The card edits only the sound and volume; the sync offset is edited in
+Settings → Config, and the driver keeps reading it live.
 
 ## Player errors and refusals (`SonataRecording.Refused`)
 
@@ -65,25 +69,19 @@ the refusal.
 
 ## Plugin reference
 
-- Description: Sonata recording: RecordingVideo — a song's YouTube video with its volume (on/off + slider) below it, for whoever shows the song's recording to render. When the open score is timed on that video (Score.meta.recording) it is registered as the session's transport driver while mounted and ready — the cursor, the synth and the A–B loop follow the video, its rate is the tempo — with a sync offset slider; otherwise it plays on its own with YouTube's controls, labelled not synced. The video's sound, level and the offset persist in the sonata.recording config. Owns the SonataRecording.Refused seam for whoever picked a video YouTube refuses to embed. Server registration of the Sonata recording mix config.
+- Description: Sonata recording: RecordingVideo — a song's YouTube video with its volume (on/off, slider, level) below it, for whoever shows the song's recording to render. When the open score is timed on that video (Score.meta.recording) it is registered as the session's transport driver while mounted and ready — the cursor, the synth and the A–B loop follow the video, its rate is the tempo; otherwise it plays on its own with YouTube's controls under a “Not synced” badge. The video's sound, level and the sync offset (no control in the card; Settings → Config) persist in the sonata.recording config. Owns the SonataRecording.Refused seam for whoever picked a video YouTube refuses to embed. Server registration of the Sonata recording mix config.
 - Web:
   - Slots: `SonataRecording.Refused`
   - Slot contributors: `SonataRecording.Refused` ← `apps.sonata.sources.ultimate-guitar.alignment`
   - Contributes: `ConfigV2.WebRegister` "sonata.recording"
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `integrations/youtube` ×6
+    - `config_v2` ×3
     - `apps/sonata/session.useSession`
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
-    - `config_v2.useSetConfig`
-    - `integrations/youtube.createMediaClock`
-    - `integrations/youtube.useYouTubePlayer`
-    - `integrations/youtube.useYouTubePlayerState`
-    - `integrations/youtube.YouTubePlayer`
-    - `integrations/youtube.YouTubePlayerController`
-    - `integrations/youtube.YouTubePlayerState`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
+    - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/slider.Slider`
     - `primitives/css/spacing.Stack`

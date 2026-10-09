@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-rich-accompaniment",
+  "description": "Sonata Section: Accompaniment — the chord-mode row, the groove (header switch + body) and the voicing rows composed into one section.",
+  "private": true,
+  "version": "0.0.1"
+}

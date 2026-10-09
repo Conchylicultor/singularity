@@ -40,6 +40,14 @@ const asZoom = (spread: number) =>
  * (the `spread` float field) and from pinch / Ctrl+scroll over the roll.
  */
 export function SpreadWheel() {
+  // Spread is the piano roll's own zoom: under any other display it would
+  // scale nothing, so the header shows it only while the roll is showing.
+  const { displayId } = usePlayerView();
+  if (displayId !== "piano-roll") return null;
+  return <PianoRollSpreadWheel />;
+}
+
+function PianoRollSpreadWheel() {
   const { spread, spreadMin, spreadMax, setSpread } = usePlayerView();
   const setConfig = useSetConfig(pianoRollConfig);
   // The last scrubbed value, captured so the (value-less) settle callback

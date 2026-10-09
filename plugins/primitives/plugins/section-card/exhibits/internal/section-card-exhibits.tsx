@@ -46,4 +46,18 @@ export const sectionCardExhibits: Exhibit[] = [
       </SectionCard>
     ),
   }),
+  // The inspector variant shares the card's body rail by construction (one
+  // `CollapsibleContent`, two frames), so the same two failure modes apply — and
+  // a flat frame with no border box of its own is exactly where a body inset
+  // would be easiest to lose without anyone seeing it.
+  regionExhibit({
+    id: "section-card/inspector-region",
+    label: "Inspector section body region",
+    widths: [320, 368],
+    render: (children) => (
+      <SectionCard variant="inspector" title="Tracks" defaultOpen>
+        {children}
+      </SectionCard>
+    ),
+  }),
 ];

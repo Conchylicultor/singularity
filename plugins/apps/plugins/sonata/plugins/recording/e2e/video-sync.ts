@@ -2,7 +2,7 @@
 // (a UG song aligned to a YouTube video), then drives pause, ←/→ seeks, an A–B
 // loop wrap and ↑/↓ tempo (the video's playbackRate must follow). The video
 // lives in the player's Recording section (opened here if it is collapsed),
-// with its volume slider and the sync offset below it; collapsing the section
+// with its volume row (mute, slider, level) below it; collapsing the section
 // mid-play must leave the transport playing on the synth's own clock.
 //
 // Drift is measured at every cursor PAINT, not by polling: a MutationObserver
@@ -274,9 +274,15 @@ await withBrowser(async (h) => {
   await recordingHeader.waitFor({ timeout: RENDER_TIMEOUT_MS });
   if (!(await videoSlider.isVisible())) await recordingHeader.click();
   await videoSlider.waitFor({ timeout: 10_000 });
-  r.ok(
-    "the Recording section shows the video's volume and the sync offset",
-    await page.getByRole("slider", { name: "Sync offset" }).isVisible(),
+  r.eq(
+    "the Recording section shows no sync offset (it is a Settings → Config field)",
+    await page.getByRole("slider", { name: "Sync offset" }).count(),
+    0,
+  );
+  r.eq(
+    'a synced video wears no "Not synced" badge',
+    await page.getByText("Not synced", { exact: true }).count(),
+    0,
   );
 
   let frame: Frame | undefined;
@@ -464,7 +470,7 @@ await withBrowser(async (h) => {
   );
   r.eq("tempo: the video never stops", stops(fast), 0);
 
-  // ── The Recording section: video, then its volume, then the sync offset ──
+  // ── The Recording section: video, then its volume row ──
   await snap(page, OUT, "4-recording-section");
 
   // ── Collapse the section mid-play: the driver goes, the synth carries on ──

@@ -14,9 +14,15 @@ import {
   alignChords,
   WEAK_MATCH_THRESHOLD,
   type AlignmentCandidate,
+  type AlignmentPhase,
 } from "../../core";
 import type { AlignmentRecord } from "../../core/internal/record";
-import { retryScored, walkCandidates, type AlignmentWork } from "./decide";
+import {
+  retryScored,
+  untryCandidates,
+  walkCandidates,
+  type AlignmentWork,
+} from "./decide";
 import { songUgAlignment } from "./tables";
 import { readWork } from "./work";
 
@@ -32,17 +38,22 @@ const UgAlignInputSchema = z.object({ songId: z.string() });
 
 type Log = (line: string) => void;
 
-/** Beat features of `videoId`, then the sheet aligned to them. */
+/**
+ * Beat features of `videoId`, then the sheet aligned to them. `onPhase` is
+ * handed each stage as it starts — the analysis's own (`waiting` → `fetching`
+ * → `installing` → `analysing`, none on a cache hit), then `aligning` — and
+ * awaited, so the row shows it before the work goes on.
+ */
 async function alignTo(
   tab: UgTab,
   hash: string,
   videoId: string,
   exec: ExecContext,
   log: Log,
-  onAligning: () => Promise<void>,
+  onPhase: (phase: AlignmentPhase) => Promise<void>,
 ): Promise<AlignmentRecord> {
-  const features = await ensureBeatFeatures(videoId, exec, { log });
-  await onAligning();
+  const features = await ensureBeatFeatures(videoId, exec, { log, onPhase });
+  await onPhase("aligning");
   const started = Date.now();
   const record = alignChords(parseUgTab(tab), features, {
     capo: tab.capo,
@@ -64,24 +75,22 @@ async function runAlign(
 ): Promise<void> {
   const { tab, videoId, hash } = work;
   log(`${songId}: aligning to ${videoId} (${work.reason})`);
-  await songUgAlignment.upsert(songId, {
-    status: "running",
-    phase: "analysing",
-    error: null,
-    errorPermanent: false,
-  });
-  try {
-    const record = await alignTo(tab, hash, videoId, exec, log, async () => {
-      // Every NOT NULL column, not `{ phase }` alone: an upsert is INSERT … ON
-      // CONFLICT, and Postgres rejects the proposed row's missing NOT NULL
-      // columns before the conflict turns it into an update.
-      await songUgAlignment.upsert(songId, {
-        status: "running",
-        phase: "aligning",
-        error: null,
-        errorPermanent: false,
-      });
+  // Every NOT NULL column, not `{ phase }` alone: an upsert is INSERT … ON
+  // CONFLICT, and Postgres rejects the proposed row's missing NOT NULL
+  // columns before the conflict turns it into an update.
+  const running = async (phase: AlignmentPhase | null): Promise<void> => {
+    await songUgAlignment.upsert(songId, {
+      status: "running",
+      phase,
+      error: null,
+      errorPermanent: false,
     });
+  };
+  // No phase until the first stage starts (a cached analysis goes straight to
+  // `aligning`).
+  await running(null);
+  try {
+    const record = await alignTo(tab, hash, videoId, exec, log, running);
     const status = record.score >= WEAK_MATCH_THRESHOLD ? "aligned" : "weak";
     log(`${songId}: ${status}`);
     // A new video set while this ran supersedes this result: leave its
@@ -112,10 +121,16 @@ async function runAlign(
   }
 }
 
-/** The resolver still owns the choice: nobody set a video while it ran. */
+/**
+ * The resolver still owns the choice: nobody set a video while it ran, and
+ * the user did not cancel it (a Cancel normally stops this process outright;
+ * this catches one that landed before the child was signalled).
+ */
 async function stillResolving(songId: string): Promise<boolean> {
   const row = await songUgAlignment.get(songId);
-  return row?.pick === "auto" && row.videoId === null;
+  return (
+    row?.pick === "auto" && row.videoId === null && row.status !== "cancelled"
+  );
 }
 
 /**
@@ -139,9 +154,7 @@ async function runResolve(
     // moment a video is set) knows the resolver owns the choice again.
     await songUgAlignment.upsert(songId, { videoId: null, candidates });
   }
-  const progress = async (
-    phase: "analysing" | "aligning" | null,
-  ): Promise<void> => {
+  const progress = async (phase: AlignmentPhase | null): Promise<void> => {
     await songUgAlignment.upsert(songId, {
       status: "resolving",
       phase,
@@ -150,7 +163,7 @@ async function runResolve(
       candidates,
     });
   };
-  await progress(null);
+  await progress(work.search ? "searching" : null);
   try {
     if (work.search) {
       const query = { artist: tab.artistName, title: tab.songName };
@@ -183,14 +196,20 @@ async function runResolve(
     const walk = await walkCandidates(candidates, {
       shouldContinue: () => stillResolving(songId),
       onProgress: async (next) => {
+        // A candidate just became `trying`: no phase until its first stage.
         candidates = next;
-        await progress("analysing");
+        await progress(null);
       },
       tryOne: async (candidate) => {
         log(`${songId}: trying #${candidate.rank} ${candidate.videoId}`);
         try {
-          return await alignTo(tab, hash, candidate.videoId, exec, log, () =>
-            progress("aligning"),
+          return await alignTo(
+            tab,
+            hash,
+            candidate.videoId,
+            exec,
+            log,
+            progress,
           );
         } catch (err) {
           // Logged whatever it is; the walk decides whether it is the
@@ -203,7 +222,9 @@ async function runResolve(
       },
     });
     if (walk.kind === "interrupted" || !(await stillResolving(songId))) {
-      log(`${songId}: a video was set while trying candidates — stopping`);
+      log(
+        `${songId}: a video was set (or the user cancelled) while trying candidates — stopping`,
+      );
       return;
     }
     candidates = walk.candidates;
@@ -243,11 +264,7 @@ async function runResolve(
     });
   } catch (err) {
     // A candidate cut off mid-try goes back to untried, so the retry tries it.
-    candidates = candidates.map((c) =>
-      c.outcome === "trying"
-        ? { ...c, outcome: "untried", score: null, error: null }
-        : c,
-    );
+    candidates = untryCandidates(candidates);
     await songUgAlignment.upsert(songId, {
       status: "failed",
       phase: null,
@@ -296,8 +313,29 @@ export const ugAlignJob = defineSupervisedJob({
       }
     }
   },
-  async onEnded(_runId, terminal, { input }): Promise<void> {
+  async onEnded(_runId, terminal, { input, cancelled }): Promise<void> {
     const row = await songUgAlignment.get(input.songId);
+    if (cancelled) {
+      // The user's Cancel (`cancelUgAlignment`) already wrote `cancelled`, but
+      // the child may have written over it before the signal reached it (a
+      // phase, a `trying` candidate, a `failed` from its catch). Write it
+      // again, now that nothing else writes: no "interrupted" failure, no
+      // re-enqueue. Only a `queued` row is left alone — a video set or a retry
+      // asked for after the Cancel, whose enqueue lost the claim to this run.
+      if (row === undefined) return;
+      if (row.status === "queued") {
+        await ugAlignJob.enqueue({ songId: input.songId });
+        return;
+      }
+      await songUgAlignment.upsert(input.songId, {
+        status: "cancelled",
+        phase: null,
+        error: null,
+        errorPermanent: false,
+        candidates: untryCandidates(row.candidates),
+      });
+      return;
+    }
     if (terminal.exitCode !== 0) {
       // A body that threw recorded `failed` itself; one killed mid-run left
       // `running` or `resolving`, which would read as busy forever.

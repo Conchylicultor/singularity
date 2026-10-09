@@ -14,6 +14,7 @@ export type { AlignmentSegment } from "./internal/record";
 // the UG compile() applies when the record `fitsSheet`.
 export { alignChords } from "./internal/align";
 export { alignedScore, fitsSheet } from "./internal/aligned-score";
+export { MAX_TRIES_PER_RUN } from "./internal/accept";
 
 // The UG source's raw ({ tab, alignment }), the side-table row and the endpoint
 // contracts — the integration surface the UG source and the alignment
@@ -35,6 +36,7 @@ export type {
   VideoPick,
 } from "./internal/row";
 export {
+  cancelUgAlignment,
   getUgAlignment,
   realignUg,
   refuseUgAlignmentVideo,

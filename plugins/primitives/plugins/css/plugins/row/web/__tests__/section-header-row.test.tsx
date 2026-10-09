@@ -75,3 +75,93 @@ describe("SectionHeaderRow — disclosure", () => {
     expect(onPointerEnter).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("SectionHeaderRow — disclosure none", () => {
+  it("draws no chevron and reserves no box, but stays the disclosure control", () => {
+    const onClick = vi.fn();
+    render(
+      <SectionHeaderRow open={false} onClick={onClick} disclosure="none">
+        Tracks
+      </SectionHeaderRow>,
+    );
+    const button = screen.getByRole("button", { name: "Tracks" });
+    expect(button.querySelector("svg")).toBeNull();
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("mutes the label while collapsed, full strength while open", () => {
+    const { rerender } = render(
+      <SectionHeaderRow
+        open={false}
+        onClick={() => {}}
+        disclosure="none"
+        variant="title"
+      >
+        Tracks
+      </SectionHeaderRow>,
+    );
+    const button = screen.getByRole("button", { name: "Tracks" });
+    expect(button.className).toContain("text-muted-foreground");
+    rerender(
+      <SectionHeaderRow
+        open
+        onClick={() => {}}
+        disclosure="none"
+        variant="title"
+      >
+        Tracks
+      </SectionHeaderRow>,
+    );
+    expect(
+      screen.getByRole("button", { name: "Tracks" }).className,
+    ).not.toContain("text-muted-foreground");
+  });
+
+  it("keeps header actions clickable without toggling", () => {
+    const onClick = vi.fn();
+    const onAction = vi.fn();
+    render(
+      <SectionHeaderRow
+        open={false}
+        onClick={onClick}
+        disclosure="none"
+        actions={
+          <button type="button" onClick={onAction}>
+            Solo
+          </button>
+        }
+      >
+        Tracks
+      </SectionHeaderRow>,
+    );
+    const toggle = screen.getByRole("button", { name: "Tracks" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: "Solo" }));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("a static header in this mode reserves no chevron box either", () => {
+    const { container } = render(
+      <SectionHeaderRow collapsible={false} disclosure="none">
+        Key
+      </SectionHeaderRow>,
+    );
+    expect(container.querySelector("svg")).toBeNull();
+  });
+});
+
+describe("SectionHeaderRow — lead keeps the card behaviour", () => {
+  it("does not mute a collapsed title", () => {
+    render(
+      <SectionHeaderRow open={false} onClick={() => {}} variant="title">
+        Tracks
+      </SectionHeaderRow>,
+    );
+    const button = screen.getByRole("button", { name: "Tracks" });
+    expect(button.className).not.toContain("text-muted-foreground");
+    expect(button.querySelector("svg")).not.toBeNull();
+  });
+});

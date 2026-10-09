@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import {
@@ -64,6 +64,7 @@ export function builtinLedgerFor(
   listUnfinished(): Promise<readonly UnfinishedRun[]>;
   setPid(runId: string, pid: number): Promise<void>;
   closeRow(runId: string, terminal: RunTerminal): Promise<void>;
+  markCancelled(lockKey: string): Promise<string | null>;
 } {
   return {
     /**
@@ -125,6 +126,29 @@ export function builtinLedgerFor(
           ),
         );
     },
+
+    /**
+     * Stamp `cancelled_at` on the open run holding `lockKey` and answer its id,
+     * or `null` when no run of this job holds it. The partial unique index
+     * guarantees at most one such row. The first stamp wins, so a second
+     * cancel keeps the time the user first asked.
+     */
+    async markCancelled(lockKey) {
+      const [row] = await conn
+        .update(_supervisedJobRuns)
+        .set({
+          cancelledAt: sql`COALESCE(${_supervisedJobRuns.cancelledAt}, now())`,
+        })
+        .where(
+          and(
+            eq(_supervisedJobRuns.jobName, jobName),
+            eq(_supervisedJobRuns.lockKey, lockKey),
+            isNull(_supervisedJobRuns.finishedAt),
+          ),
+        )
+        .returning({ id: _supervisedJobRuns.id });
+      return row?.id ?? null;
+    },
   };
 }
 
@@ -152,6 +176,8 @@ export async function recordRunError(
 export interface RecordedFailure {
   readonly errorMessage: string | null;
   readonly retryable: boolean | null;
+  /** `cancelSupervisedJobByLock` stamped the run before it ended. */
+  readonly cancelled: boolean;
 }
 
 export async function readRecordedFailure(
@@ -162,6 +188,7 @@ export async function readRecordedFailure(
     .select({
       errorMessage: _supervisedJobRuns.errorMessage,
       retryable: _supervisedJobRuns.retryable,
+      cancelledAt: _supervisedJobRuns.cancelledAt,
     })
     .from(_supervisedJobRuns)
     .where(eq(_supervisedJobRuns.id, runId));
@@ -172,7 +199,11 @@ export async function readRecordedFailure(
       `[supervised-job] run ${runId} ended but has no supervised_job_runs row.`,
     );
   }
-  return row;
+  return {
+    errorMessage: row.errorMessage,
+    retryable: row.retryable,
+    cancelled: row.cancelledAt !== null,
+  };
 }
 
 /**
@@ -180,6 +211,9 @@ export async function readRecordedFailure(
  * surface, since a job without its own ledger has no UI.
  *
  * - exit 0 → `done`.
+ * - failed, but the run was cancelled (`cancelSupervisedJobByLock`) → `done`:
+ *   the user asked for it to stop, so there is nothing to retry and nothing to
+ *   alert on.
  * - failed, and (not retryable, or the last attempt) → throw
  *   `NonRetryableError` naming the job, the run, how it ended, and the child's
  *   recorded error (or that it recorded none).
@@ -205,6 +239,7 @@ export function applyFailurePolicy(args: {
       `[supervised-job] ${args.jobName}: a failed run's policy needs its recorded failure.`,
     );
   }
+  if (args.failure.cancelled) return "done";
   const last = args.attempt >= args.runAttempts;
   if (args.failure.retryable !== false && !last) return "retry";
   const ended =

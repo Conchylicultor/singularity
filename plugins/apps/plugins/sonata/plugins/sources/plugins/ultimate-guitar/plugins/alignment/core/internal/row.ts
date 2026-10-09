@@ -18,6 +18,10 @@ import { AlignmentRecordSchema, type AlignmentRecord } from "./record";
  * finding candidates and aligning them one by one — and `needs-video`, when
  * none of the candidates tried aligned well enough (the best weak record is
  * kept, and played the same way, while the user is asked for a better video).
+ *
+ * `cancelled`: the user stopped a `queued` / `resolving` / `running` alignment.
+ * Nothing restarts it on its own — not even a sheet edit — until the user
+ * retries (re-align) or sets a video.
  */
 export const AlignmentStatusSchema = z.enum([
   "queued",
@@ -27,6 +31,7 @@ export const AlignmentStatusSchema = z.enum([
   "weak",
   "needs-video",
   "failed",
+  "cancelled",
 ]);
 export type AlignmentStatus = z.infer<typeof AlignmentStatusSchema>;
 
@@ -73,8 +78,23 @@ export const AlignmentCandidateSchema = z.object({
 });
 export type AlignmentCandidate = z.infer<typeof AlignmentCandidateSchema>;
 
-/** What a `running` job is doing: analysing the recording, or aligning the sheet to it. */
-export const AlignmentPhaseSchema = z.enum(["analysing", "aligning"]);
+/**
+ * What a `resolving` / `running` job is doing right now, written live by the
+ * job: `searching` for candidate videos, then per video the beat analysis's own
+ * stages (`waiting` for another process analysing the same video, `fetching`
+ * its audio, `installing` the analyser, `analysing`) and `aligning` the sheet
+ * to the beats. Null between steps — a candidate just marked `trying` has none
+ * until its first stage starts — and once the job is done. A cached analysis
+ * goes straight to `aligning`.
+ */
+export const AlignmentPhaseSchema = z.enum([
+  "searching",
+  "waiting",
+  "fetching",
+  "installing",
+  "analysing",
+  "aligning",
+]);
 export type AlignmentPhase = z.infer<typeof AlignmentPhaseSchema>;
 
 // The `sonata_songs_ext_ug_alignment` row, declared once: the server builds the

@@ -239,14 +239,16 @@ surfacing as crash tasks, not just toasts.
     - `Library.Source` "ultimate-guitar"
     - `Sonata.Section` "Ultimate Guitar" → `UltimateGuitarEditorSection`
     - `Sonata.Effect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×4
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×5
     - `apps/sonata/document` ×2
     - `apps/sonata/library` ×2
     - `apps/sonata/shell` ×2
     - `infra/endpoints` ×2
+    - `apps/sonata/primitives/source-line.SourceLine`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
+    - `primitives/css/grow.growClass`
     - `primitives/css/inline.Inline`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`

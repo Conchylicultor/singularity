@@ -6,8 +6,8 @@
  * Unlike the chord-grid loader (which is fully controlled — `raw` *is* what's
  * typed), the source of truth here is the **fetched** `UgTab`: the URL text box
  * is local working state, but the only thing that flows up via `onRaw` is the
- * tab the server returned. Once a tab is loaded we show a small summary and keep
- * the input available to load a different one.
+ * tab the server returned. Once a tab is loaded we show its `SourceLine` (song,
+ * muted artist · key · capo) whose Replace expands the URL row to load another.
  *
  * Failures are surfaced visibly in a `role="alert"` red line — never swallowed.
  * That includes compile-time chord drops: chord symbols `theory.parseChordSymbol`
@@ -20,7 +20,13 @@
 
 import { useMemo, useState } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
+import { SourceLine } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/source-line/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   parseUgTab,
@@ -54,6 +60,9 @@ export function UltimateGuitarLoader({ raw, onRaw }: Props) {
   const [url, setUrl] = useState(loaded?.urlWeb ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Replace expands the URL row below the loaded tab's line; with no tab loaded
+  // yet the row is shown directly.
+  const [replacing, setReplacing] = useState(false);
 
   // Compile feedback for the loaded tab: the chord symbols the synthesizer
   // would drop (unrecognised), plus any loud markup-parse failure. Re-derives
@@ -91,6 +100,7 @@ export function UltimateGuitarLoader({ raw, onRaw }: Props) {
         { body: { url: trimmed } },
       );
       onRaw({ tab, alignment: null } satisfies UgSourceRaw);
+      setReplacing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -98,71 +108,89 @@ export function UltimateGuitarLoader({ raw, onRaw }: Props) {
     }
   }
 
-  return (
-    <Stack gap="md">
-      {loaded ? (
-        <Stack
-          gap="2xs"
-          className="rounded-md border border-border bg-background px-md py-sm"
-        >
-          <span className="text-body font-semibold">
-            {loaded.songName}
-            <span className="font-normal text-muted-foreground">
-              {" — "}
-              {loaded.artistName}
-            </span>
-          </span>
-          {loaded.key || loaded.capo > 0 ? (
-            <span className="text-caption text-muted-foreground">
-              {loaded.key ? `Key ${loaded.key}` : null}
-              {loaded.key && loaded.capo > 0 ? " · " : null}
-              {loaded.capo > 0 ? `Capo ${loaded.capo}` : null}
-            </span>
-          ) : null}
-          {parseError ? (
-            <span className="text-caption text-destructive" role="alert">
-              {parseError}
-            </span>
-          ) : unrecognised.length > 0 ? (
-            <span className="text-caption text-destructive" role="alert">
-              Unrecognised chords (dropped): {unrecognised.join(", ")}
-            </span>
-          ) : null}
-        </Stack>
-      ) : null}
+  const urlOpen = !loaded || replacing;
 
-      <Stack gap="xs">
-        <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Ultimate Guitar URL
-        </span>
-        <Stack direction="row" align="center" gap="sm">
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                void load();
-              }
-            }}
-            placeholder={PLACEHOLDER}
-            spellCheck={false}
-            disabled={loading}
-            // eslint-disable-next-line layout/no-adhoc-layout -- flex-1: the URL input grows to fill the row while the button stays rigid; Stack has no per-child grow prop
-            className="flex-1 rounded-md border border-border bg-background px-md py-sm text-body outline-none focus:border-primary"
-          />
-          <Button onClick={load} disabled={url.trim().length === 0}>
-            Load tab
-          </Button>
-        </Stack>
-      </Stack>
-
-      {error ? (
-        <span className="text-caption text-destructive" role="alert">
-          {error}
-        </span>
-      ) : null}
+  const urlRow = urlOpen ? (
+    <Stack direction="row" align="center" gap="sm">
+      <Input
+        type="url"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            void load();
+          }
+        }}
+        placeholder={PLACEHOLDER}
+        aria-label="Ultimate Guitar URL"
+        spellCheck={false}
+        disabled={loading}
+        autoFocus={replacing}
+        className={growClass()}
+      />
+      <Button onClick={load} disabled={url.trim().length === 0}>
+        Load
+      </Button>
     </Stack>
+  ) : null;
+
+  const alerts = (
+    <>
+      {loaded && parseError ? (
+        <Text variant="caption" tone="destructive" role="alert">
+          {parseError}
+        </Text>
+      ) : loaded && unrecognised.length > 0 ? (
+        <Text variant="caption" tone="destructive" role="alert">
+          Unrecognised chords (dropped): {unrecognised.join(", ")}
+        </Text>
+      ) : null}
+      {error ? (
+        <Text variant="caption" tone="destructive" role="alert">
+          {error}
+        </Text>
+      ) : null}
+    </>
+  );
+
+  if (!loaded)
+    return (
+      <Stack gap="sm">
+        {urlRow}
+        {alerts}
+      </Stack>
+    );
+
+  const subtitle = [
+    loaded.artistName,
+    loaded.key ? `Key ${loaded.key}` : null,
+    loaded.capo > 0 ? `Capo ${loaded.capo}` : null,
+  ]
+    .filter((part) => part !== null)
+    .join(" · ");
+
+  return (
+    <SourceLine
+      title={loaded.songName}
+      subtitle={subtitle}
+      action={
+        <Button
+          variant="ghost"
+          onClick={() => {
+            if (replacing) {
+              setUrl(loaded.urlWeb);
+              setError(null);
+            }
+            setReplacing(!replacing);
+          }}
+        >
+          {replacing ? "Cancel" : "Replace"}
+        </Button>
+      }
+    >
+      {urlRow}
+      {alerts}
+    </SourceLine>
   );
 }

@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { useHasChords } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { ChordReadout } from "./components/chord-readout";
+import { ChordReadoutActions } from "./components/chord-readout-actions";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
@@ -13,6 +14,7 @@ export default {
       label: "Current chord",
       icon: symbol("music-note"),
       component: ChordReadout,
+      actions: ChordReadoutActions,
       area: "player",
       useAvailable: useHasChords,
     }),

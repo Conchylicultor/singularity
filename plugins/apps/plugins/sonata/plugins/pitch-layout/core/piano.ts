@@ -32,6 +32,12 @@ const BLACK_WIDTH_RATIO = 0.62;
 const BLACK_HEIGHT_RATIO = 0.62;
 
 /**
+ * A natural's length over its width — a real white key is ~23.5mm wide and
+ * ~100mm+ long; 4.4 is the shorter, chip-friendly proportion Sonata draws.
+ */
+const WHITE_KEY_LENGTH = 4.4;
+
+/**
  * Widen outward while an endpoint is an accidental, so the row starts and ends
  * on a natural and therefore tiles flush.
  *
@@ -45,6 +51,18 @@ function snapRange(low: number, high: number): { low: number; high: number } {
   while (isAccidental(lo)) lo -= 1;
   while (isAccidental(hi)) hi += 1;
   return { low: lo, high: hi };
+}
+
+/** One key-width per natural; the keyboard is `WHITE_KEY_LENGTH` of them tall. */
+function proportion(
+  low: number,
+  high: number,
+): { span: number; aspect: number } {
+  let span = 0;
+  for (let pitch = low; pitch <= high; pitch++) {
+    if (!isAccidental(pitch)) span += 1;
+  }
+  return { span, aspect: span / WHITE_KEY_LENGTH };
 }
 
 function lay(
@@ -118,6 +136,7 @@ function lay(
 export const pianoLayout: PitchLayout = {
   snapRange,
   lay,
-  // Today's `KEYBOARD_HEIGHT` constant in the roll, and the readout chips' h-11.
-  heights: { keybed: 112, chip: 44 },
+  proportion,
+  // Today's `KEYBOARD_HEIGHT` constant in the roll.
+  heights: { keybed: 112 },
 };

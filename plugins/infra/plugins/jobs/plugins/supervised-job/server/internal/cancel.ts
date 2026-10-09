@@ -1,6 +1,12 @@
-import { killSupervisedRun, type KillOutcome } from "./run/supervisor";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { z } from "zod";
-import type { SupervisedJob } from "./define-supervised-job";
+import { db } from "@plugins/database/server";
+import { builtinLedgerFor } from "./builtin-ledger";
+import {
+  builtinLockedJobOf,
+  type SupervisedJob,
+} from "./define-supervised-job";
+import { killSupervisedRun, type KillOutcome } from "./run/supervisor";
 
 /**
  * Cancel one run of a supervised job: signal its process group and let the
@@ -36,4 +42,59 @@ export function cancelSupervisedJob<N extends string, S extends z.ZodType>(
   runId: string,
 ): Promise<KillOutcome> {
   return killSupervisedRun(job.kind, runId);
+}
+
+/** What `cancelSupervisedJobByLock` did. */
+export type CancelByLockResult =
+  /** The open run holding the lock is stamped cancelled; `outcome` is the signal. */
+  | {
+      readonly kind: "cancelled";
+      readonly runId: string;
+      readonly outcome: KillOutcome;
+    }
+  /** No run of this job holds `lock(input)`. */
+  | { readonly kind: "not-running" };
+
+/**
+ * A user's Cancel: stop the run of `job` that holds `lock(input)`, and have it
+ * recorded as cancelled rather than failed.
+ *
+ * The run's row is stamped `cancelled_at` FIRST, then signalled through
+ * `cancelSupervisedJob`'s kill path (everything above holds: no
+ * `abortDurableRun`, the wake records the outcome). Stamping first is what lets
+ * the failure policy, reading the row after the wake, answer `done` — no retry,
+ * no dead-letter — and `onEnded` see `cancelled: true`. A TERM sent any other
+ * way (a reboot, `cancelSupervisedJob`) carries no stamp and stays a retryable
+ * failure.
+ *
+ * Only for a built-in-ledger job that declared `lock` — the lock is how a
+ * caller names the run without holding its id. Any other job throws.
+ *
+ * A run stamped while its child is still being spawned answers
+ * `outcome: { ok: false, reason: "not-spawned" }`: the child then runs on, and
+ * if it fails it still closes as cancelled.
+ */
+export async function cancelSupervisedJobByLock<
+  N extends string,
+  S extends z.ZodType,
+>(
+  job: SupervisedJob<N, S>,
+  input: z.infer<S>,
+  conn: NodePgDatabase = db,
+): Promise<CancelByLockResult> {
+  const locked = builtinLockedJobOf(job);
+  if (locked === null) {
+    throw new Error(
+      `[supervised-job] ${job.name}: cancelSupervisedJobByLock needs a built-in-ledger job that declares \`lock\` — cancel an own-ledger run by id with cancelSupervisedJob.`,
+    );
+  }
+  const runId = await builtinLedgerFor(locked.jobName, conn).markCancelled(
+    locked.lock(input),
+  );
+  if (runId === null) return { kind: "not-running" };
+  return {
+    kind: "cancelled",
+    runId,
+    outcome: await cancelSupervisedJob(job, runId),
+  };
 }

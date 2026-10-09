@@ -19,13 +19,20 @@ export {
   formatChordSymbolWithBass,
   formatSpelledChordSymbol,
 } from "./chords";
-export { chordPitches, invertVoicing, nearestVoicing } from "./voicing";
+export {
+  chordPitches,
+  chordVoicing,
+  invertVoicing,
+  nearestVoicing,
+} from "./voicing";
 export { parseChordSymbol } from "./parse";
 export { parseKeySignature } from "./key";
 export { detectChordWindows } from "./detect";
 export type { ChordMatch, ChordWindow } from "./detect";
 export { inferKeys, tonicName, tonicPc } from "./key-detect";
 export { romanNumeral, romanNumeralParts, parseRomanNumeral } from "./roman";
+export { diatonicChords } from "./diatonic";
+export type { DiatonicChord } from "./diatonic";
 export { formatChordLabel } from "./chord-label";
 export type { ChordDisplayMode } from "./chord-label";
 export { transposeScore, transposeKey, transposeChordText } from "./transpose";

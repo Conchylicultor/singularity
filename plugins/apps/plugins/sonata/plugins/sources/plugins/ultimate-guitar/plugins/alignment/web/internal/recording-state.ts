@@ -3,10 +3,36 @@ import type { UgTab } from "@plugins/apps/plugins/sonata/plugins/sources/plugins
 import {
   ALIGNER_VERSION,
   fitsSheet,
+  MAX_TRIES_PER_RUN,
   type AlignmentCandidate,
   type AlignmentPhase,
   type UgAlignmentRow,
 } from "../../core";
+
+/** The three stages of getting a song onto a recording, in order. */
+export type AlignStage = "find" | "analyse" | "align";
+export const ALIGN_STAGES: readonly AlignStage[] = ["find", "analyse", "align"];
+
+/**
+ * What the job is doing right now: the row's live `phase`, or — between
+ * phases — `queued` (no run has picked it up yet) and `preparing` (a run is on
+ * it, its first stage not started).
+ */
+export type AlignStep = "queued" | "preparing" | AlignmentPhase;
+
+/**
+ * Where a working alignment stands. No percentage: nothing reports one, so the
+ * stage is the honest granularity.
+ */
+export interface AlignProgress {
+  stage: AlignStage;
+  step: AlignStep;
+  /**
+   * The candidate the resolver is trying, while it walks them; `attempt` counts
+   * this run's tries (at most `maxAttempts`).
+   */
+  candidate: { title: string; attempt: number; maxAttempts: number } | null;
+}
 
 /**
  * What the Recording section shows, derived from the live row and the open tab.
@@ -17,21 +43,17 @@ export type RecordingState =
   | { kind: "loading" }
   | { kind: "unreadable"; message: string }
   | { kind: "no-video" }
-  /** The resolver is choosing: searching (`trying: null`), or aligning one candidate. */
-  | {
-      kind: "finding";
-      trying: AlignmentCandidate | null;
-      phase: AlignmentPhase | null;
-      tried: number;
-    }
+  /**
+   * A job is on it: finding a video (`videoId` null, the resolver's walk), or
+   * aligning the chosen one.
+   */
+  | { kind: "working"; videoId: string | null; progress: AlignProgress }
   /**
    * The resolver tried candidates and none aligned well enough: the user is
    * asked. `best` is the best try's score — that record still plays
    * (unconfirmed); null when none scored.
    */
   | { kind: "needs-video"; tried: number; best: number | null }
-  | { kind: "queued"; videoId: string }
-  | { kind: "aligning"; videoId: string; phase: AlignmentPhase | null }
   | {
       kind: "aligned";
       videoId: string;
@@ -50,6 +72,8 @@ export type RecordingState =
       message: string;
       permanent: boolean;
     }
+  /** The user stopped it; nothing restarts it until they retry or set a video. */
+  | { kind: "cancelled"; videoId: string | null }
   /**
    * The record cannot play this sheet — made for another sheet or video, or
    * its chords moved in today's parse — and nothing is re-aligning.
@@ -66,6 +90,70 @@ export function triedCount(candidates: readonly AlignmentCandidate[]): number {
 /** The record's `[0, 12)` transpose as the nearer signed interval. */
 export function signedTranspose(transpose: number): number {
   return transpose > 6 ? transpose - 12 : transpose;
+}
+
+/** A candidate's name: its title, or — a pasted video the resolver never listed — its id. */
+export function candidateTitle(
+  candidate: AlignmentCandidate | undefined,
+  videoId: string,
+): string {
+  return candidate?.title ?? `YouTube video ${videoId}`;
+}
+
+const STAGE_OF_PHASE: Record<AlignmentPhase, AlignStage> = {
+  searching: "find",
+  waiting: "analyse",
+  fetching: "analyse",
+  installing: "analyse",
+  analysing: "analyse",
+  aligning: "align",
+};
+
+/**
+ * Where a working row stands, or `null` when no job is on it (any status but
+ * `queued`, `resolving` or `running`). Pure, from the row alone.
+ *
+ * Between phases the stage follows what is already settled: a video chosen
+ * (the user's, or the resolver's accepted pick) or candidates found means the
+ * find stage is done; with neither, finding has not finished.
+ *
+ * `attempt` is this run's try number. The row does not record a run's start,
+ * so it is counted from the candidates the walk has tried, in runs of
+ * `MAX_TRIES_PER_RUN` — exact unless an earlier run stopped early (a cancel or
+ * a failure), and never above `maxAttempts`.
+ */
+export function alignProgress(row: UgAlignmentRow): AlignProgress | null {
+  if (
+    row.status !== "queued" &&
+    row.status !== "resolving" &&
+    row.status !== "running"
+  ) {
+    return null;
+  }
+  const trying = row.candidates.find((c) => c.outcome === "trying");
+  const step: AlignStep =
+    row.phase ?? (row.status === "queued" ? "queued" : "preparing");
+  const stage: AlignStage =
+    row.phase !== null
+      ? STAGE_OF_PHASE[row.phase]
+      : trying !== undefined ||
+          row.videoId !== null ||
+          row.candidates.length > 0
+        ? "analyse"
+        : "find";
+  let candidate: AlignProgress["candidate"] = null;
+  if (row.videoId === null && trying !== undefined) {
+    const attempt = (triedCount(row.candidates) % MAX_TRIES_PER_RUN) + 1;
+    const untried = row.candidates.filter(
+      (c) => c.outcome === "untried",
+    ).length;
+    candidate = {
+      title: candidateTitle(trying, trying.videoId),
+      attempt,
+      maxAttempts: Math.min(MAX_TRIES_PER_RUN, attempt + untried),
+    };
+  }
+  return { stage, step, candidate };
 }
 
 export function recordingState(
@@ -87,61 +175,47 @@ export function recordingState(
       permanent: row.errorPermanent,
     };
   }
+  if (row.status === "cancelled") return { kind: "cancelled", videoId };
+  // The user cleared their video: nothing runs until they set one.
+  if (videoId === null && row.pick === "user") return { kind: "no-video" };
+  const progress = alignProgress(row);
+  if (progress !== null) return { kind: "working", videoId, progress };
   if (videoId === null) {
-    if (row.pick === "user") return { kind: "no-video" };
-    const tried = triedCount(row.candidates);
-    if (row.status === "needs-video") {
-      const scores = row.candidates.flatMap((c) =>
-        c.score === null ? [] : [c.score],
-      );
-      return {
-        kind: "needs-video",
-        tried,
-        best: scores.length === 0 ? null : Math.max(...scores),
-      };
-    }
+    if (row.status !== "needs-video") return { kind: "no-video" };
+    const scores = row.candidates.flatMap((c) =>
+      c.score === null ? [] : [c.score],
+    );
     return {
-      kind: "finding",
-      trying: row.candidates.find((c) => c.outcome === "trying") ?? null,
-      phase: row.phase,
-      tried,
+      kind: "needs-video",
+      tried: triedCount(row.candidates),
+      best: scores.length === 0 ? null : Math.max(...scores),
     };
   }
-  switch (row.status) {
-    case "queued":
-      return { kind: "queued", videoId };
-    case "running":
-    case "resolving":
-      return { kind: "aligning", videoId, phase: row.phase };
-    case "aligned":
-    case "weak":
-    case "needs-video": {
-      const record = row.record;
-      // The same rule as the player's (`appliedAlignment`): out of date
-      // exactly when the record would not play.
-      if (
-        record === null ||
-        record.videoId !== videoId ||
-        !fitsSheet(record, tab.content)
-      ) {
-        return { kind: "out-of-date", videoId };
-      }
-      const olderAligner = record.alignerVersion !== ALIGNER_VERSION;
-      return row.status === "aligned"
-        ? {
-            kind: "aligned",
-            videoId,
-            score: record.score,
-            transpose: signedTranspose(record.transpose),
-            capo: tab.capo,
-            olderAligner,
-          }
-        : { kind: "weak", videoId, score: record.score, olderAligner };
-    }
+  // aligned | weak | needs-video with a video: judged by its record — the same
+  // rule as the player's (`appliedAlignment`): out of date exactly when the
+  // record would not play.
+  const record = row.record;
+  if (
+    record === null ||
+    record.videoId !== videoId ||
+    !fitsSheet(record, tab.content)
+  ) {
+    return { kind: "out-of-date", videoId };
   }
+  const olderAligner = record.alignerVersion !== ALIGNER_VERSION;
+  return row.status === "aligned"
+    ? {
+        kind: "aligned",
+        videoId,
+        score: record.score,
+        transpose: signedTranspose(record.transpose),
+        capo: tab.capo,
+        olderAligner,
+      }
+    : { kind: "weak", videoId, score: record.score, olderAligner };
 }
 
-const percent = (score: number) => `${Math.round(score * 100)}%`;
+export const percent = (score: number) => `${Math.round(score * 100)}%`;
 
 const olderAlignerNote = (older: boolean) =>
   older ? " · made by an earlier aligner (re-align to update)" : "";
@@ -153,7 +227,30 @@ export function formatTranspose(transpose: number, capo: number): string {
   return capo > 0 ? `${signed} (capo ${capo})` : signed;
 }
 
-/** The one-line status, for the collapsed summary and the body alike. */
+const STEP_LABEL: Record<AlignStep, string> = {
+  queued: "Waiting to start",
+  preparing: "Preparing",
+  searching: "Searching for a video",
+  waiting: "Waiting for another analysis",
+  fetching: "Downloading the audio",
+  installing: "Installing the analyser",
+  analysing: "Analysing the audio",
+  aligning: "Aligning the sheet",
+};
+
+/**
+ * The working step in words — "Analysing the audio…", or "Analysing the audio
+ * (video 2 of 3)…" while the resolver walks its candidates.
+ */
+export function alignProgressLabel(progress: AlignProgress): string {
+  const step = STEP_LABEL[progress.step];
+  const c = progress.candidate;
+  return c === null
+    ? `${step}…`
+    : `${step} (video ${c.attempt} of ${c.maxAttempts})…`;
+}
+
+/** The status line beside the icon (a failure's message goes on its own line, under it). */
 export function recordingStateLine(state: RecordingState): string {
   switch (state.kind) {
     case "loading":
@@ -162,60 +259,21 @@ export function recordingStateLine(state: RecordingState): string {
       return `Could not read the alignment: ${state.message}`;
     case "no-video":
       return "No recording";
-    case "finding":
-      return state.trying === null
-        ? "Finding a video…"
-        : `Trying ${state.trying.title ?? state.trying.videoId} (${state.phase === "aligning" ? "aligning" : "analysing"})…`;
-    case "needs-video": {
-      const tried = `${state.tried} tried`;
+    case "working":
+      return alignProgressLabel(state.progress);
+    case "needs-video":
       return state.best === null
-        ? `Needs a video (${tried})`
-        : `Needs a video — playing the best try, a weak match (${percent(state.best)}, ${tried}); the timing is unconfirmed`;
-    }
-    case "queued":
-      return "Waiting to align…";
-    case "aligning":
-      return state.phase === "aligning"
-        ? "Aligning the sheet…"
-        : "Analysing the recording…";
+        ? `No video aligned (${state.tried} tried)`
+        : `Weak match (${percent(state.best)}) — timing unconfirmed`;
     case "aligned":
       return `Aligned ${percent(state.score)} · ${formatTranspose(state.transpose, state.capo)} semitones${olderAlignerNote(state.olderAligner)}`;
     case "weak":
-      return `Weak match (${percent(state.score)}) — playing it, but the timing is unconfirmed; a better video may align${olderAlignerNote(state.olderAligner)}`;
+      return `Weak match (${percent(state.score)}) — timing unconfirmed${olderAlignerNote(state.olderAligner)}`;
     case "failed":
-      return `Failed: ${state.message}`;
+      return "Alignment failed";
+    case "cancelled":
+      return "Alignment cancelled";
     case "out-of-date":
       return "Out of date — the alignment no longer fits this sheet; re-align to sync the video";
-  }
-}
-
-/**
- * The state in a word or two, for the collapsed card's header (beside the
- * title, like the other sections' "Off" / "Auto-detect"). The full sentence is
- * {@link recordingStateLine}, in the body.
- */
-export function recordingStateSummary(state: RecordingState): string {
-  switch (state.kind) {
-    case "loading":
-      return "Loading…";
-    case "unreadable":
-      return "Unreadable";
-    case "no-video":
-      return "No recording";
-    case "finding":
-      return "Finding a video…";
-    case "needs-video":
-      return "Needs a video";
-    case "queued":
-    case "aligning":
-      return "Aligning…";
-    case "aligned":
-      return percent(state.score);
-    case "weak":
-      return `Weak · ${percent(state.score)}`;
-    case "failed":
-      return "Failed";
-    case "out-of-date":
-      return "Out of date";
   }
 }

@@ -7,7 +7,7 @@ import { SonataLayout } from "./components/sonata-layout";
 import { Sonata } from "./slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
-export { Sonata, SonataSectionItem } from "./slots";
+export { Sonata, SonataSectionItem, SonataSectionStack } from "./slots";
 export type { SonataSection } from "./slots";
 export { useSonataApp, type SonataAppValue } from "./app";
 export {

@@ -32,8 +32,8 @@ attribute type carries.
   - Exports (types): `LineProps`
   - Exports (values): `Line`
 - Cross-plugin:
-  - Imported by: 93 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×22
+  - Imported by: 96 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×25
     - `primitives` ×16
     - `conversations` ×14
     - `debug` ×6

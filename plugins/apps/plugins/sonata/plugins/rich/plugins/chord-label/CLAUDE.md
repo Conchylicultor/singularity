@@ -17,9 +17,16 @@ chord overlay and the progression strip so they label chords identically.
     - `apps/sonata/shell.Sonata`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
+    - `config_v2.useConfigResult`
+    - `config_v2.useSetConfig`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/loading.Loading`
+    - `primitives/overlay/tooltip.WithTooltip`
   - Exports (types): `ChordBoxFace`
   - Exports (values):
     - `chordBoxFace`
+    - `ChordLabelModeAction`
     - `useChordDisplayMode`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
@@ -27,6 +34,7 @@ chord overlay and the progression strip so they label chords identically.
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/chord-chart`
+    - `apps/sonata/progress/chords`
     - `apps/sonata/rich/chord-list`
     - `apps/sonata/rich/chord-overlay`
     - `apps/sonata/rich/chord-progression`

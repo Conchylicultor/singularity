@@ -12,7 +12,7 @@ import { beatFeaturesJob } from "./internal/job";
 // body, the CLI) and `sonifyBeatFeatures`. Anywhere: `readBeatFeatures` (the
 // state, from files) and `requestBeatFeatures` (enqueues the job).
 export { ensureBeatFeatures } from "./internal/ensure";
-export type { EnsureBeatFeaturesOptions } from "./internal/ensure";
+export type { EnsureBeatFeaturesOptions, EnsurePhase } from "./internal/ensure";
 export { requestBeatFeatures } from "./internal/job";
 export { sonifyBeatFeatures } from "./internal/sonify";
 export { readBeatFeatures } from "./internal/state";

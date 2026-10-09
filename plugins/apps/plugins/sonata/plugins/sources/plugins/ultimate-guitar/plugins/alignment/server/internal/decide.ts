@@ -10,6 +10,7 @@ import {
 import type { AlignmentRecord } from "../../core/internal/record";
 import {
   chooseCandidate,
+  MAX_TRIES_PER_RUN,
   type TriedCandidate,
 } from "../../core/internal/accept";
 
@@ -63,6 +64,7 @@ function stale(record: AlignmentRecord, hash: string): string | null {
  *   are no candidates yet, else go on from the next untried one.
  * - `resolving` / `running`: a run that never finished — go on.
  * - `failed`: retry unless permanent.
+ * - `cancelled`: nothing — the user stopped it; only their retry resumes it.
  * - `needs-video`: nothing to do — every candidate tried fell short — unless
  *   the sheet or the aligner changed since, when the same candidates are tried
  *   again (their scores were against another sheet).
@@ -91,6 +93,8 @@ function decideResolve(tab: UgTab, row: AlignmentState): AlignmentWork {
       return row.errorPermanent
         ? { kind: "idle", reason: "failed permanently" }
         : resolve("retrying a failed video search");
+    case "cancelled":
+      return { kind: "idle", reason: "cancelled by the user" };
     case "needs-video": {
       const why = row.record === null ? null : stale(row.record, hash);
       return why === null
@@ -114,6 +118,8 @@ function decideResolve(tab: UgTab, row: AlignmentState): AlignmentWork {
  * - `queued` (a new video or a re-align asked for) or `running` / `resolving`
  *   (left behind by a run that never finished): align.
  * - `failed`: align again unless the failure was permanent for this video.
+ * - `cancelled`: nothing, whatever changed since (a sheet edit included) —
+ *   the user stopped it, and only their retry or a new video restarts it.
  * - `aligned` / `weak` / `needs-video`: align only when the record no longer
  *   matches the current video, sheet or aligner. An edit re-aligns the chosen
  *   video, whoever chose it; it never re-picks one that aligned. A new aligner
@@ -146,6 +152,8 @@ export function decideWork(tab: UgTab, row: AlignmentState): AlignmentWork {
       return row.errorPermanent
         ? { kind: "idle", reason: "failed permanently for this video" }
         : align("retrying a failed alignment");
+    case "cancelled":
+      return { kind: "idle", reason: "cancelled by the user" };
     case "aligned":
     case "weak":
     case "needs-video": {
@@ -175,12 +183,6 @@ export function decideWork(tab: UgTab, row: AlignmentState): AlignmentWork {
 // ── The candidate walk ───────────────────────────────────────────────────────
 
 /**
- * Candidates one run tries at most. Each costs a download and a beat analysis
- * (~30–60 s); past three, the ranking has failed and the user is better asked.
- */
-export const MAX_TRIES_PER_RUN = 3;
-
-/**
  * Why trying one candidate failed, when the failure is the CANDIDATE's: its
  * audio could not be had — YouTube will not serve it, or its download failed
  * (an HTTP 403 on its stream) — so the walk marks it `failed` and moves on to
@@ -208,6 +210,20 @@ export type WalkResult =
     }
   /** `shouldContinue` said stop (the user picked a video meanwhile). */
   | { kind: "interrupted" };
+
+/**
+ * A candidate cut off mid-try (a run that failed, or one the user cancelled)
+ * goes back to untried, so the next run tries it.
+ */
+export function untryCandidates(
+  candidates: readonly AlignmentCandidate[],
+): AlignmentCandidate[] {
+  return candidates.map((c) =>
+    c.outcome === "trying"
+      ? { ...c, outcome: "untried", score: null, error: null }
+      : c,
+  );
+}
 
 /** Candidates scored against an earlier sheet go back to untried; refusals and failures stay. */
 export function retryScored(

@@ -1,4 +1,5 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { usePaneStore } from "@plugins/primitives/plugins/pane/web";
 import {
   SonataPlayer,
@@ -17,13 +18,17 @@ import { Picker } from "./display-picker";
  * `panes.tsx`.
  */
 
-/** ← Library — clears the route back to the library index pane. */
+const arrowBackIcon = symbol("arrow-back");
+
+/** Back to Library — clears the route back to the library index pane. */
 export function BackToLibrary() {
   const store = usePaneStore();
   return (
-    <Button variant="outline" onClick={() => store.clearRoute()}>
-      ← Library
-    </Button>
+    <IconButton
+      icon={arrowBackIcon}
+      label="Back to Library"
+      onClick={() => store.clearRoute()}
+    />
   );
 }
 

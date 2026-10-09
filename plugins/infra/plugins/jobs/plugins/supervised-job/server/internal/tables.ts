@@ -66,6 +66,13 @@ export const _supervisedJobRuns = pgTable(
      * retryable.
      */
     retryable: boolean("retryable"),
+    /**
+     * When `cancelSupervisedJobByLock` asked this run to stop — stamped BEFORE
+     * the signal is sent, so the failure policy reading the row after the wake
+     * always sees it. Null for every other ending, a reboot's TERM included:
+     * that one stays a retryable failure.
+     */
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
   },
   (t) => [
     // THE lock: the claiming INSERT wins or loses on this index, so there is no

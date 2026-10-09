@@ -43,8 +43,8 @@ same paint through `statusDotPaintClass(paint)`.
     - `StatusDot`
     - `statusDotPaintClass`
 - Cross-plugin:
-  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×10
+  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×11
     - `conversations` ×8
     - `debug` ×6
     - `active-data` ×3

@@ -275,10 +275,10 @@ to reconcile them; they never needed reconciling.
     - `Text`
     - `textVariantClass`
 - Cross-plugin:
-  - Imported by: 350 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×90
+  - Imported by: 355 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×94
     - `conversations` ×70
-    - `primitives` ×39
+    - `primitives` ×40
     - `debug` ×32
     - `page` ×20
     - `plugin-meta` ×14

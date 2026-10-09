@@ -15,26 +15,11 @@ tab's own — the prototype canvas, keyed by its pane instance.
 
 - Description: Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
 - Cross-plugin:
-  - Imported by:
-    - `apps/agent-manager/welcome`
-    - `apps/chord/curriculum`
-    - `apps/file-explorer/browser`
-    - `apps/prototypes/canvas`
-    - `apps/sonata/library`
-    - `apps/sonata/rich/chord-readout`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
-    - `conversations/conversation-view/open-app`
-    - `conversations/conversation-view/prompt-input`
-    - `conversations/conversation-view/push-and-exit`
-    - `conversations/conversation-view/running-agents`
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×8
+    - `primitives` ×7
+    - `conversations` ×5
     - `page/editor`
-    - `primitives/css/color-picker`
-    - `primitives/detail-sections`
-    - `primitives/dom/auto-scroll`
-    - `primitives/launch`
-    - `primitives/metrics`
-    - `primitives/overlay/image-viewer`
-    - `primitives/usage-rank`
     - `tasks/task-draft-form`
 - Web:
   - Exports (types): `DraftOptions`

@@ -71,11 +71,11 @@ const LOCK_RETRY_MS = 500;
  */
 export async function waitLock(
   path: string,
-  onWait: () => void,
+  onWait: () => void | Promise<void>,
 ): Promise<number> {
   const first = tryLock(path);
   if (first !== null) return first;
-  onWait();
+  await onWait();
   for (;;) {
     await Bun.sleep(LOCK_RETRY_MS);
     const fd = tryLock(path);

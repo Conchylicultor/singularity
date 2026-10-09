@@ -6,22 +6,19 @@ import {
 import {
   effectiveKeyAt,
   type ChordAnnotation,
-  type PitchPlane,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { chordPitches } from "@plugins/apps/plugins/sonata/plugins/theory/core";
+import { chordVoicing } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import {
   chordBoxFace,
   useChordDisplayMode,
   type ChordBoxFace,
 } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label/web";
 import {
-  Keyboard,
-  useSonataKeySkin,
-} from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
+  ReadoutKeyboard,
+  useReadoutPlane,
+} from "@plugins/apps/plugins/sonata/plugins/rich/plugins/readout-keyboard/web";
 import { useChordAudition } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/live-play/web";
-import { pitchKeyboardHeight } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/core";
-import { usePitchGeometry } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/web";
 import {
   ChordBox,
   chordColour,
@@ -39,16 +36,13 @@ interface ChordEntry {
   /** Its first occurrence, which names, paints and voices it and is where a click seeks. */
   first: ChordAnnotation;
   face: ChordBoxFace;
-  /** Its notes as the keyboard lights them (and a click sounds them): each pitch in the chord's colour. */
-  lit: ReadonlyMap<number, string>;
+  /** Its colour: the degree's, which lights its keys. */
+  colour: string;
+  /** Its notes, root position with a slash bass lowest — before the readout window's octave fit. */
+  voicing: number[];
   /** How many times it is struck. */
   uses: number;
 }
-
-/** The keyboards' lowest key, C4: `chordPitches` stacks every chord from its root in octave 4. */
-const KB_LOW = 60;
-/** The keyboards' default top, B5 — two octaves, room for any triad or seventh. */
-const KB_HIGH = 83;
 
 const entryKey = (c: ChordAnnotation) =>
   `${c.data.spelledSymbol ?? c.data.symbol}|${String(c.data.root)}`;
@@ -74,12 +68,12 @@ function distinctChords(
       effectiveKeyAt(score, c.start) ?? null,
       mode,
     );
-    const colour = chordColour(face.degree);
     byKey.set(key, {
       key,
       first: c,
       face,
-      lit: new Map(chordPitches(c.data).map((p) => [p, colour])),
+      colour: chordColour(face.degree),
+      voicing: chordVoicing(c.data),
       uses: 1,
     });
   }
@@ -104,20 +98,24 @@ function distinctChords(
 export function ChordList() {
   const { score, seekTo } = useSession();
   const mode = useChordDisplayMode();
-  const skin = useSonataKeySkin();
   const audition = useChordAudition();
 
   const entries = useMemo(() => distinctChords(score, mode), [score, mode]);
 
-  // One plane for every row — the rows differ only in what is lit — wide
-  // enough for the tallest chord.
-  const high = useMemo(() => {
-    let top = KB_HIGH;
-    for (const e of entries)
-      for (const p of e.lit.keys()) top = Math.max(top, p);
-    return top;
-  }, [entries]);
-  const plane = usePitchGeometry(KB_LOW, high);
+  // One plane for every row — the rows differ only in what is lit — fitted
+  // to every chord's voicing at once.
+  const voicings = useMemo(() => entries.map((e) => e.voicing), [entries]);
+  const { plane, voicings: fitted } = useReadoutPlane(voicings);
+  // Each row's notes as its keyboard lights them (and a click sounds them):
+  // every pitch of its fitted voicing in the chord's colour.
+  const rows = useMemo(
+    () =>
+      entries.map((entry, i) => ({
+        entry,
+        lit: new Map((fitted[i] ?? []).map((p) => [p, entry.colour])),
+      })),
+    [entries, fitted],
+  );
 
   // The key of the chord under the playhead; reconciles only on a chord boundary.
   const nowKey = useCursorSelector(
@@ -133,16 +131,16 @@ export function ChordList() {
 
   return (
     <Stack gap="2xs">
-      {entries.map((entry) => (
+      {rows.map(({ entry, lit }) => (
         <ChordRow
           key={entry.key}
           entry={entry}
+          lit={lit}
           now={entry.key === nowKey}
           plane={plane}
-          skin={skin}
-          onPick={(e) => {
-            audition?.([...e.lit.keys()]);
-            seekTo(e.first.start);
+          onPick={() => {
+            audition?.([...lit.keys()]);
+            seekTo(entry.first.start);
           }}
         />
       ))}
@@ -153,18 +151,18 @@ export function ChordList() {
 /** One chord: its box, its keyboard and its count, the whole row a play-and-seek button. */
 function ChordRow({
   entry,
+  lit,
   now,
   plane,
-  skin,
   onPick,
 }: {
   entry: ChordEntry;
+  lit: ReadonlyMap<number, string>;
   now: boolean;
-  plane: PitchPlane;
-  skin: ReturnType<typeof useSonataKeySkin>;
-  onPick: (entry: ChordEntry) => void;
+  plane: ReturnType<typeof useReadoutPlane>["plane"];
+  onPick: () => void;
 }) {
-  const { face, lit, uses } = entry;
+  const { face, uses } = entry;
   return (
     <Overlay
       className="chord-list-row"
@@ -177,7 +175,7 @@ function ChordRow({
           className="chord-list-hit size-full"
           aria-label={`${face.name}, played ${String(uses)} times — play it and go to its first time`}
           aria-current={now ? "true" : undefined}
-          onClick={() => onPick(entry)}
+          onClick={onPick}
         />
       }
     >
@@ -187,14 +185,9 @@ function ChordRow({
           degree={face.degree}
           state="filled"
           label={face.label}
+          now={now}
         />
-        <Keyboard
-          plane={plane}
-          lit={lit}
-          skin={skin}
-          className="w-full"
-          style={{ height: pitchKeyboardHeight(plane.layout, "chip") }}
-        />
+        <ReadoutKeyboard plane={plane} lit={lit} />
         <Text variant="caption" tone="muted" className="tabular-nums">
           ×{uses}
         </Text>

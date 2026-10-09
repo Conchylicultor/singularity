@@ -26,10 +26,13 @@
     - `ChordMatch`
     - `ChordTemplate`
     - `ChordWindow`
+    - `DiatonicChord`
   - Exports (values):
     - `CHORD_TEMPLATES`
     - `chordPitches`
+    - `chordVoicing`
     - `detectChordWindows`
+    - `diatonicChords`
     - `formatChordLabel`
     - `formatChordSymbol`
     - `formatChordSymbolWithBass`

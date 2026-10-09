@@ -15,8 +15,11 @@ import { formatChordLabel } from "@plugins/apps/plugins/sonata/plugins/theory/co
 import { useChordDisplayMode } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  ControlSizeProvider,
+  cn,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
  * The chord-progression strip — the BODY of a `Sonata.Section` card whose chrome
@@ -30,7 +33,12 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
  *
  * Each chip's text follows the shared chord-label mode (`symbol` / `roman` /
  * `both`) via `formatChordLabel` — the same label the piano-roll overlay shows —
- * so the two chord surfaces stay in lockstep.
+ * so the two chord surfaces stay in lockstep. The section's header action
+ * (`ChordLabelModeAction`) cycles that mode in place.
+ *
+ * Chips carry no degree colour: neutral (`secondary`) at rest, filled primary
+ * under the playhead — the strip reads as rhythm and position, while the chord
+ * list beside it owns the harmonic colouring.
  *
  * Applicability is the contribution's `useAvailable` (`useHasChords`): the card
  * is not painted at all for a chordless song, so this body never renders empty.
@@ -114,20 +122,22 @@ export function ChordProgression() {
         overflowY: "auto",
       }}
     >
-      <Stack gap="2xs">
-        {barLines.map((line, i) => (
-          <BarRow
-            key={i}
-            rowRef={(el) => {
-              rowRefs.current[i] = el;
-            }}
-            line={line}
-            active={active}
-            labelByChord={labelByChord}
-            onSeek={seekTo}
-          />
-        ))}
-      </Stack>
+      <ControlSizeProvider size="sm">
+        <Stack gap="2xs">
+          {barLines.map((line, i) => (
+            <BarRow
+              key={i}
+              rowRef={(el) => {
+                rowRefs.current[i] = el;
+              }}
+              line={line}
+              active={active}
+              labelByChord={labelByChord}
+              onSeek={seekTo}
+            />
+          ))}
+        </Stack>
+      </ControlSizeProvider>
     </div>
   );
 }
@@ -150,7 +160,8 @@ function BarRow({
   rowRef?: (el: HTMLDivElement | null) => void;
 }) {
   return (
-    // `auto minmax(0,1fr)`: rigid number gutter + a flexible chip track that
+    // Rigid, right-aligned number gutter (wide enough for three digits, so the
+    // chip track starts at the same x on every row) + a flexible chip track that
     // owns the full bar width, so the per-chip weights map to real bar time.
     // Baseline alignment (not centring) puts the number on the first line of
     // chips: a crowded bar wraps onto several lines, and its number has to mark
@@ -159,12 +170,12 @@ function BarRow({
       ref={rowRef}
       style={{
         display: "grid",
-        gridTemplateColumns: "auto minmax(0, 1fr)",
+        gridTemplateColumns: "1.5rem minmax(0, 1fr)",
         alignItems: "baseline",
-        gap: "0.5rem",
+        gap: "0.375rem",
       }}
     >
-      <Text variant="caption" tone="muted" className="tabular-nums">
+      <Text variant="caption" tone="muted" className="text-right tabular-nums">
         {line.number}
       </Text>
       <BarBody
@@ -193,7 +204,9 @@ function BarBody({
     return (
       <div
         className="rounded-md bg-muted/30"
-        style={{ height: "1.25rem" }}
+        // The height of the (sm-density) chips around it, so a rest bar holds
+        // its line exactly like a chord bar.
+        style={{ height: "var(--control-height-sm)" }}
         aria-hidden
       />
     );
@@ -212,7 +225,7 @@ function BarBody({
         display: "flex",
         flexWrap: "wrap",
         alignItems: "center",
-        gap: "0.125rem",
+        gap: "0.1875rem",
       }}
     >
       {segs.map((seg, j) => (
@@ -247,12 +260,12 @@ function ChordChip({
 }) {
   const { chord, isContinuation } = seg;
   return (
-    <ToggleChip
-      active={isActive}
-      mono
+    <Button
+      variant={isActive ? "default" : "secondary"}
+      aria-pressed={isActive}
       onClick={() => onSeek(chord.start)}
       title={`${chord.data.symbol} · beats ${chord.start.toFixed(2)}–${chord.end.toFixed(2)}`}
-      className={cn(isContinuation && "opacity-40")}
+      className={cn("font-semibold", isContinuation && "opacity-40")}
       style={{
         // Grow by beat-weight, floor at the label, ceiling at the beats' share of
         // the bar. `minWidth` wins over `maxWidth` when they disagree (CSS resolves
@@ -266,6 +279,6 @@ function ChordChip({
       }}
     >
       {label}
-    </ToggleChip>
+    </Button>
   );
 }

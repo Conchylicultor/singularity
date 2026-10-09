@@ -21,6 +21,7 @@ import {
   backoffMsAfter,
   superviseRuns,
   type LoopCtx,
+  type RunVerdict,
   type StartedRunAttempt,
 } from "./loop";
 
@@ -162,6 +163,11 @@ function record(
   };
 }
 
+/** The exit-code verdict an own-ledger job answers. */
+function verdictOf(terminal: RunTerminal): RunVerdict {
+  return terminal.exitCode === 0 ? "done" : "retry";
+}
+
 afterEach(async () => {
   for (const proc of children.splice(0)) {
     proc.kill("SIGKILL");
@@ -183,7 +189,7 @@ describe("superviseRuns", () => {
       spawn: () => Promise.resolve(null),
       onEnded: (started, terminal, attempt) => {
         ended.push(record(started, terminal, attempt));
-        return Promise.resolve();
+        return Promise.resolve(verdictOf(terminal));
       },
     });
 
@@ -209,7 +215,7 @@ describe("superviseRuns", () => {
       spawn: () => Promise.resolve({ runId, pid: proc.pid }),
       onEnded: (started, terminal, attempt) => {
         ended.push(record(started, terminal, attempt));
-        return Promise.resolve();
+        return Promise.resolve(verdictOf(terminal));
       },
     });
 
@@ -245,7 +251,7 @@ describe("superviseRuns", () => {
       spawn: () => Promise.resolve({ runId, pid: proc.pid }),
       onEnded: (started, terminal, attempt) => {
         ended.push(record(started, terminal, attempt));
-        return Promise.resolve();
+        return Promise.resolve(verdictOf(terminal));
       },
     });
 
@@ -271,7 +277,7 @@ describe("superviseRuns", () => {
       spawn: () => Promise.resolve({ runId, pid: proc.pid }),
       onEnded: (started, terminal, attempt) => {
         ended.push(record(started, terminal, attempt));
-        return Promise.resolve();
+        return Promise.resolve(verdictOf(terminal));
       },
     });
 
@@ -313,7 +319,7 @@ describe("superviseRuns", () => {
       },
       onEnded: (started, terminal, attempt) => {
         ended.push(record(started, terminal, attempt));
-        return Promise.resolve();
+        return Promise.resolve(verdictOf(terminal));
       },
     });
 
@@ -351,7 +357,7 @@ describe("superviseRuns", () => {
           runId: attempt === 1 ? first : second,
           pid: proc.pid,
         }),
-      onEnded: () => Promise.resolve(),
+      onEnded: (_started, terminal) => Promise.resolve(verdictOf(terminal)),
     });
 
     expect(waits).toEqual(["run-ended:1:0", "run-ended:2:0"]);
@@ -372,11 +378,36 @@ describe("superviseRuns", () => {
         writeMarker(runId, "0 -\n");
         return Promise.resolve({ runId, pid: process.pid });
       },
-      onEnded: () => Promise.resolve(),
+      onEnded: (_started, terminal) => Promise.resolve(verdictOf(terminal)),
     });
 
     expect(spawns).toBe(1);
     expect(steps).toEqual(["spawn:1"]);
+  });
+
+  test("a `done` verdict on a failed run stops the ladder — a cancel is not retried", async () => {
+    const runId = uniqueRunId("cancelled");
+    const { ctx, steps } = createCtx();
+    let spawns = 0;
+
+    const result = await superviseRuns({
+      kind,
+      runAttempts: 3,
+      closeRow: () => Promise.resolve(),
+      ctx,
+      spawn: () => {
+        spawns += 1;
+        writeMarker(runId, "143 TERM\n");
+        return Promise.resolve({ runId, pid: process.pid });
+      },
+      onEnded: () => Promise.resolve("done"),
+    });
+
+    expect(spawns).toBe(1);
+    expect(steps).toEqual(["spawn:1"]);
+    expect(result).toEqual(
+      expect.objectContaining({ outcome: "ended", runId, attempt: 1 }),
+    );
   });
 
   test("a replay does not spawn a second child for a run it already started", async () => {
@@ -407,7 +438,7 @@ describe("superviseRuns", () => {
         attempt: number,
       ) => {
         ended.push(record(started, terminal, attempt));
-        return Promise.resolve();
+        return Promise.resolve(verdictOf(terminal));
       },
     };
 
@@ -451,9 +482,9 @@ describe("the retry ladder", () => {
         events.push(`close:${runId}:${terminal.exitCode}`);
         return Promise.resolve();
       },
-      onEnded: (started) => {
+      onEnded: (started, terminal) => {
         events.push(`ended:${started.runId}`);
-        return Promise.resolve();
+        return Promise.resolve(verdictOf(terminal));
       },
     });
 
@@ -483,7 +514,7 @@ describe("the retry ladder", () => {
           return Promise.resolve({ runId: first, pid: process.pid });
         },
         closeRow: () => Promise.resolve(),
-        onEnded: () => Promise.resolve(),
+        onEnded: (_started, terminal) => Promise.resolve(verdictOf(terminal)),
       }),
     );
 
@@ -511,7 +542,8 @@ describe("the retry ladder", () => {
         return Promise.resolve({ runId, pid: process.pid });
       },
       closeRow: () => Promise.resolve(),
-      onEnded: () => Promise.resolve(),
+      onEnded: (_started: StartedRunAttempt, terminal: RunTerminal) =>
+        Promise.resolve(verdictOf(terminal)),
     };
 
     await superviseRuns(spec);

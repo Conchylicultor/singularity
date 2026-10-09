@@ -20,7 +20,11 @@ export type {
   SupervisedStepsContext,
 } from "./internal/define-supervised-job";
 export type { RunStep, StepOutcome } from "./internal/steps";
-export { cancelSupervisedJob } from "./internal/cancel";
+export {
+  cancelSupervisedJob,
+  cancelSupervisedJobByLock,
+} from "./internal/cancel";
+export type { CancelByLockResult } from "./internal/cancel";
 // The type a consumer's ledger implements (`listUnfinished` returns these).
 export type { UnfinishedRun } from "./internal/run/registry";
 // The built-in ledger's table, exported for drizzle-kit's table discovery.

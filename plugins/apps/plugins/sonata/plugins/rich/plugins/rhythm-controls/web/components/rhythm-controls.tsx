@@ -19,36 +19,28 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/rhythm-circle/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useGroove, type GrooveState } from "../use-groove";
-import { TrackConfig } from "./track-config";
-
-// Distinct theme tokens for the two concentric rings (outer = chords, inner = bass).
-const CHORD_COLOR = "var(--chart-1)";
-const BASS_COLOR = "var(--chart-2)";
+import { GroovePresetPicker } from "./groove-preset-picker";
+import { HAND_COLORS } from "./hand-colors";
+import { HandRow } from "./hand-row";
 
 /**
- * The "Rhythm" section — the BODY of a `Sonata.Section` card whose chrome (Card +
- * collapsible "Rhythm" title) the host paints. A per-song rhythm circle: a left
- * hand (bass) and right hand (chords) each strike an onset necklace; the circle
- * spins one revolution per bar with the playhead, its beads clickable to toggle
- * onsets ("Custom"). The persisted groove feeds the shell's score pipeline (via
- * the rhythm observer), so `reVoiceChords` renders the chords with real groove.
+ * The groove body — composed under a section whose header holds
+ * `GrooveSwitch`, top to bottom: the groove preset picker, the rhythm circle
+ * (one revolution per bar with the playhead, its beads clickable to toggle
+ * onsets) and one row per hand (pattern, rhythm, rotate/steps). The persisted
+ * groove feeds the song document's score pipeline (via the rhythm observer),
+ * so `reVoiceChords` renders the chords with real groove.
  *
  * Resolved groove + the optimistic commit come from the shared `useGroove()`
- * hook, which the header On/Off toggle (`RhythmActions`) also reads — so the
- * collapsed card's toggle and the open card's circle drive one groove.
- *
- * Hidden unless the shell is voicing this song's chords: a symbol source is
- * loaded (authored chords), or the song's chord mode is on (its detected chords
- * are voiced too). That applicability gate is the contribution's `useAvailable`
- * (`useHasVoicedChords`) — the card is not painted at all otherwise — so this
- * body never needs a `return null`. It serves ANY chord source (chord-grid,
- * ultimate-guitar) and any MIDI song in chord mode, not just the chord grid.
- * While the song's groove is loading it is a loading state — never the default
- * patterns standing in for the song's own.
+ * hook, which the header switch also reads — so the collapsed section's switch
+ * and the open body drive one groove. While the groove is off the body renders
+ * nothing (the switch is the whole control); while the song's groove is
+ * loading it is a loading state — never the default patterns standing in for
+ * the song's own. The composing section owns the applicability gate (whether
+ * the song document voices this song's chords at all).
  */
 export function RhythmControls() {
   const song = useLibrarySong();
@@ -68,14 +60,14 @@ export function RhythmControls() {
         />
       );
     case "ready":
-      return <GrooveEditor groove={groove.data} />;
+      return groove.data.enabled ? <GrooveEditor groove={groove.data} /> : null;
   }
 }
 
-/** The circle + per-hand controls over a KNOWN groove. */
+/** The preset picker, circle and per-hand rows over a KNOWN, enabled groove. */
 function GrooveEditor({ groove }: { groove: GrooveState }) {
   const { score } = useSession();
-  const { enabled, bass, chord, bassFigurationId, chordFigurationId, commit } =
+  const { presetId, bass, chord, bassFigurationId, chordFigurationId, commit } =
     groove;
   const cursor = useCursorApi();
   const circleRef = useRef<RhythmCircleHandle>(null);
@@ -91,7 +83,7 @@ function GrooveEditor({ groove }: { groove: GrooveState }) {
   useEffect(() => {
     return cursor.subscribe(() => {
       const handle = circleRef.current;
-      if (!handle) return; // circle not mounted (groove disabled)
+      if (!handle) return; // circle not mounted yet
       const beat = cursor.getBeat();
       // Last bar whose start is <= beat.
       let lo = 0;
@@ -123,21 +115,22 @@ function GrooveEditor({ groove }: { groove: GrooveState }) {
       id: "chord",
       subdivisions: chord.subdivisions,
       onsets: effectiveOnsets(chord),
-      colorVar: CHORD_COLOR,
+      colorVar: HAND_COLORS.chord.colorVar,
       label: "Right hand (chords)",
     },
     {
       id: "bass",
       subdivisions: bass.subdivisions,
       onsets: effectiveOnsets(bass),
-      colorVar: BASS_COLOR,
+      colorVar: HAND_COLORS.bass.colorVar,
       label: "Left hand (bass)",
     },
   ];
 
-  // The full four-field groove payload with one field overridden — every commit
-  // carries both hands' patterns AND figuration ids so nothing is dropped.
-  const fields = { bass, chord, bassFigurationId, chordFigurationId };
+  // The full groove payload with one field overridden — every commit carries
+  // both hands' patterns, figuration ids AND the preset provenance, so nothing
+  // is dropped.
+  const fields = { presetId, bass, chord, bassFigurationId, chordFigurationId };
 
   const onToggleOnset = (trackId: string, index: number) => {
     if (trackId === "bass") {
@@ -149,42 +142,35 @@ function GrooveEditor({ groove }: { groove: GrooveState }) {
 
   return (
     <Stack gap="md">
-      {enabled ? (
-        <>
-          <Center>
-            <RhythmCircle
-              ref={circleRef}
-              tracks={tracks}
-              onToggleOnset={onToggleOnset}
-              size={220}
-            />
-          </Center>
-          <TrackConfig
-            label="Left hand (bass)"
-            hand="bass"
-            pattern={bass}
-            onChange={(next) => commit({ ...fields, bass: next }, true)}
-            figurationId={bassFigurationId}
-            onFigurationChange={(id) =>
-              commit({ ...fields, bassFigurationId: id }, true)
-            }
-          />
-          <TrackConfig
-            label="Right hand (chords)"
-            hand="chord"
-            pattern={chord}
-            onChange={(next) => commit({ ...fields, chord: next }, true)}
-            figurationId={chordFigurationId}
-            onFigurationChange={(id) =>
-              commit({ ...fields, chordFigurationId: id }, true)
-            }
-          />
-        </>
-      ) : (
-        <Text as="div" variant="caption" tone="muted">
-          Turn on to play the chords with a left/right-hand groove.
-        </Text>
-      )}
+      <GroovePresetPicker groove={groove} />
+      <Center>
+        <RhythmCircle
+          ref={circleRef}
+          tracks={tracks}
+          onToggleOnset={onToggleOnset}
+          size={180}
+        />
+      </Center>
+      <Stack gap="xs">
+        <HandRow
+          hand="chord"
+          pattern={chord}
+          onChange={(next) => commit({ ...fields, chord: next }, true)}
+          figurationId={chordFigurationId}
+          onFigurationChange={(id) =>
+            commit({ ...fields, chordFigurationId: id }, true)
+          }
+        />
+        <HandRow
+          hand="bass"
+          pattern={bass}
+          onChange={(next) => commit({ ...fields, bass: next }, true)}
+          figurationId={bassFigurationId}
+          onFigurationChange={(id) =>
+            commit({ ...fields, bassFigurationId: id }, true)
+          }
+        />
+      </Stack>
     </Stack>
   );
 }

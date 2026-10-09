@@ -19,7 +19,10 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  Text,
+  textVariantClass,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   insetClass,
   Stack,
@@ -61,15 +64,23 @@ interface InstrumentOption {
   group?: string;
 }
 
-/** Round swatch that opens a categorical palette picker for one track. */
+/**
+ * Round swatch that opens a categorical palette picker for one track. A soft
+ * halo of its own colour rings it, so the swatch reads as the track's colour
+ * rather than a dot on the surface. The colour is track data (an explicit hex
+ * from the palette or the user's pick), not a theme token — hence inline.
+ */
 function ColorSwatch({
   songId,
   trackId,
   color,
+  dimmed,
 }: {
   songId: string;
   trackId: string;
   color: string;
+  /** A hidden track's swatch fades with its name. */
+  dimmed: boolean;
 }) {
   return (
     <InlinePopover
@@ -80,8 +91,15 @@ function ColorSwatch({
         <button
           type="button"
           aria-label="Track color"
-          className="size-4 rounded-full border border-border/60 transition-transform hover:scale-110"
-          style={{ background: accidentalColor(color) }}
+          className={cn(
+            "size-3.5 rounded-full transition-transform hover:scale-110",
+            rigidClass(),
+            dimmed && "opacity-50",
+          )}
+          style={{
+            background: accidentalColor(color),
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${accidentalColor(color)} 20%, transparent)`,
+          }}
         />
       }
     >
@@ -168,7 +186,9 @@ function InstrumentPicker({
           aria-label="Track instrument"
           className={cn(
             yieldClass("x"),
-            "gap-xs rounded-md text-3xs text-muted-foreground transition-colors hover:text-foreground",
+            textVariantClass("caption"),
+            // A chip: the hover fill marks it as the picker it is.
+            "gap-xs rounded-sm px-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
           )}
         >
           {ResolvedIcon ? (
@@ -316,6 +336,9 @@ function TrackLevel({
       // its own breathing room from the panel's left edge instead.
       panelClassName={cn(
         "max-w-(--control-height-sm) group-data-open/fa:max-w-48",
+        // Opened, the fader floats over the track name: lift it onto the
+        // popover surface so it reads as a panel above the row.
+        "group-data-open/fa:bg-popover group-data-open/fa:shadow-lg",
       )}
       trigger={
         <IconButton
@@ -387,14 +410,19 @@ function TrackRow({
     instrumentCustomized,
   } = entry;
   return (
-    <Stack direction="row" gap="sm" align="center" className="py-xs">
-      <ColorSwatch songId={songId} trackId={trackId} color={color} />
+    <Stack direction="row" gap="sm" align="center" className="py-sm">
+      <ColorSwatch
+        songId={songId}
+        trackId={trackId}
+        color={color}
+        dimmed={hidden}
+      />
 
       <Fill className={cn(hidden && "opacity-50")}>
         <Text
           as="div"
-          variant="caption"
-          className="truncate font-medium text-foreground"
+          variant="body"
+          className="truncate font-semibold text-foreground"
         >
           {name}
         </Text>
@@ -402,7 +430,7 @@ function TrackRow({
           direction="row"
           align="center"
           gap="xs"
-          className="text-3xs text-muted-foreground"
+          className="text-muted-foreground"
         >
           <InstrumentPicker
             songId={songId}
@@ -412,9 +440,15 @@ function TrackRow({
             resolvedLabel={instrumentLabel}
             instrumentCustomized={instrumentCustomized}
           />
-          <span>
-            · {noteCount} {noteCount === 1 ? "note" : "notes"}
-          </span>
+          <Text
+            as="span"
+            variant="caption"
+            tone="muted"
+            className="whitespace-nowrap"
+          >
+            · {noteCount.toLocaleString("en-US")}{" "}
+            {noteCount === 1 ? "note" : "notes"}
+          </Text>
         </Stack>
       </Fill>
 

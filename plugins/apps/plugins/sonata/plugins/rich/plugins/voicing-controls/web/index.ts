@@ -1,20 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { useHasVoicedChords } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { VoicingControls } from "./components/voicing-controls";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+
+export { VoicingControls } from "./components/voicing-controls";
 
 export default {
   description:
-    "Sonata Section: chord-voicing controls (realistic voice-leading toggle, voicing-strategy picker, octave stepper) writing the global voicing config. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on.",
-  contributions: [
-    Sonata.Section({
-      id: "voicing",
-      label: "Voicing",
-      icon: symbol("piano"),
-      component: VoicingControls,
-      area: "player",
-      useAvailable: useHasVoicedChords,
-    }),
-  ],
+    "Sonata accompaniment part: the chord-voicing rows (Voice-leading switch, Octave − C4 + stepper) writing the global voicing config. Contributes no section of its own — the Accompaniment section composes it, gated on the song document's useHasVoicedChords.",
+  contributions: [],
 } satisfies PluginDefinition;

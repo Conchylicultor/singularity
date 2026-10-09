@@ -7,11 +7,11 @@ import {
   type AlignmentCandidate,
 } from "../../core";
 import type { AlignmentRecord } from "../../core/internal/record";
-import { RANK_MARGIN } from "../../core/internal/accept";
+import { MAX_TRIES_PER_RUN, RANK_MARGIN } from "../../core/internal/accept";
 import {
   decideWork,
-  MAX_TRIES_PER_RUN,
   retryScored,
+  untryCandidates,
   walkCandidates,
   type AlignmentState,
 } from "./decide";
@@ -122,6 +122,28 @@ describe("decideWork — the resolver owns the choice", () => {
     expect(kind({ status: "failed", errorPermanent: true }).kind).toBe("idle");
   });
 
+  test("a cancelled walk stays put, even after a sheet edit", () => {
+    const cancelled = {
+      status: "cancelled" as const,
+      candidates: [
+        candidate("AAAAAAAAAAA", 0, { outcome: "weak", score: 0.3 }),
+        candidate("BBBBBBBBBBB", 1),
+      ],
+    };
+    expect(kind(cancelled)).toEqual({
+      kind: "idle",
+      reason: "cancelled by the user",
+    });
+    expect(
+      kind({
+        ...cancelled,
+        record: record("AAAAAAAAAAA", 0.3, { sheetHash: "an older sheet" }),
+      }).kind,
+    ).toBe("idle");
+    // A cancelled search (no candidates yet) is idle too.
+    expect(kind({ status: "cancelled" }).kind).toBe("idle");
+  });
+
   test("needs-video stays put while the sheet is the one it was tried against", () => {
     expect(
       kind({
@@ -186,6 +208,49 @@ describe("decideWork — a chosen video", () => {
       videoId: "AAAAAAAAAAA",
       reason: "the sheet changed",
     });
+  });
+
+  test("a cancelled alignment of a chosen video stays put, even after a sheet edit or a new aligner", () => {
+    for (const pick of ["user", "auto"] as const) {
+      const row = {
+        pick,
+        videoId: "AAAAAAAAAAA",
+        status: "cancelled" as const,
+      };
+      expect(kind(row)).toEqual({
+        kind: "idle",
+        reason: "cancelled by the user",
+      });
+      expect(
+        kind({
+          ...row,
+          record: record("AAAAAAAAAAA", 0.9, { sheetHash: "an older sheet" }),
+        }).kind,
+      ).toBe("idle");
+      expect(
+        kind({
+          ...row,
+          record: record("AAAAAAAAAAA", 0.9, {
+            alignerVersion: ALIGNER_VERSION - 1,
+          }),
+        }).kind,
+      ).toBe("idle");
+    }
+  });
+
+  test("a retried cancel (queued again) aligns the video, or resumes the walk", () => {
+    expect(kind({ pick: "user", videoId: "AAAAAAAAAAA" })).toMatchObject({
+      kind: "align",
+      videoId: "AAAAAAAAAAA",
+    });
+    expect(
+      kind({
+        candidates: [
+          candidate("AAAAAAAAAAA", 0, { outcome: "weak", score: 0.3 }),
+          candidate("BBBBBBBBBBB", 1),
+        ],
+      }),
+    ).toMatchObject({ kind: "resolve", search: false, retry: false });
   });
 
   test("a new video set over an old record aligns", () => {
@@ -497,6 +562,23 @@ describe("retryScored", () => {
       ["untried", null],
       ["not-embeddable", null],
       ["failed", null],
+    ]);
+  });
+});
+
+describe("untryCandidates", () => {
+  test("only a candidate cut off mid-try goes back to untried", () => {
+    const tried = [
+      candidate("AAAAAAAAAAA", 0, { outcome: "weak", score: 0.3 }),
+      candidate("BBBBBBBBBBB", 1, { outcome: "trying" }),
+      candidate("CCCCCCCCCCC", 2, { outcome: "failed", error: "gone" }),
+      candidate("DDDDDDDDDDD", 3),
+    ];
+    expect(untryCandidates(tried).map((c) => c.outcome)).toEqual([
+      "weak",
+      "untried",
+      "failed",
+      "untried",
     ]);
   });
 });

@@ -143,6 +143,11 @@ chevron:
   focus. The label then starts on the rows' own column — a quiet group header
   (`DataViewProps.groupHeaders="quiet"`). `aria-expanded`, `aria-controls` and
   the click target are unchanged.
+- **`"none"`** — no chevron and no reserved box. The row is still the
+  disclosure control (`aria-expanded`, `aria-controls`, click), and TONE carries
+  the state: a collapsed header is muted (its actions re-toned to the
+  foreground, so a header toggle never reads disabled). `SectionCard`'s
+  `inspector` variant.
 
 The trailing reveal is `hover-reveal`'s `useHoverReveal` (per-instance state;
 pointer enter/leave on the row box, keyboard-only focus on the control, each

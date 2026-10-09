@@ -1,13 +1,17 @@
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
+import { cancelSupervisedJobByLock } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { youtubeVideoId } from "@plugins/integrations/plugins/youtube/core";
 import { songUltimateGuitar } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server";
 import {
+  cancelUgAlignment,
   getUgAlignment,
   realignUg,
   refuseUgAlignmentVideo,
   resolveUgAlignment,
   setUgAlignmentVideo,
+  type AlignmentStatus,
 } from "../../core";
+import { untryCandidates } from "./decide";
 import { ugAlignJob } from "./job";
 import { songUgAlignment } from "./tables";
 
@@ -67,10 +71,15 @@ export const handleSetUgAlignmentVideo = implement(
   },
 );
 
-/** Align again to the current video, even when the record is current (`queued` forces a run). */
+/**
+ * Align again ("Retry"): to the current video, even when the record is current
+ * (`queued` forces a run); or, with no video and the resolver owning the
+ * choice, go on with the walk — `queued` with the candidates kept resumes it
+ * from the next untried one (a search that never finished searches again).
+ */
 export const handleRealignUg = implement(realignUg, async ({ params }) => {
   const row = await songUgAlignment.get(params.id);
-  if (row === undefined || row.videoId === null) {
+  if (row === undefined || (row.videoId === null && row.pick !== "auto")) {
     throw new HttpError(409, "Set a YouTube video before aligning.");
   }
   await songUgAlignment.upsert(params.id, {
@@ -82,6 +91,41 @@ export const handleRealignUg = implement(realignUg, async ({ params }) => {
   await ugAlignJob.enqueue({ songId: params.id });
   return { ok: true as const };
 });
+
+/** The statuses a Cancel can stop: a job is queued for the song, or running. */
+const CANCELLABLE: ReadonlySet<AlignmentStatus> = new Set<AlignmentStatus>([
+  "queued",
+  "resolving",
+  "running",
+]);
+
+/**
+ * Stop the song's alignment. The row is written `cancelled` FIRST — so the run
+ * the signal stops, and a queued run that has not started, both find nothing
+ * to do — with a candidate being tried put back to untried (a retry tries it).
+ * Then the run holding the song's lock is stopped through
+ * `cancelSupervisedJobByLock`, which records it as cancelled (no retry, no
+ * report); its `onEnded` writes `cancelled` again over anything the child wrote
+ * meanwhile. A queued row may have no run yet: `not-running` is fine.
+ */
+export const handleCancelUgAlignment = implement(
+  cancelUgAlignment,
+  async ({ params }) => {
+    const row = await songUgAlignment.get(params.id);
+    if (row === undefined || !CANCELLABLE.has(row.status)) {
+      throw new HttpError(409, "No alignment is in progress.");
+    }
+    await songUgAlignment.upsert(params.id, {
+      status: "cancelled",
+      phase: null,
+      error: null,
+      errorPermanent: false,
+      candidates: untryCandidates(row.candidates),
+    });
+    await cancelSupervisedJobByLock(ugAlignJob, { songId: params.id });
+    return { ok: true as const };
+  },
+);
 
 /** "Find a video": forget the video and the candidates, and let the resolver choose. */
 export const handleResolveUgAlignment = implement(

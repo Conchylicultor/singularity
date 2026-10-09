@@ -47,18 +47,27 @@ export interface SonataSectionArea {
 export type SonataSection = DetailSection<SonataSectionProps> &
   SonataSectionArea;
 
+// The player's column is an INSPECTOR: flat, rule-divided, chevron-free
+// sections running edge to edge beside the display, not a stack of cards.
 const sonataSections = defineDetailSections<
   SonataSectionProps,
   SonataSectionArea
->();
+>({ chrome: "inspector" });
 
 /**
  * The per-section chrome, for the section column's host (`library`'s
- * `SectionPane`). The column owns its own layout — a collapse-to-rail strip and
- * two `area`-filtered `.Render` zones — so it paints each section through this
- * instead of the primitive's single-stack `Host`.
+ * `SectionPane`). The column owns its own layout — two `area`-filtered
+ * `.Render` zones inside one `SonataSectionStack` — so it paints each section
+ * through this instead of the primitive's single-stack `Host`.
  */
 export const SonataSectionItem = sonataSections.SectionItem;
+
+/**
+ * The stack the section column's zones sit in — the inspector rhythm (no gap,
+ * no inset; the sections' own rules divide them), owned by the primitive so the
+ * column never hand-sets a gap or padding of its own.
+ */
+export const SonataSectionStack = sonataSections.SectionStack;
 
 /**
  * The Sonata app's extension axes — what a display hosts and what the app

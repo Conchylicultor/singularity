@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { chordPitches, invertVoicing, nearestVoicing } from "./voicing";
+import {
+  chordPitches,
+  chordVoicing,
+  invertVoicing,
+  nearestVoicing,
+} from "./voicing";
 import { parseChordSymbol } from "./parse";
 
 /** Pitch-class of each voicing's bass, in inversion order. */
@@ -34,7 +39,9 @@ function maxConsecutiveSpan(voicings: number[][]): number {
 describe("nearestVoicing", () => {
   it("returns root position unchanged for the first chord (prev null)", () => {
     const tones = chordPitches(PROGRESSION[0]!, 4);
-    expect(nearestVoicing(tones, null)).toEqual([...tones].sort((a, b) => a - b));
+    expect(nearestVoicing(tones, null)).toEqual(
+      [...tones].sort((a, b) => a - b),
+    );
   });
 
   it("voice-leads a C→G→Am→F progression within a tight register window", () => {
@@ -51,14 +58,17 @@ describe("nearestVoicing", () => {
     expect(maxConsecutiveSpan(voiced)).toBeLessThanOrEqual(12);
 
     // Always-root-position spreads much wider across consecutive chords.
-    expect(maxConsecutiveSpan(rootPos)).toBeGreaterThan(maxConsecutiveSpan(voiced));
+    expect(maxConsecutiveSpan(rootPos)).toBeGreaterThan(
+      maxConsecutiveSpan(voiced),
+    );
   });
 
   it("preserves the pitch-class set (octave/inversion choice only)", () => {
     const tones = chordPitches(PROGRESSION[1]!, 4);
     const prev = nearestVoicing(chordPitches(PROGRESSION[0]!, 4), null);
     const v = nearestVoicing(tones, prev);
-    const pcs = (xs: number[]) => [...new Set(xs.map((p) => ((p % 12) + 12) % 12))].sort();
+    const pcs = (xs: number[]) =>
+      [...new Set(xs.map((p) => ((p % 12) + 12) % 12))].sort();
     expect(pcs(v)).toEqual(pcs(tones));
   });
 });
@@ -127,5 +137,29 @@ describe("chordPitches", () => {
     expect(
       chordPitches({ root: 7, quality: "dom7", intervals: [4, 8, 10] }, 4),
     ).toEqual([67, 71, 75, 77]);
+  });
+});
+
+describe("chordVoicing", () => {
+  it("root position at octave 4 without a slash bass", () => {
+    expect(chordVoicing({ root: 0, quality: "maj" })).toEqual([60, 64, 67]);
+  });
+
+  it("rotates a chord-tone slash bass to the bottom", () => {
+    expect(chordVoicing({ root: 0, quality: "maj", bass: 4 })).toEqual([
+      64, 67, 72,
+    ]);
+    expect(chordVoicing({ root: 0, quality: "maj", bass: 7 })).toEqual([
+      67, 72, 76,
+    ]);
+    expect(chordVoicing({ root: 0, quality: "dom7", bass: 10 })).toEqual([
+      70, 72, 76, 79,
+    ]);
+  });
+
+  it("adds a non-chord-tone slash bass below the stack", () => {
+    expect(chordVoicing({ root: 0, quality: "maj", bass: 2 })).toEqual([
+      50, 60, 64, 67,
+    ]);
   });
 });

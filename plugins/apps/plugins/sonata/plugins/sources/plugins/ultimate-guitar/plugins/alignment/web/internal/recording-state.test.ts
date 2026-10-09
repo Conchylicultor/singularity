@@ -9,10 +9,10 @@ import {
 } from "../../core";
 import type { AlignmentRecord } from "../../core/internal/record";
 import {
+  alignProgress,
   formatTranspose,
   recordingState,
   recordingStateLine,
-  recordingStateSummary,
 } from "./recording-state";
 
 const tab: UgTab = {
@@ -98,8 +98,6 @@ describe("recordingState", () => {
     expect(recordingStateLine(state)).toBe(
       "Aligned 82% · +2 (capo 2) semitones",
     );
-    // The collapsed header gets the short form; the sentence stays in the body.
-    expect(recordingStateSummary(state)).toBe("82%");
   });
 
   it("reads a transpose above a tritone as the downward interval", () => {
@@ -164,9 +162,8 @@ describe("recordingState", () => {
       tab,
     );
     expect(recordingStateLine(state)).toBe(
-      "Weak match (31%) — playing it, but the timing is unconfirmed; a better video may align",
+      "Weak match (31%) — timing unconfirmed",
     );
-    expect(recordingStateSummary(state)).toBe("Weak · 31%");
   });
 
   it("carries a failure's message and permanence", () => {
@@ -183,12 +180,33 @@ describe("recordingState", () => {
     });
   });
 
-  it("shows the running phase", () => {
+  it("shows the running phase as the align stage", () => {
     const state = recordingState(
       found({ status: "running", phase: "aligning" }),
       tab,
     );
+    expect(state).toEqual({
+      kind: "working",
+      videoId: VIDEO,
+      progress: { stage: "align", step: "aligning", candidate: null },
+    });
     expect(recordingStateLine(state)).toBe("Aligning the sheet…");
+  });
+
+  it("a queued user video has found its video: it waits in the analyse stage", () => {
+    const state = recordingState(found({ status: "queued" }), tab);
+    expect(state).toEqual({
+      kind: "working",
+      videoId: VIDEO,
+      progress: { stage: "analyse", step: "queued", candidate: null },
+    });
+    expect(recordingStateLine(state)).toBe("Waiting to start…");
+  });
+
+  it("is cancelled, with its video", () => {
+    const state = recordingState(found({ status: "cancelled" }), tab);
+    expect(state).toEqual({ kind: "cancelled", videoId: VIDEO });
+    expect(recordingStateLine(state)).toBe("Alignment cancelled");
   });
 });
 
@@ -215,19 +233,26 @@ describe("recordingState — the resolver's choice", () => {
   it("is finding a video while it searches", () => {
     const state = recordingState(found({ ...auto, status: "resolving" }), tab);
     expect(state).toEqual({
-      kind: "finding",
-      trying: null,
-      phase: null,
-      tried: 0,
+      kind: "working",
+      videoId: null,
+      progress: { stage: "find", step: "preparing", candidate: null },
     });
-    expect(recordingStateLine(state)).toBe("Finding a video…");
-    expect(recordingStateSummary(state)).toBe("Finding a video…");
+    expect(
+      recordingStateLine(
+        recordingState(
+          found({ ...auto, status: "resolving", phase: "searching" }),
+          tab,
+        ),
+      ),
+    ).toBe("Searching for a video…");
   });
 
   it("a queued new song is finding a video too, never 'no recording'", () => {
-    expect(recordingState(found({ ...auto, status: "queued" }), tab).kind).toBe(
-      "finding",
-    );
+    const state = recordingState(found({ ...auto, status: "queued" }), tab);
+    expect(state).toMatchObject({
+      kind: "working",
+      progress: { stage: "find", step: "queued" },
+    });
   });
 
   it("names the candidate it is trying", () => {
@@ -243,8 +268,18 @@ describe("recordingState — the resolver's choice", () => {
       }),
       tab,
     );
-    expect(state).toMatchObject({ kind: "finding", tried: 1 });
-    expect(recordingStateLine(state)).toBe("Trying Wonderwall (aligning)…");
+    expect(state).toEqual({
+      kind: "working",
+      videoId: null,
+      progress: {
+        stage: "align",
+        step: "aligning",
+        candidate: { title: "Wonderwall", attempt: 2, maxAttempts: 2 },
+      },
+    });
+    expect(recordingStateLine(state)).toBe(
+      "Aligning the sheet (video 2 of 2)…",
+    );
   });
 
   it("needs a video once the candidates tried all fell short, with the count and best score", () => {
@@ -263,9 +298,8 @@ describe("recordingState — the resolver's choice", () => {
     );
     expect(state).toEqual({ kind: "needs-video", tried: 3, best: 0.31 });
     expect(recordingStateLine(state)).toBe(
-      "Needs a video — playing the best try, a weak match (31%, 3 tried); the timing is unconfirmed",
+      "Weak match (31%) — timing unconfirmed",
     );
-    expect(recordingStateSummary(state)).toBe("Needs a video");
   });
 
   it("needs a video with nothing scored says so without a percentage", () => {
@@ -273,7 +307,7 @@ describe("recordingState — the resolver's choice", () => {
       recordingStateLine(
         recordingState(found({ ...auto, status: "needs-video" }), tab),
       ),
-    ).toBe("Needs a video (0 tried)");
+    ).toBe("No video aligned (0 tried)");
   });
 
   it("an automatically picked video reads like any other once aligned", () => {
@@ -287,6 +321,89 @@ describe("recordingState — the resolver's choice", () => {
 
   it("a user row with no video is 'no recording'", () => {
     expect(recordingState(found({ videoId: null }), tab).kind).toBe("no-video");
+  });
+});
+
+describe("alignProgress", () => {
+  const row = (over: Partial<UgAlignmentRow>): UgAlignmentRow =>
+    (found(over) as { row: UgAlignmentRow }).row;
+  const auto = { pick: "auto" as const, videoId: null };
+
+  it("is null when no job is on the row", () => {
+    expect(alignProgress(row({ status: "aligned" }))).toBeNull();
+    expect(alignProgress(row({ status: "cancelled" }))).toBeNull();
+    expect(alignProgress(row({ status: "failed" }))).toBeNull();
+  });
+
+  it("maps the beat analysis's phases to the analyse stage", () => {
+    for (const phase of [
+      "waiting",
+      "fetching",
+      "installing",
+      "analysing",
+    ] as const) {
+      expect(alignProgress(row({ status: "running", phase }))).toEqual({
+        stage: "analyse",
+        step: phase,
+        candidate: null,
+      });
+    }
+  });
+
+  it("a candidate just marked trying, before its first phase, is preparing in the analyse stage", () => {
+    expect(
+      alignProgress(
+        row({
+          ...auto,
+          status: "resolving",
+          candidates: [candidate("AAAAAAAAAAA", { outcome: "trying" })],
+        }),
+      ),
+    ).toEqual({
+      stage: "analyse",
+      step: "preparing",
+      candidate: {
+        title: "YouTube video AAAAAAAAAAA",
+        attempt: 1,
+        maxAttempts: 1,
+      },
+    });
+  });
+
+  it("a resumed walk (queued with candidates kept) is past finding", () => {
+    expect(
+      alignProgress(
+        row({
+          ...auto,
+          status: "queued",
+          candidates: [
+            candidate("AAAAAAAAAAA", { outcome: "weak", score: 0.2 }),
+            candidate("BBBBBBBBBBB"),
+          ],
+        }),
+      ),
+    ).toEqual({ stage: "analyse", step: "queued", candidate: null });
+  });
+
+  it("counts this run's tries, capped by what is left to try", () => {
+    const progress = alignProgress(
+      row({
+        ...auto,
+        status: "resolving",
+        phase: "fetching",
+        candidates: [
+          candidate("AAAAAAAAAAA", { outcome: "weak", score: 0.2 }),
+          candidate("BBBBBBBBBBB", { outcome: "trying", title: "Live" }),
+          candidate("CCCCCCCCCCC"),
+          candidate("DDDDDDDDDDD"),
+        ],
+      }),
+    );
+    expect(progress?.candidate).toEqual({
+      title: "Live",
+      attempt: 2,
+      maxAttempts: 3,
+    });
   });
 });
 

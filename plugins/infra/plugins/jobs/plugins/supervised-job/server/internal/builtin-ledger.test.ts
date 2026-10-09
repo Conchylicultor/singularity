@@ -29,7 +29,12 @@ import {
   readRecordedFailure,
   recordRunError,
 } from "./builtin-ledger";
-import { defineSupervisedJob } from "./define-supervised-job";
+import { cancelSupervisedJobByLock } from "./cancel";
+import {
+  defineSupervisedJob,
+  endAttempt,
+  type SupervisedJobEndedMeta,
+} from "./define-supervised-job";
 import { _supervisedJobRuns } from "./tables";
 
 const ended = (
@@ -117,7 +122,11 @@ describe("applyFailurePolicy", () => {
       ...base,
       terminal: ended(1),
       attempt: 1,
-      failure: { errorMessage: "ECONNRESET", retryable: true },
+      failure: {
+        errorMessage: "ECONNRESET",
+        retryable: true,
+        cancelled: false,
+      },
     };
     expect(applyFailurePolicy(args)).toBe("retry");
     expect(applyFailurePolicy(args)).toBe("retry");
@@ -129,7 +138,7 @@ describe("applyFailurePolicy", () => {
         ...base,
         terminal: ended(HARD_KILL_EXIT_CODE),
         attempt: 2,
-        failure: { errorMessage: null, retryable: null },
+        failure: { errorMessage: null, retryable: null, cancelled: false },
       }),
     ).toBe("retry");
   });
@@ -140,7 +149,11 @@ describe("applyFailurePolicy", () => {
         ...base,
         terminal: ended(1),
         attempt: 1,
-        failure: { errorMessage: "plan refused", retryable: false },
+        failure: {
+          errorMessage: "plan refused",
+          retryable: false,
+          cancelled: false,
+        },
       }),
     );
     expect(isNonRetryableError(err)).toBe(true);
@@ -150,13 +163,37 @@ describe("applyFailurePolicy", () => {
     expect(err.message).toContain("plan refused");
   });
 
+  test("a cancelled run is done on any attempt — no retry, no dead-letter", () => {
+    for (const attempt of [1, 3]) {
+      expect(
+        applyFailurePolicy({
+          ...base,
+          terminal: ended(143, "TERM"),
+          attempt,
+          failure: { errorMessage: null, retryable: null, cancelled: true },
+        }),
+      ).toBe("done");
+    }
+  });
+
+  test("a TERM with no cancel stamp (a reboot) stays a retryable failure", () => {
+    expect(
+      applyFailurePolicy({
+        ...base,
+        terminal: ended(143, "TERM"),
+        attempt: 1,
+        failure: { errorMessage: null, retryable: null, cancelled: false },
+      }),
+    ).toBe("retry");
+  });
+
   test("the last attempt dead-letters; with nothing recorded it points at the transcript", () => {
     const err = thrown(() =>
       applyFailurePolicy({
         ...base,
         terminal: ended(143, "TERM"),
         attempt: 3,
-        failure: { errorMessage: null, retryable: null },
+        failure: { errorMessage: null, retryable: null, cancelled: false },
       }),
     );
     expect(err).toBeInstanceOf(NonRetryableError);
@@ -166,6 +203,130 @@ describe("applyFailurePolicy", () => {
     );
   });
 });
+
+describe("endAttempt", () => {
+  type Meta = SupervisedJobEndedMeta<{ target: string }>;
+
+  function end(opts: {
+    builtin: boolean;
+    terminal: RunTerminal;
+    cancelled: boolean;
+    seen: Meta[];
+  }) {
+    return endAttempt({
+      jobName: "t.end",
+      builtin: opts.builtin,
+      runAttempts: 3,
+      readFailure: () =>
+        Promise.resolve({
+          errorMessage: null,
+          retryable: null,
+          cancelled: opts.cancelled,
+        }),
+      onEnded: (_runId, _terminal, meta) => {
+        opts.seen.push(meta);
+        return Promise.resolve();
+      },
+      runId: "r1",
+      terminal: opts.terminal,
+      attempt: 1,
+      input: { target: "a" },
+    });
+  }
+
+  test("a cancelled built-in run closes as done, and onEnded sees cancelled", async () => {
+    const seen: Meta[] = [];
+    expect(
+      await end({
+        builtin: true,
+        terminal: ended(143, "TERM"),
+        cancelled: true,
+        seen,
+      }),
+    ).toBe("done");
+    expect(seen).toEqual([
+      { input: { target: "a" }, attempt: 1, cancelled: true },
+    ]);
+  });
+
+  test("an unstamped TERM retries, and onEnded sees cancelled: false", async () => {
+    const seen: Meta[] = [];
+    expect(
+      await end({
+        builtin: true,
+        terminal: ended(143, "TERM"),
+        cancelled: false,
+        seen,
+      }),
+    ).toBe("retry");
+    expect(seen.map((m) => m.cancelled)).toEqual([false]);
+  });
+
+  test("a success is never cancelled, even when the stamp landed first", async () => {
+    const seen: Meta[] = [];
+    expect(
+      await end({ builtin: true, terminal: ended(0), cancelled: true, seen }),
+    ).toBe("done");
+    expect(seen.map((m) => m.cancelled)).toEqual([false]);
+  });
+
+  test("an own ledger decides by exit code alone", async () => {
+    const seen: Meta[] = [];
+    expect(
+      await end({
+        builtin: false,
+        terminal: ended(143, "TERM"),
+        cancelled: true,
+        seen,
+      }),
+    ).toBe("retry");
+    expect(seen.map((m) => m.cancelled)).toEqual([false]);
+  });
+});
+
+describe("cancelSupervisedJobByLock", () => {
+  const channel = { publishAll: () => {} } as unknown as LogChannel;
+
+  test("a job with no lock, or with an own ledger, throws", async () => {
+    const unlocked = defineSupervisedJob({
+      name: "supervised-job.test.unlocked",
+      description: "Test job.",
+      input: z.object({}),
+      channel,
+      argv: () => ({ argv: ["true"] }),
+    });
+    expect(
+      (await rejectionOf(cancelSupervisedJobByLock(unlocked, {}))).message,
+    ).toContain("declares `lock`");
+
+    const own = defineSupervisedJob({
+      name: "supervised-job.test.ownledger",
+      description: "Test job.",
+      input: z.object({}),
+      channel,
+      argv: () => ({ argv: ["true"] }),
+      ledger: {
+        kindId: "supervisedjobtestownledger",
+        claim: () => Promise.resolve(null),
+        listUnfinished: () => Promise.resolve([]),
+        setPid: () => Promise.resolve(),
+        closeRow: () => Promise.resolve(),
+      },
+    });
+    expect(
+      (await rejectionOf(cancelSupervisedJobByLock(own, {}))).message,
+    ).toContain("declares `lock`");
+  });
+});
+
+async function rejectionOf(promise: Promise<unknown>): Promise<Error> {
+  try {
+    await promise;
+  } catch (err) {
+    return err as Error;
+  }
+  throw new Error("expected a rejection");
+}
 
 describe("the built-in ledger (real DB)", () => {
   let t: TestDb;
@@ -234,7 +395,43 @@ describe("the built-in ledger (real DB)", () => {
     expect(await readRecordedFailure(runId, t.db)).toEqual({
       errorMessage: "bad plan",
       retryable: false,
+      cancelled: false,
     });
     await t.db.execute(sql`DELETE FROM supervised_job_runs`);
+  });
+
+  test("markCancelled stamps the open run holding the lock, and only it", async () => {
+    const ledger = builtinLedgerFor("t.cancel", t.db);
+    const meta = { attempt: 1, workflowRunId: "wf" };
+    const a = await ledger.claim({ ...meta, lockKey: "song-a" });
+    const b = await ledger.claim({ ...meta, lockKey: "song-b" });
+    if (a === null || b === null) throw new Error("the claims must win");
+
+    expect(await ledger.markCancelled("song-a")).toBe(a);
+    expect((await readRecordedFailure(a, t.db)).cancelled).toBe(true);
+    expect((await readRecordedFailure(b, t.db)).cancelled).toBe(false);
+
+    // Closed, the run no longer holds the lock: nothing to cancel.
+    await ledger.closeRow(a, ended(143, "TERM"));
+    expect(await ledger.markCancelled("song-a")).toBeNull();
+    // Another job's run under the same key is not this job's.
+    expect(
+      await builtinLedgerFor("t.cancel.other", t.db).markCancelled("song-b"),
+    ).toBeNull();
+    await t.db.execute(sql`DELETE FROM supervised_job_runs`);
+  });
+
+  test("cancelSupervisedJobByLock with no open run answers not-running", async () => {
+    const job = defineSupervisedJob({
+      name: "supervised-job.test.locked",
+      description: "Test job.",
+      input: z.object({ song: z.string() }),
+      channel: { publishAll: () => {} } as unknown as LogChannel,
+      lock: (input) => input.song,
+      argv: () => ({ argv: ["true"] }),
+    });
+    expect(
+      await cancelSupervisedJobByLock(job, { song: "nobody" }, t.db),
+    ).toEqual({ kind: "not-running" });
   });
 });

@@ -19,14 +19,13 @@ import {
  * list of "key established at beat X" entries; here we mark each one with a
  * strong vertical bar at the boundary where the key takes hold — a highlighted
  * sibling of the muted bar ticks, drawn on the SAME shared rail band so the two
- * line up pixel-for-pixel — captioned by a small neutral chip naming the key,
- * floating in the headroom just above the rail. A song that moves through three
- * keys reads as three change bars at a glance, each labelled with its key.
- *
- * The change bar sits on the rail (via `RAIL_BAND_Y`); the chip floats above
- * it, leaving the rail itself clean. The section bands own the bottom headroom,
- * so chip / bar / bands stack without fighting for the same pixels.
+ * line up pixel-for-pixel. The key's name is the bar's hover tooltip, not a
+ * floating caption: the band above the rail belongs to the chord lane.
  */
+
+/** Width of a key bar's hover hit box, and where the 2px bar sits inside it. */
+const HIT_PX = 8;
+const BAR_INSET_PX = 3;
 
 /** Compact label, e.g. `C maj` / `A min`. */
 function keyLabel(key: KeySignature): string {
@@ -50,32 +49,28 @@ export function KeyFlags({
   return (
     <Layer decorative>
       {entries.map((e) => (
-        // The flag's own coordinate host, at the beat's fraction along the rail.
+        // A hit box a few px wider than the bar, over the rail band, so the
+        // tooltip is reachable; it re-enables pointer events for its own box
+        // only, and a press still bubbles to the scrubber and seeks.
         <Placed
           key={`${e.beat}-${keyLabel(e.key)}`}
-          x={{ start: pct(beatToFraction(e.beat)) }}
-          y="fill"
-          title={keyLabel(e.key)}
+          x={{
+            start: pct(beatToFraction(e.beat)),
+            size: HIT_PX,
+            shift: -BAR_INSET_PX,
+          }}
+          y={RAIL_BAND_Y}
+          className="pointer-events-auto"
+          title={`Key: ${keyLabel(e.key)}`}
         >
           {/* Strong vertical bar marking where this key takes hold — a
-              highlighted sibling of the muted bar ticks, taking the same shared
-              rail-band extent so the two align pixel-for-pixel. */}
+              highlighted sibling of the muted bar ticks, spanning the shared
+              rail band so the two align pixel-for-pixel. */}
           <Placed
-            x={{ start: 0, size: 2 }}
-            y={RAIL_BAND_Y}
+            x={{ start: BAR_INSET_PX, size: 2 }}
+            y="fill"
             className="bg-foreground/60"
           />
-          {/* Small neutral key chip — names the key without a colored band,
-              floating in the headroom just above the rail. */}
-          <Placed
-            as="span"
-            x={{ start: 4 }}
-            y={{ end: "50%" }}
-            // eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing -- leading-none keeps the key chip slim enough to match the bands below; mb-2 lifts it into the headroom above the rail (no named margin step for that offset)
-            className="mb-2 whitespace-nowrap rounded-sm bg-muted px-xs text-3xs font-medium leading-none text-foreground/80"
-          >
-            {keyLabel(e.key)}
-          </Placed>
         </Placed>
       ))}
     </Layer>

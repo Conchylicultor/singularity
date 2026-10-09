@@ -69,9 +69,9 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `Badge`
     - `formatStatusLabel`
 - Cross-plugin:
-  - Imported by: 153 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 157 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×37
     - `debug` ×34
-    - `apps` ×33
     - `conversations` ×23
     - `reports` ×11
     - `plugin-meta` ×8

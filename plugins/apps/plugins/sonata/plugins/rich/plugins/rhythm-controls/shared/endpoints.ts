@@ -3,7 +3,8 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { RhythmPatternSchema } from "./resources";
 
 /**
- * Set a song's rhythm groove: the `enabled` flag plus both hands' patterns.
+ * Set a song's rhythm groove: the `enabled` flag plus both hands' patterns,
+ * figuration ids, and the groove preset it was applied from (`null`: none).
  * Upserts the per-song extension row. The body is validated by
  * `RhythmPatternSchema` (onsets in range), so a malformed pattern is rejected
  * loudly rather than persisted.
@@ -16,5 +17,6 @@ export const setRhythmEndpoint = defineEndpoint({
     chord: RhythmPatternSchema,
     bassPatternId: z.string(),
     chordPatternId: z.string(),
+    groovePresetId: z.string().nullable(),
   }),
 });

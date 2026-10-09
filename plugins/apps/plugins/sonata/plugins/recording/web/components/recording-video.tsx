@@ -12,6 +12,7 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
@@ -54,25 +55,21 @@ function faultOf(
   return { kind: "player", code: state.code };
 }
 
-/** A signed millisecond offset as the slider reads it: "+40 ms", "0 ms", "−20 ms". */
-function formatOffset(ms: number): string {
-  if (ms > 0) return `+${ms} ms`;
-  if (ms < 0) return `−${-ms} ms`;
-  return "0 ms";
-}
-
 /**
  * A song's recording, for whoever shows it (the UG alignment's Recording
- * section): the YouTube video (16:9), its volume (on/off + slider) right below
- * it, and — when it drives the transport — the sync offset.
+ * section): the YouTube video (16:9) and its volume (on/off, slider, level)
+ * right below it. The sync offset is not in the card: it is the
+ * `sonata.recording` config's `syncOffsetMs` (Settings → Config), still applied
+ * to the driver.
  *
  * It drives the transport exactly when the open score is timed on this video
  * (`score.meta.recording.videoId === videoId`): while the player is ready it is
  * registered as the session's transport driver, so the cursor, the synth and
  * the loop follow it, and YouTube's own controls are off (the transport is the
  * app's). Otherwise the video is NOT synced: it plays on its own with YouTube's
- * controls, and the synth keeps the score's own timing. Switching between the
- * two re-creates the player (its controls are fixed at creation).
+ * controls, the synth keeps the score's own timing, and a "Not synced" badge
+ * sits over the video's top-left corner. Switching between the two re-creates
+ * the player (its controls are fixed at creation).
  *
  * Unmounting (the section collapsed, the player closed) unregisters the driver
  * and the iframe dies with it; playback carries on with the synth alone on the
@@ -89,14 +86,6 @@ export function RecordingVideo({ videoId }: { videoId: string }) {
         synced={synced}
       />
       <VideoVolume />
-      {synced ? (
-        <SyncOffset />
-      ) : (
-        <Text variant="caption" tone="muted">
-          Not synced — the video plays on its own; the synth keeps the sheet's
-          own timing.
-        </Text>
-      )}
     </Stack>
   );
 }
@@ -135,6 +124,7 @@ function VideoPlayer({
           controls={!synced}
           audio={{ volume: videoVolume, muted: !videoOn }}
         />
+        {!synced && <NotSyncedBadge />}
       </Clip>
       {fault?.kind === "refused" && (
         <>
@@ -156,6 +146,23 @@ function VideoPlayer({
         </Text>
       )}
     </Stack>
+  );
+}
+
+/**
+ * Over the video's top-left corner while it plays on its own (the synth keeps
+ * the sheet's own timing): a dot and "Not synced" on a translucent dark pill —
+ * the video behind is dark whatever the theme. Clicks pass through to
+ * YouTube's controls.
+ */
+function NotSyncedBadge() {
+  return (
+    <Pin to="top-left" offset="sm" decorative>
+      <Line className="gap-xs rounded-full bg-black/60 px-sm py-2xs text-white backdrop-blur-sm">
+        <span className={`${rigidClass()} size-1.5 rounded-full bg-white/50`} />
+        <Text variant="caption">Not synced</Text>
+      </Line>
+    </Pin>
   );
 }
 
@@ -191,30 +198,13 @@ function VideoVolume() {
           className="w-full"
         />
       </Fill>
-    </Line>
-  );
-}
-
-/** The milliseconds the synth (and the cursor) trail the video's reported time — the iframe's sound comes out late. */
-function SyncOffset() {
-  const { syncOffsetMs } = useConfig(recordingConfig);
-  const setConfig = useSetConfig(recordingConfig);
-  return (
-    <Line className="gap-sm">
-      <Text variant="caption" tone="muted" className={rigidClass()}>
-        Sync offset {formatOffset(syncOffsetMs)}
+      <Text
+        variant="caption"
+        tone="muted"
+        className={`${rigidClass()} w-6 text-right tabular-nums`}
+      >
+        {videoVolume}
       </Text>
-      <Fill>
-        <Slider
-          value={syncOffsetMs}
-          min={-500}
-          max={500}
-          step={10}
-          onValueChange={(v) => setConfig("syncOffsetMs", v)}
-          aria-label="Sync offset"
-          className="w-full"
-        />
-      </Fill>
     </Line>
   );
 }

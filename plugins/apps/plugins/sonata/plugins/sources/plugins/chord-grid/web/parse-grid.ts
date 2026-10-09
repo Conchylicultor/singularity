@@ -16,7 +16,7 @@
  * Plus two pieces of trivia that consume no bar:
  *
  *   - a `;` starts a comment that runs to the end of the line (`; verse`);
- *     comments are stripped before tokenizing. `;` is deliberately NOT a musical
+ *     comments are blanked before tokenizing. `;` is deliberately NOT a musical
  *     character, so it needs no positional rule to disambiguate — unlike `#`,
  *     which it replaced: `#` is the sharp, and a degree may legally *begin* with
  *     one (`♯IV`), so no position was ever safely free for it;
@@ -36,6 +36,12 @@
  *
  * Unparseable tokens never crash — they are collected into `skipped` and
  * surfaced by the loader, so typos stay visible rather than silently dropped.
+ *
+ * The parse also returns `tokens` — a classified span over the source text for
+ * every meaningful piece (chord, degree, hold, group parens, comment, key
+ * directive) — which the editor colours. A span is `invalid` exactly when its
+ * text went into `skipped`: both are written by the one `Marks.reject` call
+ * inside the same expansion, so the highlight and the compiler cannot disagree.
  */
 
 import type { KeySignature } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -75,12 +81,77 @@ export interface KeyChange {
   key: KeySignature;
 }
 
+/**
+ * What a span of the grid text is, for the editor's colouring. `invalid` is
+ * written only by `reject`, the same call that fills `skipped`.
+ */
+export type GridTokenKind =
+  | "chord"
+  | "degree"
+  | "hold"
+  | "group-open"
+  | "group-close"
+  | "comment"
+  | "key-directive"
+  | "key-value"
+  | "invalid";
+
+/** A classified span `[from, to)` of the grid text (UTF-16 offsets). */
+export interface GridToken {
+  from: number;
+  to: number;
+  kind: GridTokenKind;
+}
+
+/** The result of parsing a grid. */
+export interface ParsedGrid {
+  events: ChordEvent[];
+  /** Unparseable tokens, in source order per stage; never silently dropped. */
+  skipped: string[];
+  keys: KeyChange[];
+  /** Classified spans over the source text, sorted by `from`, non-overlapping. */
+  tokens: GridToken[];
+  /** Bars the grid occupies — one per top-level cell. */
+  bars: number;
+}
+
+interface Span {
+  from: number;
+  to: number;
+}
+
+/** A bare token with the span it was read from. */
+interface Item {
+  token: string;
+  span: Span;
+}
+
 /** A tokenized cell: a chord, a parenthesised group, a hold, or a key directive. */
 type Cell =
-  | { kind: "chord"; token: string }
-  | { kind: "group"; items: string[] }
-  | { kind: "hold" }
-  | { kind: "key"; arg: string };
+  | { kind: "chord"; item: Item }
+  | { kind: "group"; open: Span; close: Span; items: Item[] }
+  | { kind: "hold"; span: Span }
+  | { kind: "key"; arg: string; directive: Span; value: Span | null };
+
+/**
+ * The parse's two outputs that describe the source text — the span colouring
+ * and the typo list — written together, so a span is `invalid` exactly when
+ * its text was skipped.
+ */
+class Marks {
+  readonly tokens: GridToken[] = [];
+  readonly skipped: string[] = [];
+
+  mark(span: Span, kind: GridTokenKind): void {
+    if (span.to > span.from) this.tokens.push({ ...span, kind });
+  }
+
+  /** Record `token` as skipped and paint every one of its spans invalid. */
+  reject(token: string, ...spans: Span[]): void {
+    this.skipped.push(token);
+    for (const span of spans) this.mark(span, "invalid");
+  }
+}
 
 /**
  * The insignificant characters: whitespace and the optional `|` bar separator.
@@ -92,24 +163,28 @@ function isInsignificant(c: string): boolean {
 }
 
 /**
- * Strip line comments — lexical trivia, removed before tokenizing so `(` groups,
- * chord runs and holds never have to know about them. The terminating newline
- * survives, so a comment can't glue two lines into one cell.
+ * Blank out line comments — lexical trivia, replaced by spaces before
+ * tokenizing so `(` groups, chord runs and holds never have to know about them.
+ * Blanking (not deleting) keeps every offset equal to the source's, so the
+ * spans the tokenizer reads are spans of the text the user typed. The
+ * terminating newline survives, so a comment can't glue two lines into one cell.
  *
  * `;` carries no musical meaning, so a comment starts wherever one appears —
  * there is nothing to disambiguate against, and no position clause to remember.
  */
-function stripComments(text: string): string {
+function blankComments(text: string, marks: Marks): string {
   let out = "";
   let i = 0;
   const n = text.length;
   while (i < n) {
-    const c = text[i]!;
-    if (c === COMMENT) {
+    if (text[i] === COMMENT) {
+      const from = i;
       while (i < n && text[i] !== "\n") i++;
+      marks.mark({ from, to: i }, "comment");
+      out += " ".repeat(i - from);
       continue;
     }
-    out += c;
+    out += text[i]!;
     i++;
   }
   return out;
@@ -156,10 +231,17 @@ function readRun(text: string, start: number): { token: string; next: number } {
   return { token, next: i };
 }
 
-/** Char-scan the grid text into cells (groups contain spaces, so no naive split). */
-function tokenize(text: string): { cells: Cell[]; skipped: string[] } {
+/** The whitespace-separated items of `text`, each with its span offset by `base`. */
+function itemsOf(text: string, base: number): Item[] {
+  return [...text.matchAll(/\S+/g)].map((m) => ({
+    token: m[0],
+    span: { from: base + m.index, to: base + m.index + m[0].length },
+  }));
+}
+
+/** Char-scan the (comment-blanked) grid text into cells (groups contain spaces, so no naive split). */
+function tokenize(text: string, marks: Marks): Cell[] {
   const cells: Cell[] = [];
-  const skipped: string[] = [];
   let i = 0;
   const n = text.length;
 
@@ -173,7 +255,7 @@ function tokenize(text: string): { cells: Cell[]; skipped: string[] } {
     }
 
     if (c === ")") {
-      skipped.push(")"); // stray closer with no open group
+      marks.reject(")", { from: i, to: i + 1 }); // stray closer with no open group
       i++;
       continue;
     }
@@ -202,22 +284,33 @@ function tokenize(text: string): { cells: Cell[]; skipped: string[] } {
         i++;
       }
       if (!closed) {
-        skipped.push(text.slice(start)); // unterminated group
+        // Unterminated group: the whole rest is one typo — the `(` and every
+        // run after it (the blanked comments in between stay comments).
+        const rest = text.slice(start);
+        marks.reject(
+          rest.replace(/\s+/g, " ").trim(),
+          ...itemsOf(rest, start).map((it) => it.span),
+        );
         break;
       }
       // Group items are whitespace-separated; a chord's own `(…)` has no inner
       // space, so `G7(♯5)` stays one item.
-      const items = body.split(/\s+/).filter((t) => t.length > 0);
-      cells.push({ kind: "group", items });
+      cells.push({
+        kind: "group",
+        open: { from: start, to: start + 1 },
+        close: { from: i - 1, to: i },
+        items: itemsOf(body, start + 1),
+      });
       continue;
     }
 
     if (c === HOLD) {
-      cells.push({ kind: "hold" });
+      cells.push({ kind: "hold", span: { from: i, to: i + 1 } });
       i++;
       continue;
     }
 
+    const start = i;
     const run = readRun(text, i);
     i = run.next;
 
@@ -228,33 +321,43 @@ function tokenize(text: string): { cells: Cell[]; skipped: string[] } {
     const directive = KEY_DIRECTIVE.exec(run.token);
     if (directive) {
       let arg = directive[1]!;
+      // `key` plus its `:` / `=` — the rest of an attached run is the value.
+      const head = start + run.token.length - arg.length;
+      let value: Span | null = arg === "" ? null : { from: head, to: i };
       if (arg === "") {
         let j = i;
         while (j < n && isInsignificant(text[j]!)) j++;
         if (j < n && !isBoundary(text[j]!)) {
           const tonic = readRun(text, j);
           arg = tonic.token;
+          value = { from: j, to: tonic.next };
           i = tonic.next;
         }
       }
-      cells.push({ kind: "key", arg });
+      cells.push({
+        kind: "key",
+        arg,
+        directive: { from: start, to: head },
+        value,
+      });
       continue;
     }
 
-    cells.push({ kind: "chord", token: run.token });
+    cells.push({
+      kind: "chord",
+      item: { token: run.token, span: { from: start, to: i } },
+    });
   }
 
-  return { cells, skipped };
+  return cells;
 }
 
 /** Expand cells into timed chord events, one bar per top-level cell. */
-function expand(cells: Cell[]): {
-  events: ChordEvent[];
-  skipped: string[];
-  keys: KeyChange[];
-} {
+function expand(
+  cells: Cell[],
+  marks: Marks,
+): { events: ChordEvent[]; keys: KeyChange[]; bars: number } {
   const events: ChordEvent[] = [];
-  const skipped: string[] = [];
   const keys: KeyChange[] = [];
   let beat = 0;
   // The event a hold extends — null at the start or after a silent slot.
@@ -269,15 +372,17 @@ function expand(cells: Cell[]): {
   // caller updates `lastEvent` in the linear flow — assigning it only inside
   // this closure would defeat narrowing.
   const strike = (
-    token: string,
+    { token, span }: Item,
     start: number,
     len: number,
   ): ChordEvent | null => {
-    const data = parseChordSymbol(token) ?? parseRomanNumeral(token, key);
+    const letter = parseChordSymbol(token);
+    const data = letter ?? parseRomanNumeral(token, key);
     if (!data) {
-      skipped.push(token);
+      marks.reject(token, span);
       return null;
     }
+    marks.mark(span, letter ? "chord" : "degree");
     const ev: ChordEvent = { data, start, end: start + len };
     events.push(ev);
     return ev;
@@ -285,16 +390,22 @@ function expand(cells: Cell[]): {
 
   for (const cell of cells) {
     if (cell.kind === "chord") {
-      lastEvent = strike(cell.token, beat, BEATS_PER_BAR);
+      lastEvent = strike(cell.item, beat, BEATS_PER_BAR);
     } else if (cell.kind === "hold") {
+      marks.mark(cell.span, "hold");
       if (lastEvent) lastEvent.end += BEATS_PER_BAR;
     } else if (cell.kind === "key") {
       // Trivia, like a comment: a key directive establishes context, not a bar.
       const parsed = parseKeySignature(cell.arg);
+      const spans = cell.value
+        ? [cell.directive, cell.value]
+        : [cell.directive];
       if (!parsed) {
-        skipped.push(`key:${cell.arg}`);
+        marks.reject(`key:${cell.arg}`, ...spans);
         continue;
       }
+      marks.mark(cell.directive, "key-directive");
+      if (cell.value) marks.mark(cell.value, "key-value");
       key = parsed;
       // Two directives on the same beat: the last one wins, as it does downstream.
       if (keys.at(-1)?.beat === beat) keys[keys.length - 1] = { beat, key };
@@ -302,12 +413,15 @@ function expand(cells: Cell[]): {
       continue;
     } else {
       // group: split this one bar equally among its items.
+      marks.mark(cell.open, "group-open");
+      marks.mark(cell.close, "group-close");
       const { items } = cell;
       if (items.length > 0) {
         const sub = BEATS_PER_BAR / items.length;
         let subBeat = beat;
         for (const item of items) {
-          if (item === HOLD) {
+          if (item.token === HOLD) {
+            marks.mark(item.span, "hold");
             if (lastEvent) lastEvent.end += sub;
           } else {
             lastEvent = strike(item, subBeat, sub);
@@ -319,19 +433,18 @@ function expand(cells: Cell[]): {
     beat += BEATS_PER_BAR;
   }
 
-  return { events, skipped, keys };
+  return { events, keys, bars: beat / BEATS_PER_BAR };
 }
 
 /**
  * Parse the grid text into timed chord events plus the key changes its `key:`
- * directives establish; unparseable tokens are skipped.
+ * directives establish; unparseable tokens are skipped. Also returns the
+ * classified source spans the editor colours, and the bar count.
  */
-export function parseGrid(text: string): {
-  events: ChordEvent[];
-  skipped: string[];
-  keys: KeyChange[];
-} {
-  const { cells, skipped: tokSkipped } = tokenize(stripComments(text));
-  const { events, skipped: expSkipped, keys } = expand(cells);
-  return { events, skipped: [...tokSkipped, ...expSkipped], keys };
+export function parseGrid(text: string): ParsedGrid {
+  const marks = new Marks();
+  const cells = tokenize(blankComments(text, marks), marks);
+  const { events, keys, bars } = expand(cells, marks);
+  const tokens = marks.tokens.toSorted((a, b) => a.from - b.from);
+  return { events, skipped: marks.skipped, keys, tokens, bars };
 }

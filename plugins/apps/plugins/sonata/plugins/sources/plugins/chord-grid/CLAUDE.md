@@ -135,8 +135,14 @@ directives establish); the selected voicing strategy from the shared
     - `apps/sonata/shell.useSonataApp`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/cluster.Cluster`
+    - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/persistent-draft.useDraft`
+    - `primitives/syntax-highlight/overlay-textarea.OverlayTextarea`
     - `ui/icons.Icon`
 - Server:
   - Uses:

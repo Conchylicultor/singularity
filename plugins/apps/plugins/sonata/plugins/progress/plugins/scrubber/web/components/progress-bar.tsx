@@ -17,7 +17,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { SonataProgress } from "../slots";
-import { RAIL_HEIGHT } from "../rail-geometry";
+import { LANE_HEIGHT, RAIL_HEIGHT } from "../rail-geometry";
 
 /**
  * Format elapsed seconds as `m:ss.s` (e.g. 95.4 → "1:35.4"). Rounds to tenths
@@ -179,8 +179,11 @@ export function ProgressBar() {
   // `fill`, so the slot's cell grows and this box fills it.
   return (
     <Stack direction="row" align="center" gap="md" className={fillClasses("x")}>
-      {/* Interactive track. Extra vertical height (py) reserves headroom above
-          and below for markers; the track itself is centered within it. */}
+      {/* Interactive track. A constant `LANE_HEIGHT` of top room hosts the
+          lane band above the rail (`LANE_ABOVE_Y` — the chord lane), reserved
+          whether or not a marker draws there so the strip height never jumps;
+          pressing in it scrubs like the rail, since the whole box is the
+          slider. */}
       <div
         ref={sliderRef}
         role="slider"
@@ -196,76 +199,84 @@ export function ProgressBar() {
         // This is already prettier's own output, so the format pass is a no-op
         // here (see `lint-directives-stable`).
         // eslint-disable-next-line layout/no-adhoc-layout -- flexible track fills the row; a role="slider" positioning context with pointer handlers has no primitive home
-        className={"relative flex-1 py-md" + (ready ? " cursor-pointer" : "")}
+        className={"relative flex-1" + (ready ? " cursor-pointer" : "")}
+        style={{ paddingTop: LANE_HEIGHT }}
       >
-        {/* Layering (bottom → top): the rail track + fill are the background
+        {/* The rail region — the positioning context every marker and the
+            playhead resolve against. Extra vertical height (py) reserves
+            headroom above and below the rail for markers; the rail is centered
+            within it (`RAIL_BAND_Y` is 50% of THIS box), and the lane band sits
+            just above its top edge, in the slider's reserved top room. */}
+        <div className="relative py-md">
+          {/* Layering (bottom → top): the rail track + fill are the background
             bar, the marker layer is the annotation stratum painted *on* the
             bar, and the playhead handle is the foreground knob. This z-order
             (rail → markers → handle) is why bar ticks must live in the marker
             layer rather than overhang the rail: they read as notches on the
             bar's surface, with the handle still sitting readably on top. */}
 
-        {/* The track rail, centered within the region. Its thickness is the
+          {/* The track rail, centered within the region. Its thickness is the
             single source the on-rail markers (ticks, key bars) align to.
             `<Clip>` — the sanctioned clipping box — keeps the scaleX-driven
             fill inside the rail's rounded cap without per-frame width
             mutations. It is the primitive rather than raw `overflow-hidden`
             because that removes the violation outright: no positional lint
             directive here for a later format pass to move off its target. */}
-        <Clip
-          className="relative rounded-full bg-muted"
-          style={{ height: RAIL_HEIGHT }}
-        >
-          {/* Filled portion up to the playhead. Driven by `transform: scaleX`
+          <Clip
+            className="relative rounded-full bg-muted"
+            style={{ height: RAIL_HEIGHT }}
+          >
+            {/* Filled portion up to the playhead. Driven by `transform: scaleX`
               from the cursor subscription (origin-left), so the playback
               advance composites on the GPU and emits no counted DOM mutation. */}
-          <Layer
-            ref={fillRef}
-            className="origin-left bg-primary"
-            style={{ transform: "scaleX(0)" }}
-          />
-        </Clip>
+            <Layer
+              ref={fillRef}
+              className="origin-left bg-primary"
+              style={{ transform: "scaleX(0)" }}
+            />
+          </Clip>
 
-        {/* Marker layer — spans the full region (not just the rail) so markers
+          {/* Marker layer — spans the full region (not just the rail) so markers
             have vertical headroom for labels/bands above and below the track.
             Painted above the rail so on-rail markers (bar ticks) are visible;
             pointer-transparent so clicks fall through to the seek track; each
             marker anchors itself horizontally via `beatToFraction`. */}
-        <Layer decorative>
-          {markers.map((m) =>
-            renderIsolated(
-              SonataProgress.Marker,
-              m as unknown as Contribution,
-              {
-                score,
-                beatToFraction,
-              },
-            ),
-          )}
-        </Layer>
+          <Layer decorative>
+            {markers.map((m) =>
+              renderIsolated(
+                SonataProgress.Marker,
+                m as unknown as Contribution,
+                {
+                  score,
+                  beatToFraction,
+                },
+              ),
+            )}
+          </Layer>
 
-        {/* Playhead handle — foreground, above both rail and markers. A
+          {/* Playhead handle — foreground, above both rail and markers. A
             full-bleed layer driven by `transform: translateX(<fraction>%)` from
             the cursor subscription (% is relative to the full-width layer, so it
             tracks the track), with the knob pinned at the layer's left edge and
             self-centered. transform keeps the advance off the React/DOM-mutation
             path. */}
-        {ready ? (
-          <Layer
-            ref={handleRef}
-            decorative
-            style={{ transform: "translateX(0)" }}
-          >
-            {/* The knob sits at the carrier's left edge, self-centered on both
+          {ready ? (
+            <Layer
+              ref={handleRef}
+              decorative
+              style={{ transform: "translateX(0)" }}
+            >
+              {/* The knob sits at the carrier's left edge, self-centered on both
                 axes; the carrier's own translateX is what places it along the
                 track (`translate` and `transform` compose). */}
-            <Placed
-              x={{ start: 0, shift: "-50%" }}
-              y={{ center: "50%" }}
-              className="size-3.5 rounded-full border-2 border-background bg-primary shadow"
-            />
-          </Layer>
-        ) : null}
+              <Placed
+                x={{ start: 0, shift: "-50%" }}
+                y={{ center: "50%" }}
+                className="size-3.5 rounded-full border-2 border-background bg-primary shadow"
+              />
+            </Layer>
+          ) : null}
+        </div>
       </div>
 
       {/* Minimal elapsed / total time readout (m:ss.s). The current time is

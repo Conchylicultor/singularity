@@ -37,6 +37,7 @@ import {
 import { applyModifierTail } from "./chord-body";
 import { formatChordSymbol, formatSpelledChordSymbol } from "./chords";
 import { tonicPc } from "./key-detect";
+import { scaleOf } from "./scale";
 
 /** Roman-numeral glyph per 1-based diatonic degree. */
 const NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII"] as const;
@@ -53,17 +54,12 @@ interface Degree {
 }
 
 /**
- * Semitones above the tonic of each diatonic degree, per mode — the *forward*
- * degree model (`degree + accidental → interval`) that `parseRomanNumeral` reads.
- * The `*_DEGREES` tables below are its inverse (`interval → degree`), picking one
- * conventional spelling per chromatic interval; `roman.test.ts` asserts the two
- * agree, so the numeral round-trip is total.
- */
-const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11] as const;
-const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10] as const; // natural minor
-
-/**
- * Semitone interval above the tonic → conventional Roman degree, in a MAJOR key.
+ * Semitone interval above the tonic → conventional Roman degree, in a MAJOR key
+ * — the inverse of the forward degree model (`scaleOf`, `degree + accidental →
+ * interval`) that `parseRomanNumeral` reads, picking one conventional spelling
+ * per chromatic interval; `roman.test.ts` asserts the two agree, so the numeral
+ * round-trip is total.
+ *
  * Diatonic degrees (0,2,4,5,7,9,11) read bare; chromatic roots take the
  * conventional pop/jazz reading — the raised fourth (♯IV, the tritone that
  * pulls to V) sharp, the borrowed thirds/sixths/sevenths (♭III ♭VI ♭VII) and the
@@ -363,8 +359,7 @@ export function parseRomanNumeral(
 
   const accText = m[1]!;
   const acc = accText === "" ? 0 : accText === "♯" || accText === "#" ? 1 : -1;
-  const scale = key.mode === "major" ? MAJOR_SCALE : MINOR_SCALE;
-  const root = pc12(tonicPc(key.tonic) + scale[n - 1]! + acc);
+  const root = pc12(tonicPc(key.tonic) + scaleOf(key.mode)[n - 1]! + acc);
 
   const { quality } = head;
   const symbol = formatChordSymbol({ root, quality }) + tail.modSuffix;

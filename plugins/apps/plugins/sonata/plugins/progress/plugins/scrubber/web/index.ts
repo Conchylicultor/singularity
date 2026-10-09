@@ -4,7 +4,12 @@ import { ProgressBar } from "./components/progress-bar";
 import { SonataProgress } from "./slots";
 
 export { SonataProgress } from "./slots";
-export { RAIL_HEIGHT, RAIL_BAND_Y } from "./rail-geometry";
+export {
+  RAIL_HEIGHT,
+  RAIL_BAND_Y,
+  LANE_HEIGHT,
+  LANE_ABOVE_Y,
+} from "./rail-geometry";
 
 export default {
   description:

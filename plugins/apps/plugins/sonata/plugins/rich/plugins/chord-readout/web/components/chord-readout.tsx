@@ -1,275 +1,191 @@
 import { useMemo } from "react";
-import {
-  useCursorSelector,
-  useSession,
-} from "@plugins/apps/plugins/sonata/plugins/session/web";
-import {
-  SectionLabel,
-  Text,
-} from "@plugins/primitives/plugins/css/plugins/text/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import {
   chordPitches,
+  chordVoicing,
   invertVoicing,
   formatChordSymbolWithBass,
   romanNumeral,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
+import type { KeyboardProps } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import {
-  Keyboard,
-  useSonataKeySkin,
-} from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
-import { pitchKeyboardHeight } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/core";
-import { usePitchGeometry } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/web";
-import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+  KeyboardCaption,
+  ReadoutKeyboard,
+  useReadoutPlane,
+} from "@plugins/apps/plugins/sonata/plugins/rich/plugins/readout-keyboard/web";
 import {
+  accidentalGlyph,
   effectiveKeyAt,
-  type Annotation,
-  type ChordData,
+  makeKeySpeller,
+  type KeySpeller,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import {
+  useCurrentChord,
+  useShowInversions,
+} from "../internal/use-current-chord";
 
-/** Inversion row labels by index (0 = root position). */
+/** Inversion caption leads by index (0 = root position). */
 const ORDINALS = ["Root", "1st", "2nd", "3rd", "4th", "5th"];
 
-/**
- * Default keyboard window: C4 (60) … B6 (95), three octaves — enough for a triad
- * or 7th chord and all its inversions, with room to spare on both sides. Held
- * fixed across chords wherever it fits, so changing chord only re-lights keys
- * instead of re-laying-out the whole keyboard (no flicker).
- */
-const KB_LOW = 60;
-const KB_HIGH = 95;
-const KB_CENTER = (KB_LOW + KB_HIGH) / 2;
-
-/** Stable "nothing lit" highlight for the no-chord keyboard (see `fitted`). */
+/** Stable "nothing lit" voicing for the resting keyboard. */
 const NO_KEYS: readonly number[] = [];
 
+const pc12 = (p: number): number => ((p % 12) + 12) % 12;
+
 /**
- * Fit a chord's inversions to a keyboard window: octave-shift them toward the
- * center of the default window, then widen that window (in whole octaves) if
- * anything still falls outside it.
- *
- * This is a CONTENT fit and nothing else. Whether the resulting range tiles
- * flush is the layout's business — `pitchGeometry` snaps its own range — so a
- * chord that needs four octaves gets four octaves here and the keyboard decides
- * what to do with them.
- *
- * The shift is a multiple of 12 because the keyboard illustrates chord *shape*,
- * not sounding octave: an octave shift is free, anything else would light the
- * wrong keys. It's computed over ALL inversions at once, so the frame is stable
- * whether or not they're expanded and the bass visibly climbs from row to row.
- *
- * Widening is what makes wide chords honest rather than clipped. A rotation of a
- * chord stacked past an octave spans further than the chord itself — Bm7(♭9)'s
- * five inversions cover B4…A7 (34 semitones) — and since the shift is quantized
- * to octaves, no shift can slide that inside a 36-key window: it lands 1 key
- * over the bottom or 10 over the top. Such a chord gets four octaves; triads and
- * 7ths are untouched and keep the default three.
+ * Labels each LIT key with its note name, spelled for the key in force at the
+ * chord's onset (so a B♭ chord in a flat key reads B♭, not A#). Unlit keys stay
+ * blank — the readout is about the chord's notes, not keyboard orientation.
  */
-function fitToWindow(voicings: number[][]): {
-  low: number;
-  high: number;
-  voicings: number[][];
-} {
-  const all = voicings.flat();
-  const min = Math.min(...all);
-  const max = Math.max(...all);
-  const shift = Math.round((KB_CENTER - (min + max) / 2) / 12) * 12;
-
-  let low = KB_LOW;
-  let high = KB_HIGH;
-  while (min + shift < low) low -= 12;
-  while (max + shift > high) high += 12;
-
-  return {
-    low,
-    high,
-    voicings:
-      shift === 0 ? voicings : voicings.map((v) => v.map((p) => p + shift)),
+function noteLabels(speller: KeySpeller): KeyboardProps["renderKey"] {
+  return (key, { lit, narrow }) => {
+    if (!lit) return null;
+    const s = speller.spell(key.pitch);
+    return (
+      <span
+        // eslint-disable-next-line text/no-adhoc-typography, type-scale-tokens/no-arbitrary-font-size -- 9px/7px labels tuned to fit a narrow key cap (same as the roll's piano keyboard); below the 10px token floor
+        className={`select-none leading-none text-primary-foreground ${narrow ? "text-[7px]" : "text-[9px]"}`}
+      >
+        {`${s.step}${accidentalGlyph(s.alter)}`}
+      </span>
+    );
   };
 }
 
 /**
- * The "current chord" readout — the BODY of a `Sonata.Section` card whose chrome
- * (Card + collapsible "Current chord" title) the host paints (NOT a
- * geometry-anchored overlay). Reads the session's Score + cursor (`useSession()`)
- * and shows the chord annotation covering the playhead, tracking it as the
- * transport advances. Below the symbol, a mini keyboard lights up the chord's
- * notes; an "Inversions" toggle stacks one mini keyboard per inversion.
+ * One readout keyboard lighting one voicing, fitted ON ITS OWN into the readout
+ * window. Each inversion row fits separately (not jointly): a joint fit of a
+ * 7th chord's inversions often widens to three octaves, and every readout
+ * keyboard must keep the same two-octave shape.
+ */
+function VoicingKeyboard({
+  voicing,
+  renderKey,
+}: {
+  voicing: readonly number[];
+  renderKey?: KeyboardProps["renderKey"];
+}) {
+  const voicings = useMemo(() => [voicing], [voicing]);
+  const { plane, voicings: fitted } = useReadoutPlane(voicings);
+  return (
+    <ReadoutKeyboard
+      plane={plane}
+      lit={fitted[0] ?? NO_KEYS}
+      renderKey={renderKey}
+    />
+  );
+}
+
+/**
+ * The "current chord" readout — the BODY of a `Sonata.Section` whose chrome
+ * (and the Inversions toggle in its header, `ChordReadoutActions`) the host
+ * paints. Shows the chord annotation covering the playhead: the big symbol,
+ * beside it the Roman numeral over the short quality, and the detection
+ * confidence at the right when the chord has one. Below, a readout keyboard
+ * lights the chord's voicing — or, with Inversions on, one captioned keyboard
+ * per inversion.
  *
- * Applicability is the contribution's `useAvailable` (`useHasChords`): the card
- * is not painted for a chordless song, so this body never renders a
- * "no chords" empty state — only the resting state below, when the playhead sits
- * in a gap between chords (or past the last one).
- *
- * That resting state renders the SAME skeleton as a live chord — dash instead of
- * the symbol, "No chord detected" instead of the quality line, an unlit keyboard
- * instead of a voicing — rather than collapsing to a bare dash. A song's chords
- * are separated by silences, so the panel would otherwise shrink and re-grow at
- * every gap, jumping the whole section column with it.
+ * Applicability is the contribution's `useAvailable` (`useHasChords`): the
+ * section is not painted for a chordless song, so this body never renders a
+ * "no chords" empty state — only the resting state, when the playhead sits in a
+ * gap between chords. That state keeps the skeleton (a dash for the symbol, an
+ * unlit keyboard of the same shape) so the section column doesn't jump at
+ * every gap.
  */
 export function ChordReadout() {
-  // Sonata's own look paints its keys: one control, every keyboard in the app.
-  const skin = useSonataKeySkin();
   const { score } = useSession();
-  const [showInversions, setShowInversions] = useDraft<boolean>(
-    "sonata:chord-readout:inversions",
-    false,
+  const current = useCurrentChord();
+  const [showInversions] = useShowInversions();
+
+  // The key in force at the chord's onset: names the Roman numeral and spells
+  // the key labels. Recomputes only when the chord under the playhead changes.
+  const key = useMemo(
+    () => (current ? effectiveKeyAt(score, current.start) : undefined),
+    [current, score],
+  );
+  const roman = useMemo(
+    () => (current && key ? romanNumeral(current.data, key) : null),
+    [current, key],
+  );
+  const renderKey = useMemo(() => noteLabels(makeKeySpeller(key)), [key]);
+
+  // The chord as voiced (root position, slash bass lowest).
+  const voicing = useMemo(
+    () => (current ? chordVoicing(current.data) : NO_KEYS),
+    [current],
   );
 
-  const chords = useMemo(
-    () =>
-      score.annotations.filter(
-        (a): a is Annotation<"chord", ChordData> => a.type === "chord",
-      ),
-    [score.annotations],
-  );
-
-  // `useCursorSelector` returns the matched chord's STABLE reference (from the
-  // memoized `chords` array), so this panel re-renders only when the chord under
-  // the playhead changes — not on every cursor frame.
-  const current = useCursorSelector(
-    (cursorBeat) =>
-      chords.find((c) => cursorBeat >= c.start && cursorBeat < c.end) ??
-      // Before playback starts (cursor at 0) show the first chord so the panel
-      // isn't blank on load.
-      (cursorBeat <= 0 ? chords[0] : undefined),
-    [chords],
-  );
-
-  // The chord's Roman-numeral function in the key in force at its onset — e.g.
-  // "V7", "ii", "♭VII". `null` when no key is established (a keyless / atonal
-  // score) or the quality is outside the vocabulary. Recomputes only when the
-  // chord under the playhead changes (both `current` and `score` are stable
-  // between cursor frames), so this never runs per-frame.
-  const roman = useMemo(() => {
-    if (!current) return null;
-    const key = effectiveKeyAt(score, current.start);
-    return key ? romanNumeral(current.data, key) : null;
-  }, [current, score]);
-
-  // Every inversion of the current chord (index 0 = root position), each an
-  // ascending MIDI voicing, with the keyboard window they're drawn in. Used for
-  // the keyboards below the symbol. With no chord under the playhead this is the
-  // default window with no voicings — the keyboard still draws, unlit.
-  const fitted = useMemo(() => {
-    if (!current) return { low: KB_LOW, high: KB_HIGH, voicings: [] };
+  // Every inversion of the chord (index 0 = root position), each captioned
+  // with its ordinal and slash-chord name.
+  const inversions = useMemo(() => {
+    if (!current) return [];
     const root = chordPitches(current.data);
-    return fitToWindow(root.map((_, k) => invertVoicing(root, k)));
+    if (root.length < 2) return [];
+    return root.map((_, k) => {
+      const v = invertVoicing(root, k);
+      return {
+        voicing: v,
+        lead: ORDINALS[k] ?? `${k}th`,
+        trail: formatChordSymbolWithBass(current.data, pc12(v[0]!)),
+      };
+    });
   }, [current]);
-
-  // The pads every row is drawn on: the fitted window, laid in the active
-  // layout. One plane for all the rows — they differ only in what is lit.
-  const plane = usePitchGeometry(fitted.low, fitted.high);
-
-  // The keyboard rows to draw: the inversions (all, or just root position), or a
-  // single unlit keyboard when there's no chord.
-  const rows: readonly (readonly number[])[] =
-    fitted.voicings.length === 0
-      ? [NO_KEYS]
-      : showInversions
-        ? fitted.voicings
-        : fitted.voicings.slice(0, 1);
 
   return (
     <Stack gap="md">
-      <Stack gap="2xs">
-        {/* Row: the big chord symbol, and — when a key is in force — its
-            Roman-numeral function trailing in the accent color, so the chord's
-            name and its harmonic role read side by side. */}
-        <Stack direction="row" align="baseline" gap="sm">
-          {/* eslint-disable-next-line text/no-adhoc-typography -- large display readout (36px) exceeds the title token (20px), no equivalent variant */}
-          <div className="text-4xl font-bold tracking-tight text-foreground">
-            {current ? (
-              current.data.symbol
-            ) : (
-              <span className="text-muted-foreground/50">—</span>
-            )}
-          </div>
-          {roman && (
-            <Text
-              as="div"
-              variant="title"
-              tone="primary"
-              className="tabular-nums font-semibold"
-            >
-              {roman}
-            </Text>
-          )}
-        </Stack>
-        <Text as="div" variant="caption" className="text-muted-foreground">
+      <Stack direction="row" align="center" gap="md">
+        {/* eslint-disable-next-line text/no-adhoc-typography -- large display readout (36px) exceeds the title token (20px), no equivalent variant */}
+        <div className="text-4xl font-bold tracking-tight text-foreground">
           {current ? (
-            <>
-              {current.data.spelledSymbol
-                ? `${current.data.spelledSymbol} · `
-                : ""}
-              {current.data.quality}
-              {current.confidence !== undefined
-                ? ` · ${(current.confidence * 100).toFixed(0)}% confidence`
-                : ""}
-            </>
+            current.data.symbol
           ) : (
-            "No chord detected"
+            <span className="text-muted-foreground/50">—</span>
           )}
-        </Text>
-        <div className="text-2xs tabular-nums text-muted-foreground/70">
-          {/* Non-breaking space with no chord: holds the line so the block below
-              doesn't shift up. */}
-          {current
-            ? `beats ${current.start.toFixed(2)}–${current.end.toFixed(2)}`
-            : " "}
         </div>
+        {current && (
+          <Stack gap="none">
+            {roman && (
+              <Text
+                variant="subheading"
+                tone="primary"
+                className="tabular-nums"
+              >
+                {roman}
+              </Text>
+            )}
+            <Text variant="caption" tone="muted">
+              {current.data.quality}
+            </Text>
+          </Stack>
+        )}
+        <Fill />
+        {current?.confidence !== undefined && (
+          <Text
+            variant="caption"
+            tone="muted"
+            className="tabular-nums"
+            title="Detection confidence"
+          >
+            {`${(current.confidence * 100).toFixed(0)}%`}
+          </Text>
+        )}
       </Stack>
 
-      <Stack gap="sm">
-        <Stack direction="row" align="center" justify="between" gap="none">
-          <SectionLabel>Notes</SectionLabel>
-          {/* Rendered (disabled) rather than hidden with nothing to invert, so
-              the row keeps its height across the gaps between chords. */}
-          <ToggleChip
-            active={showInversions}
-            disabled={fitted.voicings.length <= 1}
-            onClick={() => setShowInversions((v) => !v)}
-          >
-            Inversions
-          </ToggleChip>
-        </Stack>
+      {showInversions && inversions.length > 0 ? (
         <Stack gap="sm">
-          {rows.map((voicing, k) => {
-            const bass = voicing[0];
-            return (
-              <Stack key={k} gap="xs">
-                {/* Per-row caption — only when stacking inversions; the
-                    big symbol above already names the root chord. */}
-                {showInversions && current && bass !== undefined && (
-                  <div className="text-2xs">
-                    <span className="font-medium text-foreground/80">
-                      {ORDINALS[k] ?? `${k}th`}
-                    </span>
-                    <span className="text-muted-foreground/70">
-                      {" · "}
-                      {formatChordSymbolWithBass(
-                        current.data,
-                        ((bass % 12) + 12) % 12,
-                      )}
-                    </span>
-                  </div>
-                )}
-                <Keyboard
-                  plane={plane}
-                  lit={voicing}
-                  skin={skin}
-                  className="w-full"
-                  // The chip height is the layout's own choice — four rows of
-                  // Jankó pads need more room than one row of piano keys — so it
-                  // is a number from the geometry, not a size class here.
-                  style={{ height: pitchKeyboardHeight(plane.layout, "chip") }}
-                />
-              </Stack>
-            );
-          })}
+          {inversions.map((inv) => (
+            <Stack key={inv.lead} gap="xs">
+              <KeyboardCaption lead={inv.lead} trail={inv.trail} />
+              <VoicingKeyboard voicing={inv.voicing} renderKey={renderKey} />
+            </Stack>
+          ))}
         </Stack>
-      </Stack>
+      ) : (
+        <VoicingKeyboard voicing={voicing} renderKey={renderKey} />
+      )}
     </Stack>
   );
 }

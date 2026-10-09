@@ -14,22 +14,35 @@ import {
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 /**
- * Pane-level layout options. Deliberately NOT a chrome switch — the card is not
- * configurable, or two panes' section stacks would drift again. The only thing a
- * pane may declare is where its own content edge already is.
+ * Pane-level options, declared ONCE by the slot owner in
+ * `defineDetailSections(...)` — never by a section, so a pane's sections cannot
+ * drift apart. Two closed choices:
+ *
+ * - **`chrome`** — which of `SectionCard`'s two chromes every section wears:
+ *   `"card"` (default; a bordered card per section, leading chevron) or
+ *   `"inspector"` (flat sections divided by a rule, chevron-free headers whose
+ *   collapsed title is muted). The primitive paints both, so a pane picks a
+ *   look without ever painting chrome of its own.
+ * - **`inset`** — card chrome only: where the pane's content edge already is.
+ *   An inspector stack has no inset by construction (its rules and hover fills
+ *   run edge to edge), so the field does not exist on that arm.
  */
-export interface DetailSectionsOptions {
-  /**
-   * Horizontal/vertical inset around the section stack. Default `"lg"`.
-   *
-   * `"none"` is for a pane that ALREADY positions its content and would
-   * otherwise inset it twice — Pages puts the page title, icon, and section list
-   * at the shared block inset, so the stack must not add its own on top. Either
-   * way each card body opens its own rail region (see `CardSection`), so a
-   * DataView dropped into a section is inset once, by the card.
-   */
-  inset?: SpaceStep;
-}
+export type DetailSectionsOptions =
+  | {
+      chrome?: "card";
+      /**
+       * Horizontal/vertical inset around the section stack. Default `"lg"`.
+       *
+       * `"none"` is for a pane that ALREADY positions its content and would
+       * otherwise inset it twice — Pages puts the page title, icon, and section
+       * list at the shared block inset, so the stack must not add its own on
+       * top. Either way each card body opens its own rail region (see
+       * `CardSection`), so a DataView dropped into a section is inset once, by
+       * the card.
+       */
+      inset?: SpaceStep;
+    }
+  | { chrome: "inspector"; inset?: never };
 
 /** The fields every section carries, whatever its shape. */
 interface DetailSectionCommon<EntityProps> {
@@ -104,6 +117,14 @@ export interface DetailSections<EntityProps, Extra extends object = {}> {
   Section: RenderSlot<DetailSection<EntityProps> & Extra>;
   Host: ComponentType<EntityProps>;
   /**
+   * The stack the sections sit in — the rhythm between them and the inset
+   * around them, per the pane's `chrome` (card: a small gap and the declared
+   * inset; inspector: no gap, no inset — the rules divide it). `Host` paints its
+   * one stack with it; a pane laying out several `SectionItem` zones wraps them
+   * in it, so it never hand-sets a gap or padding the chrome already owns.
+   */
+  SectionStack: ComponentType<{ children: ReactNode }>;
+  /**
    * The chrome for ONE contributed section — the same gate → card → persisted
    * open-state path `Host` applies per item, exposed for a pane that owns its
    * own zone layout and therefore cannot use `Host`'s single padded stack
@@ -124,15 +145,16 @@ export interface DetailSections<EntityProps, Extra extends object = {}> {
 /**
  * A detail pane is ONE render slot whose sections are contributions.
  *
- * `defineDetailSections("<id>")` returns `{ Section, Host, SectionItem }`:
- * plugins contribute `DetailSection`s to `Section`, the pane renders
- * `<Host {...entityProps}/>`, and the host paints every section as a
- * `SectionCard` — a `Card` with a collapsible title row. There is exactly one
- * mode: the chrome is not configurable per pane and there is NO per-section
- * opt-out, so no two panes' section stacks can drift on padding, radius, title
- * typography, or chevron placement. A pane with more than one zone (Sonata's
- * `area`-split column) paints each section with `SectionItem` — the SAME chrome,
- * laid out by the pane.
+ * `defineDetailSections("<id>")` returns `{ Section, Host, SectionItem,
+ * SectionStack }`: plugins contribute `DetailSection`s to `Section`, the pane
+ * renders `<Host {...entityProps}/>`, and the host paints every section as a
+ * `SectionCard` with a collapsible title row. The chrome is one CLOSED choice
+ * the slot owner makes once (`chrome: "card" | "inspector"`, see
+ * {@link DetailSectionsOptions}); there is NO per-section opt-out, so a pane's
+ * sections cannot drift on padding, radius, title typography, or chevron
+ * placement. A pane with more than one zone (Sonata's `area`-split column)
+ * paints each section with `SectionItem` inside its own `SectionStack` — the
+ * SAME chrome and rhythm, laid out by the pane.
  *
  * A pane's **identity block** (title input, primary actions) is a section like
  * any other, card and all: the entity's name lives in the pane header, so a
@@ -190,7 +212,9 @@ export function defineDetailSections<
     // so it is always present.
     docLabel: (p) => p.label,
   });
-  const inset = options?.inset ?? "lg";
+  const chrome = options?.chrome ?? "card";
+  const inset =
+    options?.chrome === "inspector" ? "none" : (options?.inset ?? "lg");
 
   type SectionItem = DetailSection<EntityProps> & Extra & { id: string };
 
@@ -246,6 +270,7 @@ export function defineDetailSections<
 
     return (
       <SectionCard
+        variant={chrome}
         title={section.label}
         icon={icon ? <Icon icon={icon} /> : undefined}
         actions={headerRight(section, entityProps)}
@@ -271,6 +296,7 @@ export function defineDetailSections<
     const icon = section.icon;
     return (
       <SectionCard
+        variant={chrome}
         title={section.label}
         icon={icon ? <Icon icon={icon} /> : undefined}
         actions={headerRight(section, entityProps)}
@@ -366,7 +392,7 @@ export function defineDetailSections<
     return <OpenStateSection section={section} entityProps={entityProps} />;
   }
 
-  function Host(entityProps: EntityProps): ReactNode {
+  function SectionStack({ children }: { children: ReactNode }): ReactNode {
     return (
       // This stack OPENS the region: `railClass` pads and publishes the same
       // step in one declaration. It replaced `insetClass`, and swapping it back
@@ -378,16 +404,28 @@ export function defineDetailSections<
       // The padding is still the pane's to decline. A pane that already
       // positions its content — Pages puts sections at the page's block inset —
       // passes `inset: "none"`, which opens the region at zero rather than
-      // pushing the content in a second time.
-      <Stack gap="sm" className={railClass({ rail: inset })}>
+      // pushing the content in a second time. An inspector stack always opens
+      // it at zero, with no gap: its sections are divided by their own rules.
+      <Stack
+        gap={chrome === "inspector" ? "none" : "sm"}
+        className={railClass({ rail: inset })}
+      >
+        {children}
+      </Stack>
+    );
+  }
+
+  function Host(entityProps: EntityProps): ReactNode {
+    return (
+      <SectionStack>
         <Section.Render>
           {(item) => (
             <SectionItemHost section={item} entityProps={entityProps} />
           )}
         </Section.Render>
-      </Stack>
+      </SectionStack>
     );
   }
 
-  return { Section, Host, SectionItem: SectionItemHost };
+  return { Section, Host, SectionItem: SectionItemHost, SectionStack };
 }

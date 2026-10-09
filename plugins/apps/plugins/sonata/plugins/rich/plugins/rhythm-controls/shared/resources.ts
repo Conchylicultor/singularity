@@ -9,6 +9,7 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+import { nullable } from "@plugins/fields/core";
 
 /**
  * Wire/DB shape of one hand's rhythm pattern. Mirrors `RhythmPattern` from
@@ -60,6 +61,12 @@ export const rhythmShape = defineExtensionShape({
     // `findFiguration`, not an absorbable value here.
     bassPatternId: textField(),
     chordPatternId: textField(),
+    // The groove preset (`groovePresetsConfig` list id) this song's groove was
+    // last applied from — provenance only; NULL when never applied from one.
+    // Whether the groove still matches it ("edited") is derived by comparing
+    // against the preset (`grooveEquals`), never stored. A preset deleted later
+    // leaves a dangling id, which reads as "no preset".
+    groovePresetId: nullable(textField()),
   },
 });
 export const RhythmRowSchema = rhythmShape.schema;

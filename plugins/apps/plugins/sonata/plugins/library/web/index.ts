@@ -8,6 +8,7 @@ import {
 } from "./components/player-toolbar-items";
 import { PlaySongAction } from "./components/play-song-action";
 import { DeleteSongAction } from "./components/delete-song-action";
+import { PanelsToggle } from "./components/panels-toggle";
 import { Library } from "./slots";
 import { IdKinds } from "@plugins/ids/web";
 import { songIdKind } from "../core";
@@ -21,6 +22,7 @@ export { sonataLibraryPane, sonataPlayerPane, sonataSongLink } from "./panes";
 export { useSongLink } from "./hooks";
 export { openSongImperative } from "./open-song";
 export { useCurrentSong } from "./use-current-song";
+export { useSectionPaneCollapsed } from "./components/panels-toggle";
 
 export default {
   description:
@@ -36,6 +38,9 @@ export default {
       id: "display-picker",
       component: DisplayPicker,
     }),
+    // Shows / hides the song's section column (the inspector beside the
+    // display). The column itself renders nothing while hidden.
+    sonataPlayerPane.Actions({ id: "panels", component: PanelsToggle }),
     // Play is the library's one at-rest affordance: it earns a permanent slot
     // on every view that has one (the card's footer, the table's trailing
     // track). Delete keeps the default hover-revealed zone.

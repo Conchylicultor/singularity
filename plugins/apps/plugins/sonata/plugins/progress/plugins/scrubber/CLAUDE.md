@@ -9,6 +9,7 @@
   - Slots: `SonataProgress.Marker`
   - Slot contributors:
     - `SonataProgress.Marker` ← `apps.sonata.progress.bars`
+    - `SonataProgress.Marker` ← `apps.sonata.progress.chords`
     - `SonataProgress.Marker` ← `apps.sonata.progress.keys`
     - `SonataProgress.Marker` ← `apps.sonata.progress.loop`
     - `SonataProgress.Marker` ← `apps.sonata.progress.sections`
@@ -25,12 +26,15 @@
     - `primitives/css/text.Text`
     - `primitives/slot-render.renderIsolated`
   - Exports (values):
+    - `LANE_ABOVE_Y`
+    - `LANE_HEIGHT`
     - `RAIL_BAND_Y`
     - `RAIL_HEIGHT`
     - `SonataProgress`
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/progress/bars`
+    - `apps/sonata/progress/chords`
     - `apps/sonata/progress/keys`
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/sections`

@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import {
   grooveSetting,
   useLibrarySong,
@@ -8,7 +8,6 @@ import {
 import {
   defaultBassPattern,
   defaultChordPattern,
-  type RhythmPattern,
 } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
 import {
   DEFAULT_BASS_FIGURATION_ID,
@@ -21,20 +20,15 @@ import {
   type GateInput,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
+import type { GrooveFields } from "../shared/groove";
 import { rhythms } from "../shared/resources";
 import { useSaveRhythm } from "./actions";
-
-/**
- * The four per-hand fields of a groove — each hand's rhythm necklace (*when*) and
- * tone-order figuration id (*what*). The `commit` payload: callers spread the
- * resolved groove and override one field.
- */
-export interface GrooveFields {
-  bass: RhythmPattern;
-  chord: RhythmPattern;
-  bassFigurationId: string;
-  chordFigurationId: string;
-}
+import {
+  confirmPendingPreset,
+  NO_PENDING_PRESET,
+  setPendingPreset,
+  usePendingPreset,
+} from "./pending-preset";
 
 /** A known groove: the resolved fields, whether it is on, and its writer. */
 export type GrooveState = GrooveFields & {
@@ -58,8 +52,8 @@ export type Groove = ResourceResult<GrooveState>;
 
 /**
  * Single source of the open song's groove, shared by the section BODY
- * (`RhythmControls`) and its header control (`RhythmActions`), so the On/Off
- * toggle in the collapsed card and the circle in the open card read and write
+ * (`RhythmControls`) and its header switch (`GrooveSwitch`), so the on/off
+ * switch in the collapsed section and the open body read and write
  * the exact same state.
  *
  * Two halves, both needed before anything is shown: the setting carries
@@ -67,6 +61,10 @@ export type Groove = ResourceResult<GrooveState>;
  * and the song's `rhythms` row is display truth (it remembers both patterns +
  * figuration ids even while the groove is off). An absent row is a song whose
  * groove was never configured: the default patterns ARE its patterns.
+ *
+ * `presetId` (the preset the groove was last applied from) is the row's
+ * `groovePresetId` under an optimistic overlay (`pending-preset.ts`), so
+ * "edited" never flickers between a commit and its push.
  */
 export function useGroove(): Groove {
   const song = useLibrarySong();
@@ -75,6 +73,25 @@ export function useGroove(): Groove {
   const setGroove = useWriteSongSetting(grooveSetting);
   const saveRhythm = useSaveRhythm();
   const row = useLiveRow(rhythms, currentSongId);
+  const pendingPreset = usePendingPreset(currentSongId);
+
+  // The row has caught up with the last committed preset id → drop the
+  // overlay (only that id: an older push never evicts a newer commit's). An
+  // unsettled or absent row confirms nothing.
+  let rowPresetId: string | null | undefined;
+  switch (row.status) {
+    case "loading":
+    case "error":
+      rowPresetId = undefined;
+      break;
+    case "ready":
+      rowPresetId = row.found ? row.row.groovePresetId : undefined;
+      break;
+  }
+  useEffect(() => {
+    if (currentSongId === null || rowPresetId === undefined) return;
+    confirmPendingPreset(currentSongId, rowPresetId);
+  }, [currentSongId, rowPresetId, pendingPreset]);
 
   const commit = useCallback(
     (next: GrooveFields, on: boolean) => {
@@ -89,12 +106,16 @@ export function useGroove(): Groove {
             }
           : null,
       );
+      // The preset id is this plugin's own column (not in the setting): overlay
+      // it until the row's push carries it, so "edited" never flickers.
+      setPendingPreset(currentSongId, next.presetId);
       saveRhythm(currentSongId, {
         enabled: on,
         bass: next.bass,
         chord: next.chord,
         bassPatternId: next.bassFigurationId,
         chordPatternId: next.chordFigurationId,
+        groovePresetId: next.presetId,
       });
     },
     [setGroove, saveRhythm, currentSongId],
@@ -122,6 +143,10 @@ export function useGroove(): Groove {
     const persisted = row.found ? row.row : null;
     return {
       enabled: live !== null,
+      presetId:
+        pendingPreset !== NO_PENDING_PRESET
+          ? pendingPreset
+          : (persisted?.groovePresetId ?? null),
       bass: live?.hands.bass ?? persisted?.bass ?? defaultBassPattern(),
       chord: live?.hands.chord ?? persisted?.chord ?? defaultChordPattern(),
       bassFigurationId:

@@ -9,8 +9,9 @@ with the playhead.
 ## Design
 
 - **Per-song, DB-persisted** in `sonata_songs_ext_rhythm` (an `entity-extensions`
-  1:1 side-table; an absent row reads as disabled). One row holds `enabled` plus
-  both hands' `RhythmPattern`s as jsonb. Both patterns are remembered even while
+  1:1 side-table; an absent row reads as disabled). One row holds `enabled`,
+  both hands' `RhythmPattern`s as jsonb, their figuration ids, and the groove
+  preset it was applied from (see *Groove presets*). Both patterns are remembered even while
   disabled, so re-enabling restores the groove rather than resetting. It is
   served as a lookup-only collection, `rhythms = liveCollection("sonata-rhythm",
   { row, id: "songId" })` + `serveCollection(rhythms, { from: songRhythm })`
@@ -29,25 +30,25 @@ with the playhead.
   chords) when the row is absent or `enabled` is false. Dependency arrow stays
   feature → shell.
 - **Pending is a state, in the controls too.** `useGroove()` is `pending` until
-  both the setting and the song's row have settled; the body and the header chip
+  both the setting and the song's row have settled; the body and the header switch
   render a loading state meanwhile, never the default patterns standing in for
   the song's own. Once settled, an absent row is a song never configured, whose
   patterns really are the defaults.
-- **`hasVoicedChords` gate.** The panel is a `Sonata.Section` gated exactly like
-  `voicing-controls`, via the contribution's `useAvailable: useHasVoicedChords`
-  (the shell's shared score gate): the shell must be voicing the song's chords —
-  a `source === "authored"` chord annotation exists (any chord source: chord-grid,
-  ultimate-guitar), or the song's per-song chord mode is on (a MIDI song whose
-  detected chords are voiced). A MIDI song with chord mode off stays hidden. The
-  gate lives on the contribution rather than as a
-  `return null` in the body because the section-column host paints the card + its
-  title *around* the body — a body that returned `null` would leave an empty
-  titled card behind.
-- **On/Off lives in the card header.** The section column collapses every card to
-  its title by default, so the groove toggle is contributed as the section's
-  `actions` (the `RhythmActions` chip) and stays reachable without expanding.
-  Both it and the body read one shared `useGroove()` hook, so the collapsed
-  toggle and the open circle can never drive different grooves.
+- **A part, not a section.** This plugin contributes no `Sonata.Section`: the
+  Accompaniment section composes its two exported parts — `GrooveSwitch` (the
+  on/off `Switch`, in the section header so it stays reachable while the
+  section is collapsed) and `RhythmControls` (the body). Both read one shared
+  `useGroove()` hook, so the header switch and the open body can never drive
+  different grooves. The applicability gate (does the song document voice this
+  song's chords?) is the composing section's. While the groove is off the body
+  renders nothing — the switch is the whole control.
+- **The body, top to bottom.** The groove preset picker
+  (`groove-preset-picker.tsx`; see *Groove presets*), the rhythm circle, then
+  one `HandRow` per hand (right hand first): its colour dot (the ring it owns
+  on the circle — `hand-colors.ts` is the one table both read), a Pattern
+  select (the figuration — *what*), a Rhythm select (the necklace — *when*;
+  "Custom" once the necklace no longer strikes its rhythm's own onsets) and a
+  `⋯` panel with the rarer dials, Rotate and Steps (1–48).
 - **The circle spins for free.** The panel derives a bar grid from
   `bars(score)` + `scoreEndBeat(score)` (existing `score/core` exports, time-sig
   aware) and drives `RhythmCircle.setPhase()` imperatively from the transport
@@ -63,7 +64,48 @@ with the playhead.
   the next reload. The live-state push then re-affirms server truth;
   the observer re-affirms on the next push. Preset selection SNAPS the ring's
   subdivision count to the preset's native length; the subdivision stepper
-  proportionally ADAPTS the pattern (the label then reads "… (adapted)").
+  proportionally ADAPTS the pattern (the Rhythm select then reads "Custom").
+
+## Groove presets
+
+- **Global, in config_v2.** `groovePresetsConfig` (`shared/groove-presets.ts`,
+  name `groove-presets`) is one `listField` of saved grooves — `{ name, chord,
+  bass, chordFigurationId, bassFigurationId }`, each pattern a `jsonField`
+  validated by the same `RhythmPatternSchema` as the row and the endpoint. The
+  list is `stableIdentity`: a song's `groovePresetId` is a durable key into it,
+  so every row (seeds included) carries an explicit `id`. Seeds (`default`,
+  `bossa-nova`, `pop-ballad`, `son-clave`, `stride`, `waltz`) are built from the
+  real `RHYTHMS` / figuration ids. Registered on both runtimes
+  (`ConfigV2.Register` / `ConfigV2.WebRegister`).
+- **Per-song provenance, not state.** The row's nullable `groovePresetId` (sent
+  by every `setRhythmEndpoint` write) records which preset the groove was last
+  applied from. Whether the groove is "edited" is DERIVED —
+  `!grooveEquals(groove, preset)` — never stored, so a bead toggle needs no
+  bookkeeping and a preset edited elsewhere just reads as edited. A deleted
+  preset leaves a dangling id: treat an id not in the list as no preset.
+- **The picker.** A full-width button naming the selected preset ("Custom" for
+  none or a dangling id), marked `edited` with a ghost Save (`update`) while
+  the groove differs from it. Its menu (a `ControlPanelPopover`): one row per
+  preset — name, `grooveSummary`, a check on the selected one, a hover-revealed
+  delete (deleting this song's own preset commits `presetId: null`) — and a
+  footer "Save current as a preset…" that turns into a name field + Save
+  (`save`, then commit the new id). Apply commits `presetGroove(p)`.
+- **Pure helpers** (`shared/groove.ts`, tested): `grooveEquals` compares what a
+  groove sounds like (both hands' subdivisions + effective onsets, both
+  figuration ids), ignoring provenance and how a rotation is spelt;
+  `grooveSummary` ("Block · Root–fifth", right hand first); `presetGroove` (a
+  preset as `GrooveFields`, the preset as its `presetId`).
+- **`useGroove().presetId` never flickers.** The patterns' optimistic home is
+  the shell's `grooveSetting`, but the preset id is this plugin's column, so
+  `commit` also writes a module-level per-song overlay (`web/pending-preset.ts`,
+  shared by the body and the header switch) that the row's push confirms by
+  carrying the SAME id. Without it, Apply would measure the new content against
+  the old preset until the push and flash "edited".
+- **`useGroovePresets()`** — `ResourceResult<{ presets, save(name, from) → id,
+  update(id, from), remove(id) }>` over `useConfigResult` (loading is a state,
+  never the seeds standing in). Writes are an optimistic overlay with the
+  updater + forward-written ref pattern of data-view's `useSortPresets`, so
+  back-to-back writes in one tick both land.
 
 ## The generic circle
 
@@ -77,32 +119,56 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
 
 ## Plugin reference
 
-- Description: Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Shown only for songs whose chords the song document voices: a symbol source (authored chords), or chord mode on. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves it as a per-song lookup collection.
+- Description: Sonata accompaniment part: the per-song groove. Exports its on/off switch (GrooveSwitch) and its body (RhythmControls: a groove preset picker, a left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, and one pattern/rhythm row per hand) for the Accompaniment section to compose; contributes no section of its own. Persists the groove per song and feeds the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the global groove presets (config sonata groove-presets: useGroovePresets) and the per-song preset provenance useGroove carries. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern + the groove preset it was applied from). Serves it as a per-song lookup collection. Server registration of the global groove-presets config.
 - Web:
   - Contributes:
+    - `ConfigV2.WebRegister` "groove-presets"
     - `SonataDocument.SongSetting` "rhythm-sync" → `RhythmObserver`
-    - `Sonata.Section` "Rhythm" → `RhythmControls`
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/sonata/document` ×8
-    - `primitives/css/ui-kit` ×6
-    - `primitives/live-state` ×5
+  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×9
+    - `apps/sonata/document` ×7
+    - `primitives/live-state` ×6
     - `apps/sonata/primitives/rhythm-circle` ×3
+    - `config_v2` ×3
     - `apps/sonata/session` ×2
-    - `apps/sonata/shell.Sonata`
+    - `primitives/css/control-panel` ×2
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLiveRow`
+    - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
+    - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
-    - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
-  - Exports (types): `RhythmGroove`
-  - Exports (values): `useSaveRhythm`
+    - `ui/icons.Icon`
+  - Exports (types):
+    - `Groove`
+    - `GrooveContent`
+    - `GrooveFields`
+    - `GroovePreset`
+    - `GroovePresetsController`
+    - `GrooveState`
+    - `RhythmGroove`
+  - Exports (values):
+    - `grooveEquals`
+    - `grooveSummary`
+    - `GrooveSwitch`
+    - `presetGroove`
+    - `RhythmControls`
+    - `useGroove`
+    - `useGroovePresets`
+    - `useSaveRhythm`
 - Server:
-  - Contributes: `resource.declare` "sonata-rhythm:rows"
+  - Contributes:
+    - `resource.declare` "sonata-rhythm:rows"
+    - `ConfigV2.Register` "groove-presets"
   - Uses:
     - `apps/sonata/library._songs`
+    - `config_v2.ConfigV2`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
     - `network/live.serveCollection`
@@ -111,5 +177,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
   - Exports (values): `songRhythm`
   - Resources: `sonata-rhythm:rows` (keyed, point)
   - Routes: `POST /api/sonata/songs/:id/rhythm`
+- Cross-plugin:
+  - Imported by: `apps/sonata/rich/accompaniment`
 
 <!-- AUTOGENERATED:END -->

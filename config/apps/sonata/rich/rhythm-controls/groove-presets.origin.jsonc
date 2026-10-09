@@ -1,0 +1,163 @@
+// @hash ae0bacbf4fd9
+{
+  // Saved grooves offered by the Rhythm section's preset menu: both hands' rhythm patterns and figurations.
+  "presets": [
+    {
+      "id": "default",
+      "name": "Default",
+      "chord": {
+        "presetId": "son",
+        "subdivisions": 16,
+        "onsets": [
+          0,
+          3,
+          6,
+          10,
+          12
+        ],
+        "rotation": 0
+      },
+      "bass": {
+        "presetId": "basic-2",
+        "subdivisions": 8,
+        "onsets": [
+          0,
+          4
+        ],
+        "rotation": 0
+      },
+      "chordFigurationId": "block",
+      "bassFigurationId": "root"
+    },
+    {
+      "id": "bossa-nova",
+      "name": "Bossa nova",
+      "chord": {
+        "presetId": "bossa-nova",
+        "subdivisions": 16,
+        "onsets": [
+          0,
+          3,
+          6,
+          10,
+          13
+        ],
+        "rotation": 0
+      },
+      "bass": {
+        "presetId": "basic-2",
+        "subdivisions": 8,
+        "onsets": [
+          0,
+          4
+        ],
+        "rotation": 0
+      },
+      "chordFigurationId": "block",
+      "bassFigurationId": "root-fifth"
+    },
+    {
+      "id": "pop-ballad",
+      "name": "Pop ballad",
+      "chord": {
+        "presetId": "basic-4",
+        "subdivisions": 16,
+        "onsets": [
+          0,
+          4,
+          8,
+          12
+        ],
+        "rotation": 0
+      },
+      "bass": {
+        "presetId": "basic-1",
+        "subdivisions": 8,
+        "onsets": [
+          0
+        ],
+        "rotation": 0
+      },
+      "chordFigurationId": "arpeggio-up",
+      "bassFigurationId": "root"
+    },
+    {
+      "id": "son-clave",
+      "name": "Son clave",
+      "chord": {
+        "presetId": "son",
+        "subdivisions": 16,
+        "onsets": [
+          0,
+          3,
+          6,
+          10,
+          12
+        ],
+        "rotation": 0
+      },
+      "bass": {
+        "presetId": "tresillo",
+        "subdivisions": 8,
+        "onsets": [
+          0,
+          3,
+          6
+        ],
+        "rotation": 0
+      },
+      "chordFigurationId": "block",
+      "bassFigurationId": "root-fifth"
+    },
+    {
+      "id": "stride",
+      "name": "Stride",
+      "chord": {
+        "presetId": "basic-2",
+        "subdivisions": 8,
+        "onsets": [
+          0,
+          4
+        ],
+        "rotation": 0
+      },
+      "bass": {
+        "presetId": "basic-4",
+        "subdivisions": 16,
+        "onsets": [
+          0,
+          4,
+          8,
+          12
+        ],
+        "rotation": 0
+      },
+      "chordFigurationId": "block",
+      "bassFigurationId": "stride"
+    },
+    {
+      "id": "waltz",
+      "name": "Waltz",
+      "chord": {
+        "presetId": "basic-1",
+        "subdivisions": 8,
+        "onsets": [
+          0
+        ],
+        "rotation": 0
+      },
+      "bass": {
+        "presetId": "basic-3",
+        "subdivisions": 12,
+        "onsets": [
+          0,
+          4,
+          8
+        ],
+        "rotation": 0
+      },
+      "chordFigurationId": "block",
+      "bassFigurationId": "waltz"
+    }
+  ]
+}

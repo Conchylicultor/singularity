@@ -93,7 +93,9 @@ the `@ts-expect-error` for each.
   - Kind id derived from the name (`database.fork` → `databasefork`), asserted
     `^[a-z][a-z0-9]*$`; a collision throws at register.
   - **The dead-letter is its failure surface**, applied after any `onEnded`:
-    exit 0 → done; failed and (not retryable, or the last attempt) → throw
+    exit 0 → done; failed but cancelled (`cancelled_at` stamped by
+    `cancelSupervisedJobByLock`) → done, no retry and no alert; failed and (not
+    retryable, or the last attempt) → throw
     `NonRetryableError` naming the job, run, exit and the recorded error (or
     "killed or crashed before recording an error — see the transcript"); failed
     otherwise → retry. A hard kill or a reboot's TERM records no flag, so it stays
@@ -312,6 +314,32 @@ the kind's in-flight index then refuses every future run of that kind.
 Every cancellation path closes itself. A SIGTERM leaves a marker and wakes
 immediately; a hard SIGKILL leaves none, and the next bounded wake sees an empty group
 and records the hard-kill outcome.
+
+### A user's Cancel: `cancelSupervisedJobByLock(job, input)`
+
+A bare `143 TERM` cannot say WHO sent it: a user's Cancel and a reboot read the
+same. On the built-in ledger that means a Cancel retries, then dead-letters and
+files an alert. So a user-facing Cancel goes through
+`cancelSupervisedJobByLock(job, input)` instead, which:
+
+1. finds the open run of `job` holding `lock(input)` (the caller names the run
+   the way the claim did — no run id to keep), answering `{ kind: "not-running" }`
+   when there is none;
+2. stamps its `cancelled_at` **first**, then
+3. signals it through the same kill path (`{ kind: "cancelled", runId, outcome }`).
+
+Because the stamp lands before the signal, the wake reads it: `onEnded` gets
+`meta.cancelled: true` and the failure policy answers `done` (no retry, no
+dead-letter). A run that exited 0 before the signal reached it is a success,
+`cancelled: false`. Any TERM without the stamp — a reboot, `cancelSupervisedJob`
+— stays a retryable failure. The ladder stops on the verdict, not the exit code
+(`onEnded` in `superviseRuns` answers `done | retry`).
+
+Built-in-ledger jobs that declare `lock` only; any other job throws (an own
+ledger cancels by id and records the cancellation in its own row). A run whose
+child is still being spawned (its row still holds the claiming backend's seed
+pid) is stamped but not signalled — `outcome.reason: "not-spawned"`: the child
+runs on, and closes as cancelled only if it fails.
 
 ## Residuals
 
@@ -657,6 +685,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables-run-ended.ts`
     - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables.ts`
   - Exports (types):
+    - `CancelByLockResult`
     - `DefineSupervisedJobSpec`
     - `RunEndedPayload`
     - `RunStep`
@@ -673,6 +702,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `_supervisedJobRuns`
     - `_supervisedRunEndedTriggers`
     - `cancelSupervisedJob`
+    - `cancelSupervisedJobByLock`
     - `defineSupervisedJob`
     - `runEnded`
   - Register:

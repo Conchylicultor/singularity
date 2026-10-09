@@ -10,6 +10,13 @@ import { WEAK_MATCH_THRESHOLD } from "./record";
  */
 export const RANK_MARGIN = 0.1;
 
+/**
+ * Candidates one resolver run tries at most. Each costs a download and a beat
+ * analysis (~30–60 s); past three, the ranking has failed and the user is
+ * better asked. Core, so the Recording section can say "video 2 of 3".
+ */
+export const MAX_TRIES_PER_RUN = 3;
+
 /** One candidate the walk has aligned. */
 export interface TriedCandidate {
   videoId: string;

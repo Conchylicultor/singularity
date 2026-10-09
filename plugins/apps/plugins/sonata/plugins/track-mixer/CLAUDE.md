@@ -103,9 +103,10 @@ plus a per-song reset.
   - Contributes:
     - `SonataDocument.SongSetting` "track-view-sync" → `TrackViewObserver`
     - `Sonata.Section` "Tracks" → `TrackMixerPanel`
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/document` ×8
     - `primitives/css/spacing` ×2
+    - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/live-state` ×2
     - `primitives/optimistic-mutation` ×2
@@ -123,7 +124,6 @@ plus a per-song reset.
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/slider.Slider`
-    - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`

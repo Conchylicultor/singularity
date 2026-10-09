@@ -8,9 +8,12 @@ measurements: `research/2026-09-30-infra-audio-analysis-beat-features.md`.
 ## Using it
 
 - **Off the event loop** (a chain job's `run` body, a CLI command — both hold
-  an `ExecContext`): `ensureBeatFeatures(videoId, exec, { log, force?, settings?, device? })`
+  an `ExecContext`): `ensureBeatFeatures(videoId, exec, { log, onPhase?, force?, settings?, device? })`
   → `BeatFeatures`. Fetches the audio (`youtube/audio-fetch`), installs the dep,
-  analyses, caches.
+  analyses, caches. `onPhase(phase: EnsurePhase)` is awaited as each phase
+  starts — `waiting` (only while another process holds the entry's lock), then
+  `fetching` → `installing` → `analysing` — so a caller can persist where it
+  is; it is never called on a cache hit.
 - **From a request**: `requestBeatFeatures(videoId, { force? })` enqueues the
   `audio-analysis.beat-features` supervised job (lock = settings key + videoId, 2 attempts)
   unless the features are ready, running, or failed permanently, and returns
@@ -88,7 +91,9 @@ of one video are independent entries.
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `integrations/youtube/audio-fetch.fetchYouTubeAudio`
     - `primitives/log-channels.defineLogSink`
-  - Exports (types): `EnsureBeatFeaturesOptions`
+  - Exports (types):
+    - `EnsureBeatFeaturesOptions`
+    - `EnsurePhase`
   - Exports (values):
     - `ensureBeatFeatures`
     - `readBeatFeatures`

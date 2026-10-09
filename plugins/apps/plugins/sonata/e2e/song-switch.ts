@@ -3,7 +3,7 @@
 // content and its settings in one state):
 //   - on song A, a transpose offset, a chord mode and a muted track are set and
 //     survive a reload (they persisted, not just the optimistic store);
-//   - switching to song B and back IN THE APP (← Library, then the song's card)
+//   - switching to song B and back IN THE APP (Back to Library, then the song's card)
 //     leaks nothing: B shows its own settings, and back on A every setting is
 //     A's again;
 //   - no frame in between shows a default or the other song's value. A rAF
@@ -31,7 +31,7 @@
 //
 // Width-independent: the player header is an adaptive bar, which relocates
 // what does not fit (a header control at the harness's default 1400 px,
-// the transport or ← Library on a narrower one) into its `⋯` panel. A header
+// the transport or Back to Library on a narrower one) into its `⋯` panel. A header
 // control is clicked through `reachInBar` — in the row, or by opening the `⋯`
 // holding it, as a person would — and read through CSS locators, which still
 // find a relocated control in the closed (display: none, aria-hidden) panel
@@ -187,13 +187,15 @@ await withBrowser(async (h) => {
     await waitSettled();
   };
 
-  /** ← Library, in the header's row or its `⋯` panel. */
+  /** Back to Library, in the header's row or its `⋯` panel. */
   const backToLibrary = () =>
-    reachInBar(page, page.getByRole("button", { name: "← Library" }), (b) =>
-      b.click(),
+    reachInBar(
+      page,
+      page.getByRole("button", { name: "Back to Library" }),
+      (b) => b.click(),
     );
 
-  /** Switch songs the way a person does: ← Library, then the song's card. */
+  /** Switch songs the way a person does: Back to Library, then the song's card. */
   const switchInApp = async (songId: string, title: string) => {
     await backToLibrary();
     await openCard(songId, title);

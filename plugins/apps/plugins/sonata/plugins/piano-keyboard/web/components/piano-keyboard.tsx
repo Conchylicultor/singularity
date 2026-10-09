@@ -240,6 +240,9 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
       lit={lit}
       skin={skin}
       interaction={interaction}
+      // The pitch-axis gutter sizes the keybed (the layout's keybed height);
+      // the keys stretch to it so they stay under the falling notes.
+      sizing="fill"
       // A lit accidental shows the same darker shade as the falling note that
       // lands on it — the exact `accidentalColor` the piano-roll uses.
       accidentalColor={accidentalColor}

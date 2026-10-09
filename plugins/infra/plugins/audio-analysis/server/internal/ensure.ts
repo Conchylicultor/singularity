@@ -40,9 +40,22 @@ const SummarySchema = z.object({
   device: AnalysisDeviceSchema.exclude(["auto"]),
 });
 
+/**
+ * Where a cache-missing `ensureBeatFeatures` call is: `waiting` for another
+ * process analysing the same entry, then the analysis's own phases.
+ */
+export type EnsurePhase = AnalysisPhase | "waiting";
+
 export interface EnsureBeatFeaturesOptions {
   /** Progress lines: the download's, the installs', the extractor's. */
   log?: (line: string) => void;
+  /**
+   * Each phase as it starts, awaited before the work goes on (a caller may
+   * persist it): `waiting` only when another process holds the entry's lock,
+   * then `fetching` → `installing` → `analysing`. Never called on a cache hit
+   * (nor when the lock holder turns out to have just written the features).
+   */
+  onPhase?: (phase: EnsurePhase) => Promise<void>;
   /** Re-analyse even when the features are ready. */
   force?: boolean;
   /** The settings that key the cache; each one left out is the configured one. */
@@ -81,7 +94,7 @@ async function readReady(paths: FeaturePaths): Promise<BeatFeatures | null> {
  * The settings (default: the configured ones) pick the cache entry; the
  * device only where the beat tracker runs.
  *
- * Hit: the features file, parsed. Miss: take the video's host flock (waiting
+ * Hit: the features file, parsed (no `onPhase`). Miss: take the video's host flock (waiting
  * for another process analysing it — any worktree), re-check, then with
  * `running.json` saying which phase it is in: fetch the audio, make sure the
  * `audio-python` dep is installed, run the extractor under one background unit
@@ -110,16 +123,17 @@ export async function ensureBeatFeatures(
   }
 
   mkdirSync(paths.dir, { recursive: true });
-  const fd = await waitLock(paths.lock, () =>
-    say(`another process is analysing ${id}; waiting for it`),
-  );
+  const fd = await waitLock(paths.lock, async () => {
+    say(`another process is analysing ${id}; waiting for it`);
+    await opts.onPhase?.("waiting");
+  });
   try {
     // Whoever held the lock may have just analysed this very video.
     if (opts.force !== true) {
       const again = await readReady(paths);
       if (again !== null) return again;
     }
-    return await analyse(id, paths, settings, device, exec, say);
+    return await analyse(id, paths, settings, device, exec, say, opts.onPhase);
   } finally {
     releaseLock(fd);
   }
@@ -132,20 +146,22 @@ async function analyse(
   device: AnalysisDevice,
   exec: ExecContext,
   say: (line: string) => void,
+  onPhase: EnsureBeatFeaturesOptions["onPhase"],
 ): Promise<BeatFeatures> {
   rmSync(paths.failed, { force: true });
   const since = new Date().toISOString();
-  const phase = (p: AnalysisPhase) => {
+  const phase = async (p: AnalysisPhase) => {
     const running: RunningFile = { since, phase: p, pid: process.pid };
     writeJsonAtomic(paths.running, running);
+    await onPhase?.(p);
   };
   const tmp = `${paths.ready}.tmp-${process.pid}`;
   try {
-    phase("fetching");
+    await phase("fetching");
     const audio = await fetchYouTubeAudio(id, exec, { log: say });
-    phase("installing");
+    await phase("installing");
     const ready = await ensureDep(audioPythonDep, exec, { log: say });
-    phase("analysing");
+    await phase("analysing");
     const summary = await exec.admit(() =>
       runPython(ready, {
         module: "singularity_audio.beat_features",

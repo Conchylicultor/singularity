@@ -10,7 +10,24 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
+/**
+ * The chrome a section wears — a closed pair, both painted here, so a stack's
+ * sections are uniform whichever one their pane picked.
+ *
+ * - **`card`** (default) — a bordered, rounded `Card` with a leading chevron:
+ *   the detail-pane look, where each section is an object of its own.
+ * - **`inspector`** — a flat `<section>` closed by a 1px rule, its header a
+ *   full-width row that fills on hover, with NO chevron (the collapsed title is
+ *   muted instead — see `SectionHeaderRow`'s `disclosure="none"`). For a
+ *   side-panel inspector, where the sections are one continuous column and a
+ *   card per section would box it into tiles. Its stack carries no gap and no
+ *   inset: the rules divide it, and the headers' hover runs edge to edge.
+ */
+export type SectionCardVariant = "card" | "inspector";
+
 export interface SectionCardProps {
+  /** The chrome — see {@link SectionCardVariant}. Default `"card"`. */
+  variant?: SectionCardVariant;
   /** The card's identity, and its click target: clicking it toggles the body. */
   title: string;
   /**
@@ -60,6 +77,7 @@ export interface SectionCardProps {
  * lift it into a headless always-mounted component.
  */
 export function SectionCard({
+  variant = "card",
   title,
   icon,
   actions,
@@ -76,10 +94,17 @@ export function SectionCard({
   // The row reads `open` / `toggle` / `contentId` off the Collapsible context,
   // so the chevron, the aria wiring, and the actions-as-sibling split (no
   // nested <button>) all come for free.
+  const inspector = variant === "inspector";
   const header = (
     <SectionHeaderRow
       variant="title"
-      className="rounded-lg px-lg py-md"
+      // Inspector: square corners so the hover fill runs edge to edge, and a
+      // tighter trailing pad so the header actions sit near the panel edge.
+      // `py-md` over a body-text line is the same ~44px row the card has.
+      className={
+        inspector ? "rounded-none pl-lg pr-sm py-md" : "rounded-lg px-lg py-md"
+      }
+      disclosure={inspector ? "none" : "lead"}
       collapsible={children !== undefined}
       actions={
         actions ? (
@@ -92,31 +117,40 @@ export function SectionCard({
     </SectionHeaderRow>
   );
 
+  // The frame is the only thing the two variants disagree on: the header and
+  // the body rail below are shared, so they cannot drift apart.
+  const frame = (content: ReactNode) =>
+    inspector ? (
+      <section className={cn("border-b border-border", className)}>
+        {content}
+      </section>
+    ) : (
+      <Card className={cn("rounded-lg p-none", className)}>{content}</Card>
+    );
+
   if (children === undefined) {
     // One line, permanently: no Collapsible at all, so there is no open state
     // to persist and no body to unmount.
-    return <Card className={cn("rounded-lg p-none", className)}>{header}</Card>;
+    return frame(header);
   }
 
-  return (
-    <Card className={cn("rounded-lg p-none", className)}>
-      <Collapsible
-        open={open}
-        onOpenChange={onOpenChange}
-        defaultOpen={defaultOpen}
-      >
-        {header}
-        {/* The body OPENS a rail region rather than merely padding: `rail-x-lg`
+  return frame(
+    <Collapsible
+      open={open}
+      onOpenChange={onOpenChange}
+      defaultOpen={defaultOpen}
+    >
+      {header}
+      {/* The body OPENS a rail region rather than merely padding: `rail-x-lg`
             applies the inset AND publishes it, so a descendant that follows the
             rail (a DataView's bands, a DataTable's rows) knows the card already
             paid and adds nothing. `px-lg` here would inset without publishing,
             and a follower would then guess — which is what the deleted
             `pane-gutter-flush` marker existed to correct, one wrapper at a time.
             Inline-only, so `pb-lg` stays: the block rhythm is unchanged. */}
-        <CollapsibleContent className="rail-x-lg pb-lg">
-          {children}
-        </CollapsibleContent>
-      </Collapsible>
-    </Card>
+      <CollapsibleContent className="rail-x-lg pb-lg">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>,
   );
 }

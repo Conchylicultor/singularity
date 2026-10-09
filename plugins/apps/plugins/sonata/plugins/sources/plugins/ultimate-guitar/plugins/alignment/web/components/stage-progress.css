@@ -1,0 +1,34 @@
+/* The current stage of a working alignment: nothing reports how far along it
+   is, so its bar is indeterminate — a short accent segment sweeping across the
+   track. Pure CSS (no timer); the host is the stage's clipped track. */
+.align-stage-current {
+  position: relative;
+}
+
+.align-stage-current::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 40%;
+  border-radius: inherit;
+  background: var(--primary);
+  animation: align-stage-sweep 1.2s ease-in-out infinite;
+}
+
+@keyframes align-stage-sweep {
+  to {
+    left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* A still, half-strength fill: "in progress" without the motion. */
+  .align-stage-current::after {
+    left: 0;
+    width: 100%;
+    opacity: 0.5;
+    animation: none;
+  }
+}

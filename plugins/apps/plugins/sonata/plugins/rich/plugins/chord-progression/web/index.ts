@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { useHasChords } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { ChordLabelModeAction } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label/web";
 import { ChordProgression } from "./components/chord-progression";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -13,6 +14,7 @@ export default {
       label: "Progression",
       icon: symbol("queue-music"),
       component: ChordProgression,
+      actions: ChordLabelModeAction,
       area: "player",
       useAvailable: useHasChords,
     }),

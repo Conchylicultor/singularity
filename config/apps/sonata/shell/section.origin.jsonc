@@ -1,4 +1,4 @@
-// @hash d040d334c10a
+// @hash 42a40df02061
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,14 +7,12 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "apps.sonata.rich.accompaniment:accompaniment",
     "apps.sonata.rich.chord-list:chord-list",
-    "apps.sonata.rich.chord-mode:chord-mode",
     "apps.sonata.rich.chord-progression:chord-progression",
     "apps.sonata.rich.chord-readout:chord-readout",
     "apps.sonata.rich.circle-of-fifths:circle-of-fifths",
     "apps.sonata.rich.key-readout:key-readout",
-    "apps.sonata.rich.rhythm-controls:rhythm",
-    "apps.sonata.rich.voicing-controls:voicing",
     "apps.sonata.sources.chord-grid:chord-grid-editor",
     "apps.sonata.sources.ultimate-guitar:ultimate-guitar-editor",
     "apps.sonata.sources.ultimate-guitar.alignment:ug-alignment-recording",

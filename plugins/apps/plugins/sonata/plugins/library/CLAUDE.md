@@ -187,18 +187,19 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Sonata.Home` "library" → `SongLibrary`
     - `sonataPlayerPane.Actions` "back" → `BackToLibrary`
     - `sonataPlayerPane.Actions` "display-picker" → `DisplayPicker`
+    - `sonataPlayerPane.Actions` "panels" → `PanelsToggle`
     - `Library.SongActions` "play" → `PlaySongAction`
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
   - Uses: 63 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×10
-    - `primitives/css/ui-kit` ×6
     - `primitives/data-view` ×6
     - `apps/sonata/player` ×5
+    - `primitives/css/ui-kit` ×5
     - `apps/sonata/document` ×4
+    - `apps/sonata/shell` ×4
     - `network/live` ×4
-    - `apps/sonata/shell` ×3
     - `primitives/css/spacing` ×2
     - `primitives/latest-ref` ×2
     - `primitives/live-state` ×2
@@ -228,6 +229,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `sonataPlayerPane`
     - `sonataSongLink`
     - `useCurrentSong`
+    - `useSectionPaneCollapsed`
     - `useSongLink`
 - Server:
   - Contributes:

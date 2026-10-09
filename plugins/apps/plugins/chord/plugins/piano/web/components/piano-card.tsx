@@ -159,6 +159,7 @@ export function PianoCard({
           // the layout. Flat keys, which is what the mockup draws.
           skin={CHORD_KEY_SKIN}
           interaction={interaction}
+          sizing="fill"
           renderKey={(key, state) =>
             state.lit ? (
               <span
@@ -174,8 +175,7 @@ export function PianoCard({
           className="w-full"
           // The keybed height is a number the LAYOUT chooses (four rows of
           // Jankó pads need more room than one row of piano keys), so it is not
-          // a size class here. "keybed", not "chip": these keys are what the
-          // learner reads the chord off, and they are played.
+          // a size class here.
           style={{ height: pitchKeyboardHeight("piano", "keybed") }}
         />
       </Stack>

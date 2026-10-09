@@ -15,9 +15,10 @@ import {
   builtinLedgerFor,
   JOB_WIDE_LOCK_KEY,
   readRecordedFailure,
+  type RecordedFailure,
 } from "./builtin-ledger";
 import { finishSupervisedRun } from "./finish";
-import { superviseRuns } from "./loop";
+import { superviseRuns, type RunVerdict } from "./loop";
 import {
   defineRunBodyTask,
   type RunBodyTask,
@@ -53,6 +54,14 @@ export interface SupervisedJobEndedMeta<I> {
   readonly input: I;
   /** 1-indexed spawn attempt — always 1 unless the job declared `runAttempts`. */
   readonly attempt: number;
+  /**
+   * The run failed because `cancelSupervisedJobByLock` stopped it — a user's
+   * Cancel, not a fault. False for every other ending, including a run that
+   * finished (exit 0) before the cancel's signal reached it, and a TERM sent
+   * any other way (a reboot, `cancelSupervisedJob`). Always false with an own
+   * ledger: cancel-by-lock is a built-in-ledger verb.
+   */
+  readonly cancelled: boolean;
 }
 
 /**
@@ -286,6 +295,23 @@ export interface SupervisedJob<
   readonly kind: SupervisedRunKind;
 }
 
+/**
+ * What `cancelSupervisedJobByLock` needs of a job: its built-in ledger and the
+ * `lock` it declared. Held off the public `SupervisedJob` type so the cancel
+ * verb is the only reader; a job missing here has an own ledger or no `lock`.
+ */
+export interface BuiltinLockedJob {
+  readonly jobName: string;
+  readonly lock: (input: unknown) => string;
+}
+
+const builtinLockedJobs = new WeakMap<object, BuiltinLockedJob>();
+
+/** The built-in ledger and lock of `job`, or `null` when it has none. */
+export function builtinLockedJobOf(job: object): BuiltinLockedJob | null {
+  return builtinLockedJobs.get(job) ?? null;
+}
+
 /** A ledger with the verbs the wrapper calls, whichever kind it is. */
 interface ResolvedLedger<I> {
   readonly kindId: string;
@@ -452,7 +478,7 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
         })
       : defineJob({ ...common, dedup: "none" });
 
-  return {
+  const supervised: SupervisedJob<N, S> = {
     ...job,
     kind,
     _kind: "supervised-job",
@@ -469,6 +495,16 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
       await job.register();
     },
   };
+  if (ledger.builtin && spec.steps === undefined && spec.lock !== undefined) {
+    const lock = spec.lock;
+    builtinLockedJobs.set(supervised, {
+      jobName: spec.name,
+      // The caller hands `z.infer<S>` (the cancel verb's signature), the same
+      // parsed shape `claim` locked on.
+      lock: (input) => lock(input as z.infer<S>),
+    });
+  }
+  return supervised;
 }
 
 async function runSingleChildJob<I>(opts: {
@@ -523,21 +559,18 @@ async function runSingleChildJob<I>(opts: {
         return { runId, pid };
       },
       closeRow: ledger.closeRow,
-      onEnded: async (started, terminal, attempt) => {
-        await opts.onEnded?.(started.runId, terminal, { input, attempt });
-        if (!ledger.builtin) return;
-        applyFailurePolicy({
+      onEnded: (started, terminal, attempt) =>
+        endAttempt({
           jobName: opts.jobName,
+          builtin: ledger.builtin,
+          runAttempts: opts.runAttempts,
+          readFailure: readRecordedFailure,
+          onEnded: opts.onEnded,
           runId: started.runId,
           terminal,
           attempt,
-          runAttempts: opts.runAttempts,
-          failure:
-            terminal.exitCode === 0
-              ? null
-              : await readRecordedFailure(started.runId),
-        });
-      },
+          input,
+        }),
     });
   } catch (err) {
     // A dead-lettering failure (the built-in failure policy, or an `onEnded`
@@ -559,6 +592,53 @@ async function runSingleChildJob<I>(opts: {
   // failed run surfaces in the job's own row, UI and notification, and a throw
   // would file a dead-letter for every failed build. The built-in ledger has no
   // UI, so its failure policy (in `onEnded` above) throws instead.
+}
+
+/**
+ * One single-child attempt has ended: run the job's `onEnded`, then answer the
+ * ladder's verdict.
+ *
+ * - Own ledger: the exit code decides (a failed run is DATA in the job's own
+ *   row, retried while attempts are left). `cancelled` is always false.
+ * - Built-in ledger: a failed run's row is read FIRST, so `onEnded` can tell a
+ *   user's Cancel from a fault, and the failure policy answers (or throws).
+ */
+export async function endAttempt<I>(opts: {
+  jobName: string;
+  builtin: boolean;
+  runAttempts: number;
+  readFailure: (runId: string) => Promise<RecordedFailure>;
+  onEnded:
+    | ((
+        runId: string,
+        terminal: RunTerminal,
+        meta: SupervisedJobEndedMeta<I>,
+      ) => Promise<void>)
+    | undefined;
+  runId: string;
+  terminal: RunTerminal;
+  attempt: number;
+  input: I;
+}): Promise<RunVerdict> {
+  const { runId, terminal, attempt } = opts;
+  const failure =
+    opts.builtin && terminal.exitCode !== 0
+      ? await opts.readFailure(runId)
+      : null;
+  await opts.onEnded?.(runId, terminal, {
+    input: opts.input,
+    attempt,
+    cancelled: failure?.cancelled ?? false,
+  });
+  if (!opts.builtin) return terminal.exitCode === 0 ? "done" : "retry";
+  return applyFailurePolicy({
+    jobName: opts.jobName,
+    runId,
+    terminal,
+    attempt,
+    runAttempts: opts.runAttempts,
+    failure,
+  });
 }
 
 async function runStepsJob<I>(

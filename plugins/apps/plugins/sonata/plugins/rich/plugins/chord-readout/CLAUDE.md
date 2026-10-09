@@ -9,14 +9,14 @@
   - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
   - Uses:
     - `apps/sonata/document.useHasChords`
-    - `apps/sonata/pitch-layout.usePitchGeometry`
-    - `apps/sonata/primitives/keyboard.Keyboard`
-    - `apps/sonata/primitives/keyboard.useSonataKeySkin`
+    - `apps/sonata/rich/readout-keyboard.KeyboardCaption`
+    - `apps/sonata/rich/readout-keyboard.ReadoutKeyboard`
+    - `apps/sonata/rich/readout-keyboard.useReadoutPlane`
     - `apps/sonata/session.useCursorSelector`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
+    - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/persistent-draft.useDraft`

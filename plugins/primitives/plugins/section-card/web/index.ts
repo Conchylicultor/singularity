@@ -1,6 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { SectionCard, type SectionCardProps } from "./internal/section-card";
+export {
+  SectionCard,
+  type SectionCardProps,
+  type SectionCardVariant,
+} from "./internal/section-card";
 
 export default {
   description:

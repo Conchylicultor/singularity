@@ -156,16 +156,24 @@ export interface SuperviseRunsSpec {
    */
   closeRow(runId: string, terminal: RunTerminal): Promise<void>;
   /**
-   * The run has ENDED — do this kind's terminal work. Called once per attempt
-   * that reached a terminal (and again on every replay: it is not memoized),
+   * The run has ENDED — do this kind's terminal work and answer whether the
+   * ladder goes on: `done` stops it, `retry` spawns the next attempt (if one
+   * is left). Called once per attempt that reached a terminal (and again on
+   * every replay: it is not memoized, so the verdict must be deterministic),
    * before the next attempt claims. Throwing ends the ladder.
    */
   onEnded(
     started: StartedRunAttempt,
     terminal: RunTerminal,
     attempt: number,
-  ): Promise<void>;
+  ): Promise<RunVerdict>;
 }
+
+/**
+ * What one ended attempt means for the ladder. Never derived from the exit code
+ * alone: a cancelled run fails, and must not be retried.
+ */
+export type RunVerdict = "done" | "retry";
 
 export type SuperviseRunsResult =
   /** The claim lost its race: another run of this kind is already in flight. */
@@ -180,7 +188,7 @@ export type SuperviseRunsResult =
 
 /**
  * Spawn a supervised run, wait for it to end, and repeat up to `runAttempts`
- * times while it keeps failing.
+ * times while `onEnded` answers `retry`.
  *
  * The whole shape of a supervised job lives here, and it is short at both ends
  * and empty in the middle: spawn and suspend, then be woken and read the marker.
@@ -244,9 +252,9 @@ export async function superviseRuns(
       pid: started.pid,
       name: `run-ended:${attempt}`,
     });
-    await spec.onEnded(started, terminal, attempt);
+    const verdict = await spec.onEnded(started, terminal, attempt);
     last = { outcome: "ended", runId: started.runId, attempt, terminal };
-    if (terminal.exitCode === 0) break;
+    if (verdict === "done") break;
     previous = { runId: started.runId, terminal };
   }
   return last;
