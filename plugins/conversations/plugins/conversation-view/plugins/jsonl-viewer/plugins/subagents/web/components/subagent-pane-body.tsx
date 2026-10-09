@@ -237,7 +237,7 @@ function ReportCard({ report }: { report: ReportText }) {
           <Text
             as="pre"
             variant="caption"
-            className="whitespace-pre-wrap break-words text-destructive-text"
+            className="whitespace-pre-wrap break-words text-destructive"
           >
             {report.text}
           </Text>
@@ -325,7 +325,7 @@ export function SubagentPaneBody({
       }
       errorFallback={(err) => (
         <PaneMessage>
-          <Text as="div" variant="caption" className="text-destructive-text">
+          <Text as="div" variant="caption" className="text-destructive">
             {err.message}
           </Text>
         </PaneMessage>

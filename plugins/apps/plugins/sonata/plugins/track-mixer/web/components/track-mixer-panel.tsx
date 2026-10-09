@@ -322,7 +322,7 @@ function TrackLevel({
           icon={levelIcon(muted, fader.value)}
           label={muted ? "Unmute track" : "Mute track"}
           aria-pressed={muted}
-          className={cn(muted && "text-destructive-text")}
+          className={cn(muted && "text-destructive")}
           onClick={() => setTrackMuted(songId, trackId, !muted)}
         />
       }

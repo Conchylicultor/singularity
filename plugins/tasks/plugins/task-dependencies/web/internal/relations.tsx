@@ -102,7 +102,7 @@ export function RelationChip({
               label={direction.removeLabel(title)}
               variant="ghost"
               onClick={remove}
-              className="hover:text-destructive-text"
+              className="hover:text-destructive"
             />
           </ControlSizeProvider>
         }

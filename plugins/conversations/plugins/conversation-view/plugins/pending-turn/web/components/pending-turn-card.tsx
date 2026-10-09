@@ -122,7 +122,7 @@ export function PendingTurnCard({
         <Text
           as="div"
           variant="caption"
-          className={destructive ? "text-destructive-text" : "text-warning"}
+          className={destructive ? "text-destructive" : "text-warning"}
         >
           {caption}
         </Text>

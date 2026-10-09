@@ -175,7 +175,7 @@ export function GoogleMapsSetupPane() {
               {connected ? "Replace key" : "Save key"}
             </Button>
             {saveError ? (
-              <Text as="p" variant="caption" className="text-destructive-text">
+              <Text as="p" variant="caption" className="text-destructive">
                 {saveError}
               </Text>
             ) : null}

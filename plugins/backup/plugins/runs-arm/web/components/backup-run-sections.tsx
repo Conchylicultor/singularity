@@ -54,9 +54,9 @@ function TargetResultLine({
         />
         <span className="font-medium capitalize">{result.targetId}</span>
         {result.ok ? (
-          <Icon icon={checkCircleIcon} className="size-3.5 text-success-text" />
+          <Icon icon={checkCircleIcon} className="size-3.5 text-success" />
         ) : (
-          <Icon icon={errorIcon} className="size-3.5 text-destructive-text" />
+          <Icon icon={errorIcon} className="size-3.5 text-destructive" />
         )}
         {result.detail !== undefined && (
           <Text as="span" variant="caption" tone="muted">
@@ -107,7 +107,7 @@ function SourceReportLines({
         <Inline gap="sm">
           <span>{source.name}</span>
           {failed && (
-            <Icon icon={errorIcon} className="size-3.5 text-destructive-text" />
+            <Icon icon={errorIcon} className="size-3.5 text-destructive" />
           )}
         </Inline>
       </Text>

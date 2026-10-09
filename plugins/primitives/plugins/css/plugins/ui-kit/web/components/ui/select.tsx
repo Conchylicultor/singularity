@@ -261,7 +261,10 @@ function SelectItem({
           <span className="pointer-events-none flex size-4 items-center justify-center" />
         }
       >
-        <Icon icon={checkIcon} className="pointer-events-none text-primary" />
+        <Icon
+          icon={checkIcon}
+          className="pointer-events-none text-primary-text"
+        />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
   );

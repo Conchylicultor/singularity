@@ -75,7 +75,7 @@ export function ToolCallCard({
           <Badge
             colorClass={
               hasError
-                ? "bg-destructive/15 text-destructive-text"
+                ? "bg-destructive/15 text-destructive"
                 : "bg-primary/10 text-primary-text"
             }
             // The badge's shape is the tool-badge tokens (density

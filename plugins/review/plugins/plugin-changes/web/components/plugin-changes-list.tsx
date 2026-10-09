@@ -32,7 +32,7 @@ export function PluginChangesList({
   }
   if (error) {
     return (
-      <Text as="p" variant="body" className="text-destructive-text px-xs">
+      <Text as="p" variant="body" className="text-destructive px-xs">
         Error: {String(error)}
       </Text>
     );

@@ -36,10 +36,10 @@ const VARIANT_BORDER: Record<Notification["variant"], string> = {
 };
 
 const VARIANT_TEXT: Record<Notification["variant"], string> = {
-  error: "text-destructive-text",
+  error: "text-destructive",
   warning: "text-warning",
   info: "text-info",
-  success: "text-success-text",
+  success: "text-success",
 };
 
 const VARIANT_BORDER_MUTED: Record<Notification["variant"], string> = {
@@ -50,10 +50,10 @@ const VARIANT_BORDER_MUTED: Record<Notification["variant"], string> = {
 };
 
 const VARIANT_TEXT_MUTED: Record<Notification["variant"], string> = {
-  error: "text-destructive-text/70",
+  error: "text-destructive/70",
   warning: "text-warning/70",
   info: "text-info/70",
-  success: "text-success-text/70",
+  success: "text-success/70",
 };
 
 function NotificationRow({
@@ -355,7 +355,7 @@ function NotificationList({
       {unread.length > 0 && (
         <>
           <div
-            className={`px-md py-xs text-3xs font-semibold uppercase tracking-wider border-b ${hasUnreadError ? "text-destructive-text bg-destructive/5" : "text-warning bg-warning/5"}`}
+            className={`px-md py-xs text-3xs font-semibold uppercase tracking-wider border-b ${hasUnreadError ? "text-destructive bg-destructive/5" : "text-warning bg-warning/5"}`}
           >
             Unread ({unread.length})
           </div>

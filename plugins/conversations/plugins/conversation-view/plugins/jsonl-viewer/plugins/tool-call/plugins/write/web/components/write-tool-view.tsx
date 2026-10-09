@@ -23,7 +23,7 @@ export function WriteToolView({ event }: ToolRendererProps) {
         </Scroll>
         {event.result?.isError && (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 separates the error text from the code block above
-          <Text as="p" variant="caption" className="mt-1 text-destructive-text">
+          <Text as="p" variant="caption" className="mt-1 text-destructive">
             {event.result.content}
           </Text>
         )}

@@ -36,7 +36,7 @@ type BroadcastSeverity = BroadcastEntry["severity"];
 type BroadcastCommand = OpKind;
 
 const SEVERITY_STYLES: Record<BroadcastSeverity, string> = {
-  error: "bg-destructive/10 text-destructive-text",
+  error: "bg-destructive/10 text-destructive",
   warning: "bg-warning/10 text-warning",
   info: "bg-info/10 text-info",
 };
@@ -161,7 +161,7 @@ export function BroadcastsPanel() {
         <Text
           as="div"
           variant="caption"
-          className="border-b bg-destructive/10 px-lg py-sm text-destructive-text"
+          className="border-b bg-destructive/10 px-lg py-sm text-destructive"
         >
           {error}
         </Text>
@@ -377,7 +377,7 @@ export function BroadcastsPanel() {
                     icon={deleteIcon}
                     label="Delete"
                     variant="ghost"
-                    className="text-muted-foreground hover:text-destructive-text"
+                    className="text-muted-foreground hover:text-destructive"
                     loading={saving}
                     onClick={() => handleDelete(i)}
                   />

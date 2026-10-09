@@ -1870,7 +1870,7 @@ function SelectionLayer({
               </Button>
               <button
                 type="button"
-                className="text-destructive-text hover:text-destructive-text/80"
+                className="text-destructive hover:text-destructive/80"
                 onClick={() => {
                   bulkDelete([...selection]);
                   clearSelection();

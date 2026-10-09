@@ -7,19 +7,19 @@ const createRule = ESLintUtils.RuleCreator(
 );
 
 /**
- * `primary`, `destructive` and `success` are FILL colours (Send, Stop, Go,
- * a destructive button), read with their `*-foreground` label on top. Used as text on a
- * surface they need the palette's text twins (`primary-text`,
- * `destructive-text`, `success-text`): on a dark surface no single value is both dark enough
- * for a white label at 4.5:1 and light enough to read at 4.5:1 against the
- * surface, so a theme with deep fills sets the twins lighter. A bare
- * `text-primary` / `text-destructive` / `text-success` would paint the fill colour as text and
- * go unreadable under such a theme.
+ * `primary` is a FILL colour (every primary button, read with its
+ * `primary-foreground` label on top). Used as text on a surface it needs the
+ * palette's text twin, `primary-text`: on a dark surface no single value is
+ * both dark enough for a near-white label at 4.5:1 and light enough to read at
+ * 4.5:1 against the surface, so a theme with a deep primary sets the twin
+ * lighter. A bare `text-primary` would paint the fill colour as text and go
+ * unreadable under such a theme. (Status colours split the other way: they are
+ * text first, and their fills are the `*-solid` tokens.)
  *
  * Flags the bare text-colour utility (any variant prefix, any opacity
- * modifier); `text-primary-foreground` and the `-text` twins are untouched.
+ * modifier); `text-primary-foreground` and `text-primary-text` are untouched.
  */
-const FILL_AS_TEXT = /^text-(primary|destructive|success)(\/\d+)?$/;
+const FILL_AS_TEXT = /^text-primary(\/\d+)?$/;
 
 export default function buildRule({
   collectTokens,
@@ -33,12 +33,12 @@ export default function buildRule({
       type: "problem",
       docs: {
         description:
-          "Disallow text-primary / text-destructive / text-success: text takes the palette's text twins (text-*-text), the fill colours stay fills.",
+          "Disallow text-primary: text takes the palette's text twin (text-primary-text), the primary fill stays a fill.",
       },
       schema: [],
       messages: {
         fillAsText:
-          "`{{token}}` paints a fill colour as text. Use `text-{{role}}-text` (the palette's {{role}}Text token), which a theme can lift for readability on its surface while `{{role}}` stays the button fill.",
+          "`{{token}}` paints the primary fill colour as text. Use `text-primary-text` (the palette's primaryText token), which a theme can lift for readability on its surface while `primary` stays the button fill.",
       },
     },
     defaultOptions: [],
@@ -46,12 +46,11 @@ export default function buildRule({
       function checkTokens(node: TSESTree.Node, tokens: Set<string>) {
         for (const token of tokens) {
           const c = baseClass(token);
-          const m = FILL_AS_TEXT.exec(c);
-          if (m) {
+          if (FILL_AS_TEXT.test(c)) {
             context.report({
               node,
               messageId: "fillAsText",
-              data: { token: c, role: m[1] },
+              data: { token: c },
             });
           }
         }

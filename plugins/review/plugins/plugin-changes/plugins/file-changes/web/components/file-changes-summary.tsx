@@ -11,10 +11,10 @@ export function FileChangesSummary({ plugin }: PluginReviewProps) {
     >
       {plugin.fileCount}f
       {plugin.additions > 0 && (
-        <span className="text-success-text"> +{plugin.additions}</span>
+        <span className="text-success"> +{plugin.additions}</span>
       )}
       {plugin.deletions > 0 && (
-        <span className="text-destructive-text"> -{plugin.deletions}</span>
+        <span className="text-destructive"> -{plugin.deletions}</span>
       )}
     </Text>
   );

@@ -40,7 +40,7 @@ export const ATTEMPT_STATUS_META: Record<
   },
   pushed: { badgeClassName: cn("bg-info/15 text-info"), dotClass: "bg-info" },
   completed: {
-    badgeClassName: cn("bg-success/15 text-success-text"),
+    badgeClassName: cn("bg-success/15 text-success"),
     dotClass: "bg-success",
   },
   // The process is not running but the attempt is resumable (a `gone`

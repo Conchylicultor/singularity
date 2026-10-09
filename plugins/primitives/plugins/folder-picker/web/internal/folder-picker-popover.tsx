@@ -77,13 +77,13 @@ export function FolderPickerPopover({
               {verdict.valid ? (
                 <Icon
                   icon={checkCircleIcon}
-                  className="size-4 text-success-text"
+                  className="size-4 text-success"
                   title="Folder exists"
                 />
               ) : (
                 <Icon
                   icon={cancelIcon}
-                  className="size-4 text-destructive-text"
+                  className="size-4 text-destructive"
                   title={verdict.reason}
                 />
               )}

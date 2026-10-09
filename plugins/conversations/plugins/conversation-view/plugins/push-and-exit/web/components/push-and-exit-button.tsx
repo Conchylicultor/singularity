@@ -107,10 +107,10 @@ const BUTTON_CLASS: Record<Mode, string> = {
   restore: PRIMARY,
   send: PRIMARY,
   queue: PRIMARY,
-  // An action, not a status: its own fill, so a theme can deepen the button
-  // without darkening every success dot and badge.
-  go: "bg-success-action hover:bg-success-action/90 text-success-action-foreground",
-  stop: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+  // The solid fills, not the status colours: a theme can deepen the buttons
+  // without darkening every success / error dot, badge and message.
+  go: "bg-success-solid hover:bg-success-solid/90 text-success-solid-foreground",
+  stop: "bg-destructive-solid text-destructive-solid-foreground hover:bg-destructive-solid/90",
   "push-and-exit": PRIMARY,
   exit: PRIMARY,
   // Degraded, never destructive: the exit decision is unknown, but closing is

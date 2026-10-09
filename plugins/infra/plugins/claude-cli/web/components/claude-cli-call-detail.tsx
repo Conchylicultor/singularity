@@ -49,7 +49,7 @@ export function ClaudeCliCallDetail({ call }: { call: ClaudeCliCall }) {
         <Section label="Error">
           <Scroll
             as="pre"
-            className="max-h-64 whitespace-pre-wrap rounded-md bg-destructive/10 p-sm text-caption text-destructive-text"
+            className="max-h-64 whitespace-pre-wrap rounded-md bg-destructive/10 p-sm text-caption text-destructive"
           >
             {call.error}
           </Scroll>

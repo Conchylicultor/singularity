@@ -452,7 +452,7 @@ function ConfigDetailBody({
                 variant="ghost"
                 loading={resetOverrideM.isPending}
                 onClick={handleResetAll}
-                className="bg-destructive/20 text-destructive-text hover:bg-destructive/30"
+                className="bg-destructive/20 text-destructive hover:bg-destructive/30"
               >
                 Reset
               </Button>
@@ -482,7 +482,7 @@ function ConfigDetailBody({
                   as="div"
                   variant="body"
                   // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the invalid banner from the fields below (no named margin utility)
-                  className="mb-2 rounded-md border border-destructive/30 bg-destructive/10 px-md py-sm text-destructive-text"
+                  className="mb-2 rounded-md border border-destructive/30 bg-destructive/10 px-md py-sm text-destructive"
                 >
                   <Stack gap="xs">
                     <Stack direction="row" gap="sm" align="center">
@@ -540,7 +540,7 @@ function ConfigDetailBody({
                                 <Text
                                   as="div"
                                   variant="caption"
-                                  className="text-destructive-text/90"
+                                  className="text-destructive/90"
                                 >
                                   <code className="rounded-sm bg-destructive/15 px-xs font-medium">
                                     {label}

@@ -44,7 +44,7 @@ function Site({ site }: { site: SearchSite }) {
           title={link.url}
           target="_blank"
           rel="noreferrer"
-          className="truncate text-caption text-foreground/80 hover:text-primary hover:underline"
+          className="truncate text-caption text-foreground/80 hover:text-primary-text hover:underline"
         >
           {link.title}
         </a>

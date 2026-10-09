@@ -27,10 +27,10 @@ ruleTester.run(
   {
     valid: [
       {
-        code: `const C = () => <span className="text-primary-text text-success-text" />;`,
+        code: `const C = () => <span className="text-primary-text text-success" />;`,
       },
       {
-        code: `const C = () => <span className="hover:text-destructive-text/80" />;`,
+        code: `const C = () => <span className="hover:text-destructive/80" />;`,
       },
       {
         code: `const C = () => <button className="bg-primary text-primary-foreground" />;`,
@@ -43,15 +43,11 @@ ruleTester.run(
         errors: [{ messageId: "fillAsText" }],
       },
       {
-        code: `const C = () => <span className="text-success" />;`,
+        code: `const v = cva("hover:text-primary/70");`,
         errors: [{ messageId: "fillAsText" }],
       },
       {
-        code: `const v = cva("hover:text-destructive/70");`,
-        errors: [{ messageId: "fillAsText" }],
-      },
-      {
-        code: `const T = { e: "text-destructive" }; const C = () => <p className={cn(T.e)} />;`,
+        code: `const T = { e: "text-primary" }; const C = () => <p className={cn(T.e)} />;`,
         errors: [{ messageId: "fillAsText" }, { messageId: "fillAsText" }],
       },
     ],

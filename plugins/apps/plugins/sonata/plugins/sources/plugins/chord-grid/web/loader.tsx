@@ -60,7 +60,7 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
           of <code className="rounded-md bg-muted px-xs">key: C</code>
         </span>
         {skipped.length > 0 ? (
-          <span className={cn("text-destructive-text")} role="alert">
+          <span className={cn("text-destructive")} role="alert">
             Unrecognised: {skipped.join(", ")}
           </span>
         ) : null}

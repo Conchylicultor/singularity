@@ -65,7 +65,7 @@ export function McpInstructionsDeltaView({ event }: AttachmentRendererProps) {
                 key={name}
                 className="text-muted-foreground"
               >
-                <span className="text-success-text">+</span> {name}
+                <span className="text-success">+</span> {name}
               </Text>
             ))}
             {removedNames.map((name) => (
@@ -75,8 +75,7 @@ export function McpInstructionsDeltaView({ event }: AttachmentRendererProps) {
                 key={name}
                 className="text-muted-foreground line-through"
               >
-                <span className="text-destructive-text no-underline">−</span>{" "}
-                {name}
+                <span className="text-destructive no-underline">−</span> {name}
               </Text>
             ))}
           </Stack>

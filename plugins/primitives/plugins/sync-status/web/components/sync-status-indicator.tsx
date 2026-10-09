@@ -100,7 +100,7 @@ function Body({ agg }: { agg: Exclude<SyncAggregate, { kind: "idle" }> }) {
       icon={cloudOffIcon}
       label="Retry"
       tooltip={`Couldn't save${what} — click to retry`}
-      className="text-destructive-text"
+      className="text-destructive"
       onClick={() => {
         // Pull every registered retry imperatively and run it.
         for (const ref of sink.retries.values()) ref.current?.();

@@ -15,7 +15,7 @@ export function ChartState({
 }) {
   if (error)
     return (
-      <Text as="div" variant="body" className="text-destructive-text">
+      <Text as="div" variant="body" className="text-destructive">
         Failed to load: {error}
       </Text>
     );

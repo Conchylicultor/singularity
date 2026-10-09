@@ -92,14 +92,14 @@ function CommitFileList({
           <Text
             as="span"
             variant="caption"
-            className="tabular-nums text-success-text"
+            className="tabular-nums text-success"
           >
             +{totals.additions}
           </Text>
           <Text
             as="span"
             variant="caption"
-            className="tabular-nums text-destructive-text"
+            className="tabular-nums text-destructive"
           >
             −{totals.deletions}
           </Text>
@@ -175,8 +175,8 @@ function CommitFileRow({
               className={cn(rigidClass(), "tabular-nums")}
             >
               <Stack as="span" direction="row" gap="sm" align="center">
-                <span className="text-success-text">+{file.additions}</span>
-                <span className="text-destructive-text">−{file.deletions}</span>
+                <span className="text-success">+{file.additions}</span>
+                <span className="text-destructive">−{file.deletions}</span>
               </Stack>
             </Text>
           </Line>

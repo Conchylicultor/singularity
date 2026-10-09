@@ -54,7 +54,7 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-hover-fill hover:text-foreground aria-expanded:bg-hover-fill aria-expanded:text-foreground",
         destructive:
-          "bg-destructive/10 text-destructive-text hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         // The OPTIONAL affordance — attach, add, point at: something the user
         // may do beside the main action, so it sits quieter than `outline`. No
         // fill, a dashed hairline and a muted label, all brought to full

@@ -224,7 +224,7 @@ export function JsonlPane({
                 <Text
                   as="div"
                   variant="caption"
-                  className="px-md py-sm text-destructive-text"
+                  className="px-md py-sm text-destructive"
                 >
                   {err.message}
                 </Text>

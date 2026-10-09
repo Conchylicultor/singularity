@@ -171,7 +171,7 @@ type BannerTone = "info" | "warning" | "error";
 const TONE_CLASS: Record<BannerTone, string> = {
   info: "border-border bg-muted/60",
   warning: "border-warning/50 bg-warning/10 text-warning",
-  error: "border-destructive/50 bg-destructive/10 text-destructive-text",
+  error: "border-destructive/50 bg-destructive/10 text-destructive",
 };
 
 function BannerShell({

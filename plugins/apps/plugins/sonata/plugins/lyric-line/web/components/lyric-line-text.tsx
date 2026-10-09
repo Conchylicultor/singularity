@@ -28,8 +28,8 @@ export interface LyricLineTextProps {
 function defaultChordStyle(_: LyricChord, active: boolean): LyricChordStyle {
   return {
     className: active
-      ? "font-bold text-primary"
-      : "font-semibold text-primary/70",
+      ? "font-bold text-primary-text"
+      : "font-semibold text-primary-text/70",
   };
 }
 

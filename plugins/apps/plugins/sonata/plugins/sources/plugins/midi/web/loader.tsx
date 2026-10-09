@@ -134,7 +134,7 @@ export function MidiLoader({ onRaw }: Props) {
         <Text
           as="p"
           variant="caption"
-          className="text-destructive-text"
+          className="text-destructive"
           role="alert"
         >
           {error}

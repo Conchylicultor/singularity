@@ -52,10 +52,10 @@ const check: Check = {
       ok: false,
       message: `hardcoded colors found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
       hint: `No raw Tailwind color scales, arbitrary color literals, or named-color CSS vars. Use tokens:
-  • Success / done / added / positive  → bg-success, text-success-text, bg-success/10
+  • Success / done / added / positive  → bg-success, text-success, bg-success/10
   • Warning / pending / held / caution → bg-warning, text-warning, bg-warning/10
   • Info / in-progress / running       → bg-info, text-info, bg-info/10
-  • Error / failed / deleted           → bg-destructive, text-destructive-text
+  • Error / failed / deleted           → bg-destructive, text-destructive
   • Neutral / muted                    → bg-muted, text-muted-foreground
   • Brand action                       → bg-primary, text-primary-foreground
 For categorical data-viz (Gantt phase, model tier, runtime/method badge, hash-assigned chips),

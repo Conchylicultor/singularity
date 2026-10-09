@@ -38,7 +38,7 @@ const BUSY_CLASS: Record<QueueTone, string> = {
 const NUMBER_CLASS: Record<QueueTone, string> = {
   ok: cn("text-muted-foreground"),
   attention: cn("text-warning"),
-  critical: cn("text-destructive-text"),
+  critical: cn("text-destructive"),
 };
 const FREE_CLASS = cn("bg-muted-foreground/15");
 const UNKNOWN_CLASS = cn("bg-muted-foreground/10");

@@ -95,7 +95,7 @@ const TONE_CLASS: Record<TextTone, string> = {
   muted: "text-muted-foreground",
   faint: "text-faint-foreground",
   primary: "text-primary-text",
-  destructive: "text-destructive-text",
+  destructive: "text-destructive",
 };
 
 /**

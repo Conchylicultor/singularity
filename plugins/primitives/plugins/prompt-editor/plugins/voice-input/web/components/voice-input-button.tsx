@@ -27,8 +27,8 @@ export function VoiceInputButton({ insertText }: PromptEditorActionProps) {
       // inherited text colour by default), like the pane toolbar's glyphs.
       className={cn(
         "text-toolbar-foreground",
-        isListening && "text-destructive-text bg-destructive/10",
-        error && "text-destructive-text",
+        isListening && "text-destructive bg-destructive/10",
+        error && "text-destructive",
       )}
     />
   );

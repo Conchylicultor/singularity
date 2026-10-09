@@ -83,7 +83,7 @@ const SecretRenderer = defineFieldShape({
               direction="row"
               align="center"
               gap="xs"
-              className="text-success-text"
+              className="text-success"
             >
               <Icon icon={checkIcon} className="size-3.5" />
               <Text variant="caption">Configured</Text>

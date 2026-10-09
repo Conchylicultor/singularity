@@ -43,7 +43,7 @@ export function HookSuccessView({ event }: AttachmentRendererProps) {
         <Text
           as="p"
           variant="caption"
-          className={failed ? "text-destructive-text" : undefined}
+          className={failed ? "text-destructive" : undefined}
         >
           exit {exitCode}
         </Text>
@@ -51,7 +51,7 @@ export function HookSuccessView({ event }: AttachmentRendererProps) {
           <Text
             as="p"
             variant="caption"
-            className="whitespace-pre-wrap break-words text-destructive-text"
+            className="whitespace-pre-wrap break-words text-destructive"
           >
             {stderr}
           </Text>

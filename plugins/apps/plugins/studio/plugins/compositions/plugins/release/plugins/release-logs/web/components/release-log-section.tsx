@@ -112,9 +112,7 @@ function PersistedLogs({ runId }: { runId: string }): ReactElement {
             key={i}
             className={cn(
               "whitespace-pre-wrap break-all",
-              line.stream === "stderr"
-                ? "text-destructive-text"
-                : "text-foreground",
+              line.stream === "stderr" ? "text-destructive" : "text-foreground",
             )}
           >
             {line.text}

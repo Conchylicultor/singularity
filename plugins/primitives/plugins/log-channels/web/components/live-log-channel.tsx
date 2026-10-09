@@ -316,9 +316,7 @@ export function LogEntryList({
           direction="row"
           gap="sm"
           className={
-            entry.stream === "stderr"
-              ? "text-destructive-text"
-              : "text-foreground"
+            entry.stream === "stderr" ? "text-destructive" : "text-foreground"
           }
         >
           <span className="text-muted-foreground tabular-nums">

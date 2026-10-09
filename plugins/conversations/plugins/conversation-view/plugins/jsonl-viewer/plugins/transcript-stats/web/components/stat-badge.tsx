@@ -15,7 +15,7 @@ const PLATE = "bg-background/80 backdrop-blur-sm";
 const INK: Record<StatTone, string> = {
   muted: "text-muted-foreground/60",
   attention: "text-warning",
-  alert: "text-destructive-text",
+  alert: "text-destructive",
 };
 
 export interface StatBadgeProps extends Passthrough {

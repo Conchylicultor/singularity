@@ -16,6 +16,6 @@ export const PHASE_CLASSES: Record<Phase, string> = {
   implementation_review:
     "bg-categorical-6/15 text-categorical-6 hover:bg-categorical-6/25",
   investigating: "bg-muted text-muted-foreground hover:bg-muted/80",
-  executing: "bg-success/15 text-success-text hover:bg-success/25",
+  executing: "bg-success/15 text-success hover:bg-success/25",
   other: "bg-muted text-muted-foreground hover:bg-muted/80",
 };

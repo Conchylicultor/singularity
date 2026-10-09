@@ -200,7 +200,7 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
           {result?.isError && (
             <Scroll
               as="pre"
-              className="max-h-96 whitespace-pre-wrap break-words rounded-md bg-destructive/10 p-sm text-destructive-text"
+              className="max-h-96 whitespace-pre-wrap break-words rounded-md bg-destructive/10 p-sm text-destructive"
             >
               {result.content || "(empty)"}
             </Scroll>

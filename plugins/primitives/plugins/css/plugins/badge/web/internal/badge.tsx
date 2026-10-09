@@ -21,8 +21,8 @@ const VARIANT_CLASS: Record<BadgeVariant, string> = {
   muted: "bg-muted text-muted-foreground",
   primary: "bg-primary/15 text-primary-text",
   warning: "bg-warning/15 text-warning",
-  destructive: "bg-destructive/15 text-destructive-text",
-  success: "bg-success/15 text-success-text",
+  destructive: "bg-destructive/15 text-destructive",
+  success: "bg-success/15 text-success",
   info: "bg-info/15 text-info",
 };
 

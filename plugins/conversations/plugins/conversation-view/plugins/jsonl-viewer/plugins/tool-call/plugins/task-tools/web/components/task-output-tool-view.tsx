@@ -29,7 +29,7 @@ export function TaskOutputToolView({ event }: ToolRendererProps) {
       )}
       {event.result?.isError && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the error text from the card header
-        <Text as="p" variant="caption" className="mt-2 text-destructive-text">
+        <Text as="p" variant="caption" className="mt-2 text-destructive">
           {event.result.content}
         </Text>
       )}

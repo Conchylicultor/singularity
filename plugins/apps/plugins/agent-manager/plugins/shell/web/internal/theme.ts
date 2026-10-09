@@ -10,8 +10,14 @@ import { scrollbarGroup } from "@plugins/ui/plugins/tokens/plugins/scrollbar/cor
 
 /**
  * Mist, the agent manager's look (prototype proto-1789643584-ldt6): cool,
- * lifted slate surfaces, a teal accent, and no colour beyond what the theme
- * has a slot for — selection, hover and focus are neutral greys, never a teal wash.
+ * lifted slate surfaces, three deep action fills — lagoon blue (primary: Send,
+ * Push & Close), ember (Stop) and pine (Go) — and no colour beyond what the
+ * theme has a slot for: selection, hover and focus are neutral greys.
+ *
+ * Each fill is deep enough for a near-white label at ~6:1. Too deep to read as
+ * text on the slate, so links read `primaryText`, and Stop / Go take the
+ * `*Solid` fills — the status colours (error text, running / done dots, green
+ * badges) keep Mist's bright coral and mint.
  *
  * The surface ramp, darkest first: the page (`background`), the sidebar and
  * cards one step up, then the quiet fill every hover, chip, pill and selected
@@ -32,13 +38,20 @@ const DARK = {
   text2: "oklch(0.8 0.012 238)",
   mutedText: "oklch(0.66 0.014 238)",
   faintText: "oklch(0.52 0.014 240)",
-  teal: "oklch(0.78 0.1 208)",
-  // Dark ink on a teal fill.
-  tealInk: "oklch(0.28 0.05 220)",
+  // Lagoon (#246181): the primary fill, a near-white label on it at ~6:1;
+  // lifted for text.
+  lagoon: "oklch(0.468 0.081 235)",
+  lagoonInk: "oklch(0.96 0.012 235)",
+  lagoonText: "oklch(0.74 0.1 235)",
+  // Ember (#8a4a33) and pine: the Stop and Go fills, on lagoon's terms.
+  ember: "oklch(0.482 0.094 40)",
+  emberInk: "oklch(0.96 0.012 40)",
+  pine: "oklch(0.475 0.085 155)",
+  pineInk: "oklch(0.96 0.012 155)",
   // One hairline for every border; the prompt field's outline one step firmer.
   border: "oklch(0.33 0.018 244 / 0.45)",
   input: "oklch(0.35 0.02 244 / 0.7)",
-  // Focus is grey, never teal: the prompt field and every control ring in it.
+  // Focus is grey, never the accent: the prompt field and every control ring in it.
   ring: "oklch(0.66 0.014 238)",
 };
 
@@ -53,8 +66,13 @@ const LIGHT = {
   text2: "oklch(0.32 0.015 242)",
   mutedText: "oklch(0.48 0.014 240)",
   faintText: "oklch(0.62 0.012 240)",
-  teal: "oklch(0.55 0.1 208)",
-  tealInk: "oklch(0.99 0 0)",
+  lagoon: "oklch(0.5 0.1 235)",
+  lagoonInk: "oklch(0.99 0 0)",
+  lagoonText: "oklch(0.48 0.1 235)",
+  ember: "oklch(0.52 0.12 38)",
+  emberInk: "oklch(0.99 0 0)",
+  pine: "oklch(0.5 0.1 155)",
+  pineInk: "oklch(0.99 0 0)",
   border: "oklch(0.25 0.02 244 / 0.1)",
   input: "oklch(0.25 0.02 244 / 0.2)",
   ring: "oklch(0.48 0.014 240)",
@@ -74,8 +92,9 @@ const colorPalette = colorPaletteGroup.fragment({
     popoverForeground: DARK.text,
     popoverHover: DARK.fillHover,
     popoverBorder: DARK.input,
-    primary: DARK.teal,
-    primaryForeground: DARK.tealInk,
+    primary: DARK.lagoon,
+    primaryForeground: DARK.lagoonInk,
+    primaryText: DARK.lagoonText,
     secondary: DARK.fill,
     secondaryForeground: DARK.text,
     muted: DARK.fill,
@@ -89,6 +108,10 @@ const colorPalette = colorPaletteGroup.fragment({
     destructiveForeground: "oklch(0.985 0 0)",
     success: "oklch(0.8 0.11 158)",
     successForeground: "oklch(0.2 0.03 158)",
+    destructiveSolid: DARK.ember,
+    destructiveSolidForeground: DARK.emberInk,
+    successSolid: DARK.pine,
+    successSolidForeground: DARK.pineInk,
     warning: "oklch(0.82 0.12 82)",
     warningForeground: "oklch(0.2 0.03 82)",
     info: "oklch(0.76 0.1 244)",
@@ -125,8 +148,9 @@ const colorPalette = colorPaletteGroup.fragment({
     cardForeground: LIGHT.text,
     popover: "oklch(1 0 0)",
     popoverForeground: LIGHT.text,
-    primary: LIGHT.teal,
-    primaryForeground: LIGHT.tealInk,
+    primary: LIGHT.lagoon,
+    primaryForeground: LIGHT.lagoonInk,
+    primaryText: LIGHT.lagoonText,
     secondary: LIGHT.fill,
     secondaryForeground: LIGHT.text,
     muted: LIGHT.fill,
@@ -138,6 +162,10 @@ const colorPalette = colorPaletteGroup.fragment({
     destructiveForeground: "oklch(0.99 0 0)",
     success: "oklch(0.55 0.13 158)",
     successForeground: "oklch(0.99 0 0)",
+    destructiveSolid: LIGHT.ember,
+    destructiveSolidForeground: LIGHT.emberInk,
+    successSolid: LIGHT.pine,
+    successSolidForeground: LIGHT.pineInk,
     warning: "oklch(0.7 0.14 70)",
     warningForeground: "oklch(0.2 0.03 70)",
     info: "oklch(0.55 0.12 244)",
@@ -171,8 +199,8 @@ const sidebarPalette = sidebarPaletteGroup.fragment({
   dark: {
     sidebar: DARK.panel,
     sidebarForeground: DARK.text2,
-    sidebarPrimary: DARK.teal,
-    sidebarPrimaryForeground: DARK.tealInk,
+    sidebarPrimary: DARK.lagoon,
+    sidebarPrimaryForeground: DARK.lagoonInk,
     sidebarBorder: DARK.border,
     sidebarAccent: DARK.fill,
     sidebarAccentForeground: DARK.textStrong,
@@ -182,8 +210,8 @@ const sidebarPalette = sidebarPaletteGroup.fragment({
   light: {
     sidebar: LIGHT.panel,
     sidebarForeground: LIGHT.text2,
-    sidebarPrimary: LIGHT.teal,
-    sidebarPrimaryForeground: LIGHT.tealInk,
+    sidebarPrimary: LIGHT.lagoon,
+    sidebarPrimaryForeground: LIGHT.lagoonInk,
     sidebarBorder: LIGHT.border,
     sidebarAccent: LIGHT.fill,
     sidebarAccentForeground: LIGHT.textStrong,
@@ -298,8 +326,8 @@ const density = densityGroup.fragment(
  * - 10.5px semibold `tag-compact` (a row's count chip, on a 15px line);
  * - 11px `2xs` (relative times, counts) — the default rung, not set here;
  * - 11.5px semibold `tag` (header chips, the tool badge), bold when strong;
- * - 12px `caption` and `control` (buttons, tabs, footer pills), semibold, bold
- *   for the primary action;
+ * - 12px `caption` and `control` (buttons, tabs, footer pills), semibold — the
+ *   primary action too: a bold near-white label on a filled button read heavy;
  * - 12.5px `code` on a 19px line (inline and block code);
  * - 12.5px semibold `group` on a 17.5px line (the sidebar's quiet group
  *   headings, "Queue 14" — the mock's 1.4 line at that size);
@@ -321,7 +349,7 @@ const typeScale = typeScaleGroup.fragment(
     lineHeightLabel: "1.1375rem",
     fontSizeControl: "0.75rem",
     fontWeightControl: "600",
-    fontWeightControlStrong: "700",
+    fontWeightControlStrong: "600",
     fontSizeTag: "0.71875rem",
     lineHeightTag: "0.9375rem",
     fontWeightTag: "600",

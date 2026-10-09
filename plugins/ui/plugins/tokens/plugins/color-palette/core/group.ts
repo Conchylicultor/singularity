@@ -137,35 +137,17 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
   // painted, so a theme that leaves them out renders exactly as before; a theme
   // sets one to restyle that role alone.
   //
-  // A primary / destructive / success colour used AS TEXT on a surface (a link, an
-  // error message), apart from the same colour used as a FILL under its
-  // `*Foreground` label (Send, Stop, Go). One value cannot serve both on a dark
-  // surface: a fill dark enough for a white label at 4.5:1 is too dark to read
-  // at 4.5:1 against the surface, and vice versa. Default = the fill colour,
-  // as every text use painted before; a theme with deep fills lifts these.
+  // The primary colour used AS TEXT on a surface (a link, a checked menu
+  // mark), apart from `primary`, which is a FILL first (every primary button,
+  // read with `primaryForeground` on it). One value cannot serve both on a dark
+  // surface: a fill dark enough for a near-white label at 4.5:1 is too dark to
+  // read at 4.5:1 against the surface. Default = the fill, as every text use
+  // painted before; a theme with a deep primary lifts this. (The status
+  // colours split the other way — they are text first, their fills are the
+  // `*Solid` tokens below.)
   primaryText: {
     default: "var(--primary)",
     label: "Primary as text",
-  },
-  destructiveText: {
-    default: "var(--destructive)",
-    label: "Destructive as text",
-  },
-  successText: {
-    default: "var(--success)",
-    label: "Success as text",
-  },
-  // The fill of an affirmative ACTION (the prompt's Go button) and its label,
-  // apart from `success`, which marks a success STATE (a running or done dot,
-  // a green badge). Default = the success colours the button always wore; a
-  // theme sets these to style the action without moving every status mark.
-  successAction: {
-    default: "var(--success)",
-    label: "Success action",
-  },
-  successActionForeground: {
-    default: "var(--success-foreground)",
-    label: "On success action",
   },
   // Emphasised text above body text: a conversation pane's title.
   strongForeground: {
@@ -243,7 +225,7 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
   },
   // The "solid" fill role: the fill a small saturated status control wears at
   // rest, with light text on it (a filled Reload pill, the bell's badge, a
-  // failed build's dot). Kept apart from `info` / `destructive` / `warning`,
+  // failed build's dot). Kept apart from `info` / `destructive` / `warning` / `success`,
   // which double as TEXT colours — a theme can deepen the fill (the app
   // chrome's navy, oxblood and deep amber) without making every status label
   // on the same surface unreadable. Default = the status colour itself, so a theme that leaves
@@ -271,6 +253,14 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
   warningSolidForeground: {
     default: "var(--warning-foreground)",
     label: "On warning fill",
+  },
+  successSolid: {
+    default: "var(--success)",
+    label: "Success fill",
+  },
+  successSolidForeground: {
+    default: "var(--success-foreground)",
+    label: "On success fill",
   },
   // A collapsible transcript card: a tool call, a thinking block, a hook row.
   threadCard: {

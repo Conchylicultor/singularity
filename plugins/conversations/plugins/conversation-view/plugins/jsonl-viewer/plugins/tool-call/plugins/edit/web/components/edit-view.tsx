@@ -17,7 +17,7 @@ function ResultDetail({ result }: { result: ToolCallEvent["result"] }) {
       as="div"
       variant="caption"
       // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the error detail from the diff above; element mixes bg+rounded+padding so it's not a clean Stack/Inset
-      className="mt-2 rounded-md bg-destructive/10 p-sm text-destructive-text whitespace-pre-wrap break-words"
+      className="mt-2 rounded-md bg-destructive/10 p-sm text-destructive whitespace-pre-wrap break-words"
     >
       {result.content || "Error"}
     </Text>

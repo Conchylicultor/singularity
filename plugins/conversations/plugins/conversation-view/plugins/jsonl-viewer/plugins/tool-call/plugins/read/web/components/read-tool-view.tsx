@@ -73,7 +73,7 @@ export function ReadToolView({ event }: ToolRendererProps) {
         // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the result block from the card header
         <div className="mt-2">
           {event.result.isError ? (
-            <Text as="p" variant="caption" className="text-destructive-text">
+            <Text as="p" variant="caption" className="text-destructive">
               {event.result.content}
             </Text>
           ) : isImagePath(file_path) ? (

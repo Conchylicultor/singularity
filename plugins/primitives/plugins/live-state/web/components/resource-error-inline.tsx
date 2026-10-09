@@ -71,7 +71,7 @@ export function ResourceErrorInline({
       <IconButton
         icon={icon ?? errorIcon}
         label={`${message}${verb}`}
-        className="text-destructive-text hover:text-destructive-text"
+        className="text-destructive hover:text-destructive"
         disabled={action === null}
         onClick={action === null ? undefined : () => action.run()}
       />
@@ -81,7 +81,7 @@ export function ResourceErrorInline({
   if (variant === "inline") {
     return (
       <Inline gap="xs">
-        <span className="text-destructive-text">{message}</span>
+        <span className="text-destructive">{message}</span>
         {action !== null && (
           <ControlSizeProvider size="xs">
             <Button variant="link" onClick={() => action.run()}>

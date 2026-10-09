@@ -76,7 +76,7 @@ export function DepPopoverContent({
                 onClick={() => onRemove(c.taskId!)}
                 disabled={busy === c.taskId}
                 className={cn(
-                  "hover:bg-destructive/10 hover:text-destructive-text rounded-md p-2xs",
+                  "hover:bg-destructive/10 hover:text-destructive rounded-md p-2xs",
                   rigidClass(),
                 )}
                 aria-label="Remove"
@@ -106,7 +106,7 @@ export function DepPopoverContent({
                   onClick={() => onRemove(id)}
                   disabled={busy === id}
                   className={cn(
-                    "hover:bg-destructive/10 hover:text-destructive-text rounded-md p-2xs",
+                    "hover:bg-destructive/10 hover:text-destructive rounded-md p-2xs",
                     rigidClass(),
                   )}
                   aria-label="Remove"

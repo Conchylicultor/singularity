@@ -47,7 +47,7 @@ export function ServerDeleteAction({ server }: { server: Server }) {
       variant="link"
       loading={remove.isPending}
       onClick={handleDelete}
-      className="text-destructive-text hover:text-destructive-text"
+      className="text-destructive hover:text-destructive"
     >
       Delete
     </Button>

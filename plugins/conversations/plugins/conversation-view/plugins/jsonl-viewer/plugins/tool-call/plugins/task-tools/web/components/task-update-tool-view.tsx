@@ -16,7 +16,7 @@ function statusBadgeClass(status: string): string {
     case "in_progress":
       return "bg-info/15 text-info";
     case "completed":
-      return "bg-success/15 text-success-text";
+      return "bg-success/15 text-success";
     default:
       return "bg-muted text-muted-foreground";
   }
@@ -52,7 +52,7 @@ export function TaskUpdateToolView({ event }: ToolRendererProps) {
       )}
       {event.result?.isError && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 separates the error text from preceding content
-        <Text as="p" variant="caption" className="mt-2 text-destructive-text">
+        <Text as="p" variant="caption" className="mt-2 text-destructive">
           {event.result.content}
         </Text>
       )}

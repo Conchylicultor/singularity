@@ -114,7 +114,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
           </LinkChip>
         )}
         {event.result?.isError && (
-          <Text as="p" variant="caption" className="text-destructive-text">
+          <Text as="p" variant="caption" className="text-destructive">
             {event.result.content}
           </Text>
         )}

@@ -242,11 +242,7 @@ export function GoogleSetupPane() {
                   {connecting ? "Connecting…" : "Connect with Google"}
                 </Button>
                 {connectError ? (
-                  <Text
-                    as="p"
-                    variant="caption"
-                    className="text-destructive-text"
-                  >
+                  <Text as="p" variant="caption" className="text-destructive">
                     {connectError}
                   </Text>
                 ) : null}

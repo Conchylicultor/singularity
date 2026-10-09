@@ -24,7 +24,7 @@ export function FieldShell({
     <Stack as="label" gap="xs" className={className}>
       <Text as="span" variant="label">
         {label}
-        {required && <span className="text-destructive-text"> *</span>}
+        {required && <span className="text-destructive"> *</span>}
       </Text>
       {children}
       {hint && (

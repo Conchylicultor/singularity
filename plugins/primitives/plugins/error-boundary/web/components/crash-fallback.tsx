@@ -70,7 +70,7 @@ export function CrashFallback({
     // stays available via the native title tooltip.
     <Line
       ref={rootRef}
-      className="gap-sm rounded-md border border-destructive/20 bg-destructive/10 px-md py-sm text-destructive-text"
+      className="gap-sm rounded-md border border-destructive/20 bg-destructive/10 px-md py-sm text-destructive"
     >
       <Text variant="caption" className="font-medium">
         {tag || "Plugin"} crashed
@@ -78,7 +78,7 @@ export function CrashFallback({
       <Fill>
         <Text
           variant="caption"
-          className="text-destructive-text/70"
+          className="text-destructive/70"
           title={report.error.message}
         >
           {report.error.message}

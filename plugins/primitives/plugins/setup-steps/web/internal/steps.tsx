@@ -94,7 +94,7 @@ export function Step({
           className={cn(
             "size-6 rounded-full",
             done
-              ? "bg-success/15 text-success-text"
+              ? "bg-success/15 text-success"
               : state === "active"
                 ? "bg-primary/10 text-primary-text"
                 : "bg-muted text-muted-foreground",
@@ -176,7 +176,7 @@ export function StepCommand({ text, title }: { text: string; title: string }) {
 /** Inline success line for a completed step ("Connected", "Key generated", …). */
 export function StepDone({ children }: { children: ReactNode }) {
   return (
-    <Text as="div" variant="caption" className="text-success-text">
+    <Text as="div" variant="caption" className="text-success">
       <Stack direction="row" align="center" gap="xs">
         <Icon icon={checkIcon} className="size-4" />
         {children}
