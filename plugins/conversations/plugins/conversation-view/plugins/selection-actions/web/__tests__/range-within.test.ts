@@ -45,6 +45,23 @@ describe("rangeWithin", () => {
     expect(rangeWithin(range, scroller)).toBeNull();
   });
 
+  it("tightens a triple-click that ends in the next row's body, past its unselectable header", () => {
+    document.body.innerHTML = `
+      <div id="scroller">
+        <div data-event-key="a"><p id="para">Last paragraph.</p><div style="display: none">To pick up a draggable item…</div></div>
+        <div data-event-key="b"><span style="user-select: none">You · just now</span><div id="body">Next message</div></div>
+      </div>`;
+    const scroller = document.getElementById("scroller")!;
+    const range = document.createRange();
+    range.setStart(document.getElementById("para")!.firstChild!, 0);
+    range.setEnd(document.getElementById("body")!, 0);
+    const tight = rangeWithin(range, scroller)!;
+    expect(tight.toString()).toBe("Last paragraph.");
+    expect(
+      tight.intersectsNode(scroller.querySelector('[data-event-key="b"]')!),
+    ).toBe(false);
+  });
+
   it("keeps a selection already inside the scroller as is", () => {
     const { scroller, para } = mount();
     const range = document.createRange();

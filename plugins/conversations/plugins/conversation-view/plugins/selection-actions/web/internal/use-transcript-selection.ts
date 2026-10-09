@@ -12,10 +12,55 @@ export interface TranscriptSelection {
 }
 
 /**
- * The part of `range` that lies inside `scope`, or null when none does. A
- * triple-click on the transcript's last paragraph ends the range at the start of
- * the next text in the page — past the scroller, in an overlay strip or the
- * prompt box — so its end is cut back to the scroller's rather than refused.
+ * Whether the user can select `text` at all: no ancestor hides it
+ * (`display: none` — e.g. a sortable row's screen-reader instructions) or
+ * opts out of selection (`user-select: none` — a row's header chrome). The
+ * browser never highlights such text, but a range spanning it still holds it.
+ */
+function isSelectableText(text: Text): boolean {
+  for (let el = text.parentElement; el; el = el.parentElement) {
+    const style = getComputedStyle(el);
+    if (style.display === "none" || style.userSelect === "none") return false;
+  }
+  return true;
+}
+
+/**
+ * `range` shrunk to the text it selects: its start moved to the first selected
+ * non-blank, selectable character's text node, its end to the last's. A
+ * triple-click ends the range at offset 0 of the NEXT block in the page — the
+ * user's next message's body (after that row's unselectable header), a
+ * running-tool strip, an overlay, the prompt box — which holds none of the
+ * selection; tightened, the range is the paragraph alone. Null when it selects
+ * no text.
+ */
+export function tightenToText(range: Range): Range | null {
+  const root = range.commonAncestorContainer;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let first: { node: Text; offset: number } | null = null;
+  let last: { node: Text; offset: number } | null = null;
+  for (let n: Node | null = walker.currentNode; n; n = walker.nextNode()) {
+    if (n.nodeType !== Node.TEXT_NODE || !range.intersectsNode(n)) continue;
+    const text = n as Text;
+    if (!isSelectableText(text)) continue;
+    const from = text === range.startContainer ? range.startOffset : 0;
+    const to = text === range.endContainer ? range.endOffset : text.length;
+    if (!text.data.slice(from, to).trim()) continue;
+    first ??= { node: text, offset: from };
+    last = { node: text, offset: to };
+  }
+  if (!first || !last) return null;
+  const tight = document.createRange();
+  tight.setStart(first.node, first.offset);
+  tight.setEnd(last.node, last.offset);
+  return tight;
+}
+
+/**
+ * The part of `range` that lies inside `scope`, or null when none does. The
+ * range is first tightened to the text it selects (see `tightenToText`), so a
+ * triple-click on the last paragraph does not reach past it; a drag that
+ * really selects text past the scroller is cut back to the scroller's edge.
  */
 export function rangeWithin(range: Range, scope: HTMLElement): Range | null {
   if (!range.intersectsNode(scope)) return null;
@@ -28,7 +73,7 @@ export function rangeWithin(range: Range, scope: HTMLElement): Range | null {
   if (clipped.compareBoundaryPoints(Range.END_TO_END, inner) > 0) {
     clipped.setEnd(scope, scope.childNodes.length);
   }
-  return clipped.collapsed ? null : clipped;
+  return clipped.collapsed ? null : tightenToText(clipped);
 }
 
 /**
