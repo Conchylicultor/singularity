@@ -149,6 +149,22 @@ describe("addSource", () => {
     s = run(s, { type: "addSource", source: "real-app" }).state;
     expect(s.frames.filter((f) => f.kind === "source")).toHaveLength(1);
   });
+
+  it("switches to swipe at the responsive size", () => {
+    const s = run(
+      { ...initialCanvasState(), size: { kind: "window" } },
+      { type: "addSource", source: "real-app" },
+    ).state;
+    expect(s.layout).toBe("swipe");
+    expect(s.size).toEqual({ kind: "responsive" });
+  });
+
+  it("stays side by side when it does not make two frames", () => {
+    let s = run(initialCanvasState(), { type: "addPrototype" }).state;
+    s = run(s, { type: "addSource", source: "real-app" }).state;
+    expect(s.frames).toHaveLength(3);
+    expect(s.layout).toBe("side");
+  });
 });
 
 describe("picks", () => {

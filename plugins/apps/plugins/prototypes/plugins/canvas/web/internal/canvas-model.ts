@@ -322,11 +322,16 @@ function transition(
         kind: "source",
         source: action.source,
       };
+      // A source frame is there to be compared against: swipe over it (kept
+      // only when it makes two frames — `settleLayout`), at the size the page
+      // really lays out at.
       return unchanged({
         ...state,
         frames: [...state.frames, frame],
         nextId: state.nextId + 1,
         selected: frame.id,
+        layout: "swipe",
+        size: { kind: "responsive" },
       });
     }
 

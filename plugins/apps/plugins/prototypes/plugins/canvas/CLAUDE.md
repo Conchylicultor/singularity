@@ -102,6 +102,8 @@ not declare is dropped from its URL.
   **Duplicate** action copies that frame instead.
 - **`+ <addLabel>`** — one button per frame source ("+ Real app"), disabled
   while that source is already on the canvas. The canvas names no source.
+  Adding one switches the canvas to Swipe (when that makes two frames) at
+  Responsive size — a source frame is there to be compared against.
 - **The options pill** ("Mist · Home +3") opens on click into "Options":
   one row per declared option — value chips for a choice; for a color, one
   swatch per suggestion and a trailing custom swatch (the color on screen,
