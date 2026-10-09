@@ -570,8 +570,8 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps` ×74
     - `conversations` ×52
     - `page` ×25
-    - `debug` ×23
     - `ui` ×23
+    - `debug` ×22
     - `apps-core` ×13
     - `tasks` ×13
     - `fields` ×12
@@ -582,9 +582,9 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `reorder` ×4
     - `shell` ×4
     - `config_v2` ×3
+    - `infra` ×3
     - `integrations` ×3
     - `backup` ×2
-    - `infra` ×2
     - `layouts` ×2
     - `screenshot` ×2
     - `stats` ×2

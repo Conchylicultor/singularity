@@ -40,7 +40,7 @@ defined in exactly one place. The distinct export buys two things:
 - Cross-plugin:
   - Imported by: 59 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×20
-    - `debug` ×12
+    - `debug` ×11
     - `conversations` ×6
     - `plugin-meta` ×6
     - `primitives` ×6
@@ -48,6 +48,7 @@ defined in exactly one place. The distinct export buys two things:
     - `page` ×2
     - `apps-core/surface/floating`
     - `config_v2/fields`
+    - `infra/claude-cli`
     - `stats/commits`
     - `tasks/task-dependencies`
     - `ui/tokens/shadow`

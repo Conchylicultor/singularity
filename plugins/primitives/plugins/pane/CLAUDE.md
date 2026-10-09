@@ -806,7 +806,7 @@ See "Open questions" in the design doc.
   - Slots: `Pane.Register`
   - Slot contributors: 88 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Pane.Register` ×88
-  - Contributes: 106 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 107 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountsPane.Actions` "title" → `PaneTitleItem`
     - `agentDetailPane.Actions` "title" → `PaneTitleItem`
@@ -829,6 +829,7 @@ See "Open questions" in the design doc.
     - `buildPane.Actions` "title" → `PaneTitleItem`
     - `buildProfileDetailPane.Actions` "title" → `PaneTitleItem`
     - `chord-trainer.actions` "title" → `PaneTitleItem`
+    - `claudeCliCallDetailPane.Actions` "title" → `PaneTitleItem`
     - `claudeCliCallsPane.Actions` "title" → `PaneTitleItem`
     - `commitDetailPane.Actions` "title" → `PaneTitleItem`
     - `comparePane.Actions` "title" → `PaneTitleItem`

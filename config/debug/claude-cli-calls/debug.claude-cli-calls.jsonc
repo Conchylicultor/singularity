@@ -1,0 +1,27 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    { "id": "all", "name": "All", "view": { "type": "table", "sort": [{ "fieldId": "createdAt", "direction": "desc" }] } },
+    {
+      "id": "failed",
+      "name": "Failed",
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "createdAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-failed",
+          "conjunction": "and",
+          "children": [
+            { "kind": "rule", "id": "r-failed", "fieldId": "status", "operatorId": "is", "value": "error" }
+          ]
+        }
+      }
+    },
+    { "id": "slowest", "name": "Slowest", "view": { "type": "table", "sort": [{ "fieldId": "durationMs", "direction": "desc" }] } },
+    { "id": "feed", "name": "Feed", "view": { "type": "list", "sort": [{ "fieldId": "createdAt", "direction": "desc" }] } }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

@@ -62,7 +62,7 @@ export function ModelCallSection({ runId }: { runId: string }): ReactNode {
             // Each call gets its own surface so two of them read as two calls
             // rather than one long transcript; the detail block itself ships no
             // chrome, by contract.
-            <Surface key={call.id} level="sunken">
+            <Surface key={call.id} level="base">
               <Inset pad="sm">
                 <ClaudeCliCallDetail call={call} />
               </Inset>

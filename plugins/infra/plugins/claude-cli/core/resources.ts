@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
+import {
+  liveInstant,
+  liveNumber,
+  liveText,
+} from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   ConversationModelSchema,
   FALLBACK_MODEL,
@@ -80,21 +84,46 @@ export type ClaudeCliCall = z.infer<typeof ClaudeCliCallSchema>;
 export const RECENT_CALLS_LIMIT = 1000;
 
 /**
+ * Whether a call succeeded: `"error"` exactly when it recorded an `error`. Not a
+ * stored column — the served collection computes it in SQL (`error IS NOT
+ * NULL`), so it filters, groups and counts on the server like any column while
+ * no write can ever make it disagree with `error`.
+ */
+export const ClaudeCliCallStatusSchema = z.enum(["ok", "error"]);
+export type ClaudeCliCallStatus = z.infer<typeof ClaudeCliCallStatusSchema>;
+
+/** A row of the {@link claudeCliCalls} collection: the call, plus its derived `status`. */
+export const ClaudeCliCallRowSchema = ClaudeCliCallSchema.extend({
+  status: ClaudeCliCallStatusSchema,
+});
+export type ClaudeCliCallRow = z.infer<typeof ClaudeCliCallRowSchema>;
+
+/**
  * The call log — Debug → Claude CLI Calls — as a live collection: a bounded
  * window, newest first (100, grown to at most `RECENT_CALLS_LIMIT`), plus its
- * `:rows` / `:groups` siblings. The pane's chips filter on the server:
- * `sourceName` (its chips are a `groupBy: "sourceName"` grouping, so a source
- * seen only in older calls still has one) and `model` (a tier chip is an `in`
- * over that tier's model ids — the tier is not a column).
+ * `:rows` / `:groups` siblings. Declared `scroll` so it backs the pane's live
+ * DataView: search runs over the prompt / output / error text, the Source and
+ * Model filters are `:groups` facets of the whole log (not the loaded window),
+ * and `status` (derived from `error`) filters and groups like a column. Since
+ * the recorder trims the log to `RECENT_CALLS_LIMIT` rows, every query here is
+ * over at most that many — the full-text `contains` over the prompt is a scan of
+ * a table that cannot grow past it.
  */
 export const claudeCliCalls = liveCollection("claude-cli-calls", {
-  row: ClaudeCliCallSchema,
+  row: ClaudeCliCallRowSchema,
   id: "id",
   filterable: {
     sourceName: liveText(),
     model: liveText(ConversationModelSchema),
+    status: liveText(ClaudeCliCallStatusSchema),
+    prompt: liveText(),
+    output: liveText(),
+    error: liveText(),
+    durationMs: liveNumber(),
+    createdAt: liveInstant(),
   },
-  sortable: ["createdAt"],
+  sortable: ["createdAt", "durationMs", "sourceName", "model"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: RECENT_CALLS_LIMIT,
+  scroll: true,
 });

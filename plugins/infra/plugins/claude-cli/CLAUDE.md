@@ -62,19 +62,28 @@ rows *globally*, so trimming is only possible at capacity:
 An omitted `occurredAt` makes (2) untestable, so an empty result reports `none`.
 
 `<ClaudeCliCallDetail call={…} />` (`…/claude-cli/web`) is the one rendering of a
-call (context / system / prompt / output-or-error / meta), so consumers don't
-each re-render prompts. Debug → Claude CLI Calls composes it and owns only its
-collapsed header; callers supply their own chrome (card, indent, collapse).
+call — header (source, model, outcome), meta grid (started, duration, model id,
+call id, correlation), the source context (its `task-…` / `conv-…` values render
+through `<InlineText>`, so as the registered id chips), then output or error,
+prompt and system, each with its size and a copy button — so consumers don't
+each re-render prompts. Callers supply their own chrome (pane, card, inset):
+Debug → Claude CLI Calls' detail pane and an event run's Model call section
+both compose it.
 
 Debug → Claude CLI Calls lists the log through `claudeCliCalls`
-(`core/resources.ts`, key `claude-cli-calls`), a `liveCollection` over
-`claude_cli_calls`: newest first, 100 rows by default, grown up to
-`RECENT_CALLS_LIMIT` — the recorder's own trim, so a fully grown window is the
-whole log. It declares `filterable: { sourceName, model }`: the pane's source
-chips are a `groupBy: "sourceName"` grouping (every source in the log, with
-counts), and a model-tier chip is an `in` over that tier's model ids, since the
-tier is not a column. Both filters run on the server. `claudeCliCallsServed`
-serves it with `serveCollection(claudeCliCalls, { from: _claudeCliCalls })`.
+(`core/resources.ts`, key `claude-cli-calls`), a `scroll: true`
+`liveCollection` over `claude_cli_calls` backing a live DataView: newest first,
+100 rows by default, grown up to `RECENT_CALLS_LIMIT` — the recorder's own
+trim, so a fully grown window is the whole log (and a `contains` search over
+the prompt text scans at most that many rows). Search runs over
+`sourceName` / `prompt` / `output` / `error`; `sourceName` and `model` are the
+Source / Model facets (a grouping of the whole log); `durationMs` and
+`createdAt` filter and sort. The row carries one computed field, `status`
+(`"ok"` / `"error"`): `claudeCliCallsServed` binds it to the SQL expression
+`error IS NOT NULL` (an `expr` column), so the Status filter and group-by run on
+the server and the field can never disagree with `error`. The list row type is
+`ClaudeCliCallRow` (= `ClaudeCliCall` + `status`); the endpoint and the detail
+block keep taking a plain `ClaudeCliCall`.
 
 ## When NOT to use
 
@@ -86,7 +95,7 @@ serves it with `serveCollection(claudeCliCalls, { from: _claudeCliCalls })`.
 
 ## Plugin reference
 
-- Description: Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, and <ClaudeCliCallDetail> is the one rendering of a recorded call (system, prompt, output or error, meta). One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
+- Description: Consumer half of the claude-cli call log: useClaudeCliCalls({correlationId, occurredAt}) answers 'which model calls produced this record?' as a calls / none / not-retained result, <ClaudeCliCallDetail> is the one rendering of a recorded call (header, meta grid, context with id chips, output or error, prompt, system — each copyable), and formatCallDuration is how a call's duration reads. One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
 - Server:
   - Contributes:
     - `resource.declare` "claude-cli-calls"
@@ -97,6 +106,7 @@ serves it with `serveCollection(claudeCliCalls, { from: _claudeCliCalls })`.
     - `conversations/model-provider/catalog.getModelCatalog`
     - `database.db`
     - `database/admin.ExcludeFromFork`
+    - `database/sql-projection.parsed`
     - `infra/claude-cli/availability.ClaudeCodeUnavailableError`
     - `infra/claude-cli/availability.noteClaudeCodeFailure`
     - `infra/claude-cli/availability.requireClaudeBin`
@@ -119,11 +129,29 @@ serves it with `serveCollection(claudeCliCalls, { from: _claudeCliCalls })`.
   - Routes: `GET /api/claude-cli/calls`
 - Web:
   - Uses:
+    - `conversations/model-provider.familyClass`
     - `infra/endpoints.useEndpoint`
+    - `primitives/copy-to-clipboard.CopyButton`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/cluster.Cluster`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/grid.Grid`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/yield.yieldClass`
+    - `primitives/inline-text.InlineText`
+    - `primitives/relative-time.RelativeTime`
   - Exports (values):
     - `ClaudeCliCallDetail`
+    - `formatCallDuration`
+    - `SLOW_CALL_MS`
     - `useClaudeCliCalls`
 - Core:
   - Uses:
@@ -141,15 +169,20 @@ serves it with `serveCollection(claudeCliCalls, { from: _claudeCliCalls })`.
     - `fields/uuid/config.uuidField`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveCollection`
+    - `network/live/filter.liveInstant`
+    - `network/live/filter.liveNumber`
     - `network/live/filter.liveText`
   - Exports (types):
     - `ClaudeCliCall`
+    - `ClaudeCliCallRow`
     - `ClaudeCliCallsResult`
+    - `ClaudeCliCallStatus`
   - Exports (values):
     - `claudeCliCallFields`
     - `claudeCliCalls`
     - `ClaudeCliCallSchema`
     - `ClaudeCliCallsResultSchema`
+    - `ClaudeCliCallStatusSchema`
     - `listClaudeCliCallsFor`
 - Cross-plugin:
   - Imported by:

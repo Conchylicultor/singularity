@@ -109,6 +109,12 @@
       "parent": null
     },
     {
+      "paneId": "claude-cli-call-detail",
+      "segment": "cli-call/:callId",
+      "appIndex": false,
+      "parent": "claude-cli-calls"
+    },
+    {
       "paneId": "claude-cli-calls",
       "segment": "claude-cli-calls",
       "appIndex": false,

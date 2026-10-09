@@ -84,15 +84,15 @@ primitive exists to name.
     - `apps` ×42
     - `primitives` ×28
     - `conversations` ×23
-    - `debug` ×16
+    - `debug` ×15
     - `page` ×10
     - `ui` ×9
     - `tasks` ×5
+    - `infra` ×3
     - `plugin-meta` ×3
     - `review` ×3
     - `auth` ×2
     - `config_v2` ×2
-    - `infra` ×2
     - `shell` ×2
     - `apps-core/app-launcher`
     - `build/deployment`

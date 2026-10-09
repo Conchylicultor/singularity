@@ -23,6 +23,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "conversations-sidebar", pluginId: "conversations.conversations-view.data-view" },
   { id: "conversations.op-status.queue", pluginId: "conversations.conversation-view.op-status" },
   { id: "debug.boot-profiles", pluginId: "debug.boot-profile" },
+  { id: "debug.claude-cli-calls", pluginId: "debug.claude-cli-calls" },
   { id: "debug.config-orphans", pluginId: "debug.config-orphans" },
   { id: "debug.profiling.runtime", pluginId: "debug.profiling.runtime" },
   { id: "debug.reports", pluginId: "debug.reports" },

@@ -14,6 +14,7 @@ export interface CollectedEntry {
 
 export const exhibitsEntries: CollectedEntry[] = [
   { pluginPath: "config_v2/plugins/settings", id: "config_v2.settings", loader: () => import("@plugins/config_v2/plugins/settings/exhibits"), dependsOn: ["primitives/plugins/css/plugins/control-panel"] },
+  { pluginPath: "infra/plugins/claude-cli", id: "infra.claude-cli", loader: () => import("@plugins/infra/plugins/claude-cli/exhibits"), dependsOn: [] },
   { pluginPath: "primitives/plugins/adaptive-bar", id: "primitives.adaptive-bar", loader: () => import("@plugins/primitives/plugins/adaptive-bar/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text"] },
   { pluginPath: "primitives/plugins/css/plugins/color-picker", id: "primitives.css.color-picker", loader: () => import("@plugins/primitives/plugins/css/plugins/color-picker/exhibits"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/control-panel", id: "primitives.css.control-panel", loader: () => import("@plugins/primitives/plugins/css/plugins/control-panel/exhibits"), dependsOn: ["primitives/plugins/css/plugins/ui-kit"] },

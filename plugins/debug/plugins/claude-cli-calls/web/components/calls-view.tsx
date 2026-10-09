@@ -1,223 +1,213 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import {
-  useLive,
-  type LiveListResult,
-} from "@plugins/network/plugins/live/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
+  claudeCliCalls,
+  type ClaudeCliCallRow,
+} from "@plugins/infra/plugins/claude-cli/core";
 import {
-  FilterChip,
-  FilterGroup,
-  useChipFilter,
-} from "@plugins/primitives/plugins/filter-chips/web";
-import {
-  InfiniteScrollFooter,
-  useInfiniteScroll,
-} from "@plugins/primitives/plugins/cursor-pagination/web";
-import { claudeCliCalls } from "@plugins/infra/plugins/claude-cli/core";
-import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
-import {
-  MODEL_TIERS,
-  modelMeta,
-  type ConversationModel,
-  type ModelCatalog,
-  type ModelTier,
-} from "@plugins/conversations/plugins/model-provider/core";
-import { useModelCatalog } from "@plugins/conversations/plugins/model-provider/web";
+  formatCallDuration,
+  SLOW_CALL_MS,
+} from "@plugins/infra/plugins/claude-cli/web";
+import { modelMeta } from "@plugins/conversations/plugins/model-provider/core";
+import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
+import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { CallRow } from "./call-row";
+import {
+  DataView,
+  defineDataView,
+  liveDataSource,
+} from "@plugins/primitives/plugins/data-view/web";
+import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 
-type ModelFilter = "all" | ModelTier;
+// Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
+const CALLS_VIEW = defineDataView("debug.claude-cli-calls");
 
-/**
- * A tier's concrete model ids, from the live catalog. The tier is not a
- * column, so the tier chip is an `in` over these — the server filters, and a
- * tier's calls older than the loaded window are still found.
- */
-function modelsOfTier(
-  tier: ModelTier,
-  catalog: ModelCatalog,
-): ConversationModel[] {
-  return catalog.versions
-    .map((v) => v.id)
-    .filter((id) => modelMeta(id).family === tier);
+// The live source: the call log, a segmented window of which is ever loaded.
+// Sort / filter / search compile to SQL server-side, and a new call reaches
+// the window through the collection's producer — no tick, no refetch. Search
+// runs over the source and the model's text (prompt / output / error); the
+// Source and Model filter options are facets — a grouping of the whole log,
+// not the loaded rows, so a source seen only in older calls is still offered.
+const callsSource = liveDataSource(claudeCliCalls, {
+  searchable: ["sourceName", "prompt", "output", "error"],
+  facets: ["sourceName", "model"],
+});
+
+export function CallsView({
+  selectedId,
+  linkTo,
+}: {
+  selectedId?: string;
+  /** Where a row goes: a link, so middle- / ⌘-click open it in a browser tab. */
+  linkTo: (id: string) => LinkTarget;
+}) {
+  return (
+    <DataView<ClaudeCliCallRow>
+      fields={fields}
+      views={["table", "list"]}
+      defaultView="table"
+      storageKey={CALLS_VIEW}
+      selectedRowId={selectedId}
+      rowActivation={(r) => linkTo(r.id)}
+      emptyState={<>No claude --print calls recorded yet.</>}
+      source={callsSource}
+    />
+  );
 }
 
-export function CallsView() {
-  const catalog = useModelCatalog();
-  if (catalog.status === "loading") return <Loading />;
-  if (catalog.status === "error")
-    return (
-      <ResourceErrorInline
-        variant="block"
-        subject="the model catalog"
-        error={catalog.error}
-        refetch={catalog.refetch}
-      />
-    );
-  return <CallsViewBody catalog={catalog.data} />;
+/** What a row says at a glance: the error, else the output's first line. */
+function summaryOf(call: ClaudeCliCallRow): string {
+  if (call.error !== null) return call.error;
+  return (call.output ?? "").trim().split(/\r?\n/, 1)[0] ?? "";
 }
 
-function CallsViewBody({ catalog }: { catalog: ModelCatalog }) {
-  const modelChip = useChipFilter<ModelFilter>("all");
-  const sourceChip = useChipFilter<string>("all");
-  const filtered = modelChip.value !== "all" || sourceChip.value !== "all";
-  const calls = useLive(claudeCliCalls, {
-    where: {
-      sourceName: sourceChip.value === "all" ? undefined : sourceChip.value,
-      model:
-        modelChip.value === "all"
-          ? undefined
-          : { in: modelsOfTier(modelChip.value, catalog) },
+/** A short `k=v` rendering of the caller's context, long values clipped. */
+function contextSummary(context: Record<string, unknown> | null): string {
+  if (context === null) return "";
+  return Object.entries(context)
+    .map(([k, v]) => {
+      const text = typeof v === "string" ? v : JSON.stringify(v);
+      return `${k}=${text.length > 14 ? `${text.slice(0, 12)}…` : text}`;
+    })
+    .join(" ");
+}
+
+// Static: the field schema derives nothing from the loaded rows. Every
+// sortable / filterable field's id IS its collection column, and its `value`
+// that column's value; `summary` and `context` are derived, so display-only.
+const fields: FieldDef<ClaudeCliCallRow>[] = [
+  {
+    id: "status",
+    label: "Status",
+    header: false,
+    type: "enum",
+    value: (r) => r.status,
+    options: [
+      { value: "ok", label: "Succeeded", variant: "success" },
+      { value: "error", label: "Failed", variant: "destructive" },
+    ],
+    cell: (r) =>
+      r.status === "error" ? (
+        <StatusDot colorClass="bg-destructive" />
+      ) : (
+        <StatusDot colorClass="bg-success" />
+      ),
+    sortable: false,
+    filterable: true,
+    width: "2rem",
+  },
+  {
+    id: "createdAt",
+    label: "Time",
+    type: "date",
+    value: (r) => r.createdAt,
+    cell: (r) => (
+      <Text tone="muted" title={r.createdAt.toLocaleString()}>
+        <RelativeTime date={r.createdAt} />
+      </Text>
+    ),
+    sortable: true,
+    filterable: true,
+    width: "7rem",
+  },
+  {
+    id: "sourceName",
+    label: "Source",
+    type: "enum",
+    value: (r) => r.sourceName,
+    cell: (r) => (
+      <Badge variant="muted" mono>
+        {r.sourceName}
+      </Badge>
+    ),
+    sortable: true,
+    filterable: true,
+    width: "12rem",
+  },
+  {
+    id: "model",
+    label: "Model",
+    type: "enum",
+    value: (r) => r.model,
+    cell: (r) => {
+      const meta = modelMeta(r.model);
+      return <Badge colorClass={familyClass(meta.family)}>{meta.label}</Badge>;
     },
-  });
-
-  return (
-    <Stack gap="none" className="h-full">
-      <Stack
-        direction="row"
-        wrap
-        gap="sm"
-        align="center"
-        className="border-b px-md py-sm"
-      >
-        <FilterGroup label="Model">
-          <FilterChip
-            active={modelChip.value === "all"}
-            onClick={() => modelChip.setValue("all")}
-          >
-            all
-          </FilterChip>
-          {MODEL_TIERS.map((tier) => (
-            <FilterChip
-              key={tier}
-              active={modelChip.value === tier}
-              onClick={() => modelChip.setValue(tier)}
-            >
-              {tier}
-            </FilterChip>
-          ))}
-        </FilterGroup>
-        <SourceChips value={sourceChip.value} onPick={sourceChip.setValue} />
-        {/* An empty Fill absorbs the slack, so the count sits flush right. */}
-        <Fill />
-        {/* The count only once the window is known; a failure says so below. */}
-        {calls.status === "ready" && (
-          <Text
-            as="div"
-            variant="caption"
-            className="text-muted-foreground tabular-nums"
-          >
-            {calls.data.length}
-            {calls.canGrow ? "+" : ""} calls
-          </Text>
-        )}
-      </Stack>
-      <Scroll axis="both" fill>
-        {calls.status === "loading" ? (
-          <Loading />
-        ) : calls.status === "error" ? (
-          <ResourceErrorInline
-            variant="block"
-            subject="the calls"
-            error={calls.error}
-            refetch={calls.refetch}
-          />
-        ) : calls.data.length === 0 ? (
-          <Center className="h-full">
-            <Text as="div" variant="body" className="text-muted-foreground">
-              {filtered
-                ? "No calls match the current filter."
-                : "No claude --print calls recorded yet."}
-            </Text>
-          </Center>
-        ) : (
-          <CallList list={calls} />
-        )}
-      </Scroll>
-    </Stack>
-  );
-}
-
-/**
- * The loaded window of calls, growing by one page when its end scrolls into
- * view — up to the whole log (`RECENT_CALLS_LIMIT`).
- */
-function CallList({
-  list,
-}: {
-  list: Extract<LiveListResult<ClaudeCliCall>, { status: "ready" }>;
-}) {
-  const scroll = useInfiniteScroll({
-    hasNextPage: list.canGrow,
-    isFetchingNextPage: list.growing,
-    isFetchNextPageError: false,
-    fetchNextPage: list.loadMore,
-    rootMargin: "200px",
-  });
-  return (
-    <>
-      <ul className="divide-y">
-        {list.data.map((c) => (
-          <CallRow key={c.id} call={c} />
-        ))}
-      </ul>
-      <InfiniteScrollFooter handle={scroll} />
-    </>
-  );
-}
-
-/**
- * One chip per source across the whole log (not the loaded window), with its
- * count: a `groupBy` grouping, deliberately unfiltered so every chip stays
- * visible while one is picked.
- */
-function SourceChips({
-  value,
-  onPick,
-}: {
-  value: string;
-  onPick: (source: string) => void;
-}) {
-  const sources = useLive(claudeCliCalls, { groupBy: "sourceName" });
-  if (sources.status === "loading") return <Loading variant="spinner" />;
-  if (sources.status === "error") {
-    return (
-      <ResourceErrorInline
-        variant="inline"
-        subject="the sources"
-        error={sources.error}
-        refetch={sources.refetch}
-      />
-    );
-  }
-  // `source_name` is NOT NULL, so no NULL group ever comes back.
-  const chips = sources.data.filter(
-    (g): g is { value: string; count: number } => g.value !== null,
-  );
-  if (chips.length === 0) return null;
-  return (
-    <FilterGroup label="Source">
-      <FilterChip active={value === "all"} onClick={() => onPick("all")}>
-        all
-      </FilterChip>
-      {chips.map((g) => (
-        <FilterChip
-          key={g.value}
-          active={value === g.value}
-          onClick={() => onPick(g.value)}
-        >
-          {g.value} <span className="opacity-60">{g.count}</span>
-        </FilterChip>
-      ))}
-      {(sources.canGrow || sources.growing) && (
-        <FilterChip active={false} onClick={sources.loadMore}>
-          {sources.growing ? "Loading…" : "More"}
-        </FilterChip>
-      )}
-    </FilterGroup>
-  );
-}
+    sortable: true,
+    filterable: true,
+    width: "8rem",
+  },
+  {
+    id: "summary",
+    label: "Summary",
+    type: "text",
+    value: summaryOf,
+    cell: (r) => {
+      const summary = summaryOf(r);
+      if (summary === "") return <Text tone="faint">&lt;empty&gt;</Text>;
+      return r.status === "error" ? (
+        <Text variant="code" tone="destructive">
+          {summary}
+        </Text>
+      ) : (
+        <Text>{summary}</Text>
+      );
+    },
+    primary: true,
+    sortable: false,
+    filterable: false,
+    width: "minmax(0,1fr)",
+  },
+  {
+    id: "context",
+    label: "Context",
+    type: "text",
+    value: (r) => contextSummary(r.sourceContext),
+    cell: (r) => {
+      const summary = contextSummary(r.sourceContext);
+      return summary === "" ? null : (
+        <Badge variant="muted" mono>
+          {summary}
+        </Badge>
+      );
+    },
+    sortable: false,
+    filterable: false,
+    width: "minmax(0,14rem)",
+  },
+  {
+    id: "durationMs",
+    label: "Duration",
+    type: "int",
+    value: (r) => r.durationMs,
+    // A slow call (over SLOW_CALL_MS) reads in the warning tint.
+    cell: (r) =>
+      r.durationMs > SLOW_CALL_MS ? (
+        <Text className="tabular-nums text-warning">
+          {formatCallDuration(r.durationMs)}
+        </Text>
+      ) : (
+        <Text tone="muted" className="tabular-nums">
+          {formatCallDuration(r.durationMs)}
+        </Text>
+      ),
+    sortable: true,
+    filterable: true,
+    align: "end",
+    width: "6rem",
+  },
+  // Filter-only text columns: "Prompt contains …", "Error is not empty". Hidden
+  // by default — the summary column already shows the output / error.
+  ...(["prompt", "output", "error"] as const).map(
+    (id): FieldDef<ClaudeCliCallRow> => ({
+      id,
+      label: id === "prompt" ? "Prompt" : id === "output" ? "Output" : "Error",
+      type: "text",
+      value: (r) => r[id],
+      sortable: false,
+      filterable: true,
+      visible: false,
+    }),
+  ),
+];

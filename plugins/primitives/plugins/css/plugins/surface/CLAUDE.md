@@ -121,14 +121,14 @@ never be clobbered.
   - Exports (types): `SurfaceProps`
   - Exports (values): `Surface`
 - Cross-plugin:
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×7
     - `primitives` ×5
     - `page` ×4
     - `apps-core` ×2
+    - `infra` ×2
     - `conversations/agents`
     - `fields/json/config`
-    - `infra/events-test`
     - `stats`
 - Exemptions:
   - Exempted by: `primitives/css/ui-kit` (0 debt)
