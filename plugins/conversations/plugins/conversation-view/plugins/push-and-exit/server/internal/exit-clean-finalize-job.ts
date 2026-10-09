@@ -37,14 +37,17 @@ export const exitCleanFinalizeJob = defineJob({
     await afterTurn(ctx, conversationId, { timeoutMs: FINALIZE_TIMEOUT_MS });
     await ctx.step("close-conversation", async () => {
       // An agent that exits without landing any work should return its task to
-      // `dropped` rather than leaving it stranded as `attempted` — the same
-      // `dropTaskOnExit` policy the manual "Drop & Close" action runs, which
-      // never drops when the attempt's git-measured standing shows work at stake
-      // or cannot be measured at all. This is the path that used to drop the
+      // `dropped` rather than leaving it stranded as `attempted`. Stricter than
+      // the manual "Drop & Close" (which drops anything not yet in `main`): no
+      // human chose to drop here, so it never drops when the attempt's
+      // git-measured standing shows any work at stake (pending included) or
+      // cannot be measured at all. This is the path that used to drop the
       // task of an agent that pushed and then called `exit_clean`, because the
       // guard read the lagging pushes ledger.
       const conversation = await getConversation(conversationId);
-      const dropped = conversation ? await dropTaskOnExit(conversation) : false;
+      const dropped = conversation
+        ? await dropTaskOnExit(conversation, "only-if-no-work")
+        : false;
 
       await markConversationClosed(conversationId);
       await deleteConversation(conversationId);

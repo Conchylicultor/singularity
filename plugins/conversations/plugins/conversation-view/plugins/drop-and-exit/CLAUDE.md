@@ -31,7 +31,10 @@
   - Routes: `POST /api/conversations/:id/drop-and-exit`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
-  - Exports (values): `dropAndExit`
+  - Exports (types): `DropPolicy`
+  - Exports (values):
+    - `dropAndExit`
+    - `dropsTask`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/push-and-exit`
 

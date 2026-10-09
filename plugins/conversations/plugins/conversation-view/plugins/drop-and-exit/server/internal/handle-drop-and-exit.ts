@@ -15,7 +15,8 @@ export const handleDropAndExit = implement(dropAndExit, async ({ params }) => {
     throw new HttpError(404, "Conversation not found");
   }
 
-  const dropped = await dropTaskOnExit(conversation);
+  // The user chose Drop from the exit menu: anything not yet in `main` drops.
+  const dropped = await dropTaskOnExit(conversation, "unless-landed");
 
   await markConversationClosed(id);
   await deleteConversation(id);

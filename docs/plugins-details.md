@@ -10877,7 +10877,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Routes: `POST /api/conversations/:id/drop-and-exit`
           - Core:
             - Uses: `infra/endpoints.defineEndpoint`
-            - Exports (values): `dropAndExit`
+            - Exports (types): `DropPolicy`
+            - Exports (values):
+              - `dropAndExit`
+              - `dropsTask`
           - Cross-plugin:
             - Imported by: `conversations/conversation-view/push-and-exit`
         - **`drop-dependents`** — Exit-menu entry that drops the task and all its transitive dependents, then closes the conversation.

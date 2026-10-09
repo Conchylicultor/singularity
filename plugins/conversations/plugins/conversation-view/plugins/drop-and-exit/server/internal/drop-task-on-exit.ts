@@ -2,6 +2,7 @@ import { getAttemptWork } from "@plugins/tasks/plugins/attempt-work/server";
 import { standingOf } from "@plugins/tasks/plugins/attempt-work/core";
 import { dropTaskIfNoActiveSibling } from "@plugins/tasks/plugins/tasks-core/server";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
+import { dropsTask, type DropPolicy } from "../../core/drop-policy";
 
 /**
  * The one exit-drop policy, shared by every conversation-close path that can set
@@ -26,7 +27,9 @@ import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
  *   landed, and only commits that carry a trailer.)
  * - **`standingOf` is a discriminated value, not a count.** There is no array
  *   here whose emptiness could be misread, and the drop is reachable only from a
- *   measured `"none"`.
+ *   measured standing that `policy` allows (see `DropPolicy`): the manual action
+ *   drops anything not yet in `main`, the agent-driven close only a measured
+ *   `"none"`. Required, so each caller states which close it is.
  *
  * Design: research/2026-08-17-global-attempt-work-git-derived-standing.md.
  *
@@ -38,9 +41,10 @@ import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
  */
 export async function dropTaskOnExit(
   conversation: Conversation,
+  policy: DropPolicy,
 ): Promise<boolean> {
   const work = await getAttemptWork(conversation.attemptId);
   if (!work.resolved) return false;
-  if (standingOf(work.value) !== "none") return false;
+  if (!dropsTask(standingOf(work.value), policy)) return false;
   return dropTaskIfNoActiveSibling(conversation);
 }

@@ -17,7 +17,7 @@ import {
   attemptWork,
   standingOf,
 } from "@plugins/tasks/plugins/attempt-work/core";
-import { dropAndExit } from "../../core";
+import { dropAndExit, dropsTask } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const checkCircleIcon = symbol("check-circle");
@@ -56,6 +56,9 @@ export function DropAndExitItem({
   // `standingOf` is the only thing consulted here: a discriminated
   // "none" | "pending" | "landed", never a length compared to zero (invariant
   // I4), so there is no array whose emptiness this component could misread.
+  // The label follows the server's own rule for this action (`dropsTask` under
+  // "unless-landed"): only work already in `main` reads as Complete; unmerged
+  // commits (a push that never finished) still read — and act — as Drop.
   const standing = useMemo(
     () =>
       foldResource(decision, {
@@ -65,7 +68,7 @@ export function DropAndExitItem({
       }),
     [decision],
   );
-  const hasWork = standing !== null && standing !== "none";
+  const landed = standing !== null && !dropsTask(standing, "unless-landed");
 
   const { mutate, isPending } = useEndpointMutation(dropAndExit, {
     onSuccess: (data) => {
@@ -78,7 +81,7 @@ export function DropAndExitItem({
     onError: (err) =>
       toast({
         type: "conversation",
-        title: `${hasWork ? "Complete" : "Drop"} & Close failed`,
+        title: `${landed ? "Complete" : "Drop"} & Close failed`,
         description: err.message,
         variant: "error",
       }),
@@ -111,7 +114,7 @@ export function DropAndExitItem({
     live.status === "done" ||
     live.status === "starting";
 
-  const { icon, label, variant } = hasWork
+  const { icon, label, variant } = landed
     ? {
         icon: checkCircleIcon,
         label: isPending ? "Completing…" : "Complete & Close",
