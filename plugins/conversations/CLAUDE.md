@@ -186,7 +186,9 @@
     - `page/annotations/agent-notes/agent-page`
   - Endpoint callers: `transcript-api`
 - Exemptions:
-  - Exempts itself from: `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts`, `server/internal/tables-user-turn-sent-event.ts` (debt)
+  - Exempts itself from:
+    - `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts`, `server/internal/tables-user-turn-sent-event.ts` (debt)
+    - `ids:pk-declared` — `server/internal/tables-held-turns.ts` (debt)
 - Sub-plugins:
   - **`agents`** — Named agent definitions that launch conversations.
   - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the…

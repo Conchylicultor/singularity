@@ -72,50 +72,68 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ActiveDataBindingSchema`
       - `ActiveDataBindingsPayloadSchema`
       - `deleteBinding`
-      - `inlineBoundary`
       - `putBinding`
       - `putBindingBodySchema`
   - Cross-plugin:
     - Imported by:
-      - `active-data/attempt`
       - `active-data/commit-link`
-      - `active-data/conv`
-      - `active-data/page-link`
       - `active-data/plugin-link`
-      - `active-data/prototype`
       - `active-data/task`
-      - `active-data/task-link`
       - `conversations/conversation-view/jsonl-viewer/assistant-text`
   - Plugins:
-    - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips named after the attempt's conversation, opening that conversation (the attempt pane when it has none). Models emit the bare id, no tag wrapping needed. The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its task's title for model-read text (InlineTokenReferentSource).
+    - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips named after the attempt's conversation, opening that conversation (the attempt pane when it has none), and presents the attempt id kind to the id registry. Models emit the bare id, no tag wrapping needed. The attempt id chip's server half (idChipServer): resolves an `att-<id>` to its task's title for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.
       - Web:
-        - Contributes: `InlineChip.Tag` "attempt" → `AttemptChip`
+        - Contributes:
+          - `IdKinds.Presenter` "att"
+          - `InlineChip.Tag` "att" → `AttemptChip`
         - Uses:
+          - `active-data/id-chip.idChip`
           - `conversations/conversation-view.useConversationOpener`
           - `network/live.useLive`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/status-dot.StatusDot`
+          - `primitives/live-state.foldResource`
           - `primitives/live-state.matchResource`
           - `primitives/live-state.useCombinedResources`
           - `primitives/pane.useOpenPane`
-          - `primitives/text-editor/inline-chip.inlineChip`
-          - `primitives/text-editor/inline-chip.InlineChip`
           - `tasks/attempt-status.ATTEMPT_STATUS_META`
           - `tasks/attempt-status.attemptStatusLabel`
           - `tasks/attempt-view.attemptPane`
         - Exports (values): `AttemptChip`
       - Server:
         - Contributes:
-          - `page.inline-token` "(?<!\/)att-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
-          - `primitives.text-editor.inline-chip.referent` "(?<!\/)att-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `ids.referent` "att"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:att-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:att-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
-          - `page/editor.Editor`
-          - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
+          - `active-data/id-chip.idChipServer`
           - `tasks/tasks-core.getAttempt`
           - `tasks/tasks-core.getTask`
       - Core:
-        - Uses: `active-data.inlineBoundary`
-        - Exports (values): `ATTEMPT_ID_RE`
+        - Exports (values): `ATTEMPT_CHIP_SURFACES`
+    - **`build-run`** — Renders a bare `build-<id>` in a transcript as the generic id chip (`Build <short commit>`) that opens the build's run-detail pane, and presents the build-run id kind to the id registry. The build-run id chip's server half (idChipServer): resolves a `build-<id>` to `Build <short commit>` for the id registry and for model-read text.
+      - Web:
+        - Contributes:
+          - `IdKinds.Presenter` "build"
+          - `InlineChip.Tag` "build" → `GenericIdChip`
+        - Uses:
+          - `active-data/id-chip.idChip`
+          - `active-data/id-chip.rowReferent`
+          - `build.buildDetailPane`
+          - `network/live.useLiveRow`
+          - `primitives/pane.useOpenPane`
+      - Server:
+        - Contributes:
+          - `ids.referent` "build"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:build-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
+        - Uses:
+          - `active-data/id-chip.idChipServer`
+          - `build/run-ledger._buildRuns`
+          - `database.db`
+      - Core:
+        - Exports (values):
+          - `BUILD_RUN_CHIP_SURFACES`
+          - `buildRunTitle`
     - **`commit-link`** — Renders commit shas in backtick-wrapped inline code as clickable chips that open the commit-detail pane, with the subject, author and date on hover. Resolves the sha against the main checkout's object database and declines when it names no commit.
       - Web:
         - Contributes: `ActiveData.Tag` "commit-link"
@@ -135,36 +153,100 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.formatRelativeTime`
           - `ui/icons.Icon`
-    - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed. The conversation-id token at the page-editor's server boundary: locates `conv-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its conversation's title for model-read text (InlineTokenReferentSource).
+    - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation, and presents the conversation id kind (title + open) to the id registry. Models emit the bare id, no tag wrapping needed. The conversation id chip's server half (idChipServer): resolves a `conv-<id>` to its conversation's title (else its task's) for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.
       - Web:
-        - Contributes: `InlineChip.Tag` "conv" → `ConvChip`
+        - Contributes:
+          - `IdKinds.Presenter` "conv"
+          - `InlineChip.Tag` "conv" → `ConvChip`
         - Uses:
+          - `active-data/id-chip.idChip`
           - `conversations.useConversationById`
           - `conversations/conversation-ui/item.CONV_STATUS_DOT`
           - `conversations/conversation-ui/item.ConversationItem`
           - `conversations/conversation-view.useConversationOpener`
+          - `network/live.useLiveRow`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/status-dot.StatusDot`
-          - `primitives/text-editor/inline-chip.inlineChip`
-          - `primitives/text-editor/inline-chip.InlineChip`
         - Exports (values): `ConvChip`
       - Server:
         - Contributes:
-          - `page.inline-token` "(?<!\/)conv-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
-          - `primitives.text-editor.inline-chip.referent` "(?<!\/)conv-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `ids.referent` "conv"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:conv-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:conv-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
-          - `page/editor.Editor`
-          - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
+          - `active-data/id-chip.idChipServer`
           - `tasks/tasks-core.getAttempt`
           - `tasks/tasks-core.getConversation`
           - `tasks/tasks-core.getTask`
       - Core:
-        - Uses: `active-data.inlineBoundary`
-        - Exports (values): `CONV_ID_RE`
-    - **`page-link`** — Renders raw `block-<id>` strings inline as clickable chips that open what the id names: a page id opens the page-detail pane, a content-block id opens the block-detail pane (that block as a page of its own). Models emit the bare id, no tag wrapping needed. Resolves a bare `block-<id>` to what its chip shows — the page's title, or '<page title> › <block type>' for a content block — for model-read text (InlineTokenReferentSource).
+        - Exports (values): `CONV_CHIP_SURFACES`
+    - **`event-source`** — Renders a bare `evs-<id>` in a transcript as the generic id chip (the source's name) that opens the event source's detail pane, and presents the event-source id kind to the id registry. The event-source id chip's server half (idChipServer): resolves an `evs-<id>` to the source's name for the id registry and for model-read text.
       - Web:
-        - Contributes: `InlineChip.Tag` "page-link" → `PageLinkChip`
+        - Contributes:
+          - `IdKinds.Presenter` "evs"
+          - `InlineChip.Tag` "evs" → `GenericIdChip`
         - Uses:
+          - `active-data/id-chip.idChip`
+          - `active-data/id-chip.rowReferent`
+          - `apps/events/sources.eventSourceDetailPane`
+          - `network/live.useLiveRow`
+          - `primitives/pane.useOpenPane`
+      - Server:
+        - Contributes:
+          - `ids.referent` "evs"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:evs-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
+        - Uses:
+          - `active-data/id-chip.idChipServer`
+          - `apps/events/events-core._eventSources`
+          - `database.db`
+      - Core:
+        - Exports (values): `EVENT_SOURCE_CHIP_SURFACES`
+    - **`id-chip`** — Id chips, web half: idChip({ presenter, surfaces, component? }) mints a kind's IdKinds.Presenter together with its inline chip — the pattern derived from the kind (never re-typed), a generic title + icon chip unless the family brings its own component. rowReferent folds a live by-id row read into a presenter's referent state. Id chips, server half: idChipServer({ kind, surfaces, resolve }) contributes the kind's IdKinds.Referent, the InlineTokenReferentSource that hands a model the referent's title, and — for a chip that belongs in documents — the Editor.InlineToken that keeps a page block holding it agent-readable.
+      - Web:
+        - Uses:
+          - `ids.IdKinds`
+          - `ids.IdPresenter`
+          - `primitives/css/link-chip.LinkChip`
+          - `primitives/text-editor/inline-chip.inlineChip`
+          - `primitives/text-editor/inline-chip.InlineChip`
+          - `ui/icons.Icon`
+        - Exports (values):
+          - `idChip`
+          - `rowReferent`
+      - Server:
+        - Uses:
+          - `ids.IdKinds`
+          - `ids.IdReferent`
+          - `page/editor.Editor`
+          - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
+        - Exports (values): `idChipServer`
+      - Core:
+        - Uses:
+          - `ids.AnyIdKind`
+          - `ids.inlineBoundary`
+        - Exports (types): `IdChipSurface`
+        - Exports (values):
+          - `idChipPattern`
+          - `idReferentTag`
+      - Cross-plugin:
+        - Imported by:
+          - `active-data/attempt`
+          - `active-data/build-run`
+          - `active-data/conv`
+          - `active-data/event-source`
+          - `active-data/page-link`
+          - `active-data/prototype`
+          - `active-data/report`
+          - `active-data/task-link`
+    - **`page-link`** — Renders raw `block-<id>` strings inline as clickable chips that open what the id names: a page id opens the page-detail pane, a content-block id opens the block-detail pane (that block as a page of its own). Transcript only. Presents the block id kind to the id registry. Models emit the bare id, no tag wrapping needed. The block id chip's server half (idChipServer): resolves a bare `block-<id>` to what its chip shows — the page's title, or '<page title> › <block type>' for a content block — for the id registry and for model-read text. Transcript-only, so no page-editor token.
+      - Web:
+        - Contributes:
+          - `IdKinds.Presenter` "block"
+          - `InlineChip.Tag` "block" → `PageLinkChip`
+        - Uses:
+          - `active-data/id-chip.idChip`
+          - `apps/pages/page-tree.blockDetailPane`
+          - `apps/pages/page-tree.pageDetailPane`
           - `apps/pages/page-tree.useBlockTarget`
           - `apps/pages/page-tree.useBlockTargetTitle`
           - `apps/pages/page-tree.useOpenBlockTarget`
@@ -172,20 +254,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/link-chip.LinkChip`
           - `primitives/live-state.foldResource`
           - `primitives/live-state.useResource`
-          - `primitives/text-editor/inline-chip.inlineChip`
-          - `primitives/text-editor/inline-chip.InlineChip`
+          - `primitives/pane.useOpenPane`
         - Exports (values): `PageLinkChip`
       - Server:
-        - Contributes: `primitives.text-editor.inline-chip.referent` "(?<!\/)block-[0-9a-z]+(?:-[0-9a-z]+)+(?![0-9a-z-])(?!\/)(?!\.[0-9A-Za-z])\b"
+        - Contributes:
+          - `ids.referent` "block"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:block-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
+          - `active-data/id-chip.idChipServer`
           - `database.db`
           - `page/editor.liveBlocks`
-          - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
-      - Core:
-        - Uses: `active-data.inlineBoundary`
-        - Exports (values): `BLOCK_ID_RE`
       - Exemptions:
         - Exempts itself from: `live/no-legacy-resource-spelling` — `web/components/page-link-chip.tsx` (debt)
+      - Core:
+        - Exports (values): `BLOCK_CHIP_SURFACES`
     - **`plugin-link`** — Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
       - Web:
         - Slots: `plugin-conv-side.actions`
@@ -214,32 +296,47 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
           - `ui/icons.Icon`
-    - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips that open the mock in the prototype-detail pane. Models emit the bare id, no tag wrapping needed. The prototype-id token at the page-editor's server boundary: locates `proto-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its prototype's title for model-read text (InlineTokenReferentSource).
+    - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips (the generic id chip: the mock's title) that open the mock in the prototype-detail pane, and presents the prototype id kind to the id registry. Models emit the bare id, no tag wrapping needed. The prototype id chip's server half (idChipServer): resolves a `proto-<id>` to its prototype's title for the id registry and for model-read text (so a task description holding the id is titled after the mock), and registers the page-editor inline token so a page block holding the chip stays agent-readable.
       - Web:
-        - Contributes: `InlineChip.Tag` "prototype" → `PrototypeChip`
+        - Contributes:
+          - `IdKinds.Presenter` "proto"
+          - `InlineChip.Tag` "proto" → `GenericIdChip`
         - Uses:
+          - `active-data/id-chip.idChip`
           - `apps/prototypes/canvas.prototypeDetailPane`
           - `network/live.useLive`
-          - `primitives/css/link-chip.LinkChip`
-          - `primitives/live-state.matchResource`
+          - `primitives/live-state.foldResource`
           - `primitives/pane.useOpenPane`
-          - `primitives/text-editor/inline-chip.inlineChip`
-          - `primitives/text-editor/inline-chip.InlineChip`
-          - `ui/icons.Icon`
-        - Exports (values): `PrototypeChip`
       - Server:
         - Contributes:
-          - `page.inline-token` "(?<!\/)proto-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
-          - `primitives.text-editor.inline-chip.referent` "(?<!\/)proto-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `ids.referent` "proto"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:proto-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:proto-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
+          - `active-data/id-chip.idChipServer`
           - `apps/prototypes/files.readPrototypeTitle`
-          - `page/editor.Editor`
-          - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
       - Core:
+        - Exports (values): `PROTOTYPE_CHIP_SURFACES`
+    - **`report`** — Renders a bare `report-<id>` in a transcript as the generic id chip (the report's kind and message) that opens the report's detail pane, and presents the report id kind to the id registry. The report id chip's server half (idChipServer): resolves a `report-<id>` to its kind and message for the id registry and for model-read text.
+      - Web:
+        - Contributes:
+          - `IdKinds.Presenter` "report"
+          - `InlineChip.Tag` "report" → `GenericIdChip`
         - Uses:
-          - `active-data.inlineBoundary`
-          - `apps/prototypes/files.PROTOTYPE_ID_RE`
-        - Exports (values): `PROTOTYPE_INLINE_RE`
+          - `active-data/id-chip.idChip`
+          - `active-data/id-chip.rowReferent`
+          - `debug/reports.reportDetailPane`
+          - `network/live.useLiveRow`
+          - `primitives/pane.useOpenPane`
+      - Server:
+        - Contributes:
+          - `ids.referent` "report"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:report-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
+        - Uses:
+          - `active-data/id-chip.idChipServer`
+          - `reports.getReportTitle`
+      - Core:
+        - Exports (values): `REPORT_CHIP_SURFACES`
     - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
       - Web:
         - Contributes: `ActiveData.Tag` "task" → `TaskCard`
@@ -263,31 +360,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/attempt-status.AttemptStatusBadge`
           - `tasks/task-detail.taskDetailPane`
           - `tasks/tasks-core.useTaskAttempts`
-    - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed. The task-id token at the page-editor's server boundary: locates `task-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread. Also resolves an id to its task's title for model-read text (InlineTokenReferentSource).
+    - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane, and presents the task id kind (title + open) to the id registry. Models emit the bare id, no tag wrapping needed. The task id chip's server half (idChipServer): resolves a `task-<id>` to its task's title for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.
       - Web:
-        - Contributes: `InlineChip.Tag` "task-link" → `TaskLinkChip`
+        - Contributes:
+          - `IdKinds.Presenter` "task"
+          - `InlineChip.Tag` "task" → `TaskLinkChip`
         - Uses:
+          - `active-data/id-chip.idChip`
           - `network/live.useLive`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/status-dot.StatusDot`
+          - `primitives/live-state.foldResource`
           - `primitives/live-state.matchResource`
           - `primitives/pane.useOpenPane`
-          - `primitives/text-editor/inline-chip.inlineChip`
-          - `primitives/text-editor/inline-chip.InlineChip`
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-status.STATUS_META`
         - Exports (values): `TaskLinkChip`
       - Server:
         - Contributes:
-          - `page.inline-token` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?!\/)(?!\.[0-9A-Za-z])\b"
-          - `primitives.text-editor.inline-chip.referent` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `ids.referent` "task"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:task-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:task-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
-          - `page/editor.Editor`
-          - `primitives/text-editor/inline-chip.InlineTokenReferentSource`
+          - `active-data/id-chip.idChipServer`
           - `tasks/tasks-core.getTask`
       - Core:
-        - Uses: `active-data.inlineBoundary`
-        - Exports (values): `TASK_ID_RE`
+        - Exports (values): `TASK_CHIP_SURFACES`
 
 - **`apps`** — Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
   - Plugins:
@@ -409,6 +507,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by: `apps/browser/start-page`
             - Endpoint callers: `history`
+          - Exemptions:
+            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`history`** — Browser history: a headless recorder that logs every navigation to the history store, plus the browserRecents live value (read with useLive). Browser history store (browser_history table), the distinct-by-url recents live value, and the POST /api/browser/history record endpoint.
           - Web:
             - Contributes: `Browser.Effects` "Effects" → `RecordVisits`
@@ -435,6 +535,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Routes: `POST /api/browser/history`
           - Cross-plugin:
             - Imported by: `apps/browser/start-page`
+          - Exemptions:
+            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`navigation`** — Browser navigation controls: back / forward / reload / home buttons in the chrome bar.
           - Web:
             - Contributes: `Browser.NavControls` "Navigation controls" → `NavControls`
@@ -750,6 +852,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/chord/progress`
               - `apps/chord/trainer`
+          - Exemptions:
+            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound mix: the song and the piano as two channels, each on or off at its own level (useSoundMix, <SoundChannelControl channel/>), the piano following the song's playhead when on. The Chord app's piano, server side: registers the chord-sound config (the song and the piano, each on or off at its own level) so the learner's mix persists and shows in Settings.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -845,6 +949,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TARGET_MEDIAN_MS`
           - Cross-plugin:
             - Imported by: `apps/chord/trainer`
+          - Exemptions:
+            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`shell`** — The Chord app's rail entry and frame: the standard sidebar-less app shell around the full-pane renderer, where the trainer's pane (whose header carries the app launcher) is shown, and the app's own dark-only theme (the mockup's onyx blacks, the seven chord colours and the outside-the-scale grey as the chord-palette tokens, Schibsted Grotesk and Bodoni Moda), which the chord app selects.
           - Web:
             - Contributes:
@@ -1054,6 +1160,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/progress`
               - `apps/chord/trainer`
               - `apps/chord/vocabulary`
+          - Exemptions:
+            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`trainer`** — The Chord trainer screen, the app's index pane (/chord): a real song's loop in an embedded YouTube player, an answer strip with one box per chord on the beat grid, one button per practised chord (keys 1–7), the check with its score, replays of the song over a box and of chords on Sonata's piano, the saved round, the player's playback reports, and the progress panel (today, all time, your chords).
           - Web:
             - Slots: `chord-trainer.actions`
@@ -1440,6 +1548,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/pages/download`
                   - `apps/website/shell`
                 - Endpoint callers: `host-only`
+              - Exemptions:
+                - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
               - Test helpers:
                 - Core: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing`
                   - `ZERO_METRICS`
@@ -1591,12 +1701,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeploymentItemActions` ← `apps.deploy.local-serve`
               - `deploymentDetailPane.Actions` ← `primitives.pane`
             - Contributes:
+              - `IdKinds.Kind` "dpl"
+              - `IdKinds.Kind` "drun"
               - `ServerDetail.Section` "Deployments" → `DeploymentsSection`
               - `Pane.Register` "deploy-deployment-detail"
               - `DeploymentDetail.Section` "Overview" → `DeploymentOverview`
               - `DeploymentItemActions` "deploy" → `DeployAction`
               - `DeploymentItemActions` "delete" → `DeleteDeploymentAction`
-            - Uses: 48 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+            - Uses: 49 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `primitives/data-view` ×7
               - `primitives/pane` ×5
@@ -1605,6 +1717,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state` ×3
               - `apps/deploy/health` ×2
               - `apps/deploy/servers.ServerDetail`
+              - `ids.IdKinds`
               - `plugin-meta/composition.useManifestItems`
               - `primitives/css/badge.Badge`
               - `primitives/css/bouncing-dots.BouncingDots`
@@ -1628,6 +1741,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useDeploymentsListServerId`
           - Server:
             - Contributes:
+              - `ids.kind` "dpl"
+              - `ids.kind` "drun"
               - `resource.declare` "deploy.deployments"
               - `resource.declare` "deploy.deployments:groups"
               - `resource.declare` "deploy.deployments:rows"
@@ -1635,8 +1750,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "deploy.run-history:groups"
               - `resource.declare` "deploy.run-history:rows"
               - `resource.declare` "deploy.runs"
-            - Uses: 22 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
               - `infra/jobs` ×3
+              - `ids` ×2
               - `infra/endpoints` ×2
               - `infra/jobs/supervised-job` ×2
               - `infra/paths` ×2
@@ -1675,6 +1791,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `apps/deploy/servers.serverDetailRoute`
+              - `ids.defineIdKind`
+              - `ids.IdOf`
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveCollection`
               - `network/live.liveValue`
@@ -1684,8 +1802,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `CreateDeploymentBody`
               - `Deployment`
+              - `DeploymentId`
               - `DeployPhase`
               - `DeployRun`
+              - `DeployRunId`
               - `DeployRunRecord`
               - `DeployVerb`
               - `InstallLayout`
@@ -1700,10 +1820,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `deleteDeployment`
               - `DEPLOY_LOG_CHANNEL`
               - `deploymentDetailRoute`
+              - `deploymentIdKind`
               - `deployments`
               - `DeploymentSchema`
               - `DeployPhaseSchema`
               - `deployRunHistory`
+              - `deployRunIdKind`
               - `DeployRunRecordSchema`
               - `deployRuns`
               - `DeployRunSchema`
@@ -1917,11 +2039,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `serversRootPane.Actions` ← `primitives.pane`
               - `serverDetailPane.Actions` ← `primitives.pane`
             - Contributes:
+              - `IdKinds.Kind` "srv"
               - `Pane.Register` "deploy-server-detail"
               - `Pane.Register` "deploy-servers"
               - `ServerDetail.Section` "Server" → `ServerEditForm`
               - `item-actions` "open-console" → `OpenConsoleAction`
-            - Uses: 31 symbols — full list in [`plugins/apps/plugins/deploy/plugins/servers/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/servers/REFERENCE.md)
+            - Uses: 32 symbols — full list in [`plugins/apps/plugins/deploy/plugins/servers/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/servers/REFERENCE.md)
               - `primitives/data-view` ×5
               - `primitives/pane` ×5
               - `infra/endpoints` ×4
@@ -1929,6 +2052,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/fill` ×2
               - `primitives/editable-field` ×2
               - `primitives/live-state` ×2
+              - `ids.IdKinds`
               - `network/live.useLive`
               - `primitives/copy-to-clipboard.CopyButton`
               - `primitives/css/spacing.Stack`
@@ -1951,10 +2075,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `serversRootPane`
               - `SshKeySchema`
           - Server:
-            - Contributes: `resource.declare` "deploy.servers"
+            - Contributes:
+              - `ids.kind` "srv"
+              - `resource.declare` "deploy.servers"
             - Uses:
               - `database.db`
               - `database/derived-updated-at.deriveUpdatedAt`
+              - `ids.idColumn`
+              - `ids.IdKinds`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/secrets.deleteSecret`
@@ -1977,8 +2105,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/deploy/servers/:id/ssh-keypair`
               - `POST /api/deploy/servers/:id/ssh-keypair/import`
           - Core:
-            - Uses: `primitives/pane.defineRoute`
+            - Uses:
+              - `ids.defineIdKind`
+              - `ids.IdOf`
+              - `primitives/pane.defineRoute`
+            - Exports (types): `DeployServerId`
             - Exports (values):
+              - `deployServerIdKind`
               - `serverDetailRoute`
               - `serversRoute`
           - Cross-plugin:
@@ -2163,7 +2296,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EventSources.Type` ← `apps.events.sources.manual`
               - `EventSources.Type` ← `apps.events.sources.salsanueva`
               - `EventSources.Type` ← `apps.events.sources.url-extract`
+            - Contributes:
+              - `IdKinds.Kind` "evs"
+              - `IdKinds.Kind` "evt"
             - Uses:
+              - `ids.IdKinds`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.LiveListResult`
               - `network/live.LiveRowResult`
@@ -2184,6 +2321,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useUpdateEventSource`
           - Server:
             - Contributes:
+              - `ids.kind` "evs"
+              - `ids.kind` "evt"
               - `resource.declare` "events.source-runs"
               - `resource.declare` "events.source-runs:groups"
               - `resource.declare` "events.source-runs:rows"
@@ -2192,6 +2331,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "events.sources:rows"
             - Uses:
               - `database.db`
+              - `ids.IdKinds`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/entities.defaultNow`
@@ -2256,6 +2396,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/json/config.jsonField`
               - `fields/text/config.enumTextField`
               - `fields/text/config.textField`
+              - `ids.defineIdKind`
+              - `ids.idKindField`
+              - `ids.IdOf`
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveCollection`
               - `network/live/filter.liveBoolean`
@@ -2265,8 +2408,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `CreateEventSourceBody`
               - `EventCategory`
+              - `EventId`
               - `EventRecord`
               - `EventSource`
+              - `EventSourceId`
               - `EventSourceRun`
               - `EventSourceRunEvent`
               - `ExtractedEvent`
@@ -2290,8 +2435,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `deleteEventSource`
               - `EVENT_CATEGORIES`
               - `eventFields`
+              - `eventIdKind`
               - `EventSchema`
               - `eventSourceFields`
+              - `eventSourceIdKind`
               - `eventSourceRunEventFields`
               - `EventSourceRunEventSchema`
               - `eventSourceRunFields`
@@ -2326,6 +2473,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `UpdateEventSourceBodySchema`
           - Cross-plugin:
             - Imported by:
+              - `active-data/event-source`
               - `apps/events/event-list`
               - `apps/events/reanchor`
               - `apps/events/refresh`
@@ -2343,7 +2491,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/url-extract`
           - Exemptions:
-            - Exempts itself from: `events/no-raw-events-write` — `server/internal/events-repo.ts` (sanctioned)
+            - Exempts itself from:
+              - `events/no-raw-events-write` — `server/internal/events-repo.ts` (sanctioned)
+              - `ids:pk-declared` — `server/internal/tables.ts` (debt)
             - Exempted by: `apps/events/events-core` (0 debt)
         - **`reanchor`** — Keeps a recurring event's occurrence columns (starts_at / ends_at / all_day) current as time passes: the hourly re-anchor tick plus the boot pass, so an 'upcoming' filter never drops a series that is still running just because its source has not been re-extracted since the last occurrence.
           - Server:
@@ -2493,6 +2643,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useEventSourceTypes`
           - Cross-plugin:
             - Imported by:
+              - `active-data/event-source`
               - `apps/events/sources/refresh-all`
               - `apps/events/sources/source-detail/runs`
               - `apps/events/sources/source-detail/schedule`
@@ -3150,6 +3301,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/text/config.enumTextField`
               - `fields/text/config.parsedTextField`
               - `fields/text/config.textField`
+              - `ids.externalIdField`
               - `network/live.liveValue`
               - `primitives/live-state.tolerantEnum`
             - Exports (types):
@@ -3209,6 +3361,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/reading-pane`
               - `apps/mail/sync`
               - `apps/mail/threads`
+          - Exemptions:
+            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`mail-html`** — Privacy-safe email HTML renderer: <MailHtml> runs a DOMPurify sanitize → remote-image gating (proxied only after opt-in) → cid: inline-image resolution → quoted-history collapse pipeline, injected inside a style-scoped container.
           - Cross-plugin:
             - Imported by: `apps/mail/reading-pane`
@@ -4159,14 +4313,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/canvas.usePrototypeDetail`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
               - `primitives/icon-button.IconButton`
-        - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done or pinned it as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+        - **`files`** — Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done or pinned it as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+          - Web:
+            - Contributes: `IdKinds.Kind` "proto"
+            - Uses: `ids.IdKinds`
           - Server:
             - Contributes:
+              - `ids.kind` "proto"
               - `resource.declare` "prototypes.history"
               - `resource.declare` "prototypes.list"
               - `resource.declare` "prototypes.picks"
               - `resource.declare` "prototypes.statuses"
             - Uses:
+              - `ids.IdKinds`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/file-watcher.defineFileWatcher`
@@ -4192,6 +4351,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PUT /api/prototypes/:name/status`
           - Core:
             - Uses:
+              - `ids.defineIdKind`
               - `infra/endpoints.defineEndpoint`
               - `infra/html-decode.decodeHtmlText`
               - `infra/html-decode.readHtmlAttr`
@@ -4231,12 +4391,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isHexColor`
               - `isOptionName`
               - `isOptionValue`
-              - `isPrototypeId`
               - `isScannableFile`
               - `listPrototypes`
               - `MocksDeclarationSchema`
               - `mocksProblemDetail`
-              - `newPrototypeId`
               - `NO_PROTOTYPE_STATUS`
               - `parseMocks`
               - `parseOptionColor`
@@ -4247,10 +4405,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PicksChangeSchema`
               - `picksFromQuery`
               - `presetSize`
+              - `protoIdKind`
               - `PROTOTYPE_ASSET_ROUTE`
               - `PROTOTYPE_ENTRY_FILE`
               - `PROTOTYPE_FILE_ROUTE`
-              - `PROTOTYPE_ID_RE`
               - `PROTOTYPE_VERSION_FILE_ROUTE`
               - `PROTOTYPE_VERSION_KINDS`
               - `PROTOTYPE_VIEWPORT_WORDS`
@@ -4858,6 +5016,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/transpose` (table `sonata_songs_ext_transpose`)
               - `apps/sonata/sources/ultimate-guitar/alignment` (table `sonata_songs_ext_ug_alignment`)
               - `apps/sonata/sources/ultimate-guitar` (table `sonata_songs_ext_ultimate_guitar`)
+          - Exemptions:
+            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`look`** — Web registration of the Sonata look config (flat / realistic / sketch) plus its View-popover switch — the app's single appearance choice. The palette itself is plain data in core/. Server registration of the Sonata look config (flat / realistic / sketch).
           - Web:
             - Contributes:
@@ -6079,6 +6239,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `PUT /api/sonata/songs/:id/ultimate-guitar`
               - Cross-plugin:
                 - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
+              - Exemptions:
+                - Exempts itself from: `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
               - Core:
                 - Exports (types):
                   - `UgFetchErrorKind`
@@ -8352,6 +8514,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `backup/sources/transcripts`
       - `backup/targets/google-drive`
       - `backup/targets/local`
+  - Exemptions:
+    - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
   - Shared:
     - Exports (values): `runBackup`
   - Plugins:
@@ -8465,6 +8629,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/admin.isForkTempName`
               - `database/admin.listDatabases`
               - `infra/worktree.hasCompositionMarker`
+              - `infra/worktree.isCanonicalWorktreeName`
         - **`project-memory`** — Config UI for the project memory backup source. Backs up Claude Code project memory files into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -8577,6 +8742,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `buildPane.Actions` ← `primitives.pane`
       - `buildDetailPane.Actions` ← `primitives.pane`
     - Contributes:
+      - `IdKinds.Kind` "build"
       - `ActionBar.Item` → `BuildButton`
       - `ActionBar.Activity` "build"
       - `ActionBar.Glance` → `ReloadChip`
@@ -8584,7 +8750,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Pane.Register` "build-detail"
       - `DebugApp.Sidebar` "Builds"
       - `ConfigV2.WebRegister` "config"
-    - Uses: 34 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
+    - Uses: 35 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
       - `primitives/css/ui-kit` ×4
       - `primitives/live-state` ×4
       - `infra/endpoints` ×2
@@ -8594,6 +8760,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `apps/debug/shell.DebugApp`
       - `build/deployment.DeploymentChain`
       - `config_v2.ConfigV2`
+      - `ids.IdKinds`
       - `network/live.useLive`
       - `primitives/css/scroll.Scroll`
       - `primitives/css/spacing.Stack`
@@ -8619,19 +8786,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useStaleFrontend`
   - Server:
     - Contributes:
+      - `ids.kind` "build"
       - `ConfigV2.Register` "config"
       - `taskCategory` "build"
       - `resource.declare` "build.history"
       - `resource.declare` "build.history:groups"
       - `resource.declare` "build.history:rows"
       - `trigger` "build.run"
-    - Uses: 21 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
+    - Uses: 22 symbols — full list in [`plugins/build/REFERENCE.md`](../plugins/build/REFERENCE.md)
       - `config_v2` ×3
       - `build/deployment` ×2
       - `build/run-ledger` ×2
       - `infra/endpoints` ×2
       - `infra/paths` ×2
       - `database.db`
+      - `ids.IdKinds`
       - `infra/events.Trigger`
       - `infra/git/git-watcher.refAdvanced`
       - `infra/jobs/supervised-job.defineSupervisedJob`
@@ -8672,6 +8841,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `triggerBuildEndpoint`
   - Cross-plugin:
     - Imported by:
+      - `active-data/build-run`
       - `build/build-commits`
       - `build/build-fix`
       - `build/build-info`
@@ -8931,22 +9101,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `build`
     - **`run-ledger`** — Lean build-runs ledger leaf: the build_runs table def + the CLI build-run recorder, importable by the `./singularity build` CLI without the heavy build barrel (which pulls config_v2/notifications).
       - Server:
-        - Uses: `database/admin.openShortLivedClient`
+        - Uses:
+          - `database/admin.openShortLivedClient`
+          - `ids.idColumn`
         - DB schema: `plugins/build/plugins/run-ledger/server/internal/tables.ts`
         - Exports (types): `BuildRunRecorder`
         - Exports (values):
           - `_buildRuns`
           - `createBuildRunRecorder`
           - `settleDeadInflightRun`
-      - Cross-plugin:
-        - Imported by:
-          - `build`
-          - `build/build-commits`
-          - `build/runs-arm`
       - Core:
+        - Uses:
+          - `ids.defineIdKind`
+          - `ids.IdOf`
+        - Exports (types): `BuildRunId`
         - Exports (values):
           - `BUILD_RUN_KIND`
           - `BUILD_RUN_KIND_ID`
+          - `buildRunIdKind`
+      - Cross-plugin:
+        - Imported by:
+          - `active-data/build-run`
+          - `build`
+          - `build/build-commits`
+          - `build/runs-arm`
     - **`runs-arm`** — The build arm's presence on the merged run surface: the Build kind (whose rows open the existing build run-detail pane), the six-way build status dot as the list row's leading indicator, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the six-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
       - Web:
         - Contributes:
@@ -9714,6 +9892,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `improve`
       - `page/annotations/agent-notes/agent-page`
     - Endpoint callers: `transcript-api`
+  - Exemptions:
+    - Exempts itself from:
+      - `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts`, `server/internal/tables-user-turn-sent-event.ts` (debt)
+      - `ids:pk-declared` — `server/internal/tables-held-turns.ts` (debt)
   - Plugins:
     - **`agents`** — Named agent definitions that launch conversations.
       - Web:
@@ -9735,6 +9917,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `agentSidePane.Actions` ← `conversations.agents`
           - `agentSidePane.Actions` ← `primitives.pane`
         - Contributes:
+          - `IdKinds.Kind` "agent"
+          - `IdKinds.Kind` "launch"
           - `Pane.Register` "agent-detail"
           - `Pane.Register` "agent-side"
           - `Pane.Register` "agent-system-detail"
@@ -9744,7 +9928,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Item.Avatar` → `AgentAvatarRow`
           - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
           - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-        - Uses: 53 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
+        - Uses: 54 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
           - `primitives/pane` ×7
           - `primitives/avatar` ×4
           - `primitives/collapsible` ×4
@@ -9759,6 +9943,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/model-provider.ModelSelect`
           - `conversations.useConversationById`
           - `fields/avatar/table.avatarFieldDef`
+          - `ids.IdKinds`
           - `infra/endpoints.fetchEndpoint`
           - `network/live.useLive`
           - `primitives/app-shell.opensPane`
@@ -9785,16 +9970,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `systemAgentDetailPane`
       - Server:
         - Contributes:
+          - `ids.kind` "agent"
+          - `ids.kind` "launch"
           - `resource.declare` "agent-launches"
           - `resource.declare` "agent-launches:rows"
           - `resource.declare` "agents"
           - `derived-view` "agents_v"
           - `derived-table` "task_latest_conversation"
           - `taskCategory` "agents"
-        - Uses: 26 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
+        - Uses: 28 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
           - `primitives/rank` ×4
           - `tasks/tasks-core` ×4
           - `database/sql-projection` ×2
+          - `ids` ×2
           - `infra/endpoints` ×2
           - `network/live` ×2
           - `tasks/task-category` ×2
@@ -9843,13 +10031,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `conversations/model-provider.ModelChoiceSchema`
           - `conversations/model-provider.StoredModelChoiceSchema`
+          - `ids.defineIdKind`
+          - `ids.IdOf`
           - `infra/endpoints.defineEndpoint`
           - `primitives/rank.RankSchema`
           - `tasks/tasks-core.ConversationStatusSchema`
           - `ui/icons/saved-names.SavedSymbolNameSchema`
         - Exports (types):
           - `Agent`
+          - `AgentId`
           - `AgentLaunch`
+          - `AgentLaunchId`
           - `AgentLaunchWithStatus`
           - `CreateAgentBody`
           - `LaunchAgentBody`
@@ -9857,6 +10049,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MoveAgentBody`
           - `UpdateAgentBody`
         - Exports (values):
+          - `agentIdKind`
+          - `agentLaunchIdKind`
           - `AgentLaunchSchema`
           - `AgentLaunchWithStatusSchema`
           - `AgentSchema`
@@ -10031,7 +10225,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: `stats/commits`
       - Exemptions:
-        - Exempts itself from: `endpoints:no-raw-json-handlers` — `server/internal/routes.ts` (sanctioned)
+        - Exempts itself from:
+          - `endpoints:no-raw-json-handlers` — `server/internal/routes.ts` (sanctioned)
+          - `ids:pk-declared` — `server/internal/tables.ts` (debt)
       - Shared:
         - Exports (types):
           - `ClassifyBody`
@@ -12770,15 +12966,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/live-state.foldResource`
                   - `primitives/live-state.ResourceReadiness`
                   - `primitives/optimistic-mutation.useOptimisticResource`
-        - **`grouped`** — Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
+        - **`grouped`** — Registers the conversation-group id kind (`cgrp-…`) in the browser's id registry, the twin of the server registration. Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.
+          - Web:
+            - Contributes: `IdKinds.Kind` "cgrp"
+            - Uses: `ids.IdKinds`
           - Server:
+            - Contributes: `ids.kind` "cgrp"
             - Uses:
               - `database.db`
               - `database/derived-updated-at.deriveUpdatedAt`
+              - `ids.idColumn`
+              - `ids.IdKinds`
               - `primitives/rank.nextRankUnder`
               - `tasks/tasks-core._conversations`
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
             - Exports (values): `addMemberToGroup`
+          - Core:
+            - Uses:
+              - `ids.defineIdKind`
+              - `ids.IdOf`
+            - Exports (types): `ConversationGroupId`
+            - Exports (values): `conversationGroupIdKind`
           - Cross-plugin:
             - Imported by: `improve`
         - **`queue`** — Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); a user-set pin lifts a waiting task group into its own top section. Stable-rank global queue. Ranks seeded once on creation (newest first). A user-set pin lifts a conversation's task group into its own section at the top.
@@ -13340,34 +13548,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/transcript-watcher`
           - `conversations/usage`
           - `debug/session-divergence`
+      - Exemptions:
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - Web:
         - Slots: `conv-summary.actions`
         - Slot contributors: `conv-summary.actions` ← `primitives.pane`
-        - Contributes: `Pane.Register` "conv-summary"
-        - Uses:
+        - Contributes:
+          - `IdKinds.Kind` "summary"
+          - `Pane.Register` "conv-summary"
+        - Uses: 21 symbols — full list in [`plugins/conversations/plugins/summary/REFERENCE.md`](../plugins/conversations/plugins/summary/REFERENCE.md)
+          - `primitives/live-state` ×4
+          - `primitives/pane` ×3
+          - `infra/endpoints` ×2
+          - `primitives/css/spacing` ×2
+          - `primitives/css/ui-kit` ×2
           - `conversations/conversation-view.conversationPane`
-          - `infra/endpoints.getEndpointErrorMessage`
-          - `infra/endpoints.useEndpointMutation`
+          - `ids.IdKinds`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
-          - `primitives/css/spacing.selfClass`
-          - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.Button`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/live-state.mapResource`
-          - `primitives/live-state.ResourceErrorInline`
-          - `primitives/live-state.ResourceResult`
-          - `primitives/live-state.ResourceView`
           - `primitives/loading.Loading`
-          - `primitives/pane.defineRoute`
-          - `primitives/pane.Pane`
-          - `primitives/pane.PaneChrome`
           - `shell/notifications.toast`
           - `ui/icons.Icon`
       - Server:
         - Contributes:
+          - `ids.kind` "summary"
           - `resource.declare` "conversation-summaries"
           - `resource.declare` "conversation-summaries:groups"
           - `resource.declare` "conversation-summaries:rows"
@@ -13378,6 +13584,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations.Turn`
           - `conversations/model-provider/catalog.getModelCatalog`
           - `database.db`
+          - `ids.IdKinds`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
@@ -13403,17 +13610,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/int/config.intField`
           - `fields/text/config.enumTextField`
           - `fields/text/config.textField`
+          - `ids.defineIdKind`
+          - `ids.idKindField`
+          - `ids.IdOf`
           - `network/live.liveCollection`
           - `network/live/filter.liveText`
         - Exports (types):
           - `ConversationSummary`
           - `Phase`
+          - `SummaryId`
         - Exports (values):
           - `conversationSummaries`
           - `conversationSummaryFields`
           - `ConversationSummarySchema`
           - `PHASE_VALUES`
           - `PhaseSchema`
+          - `summaryIdKind`
       - Shared:
         - Exports (values): `generateConversationSummary`
     - **`terminal-menu`** — The shape of an interactive numbered menu a conversation's terminal has open (title, options, highlighted option, footer): the value the runtime reads off the screen, the conversation row carries as waitingMenu, and the web's menu card answers.
@@ -13590,16 +13802,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadKnownRelations`
       - `quotedRelationsIn`
   - Cross-plugin:
-    - Imported by: 103 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 105 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×29
       - `page` ×14
       - `infra` ×12
       - `conversations` ×11
       - `tasks` ×8
       - `debug` ×6
+      - `active-data` ×4
       - `primitives` ×4
       - `database` ×3
-      - `active-data` ×2
       - `build` ×2
       - `stats` ×2
       - `apps-core/app-usage`
@@ -14195,13 +14407,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `QueryDeadlineHitSchema`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×5
           - `conversations` ×4
           - `infra` ×4
           - `fields` ×3
           - `debug` ×2
           - `backup`
+          - `ids`
           - `network/live`
           - `page/editor`
           - `primitives/collab-doc`
@@ -14430,6 +14643,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SavedBootTraceSchema`
       - Cross-plugin:
         - Imported by: `debug/trace/client-boot`
+      - Exemptions:
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - **`boot-watchdog`** — Boot-wedge report renderer: a one-line Debug → Reports summary for the boot-wedge kind, plus the boot-watchdog budget/lookback config registration. Boot-watchdog monitor: a main-only per-minute scheduled job that sweeps every worktree's boot channel off the shared filesystem and files a deduped boot-wedge report for any backend that never reached its `ready` line within the boot budget — superseded (post-hoc, once) or open (gateway-confirmed wedged-now, re-filed each tick). Structurally main-only: a perWorktree job cannot observe its own wedged boot.
       - Web:
         - Contributes:
@@ -14788,6 +15003,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PRESSURE_FREE_MEM_MB`
           - `submitClientLatency`
           - `THREAD_STALL_MS`
+      - Exemptions:
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - **`live-state-churn`** — Umbrella for live-state churn debugging: the no-op push monitor/detector and the synthetic-push emitter.
       - Plugins:
         - **`emit`** — Synthetic no-op live-state push emitter: drives N pushes/sec for a chosen resource so churn-driven render/DOM bugs reproduce deterministically, surfaced as the Debug → Live-State Emit pane and the window.__liveStateEmit API. Synthetic no-op live-state push emitter: drives N triggerResourcePush calls/sec for a chosen resource on a bounded setInterval (hard auto-stop cap), so churn-driven render/DOM bugs reproduce deterministically. Surfaced as the Debug → Live-State Emit pane. The /api/resources/_debug route powering the resource dropdown is served by the kernel, not here.
@@ -15717,6 +15934,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `reportDetailPane`
           - `reportsPane`
+      - Cross-plugin:
+        - Imported by: `active-data/report`
     - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone, attention while it restarts or the machine is under duress, read from the sentinel.status push resource), with its stats — load per core, free memory and builds at a glance, and each signal that can trip duress against its limit when expanded — read from the sentinel.vitals push resource. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
       - Web:
         - Contributes:
@@ -15981,7 +16200,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/boot-monitor`
           - `debug/health-monitor`
       - Exemptions:
-        - Exempts itself from: `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
+        - Exempts itself from:
+          - `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
+          - `ids:pk-declared` — `server/internal/tables.ts` (debt)
       - Plugins:
         - **`cluster`** — Cross-worktree Cluster tab for the Slow Events pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree fan-out endpoint: merges every worktree DB fork's slow_ops into one cluster response.
           - Web:
@@ -16330,6 +16551,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/trace/pane`
               - `debug/trace/spans`
               - `debug/trace/stall`
+          - Exemptions:
+            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`gates`** — Gates trace lane: a point-in-time gate-occupancy strip (active/max + queued per concurrency layer, saturated gates highlighted) at the trip instant. Built-in trace event class 'gates': per-concurrency-gate occupancy (active / queued / max per layer) captured synchronously at the trip instant.
           - Web:
             - Contributes: `Trace.Lane` → `GatesLane`
@@ -16473,8 +16696,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `worktreeCleanupPane`
       - Server:
         - Contributes: `report-kind` "worktree-reap-failed"
-        - Uses: 27 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
-          - `infra/worktree` ×8
+        - Uses: 28 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
+          - `infra/worktree` ×9
           - `infra/worktree/reclaim` ×4
           - `database/admin` ×3
           - `tasks/tasks-core` ×3
@@ -16507,13 +16730,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×24
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 63 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 64 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×45
       - `apps` ×7
       - `debug` ×3
       - `infra` ×3
       - `config_v2`
       - `conversations/summary`
+      - `ids`
       - `plugin-meta/plugin-health`
       - `primitives/data-view`
       - `tasks/tasks-core`
@@ -17756,6 +17980,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/rank`
           - `fields/text/config`
           - `fields/uuid`
+          - `ids`
       - Plugins:
         - **`config`** — Text field type: config-render capability (single-line input for config-v2.fields.renderer) plus the textField factory.
           - Web:
@@ -19381,6 +19606,77 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `VersionWithSnapshotSchema`
       - Cross-plugin:
         - Imported by: `apps/pages/history`
+      - Exemptions:
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
+
+- **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useOpen); useIdKinds() / useIdPresenters() read them at render time. The id-kind registry, server half: IdKinds.Kind registers a declared kind and IdKinds.Referent resolves a kind's id to its title; getIdKinds() reads them at call time. idColumn / idRef are a kind's drizzle primary-key and foreign-key columns (typed Id<P>; idRef cascades on update).
+  - Web:
+    - Slots:
+      - `IdKinds.Kind`
+      - `IdKinds.Presenter`
+    - Slot contributors: 25 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `IdKinds.Kind` ×17
+      - `IdKinds.Presenter` ×8
+    - Exports (types):
+      - `IdPresenter`
+      - `IdReferentState`
+    - Exports (values):
+      - `IdKinds`
+      - `useIdKinds`
+      - `useIdPresenters`
+  - Server:
+    - Uses:
+      - `database/sql-column.columnSchema`
+      - `database/sql-column.parsedText`
+    - Exports (types):
+      - `IdColumnDeclaration`
+      - `IdReferent`
+    - Exports (values):
+      - `externalIdColumn`
+      - `getIdKinds`
+      - `idColumn`
+      - `idColumnDeclaration`
+      - `IdKinds`
+      - `idRef`
+  - Core:
+    - Uses:
+      - `fields.FieldDef`
+      - `fields.FieldMeta`
+      - `fields.FieldType`
+      - `fields.pickMeta`
+      - `fields/text.textFieldType`
+    - Exports (types):
+      - `AnyIdKind`
+      - `DetectedId`
+      - `Id`
+      - `IdKind`
+      - `IdOf`
+      - `IdShape`
+    - Exports (values):
+      - `defineIdKind`
+      - `detectIds`
+      - `externalIdField`
+      - `ID_PREFIX_RE`
+      - `ID_SHAPES`
+      - `idKindField`
+      - `IdParseError`
+      - `inlineBoundary`
+      - `kindLabel`
+      - `parseKindLabel`
+      - `storedIdSchema`
+  - Cross-plugin:
+    - Imported by: 22 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `apps` ×5
+      - `conversations` ×3
+      - `primitives` ×3
+      - `build` ×2
+      - `release` ×2
+      - `tasks` ×2
+      - `active-data/id-chip`
+      - `page/editor`
+      - `plugin-meta/plugin-health`
+      - `reports`
+      - `shell/notifications`
 
 - **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with the current URL. Companion actions join it as segments of one split pill via ImproveSlots.Segment. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
   - Web:
@@ -19520,7 +19816,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core`
         - Endpoint callers: `task-attachments`
       - Exemptions:
-        - Exempts itself from: `paths:no-hardcoded-paths` — `server/index.ts` (sanctioned)
+        - Exempts itself from:
+          - `paths:no-hardcoded-paths` — `server/index.ts` (sanctioned)
+          - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - **`audio-analysis`** — The audio-analysis settings registration (beat tracker device and model, chroma variant), so they appear in Settings → Config. Audio analysis of YouTube videos on the on-demand `audio-python` dependency: ensureBeatFeatures(videoId, exec) fetches the audio, runs Beat This! (beats, downbeats, no DBN) and a librosa CQT chroma out of process under one background unit of host admission, and caches the validated features host-wide per video, analysis version and settings (beat model, chroma variant — user config, with the fast ones as defaults; the device is config too) under a per-entry host flock; readBeatFeatures answers absent / running / ready / failed from the files, and requestBeatFeatures (GET/POST /api/audio-analysis/beat-features/:videoId) enqueues the audio-analysis.beat-features supervised job.
       - Web:
         - Contributes: `ConfigV2.WebRegister` "config"
@@ -19817,6 +20115,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/turn-summary`
           - `debug/claude-cli-calls`
           - `tasks/task-title`
+      - Exemptions:
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
       - Plugins:
         - **`availability`** — Claude Code availability, shown: the health report's Claude Code row (critical while the CLI is missing or signed out, with the install / sign-in commands and Check again), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code CLI is installed and signed in (`claude --version` + `claude auth status --json`, under the agent panes' host env), serves it as the claude-code-status push resource and POST /api/claude-code/recheck, and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`. onClaudeCodeProbed hands every fresh answer to work keyed off the installed CLI's version.
           - Web:
@@ -20424,6 +20724,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra` ×3
           - `build`
           - `improve`
+      - Exemptions:
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
       - Web:
         - Slots: `eventsTestPane.Actions`
@@ -20503,6 +20805,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `jobs:no-raw-addjob` — `server/internal/cron-dedup.ts` (sanctioned)
           - `endpoints:no-raw-json-handlers` — `server/internal` (sanctioned)
+          - `ids:pk-declared` — `server/internal/tables.ts` (debt)
       - Shared:
         - Exports (types):
           - `DeleteTargetingBody`
@@ -20672,6 +20975,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review/plugin-changes`
               - `tasks/attempt-work`
               - `tasks/tasks-core`
+          - Exemptions:
+            - Exempts itself from: `ids:pk-declared` — `server/internal/tables-ref-advanced.ts` (debt)
         - **`remotes`** — May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its `.git/config` cache of that measurement, the upstream resolution built from the same facts, and who signs the commits push makes (a local placeholder where they cannot leave the machine, a real identity required where they will be public).
           - Core:
             - Uses:
@@ -21226,6 +21531,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `jobs:no-raw-addjob` — `server/internal/registry.ts`, `check/index.ts` (sanctioned)
           - `jobs:no-raw-addjob` — `server/internal/enqueue-deadline.test.ts` (sanctioned)
           - `jobs:no-raw-addjob:task-literal` — `core/hold.ts`, `check/index.ts` (sanctioned)
+          - `ids:pk-declared` — `server/internal/tables.ts` (debt)
       - Test helpers:
         - Server: `@plugins/infra/plugins/jobs/server/testing`
           - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.
@@ -21363,7 +21669,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/events-test`
               - `release`
           - Exemptions:
-            - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `server/internal/run/supervisor.ts` (sanctioned)
+            - Exempts itself from:
+              - `spawn-safety/no-raw-bun-spawn` — `server/internal/run/supervisor.ts` (sanctioned)
+              - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+              - `ids:pk-declared` — `server/internal/tables-run-ended.ts` (debt)
           - Test helpers:
             - Core: `@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing`
               - `execContextForTests` — An `ExecContext` for tests: origin `cli`, admission that admits at once.
@@ -22261,6 +22570,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/pages/page-tree`
           - `page/editor`
+      - Exemptions:
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - **`warmup`** — Declared heavy boot warm-up category: defineWarmup registers a deferred, throttled, scope-gated warm-up; drainWarmups drains them after onAllReady under a concurrency gate + heavy-read slot + macrotask yield, recording each warm-up's run in memory (warmupRunOf / onWarmupRun); listRegisteredWarmups lists the declared set with the plugin that declared each.
       - Server:
         - Uses: `infra/host/host-read-pool.withHeavyReadSlot`
@@ -22327,6 +22638,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ensureMainWorktreeRoot`
           - `gitWorktreesDir`
           - `hasCompositionMarker`
+          - `isCanonicalWorktreeName`
           - `isCanonicalWorktreePath`
           - `isWorktreeOpActive`
           - `listActiveWorktreeOps`
@@ -22365,12 +22677,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `attemptBranchName`
           - `attemptBranchRef`
-          - `isCanonicalWorktreeName`
           - `isOpKind`
           - `OP_KIND_IDS`
           - `OP_KINDS`
           - `stripAttemptBranchPrefix`
-          - `WORKTREE_NAME_RE`
       - Plugins:
         - **`reclaim`** — Namespace reclaim: reclaimNamespace tears down one compose-serve namespace's four artifacts (database, config dir, gateway registry dir, and the composing checkout's filtered registries) behind provenance guards, and the marker-driven ownership queries answer what a checkout or a composition owns — so a reclaim trigger asks rather than enumerating.
           - Server:
@@ -23083,15 +23393,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveValue`
           - `scopedLiveColumns`
       - Cross-plugin:
-        - Imported by: 164 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 168 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×48
           - `conversations` ×34
           - `tasks` ×21
           - `infra` ×10
+          - `active-data` ×9
           - `debug` ×8
           - `build` ×6
           - `page` ×6
-          - `active-data` ×5
           - `primitives` ×5
           - `auth` ×3
           - `review` ×3
@@ -23997,7 +24307,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.InsertAction` ×3
           - `Editor.BlockMenuItem` ← `page.open-as-page`
           - `Editor.TurnInto` ← `page.turn-into-page`
-        - Uses: 82 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Contributes: `IdKinds.Kind` "block"
+        - Uses: 83 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `primitives/live-state` ×5
           - `primitives/text-editor/caret-trigger` ×5
           - `primitives/css/spacing` ×4
@@ -24015,6 +24326,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live` ×2
           - `primitives/latest-ref` ×2
           - `primitives/persistent-draft` ×2
+          - `ids.IdKinds`
           - `primitives/announce.announce`
           - `primitives/copy-to-clipboard.useCopyToClipboard`
           - `primitives/css/badge.Badge`
@@ -24150,6 +24462,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useVoidCaret`
       - Server:
         - Contributes:
+          - `ids.kind` "block"
           - `resource.declare` "page-blocks"
           - `resource.declare` "page-edited-at"
           - `resource.declare` "pages"
@@ -24161,6 +24474,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.DbExecutor`
           - `database/derived-updated-at.deriveUpdatedAt`
           - `database/sql-column.parsedJson`
+          - `ids.IdKinds`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/events.defineTriggerEvent`
@@ -24235,6 +24549,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/pages/:pageId/blocks/patch`
       - Core:
         - Uses:
+          - `ids.defineIdKind`
           - `infra/endpoints.defineEndpoint`
           - `infra/trash.TrashOutcomeSchema`
           - `network/live.liveValue`
@@ -24310,6 +24625,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `applyBlockOpEndpoint`
           - `blockAuthorOf`
           - `BlockFieldChangesSchema`
+          - `blockIdKind`
           - `blockOpContextOf`
           - `BlockOpSchema`
           - `BlockPageSchema`
@@ -24424,10 +24740,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `xmlTextContentLength`
           - `xmlTextToRuns`
       - Cross-plugin:
-        - Imported by: 75 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Imported by: 72 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `page` ×56
           - `apps` ×8
-          - `active-data` ×6
+          - `active-data` ×3
           - `reports` ×3
           - `primitives` ×2
         - Extended by:
@@ -24439,7 +24755,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `live/no-legacy-resource-spelling` — `core/resources.ts`, `server/internal/resources.ts`, `web/components/page-options.tsx` (debt)
-          - `page-editor/no-adhoc-block-id` — `core/block-id.ts` (sanctioned)
           - `page-editor/no-adhoc-forest-write` — `server/internal/forest-writer.ts` (sanctioned)
           - `page-editor/no-adhoc-doc-write` — `web/__tests__`, `web/internal/block-text-write.ts`, `web/internal/live-state-yjs-provider.ts`, `web/internal/local-yjs-provider.ts` (sanctioned)
           - `page-editor/no-unfiltered-blocks-read` — `server/internal/forest-writer.ts`, `server/internal/handle-patch-blocks.ts`, `server/internal/live-blocks.ts`, `server/internal/page-forest.ts`, `server/internal/trash-blocks.ts` (sanctioned)
@@ -24447,6 +24762,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page-editor/no-adhoc-structural-write` — `web/block-store.ts`, `web/composite-block-store.tsx` (sanctioned)
           - `page-editor/no-unhistoried-block-field` — `web/components/block-text-area.tsx` (sanctioned)
           - `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
+          - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+          - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
         - Exempted by: `page/editor` (0 debt)
       - Test helpers:
         - Web: `@plugins/page/plugins/editor/web/testing`
@@ -24754,6 +25071,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `REMINDER_TOKEN_PATTERN`
           - `scanReminderTokens`
           - `stripInlineTokens`
+      - Exemptions:
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - **`inline-page-link`** — Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[page:<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[page:<pageId>]]` page links embedded in any block's text.
       - Server:
         - Contributes:
@@ -26327,8 +26646,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `import-scan-safety/no-adhoc-import-scan` — `core/find-imports.ts` (sanctioned)
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
-        - Contributes: `PluginViewSlots.Section` "Health" → `HealthSection`
+        - Contributes:
+          - `IdKinds.Kind` "review"
+          - `PluginViewSlots.Section` "Health" → `HealthSection`
         - Uses:
+          - `ids.IdKinds`
           - `infra/endpoints.fetchEndpoint`
           - `network/live.useLive`
           - `plugin-meta/plugin-view.PluginNode`
@@ -26342,11 +26664,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/relative-time.RelativeTime`
       - Server:
         - Contributes:
+          - `ids.kind` "review"
           - `resource.declare` "plugin-health-reviews"
           - `resource.declare` "plugin-health-reviews:groups"
           - `resource.declare` "plugin-health-reviews:rows"
         - Uses:
           - `database.db`
+          - `ids.IdKinds`
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
@@ -26378,9 +26702,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields.nullable`
           - `fields/date/config.dateField`
           - `fields/text/config.textField`
+          - `ids.defineIdKind`
+          - `ids.idKindField`
+          - `ids.IdOf`
           - `infra/endpoints.defineEndpoint`
         - Exports (types):
           - `PluginHealthReview`
+          - `PluginReviewId`
           - `PluginStaleness`
           - `ReviewTaskSummary`
         - Exports (values):
@@ -26389,6 +26717,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getPluginStaleness`
           - `pluginHealthReviewFields`
           - `PluginHealthReviewSchema`
+          - `pluginReviewIdKind`
           - `PluginStalenessSchema`
           - `ReviewTaskSummarySchema`
     - **`plugin-refs`** — The one plugin-reference locator: every place the repo names a plugin (path literals, @plugins specifiers, structurally-read dot ids, relative markdown/CSS links), each with an exact character range a mover rewrites by.
@@ -28583,11 +28912,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 52 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Contributes: 54 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `ConfigV2.WebRegister` ×46
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
-        - Uses: 72 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `IdKinds.Kind` ×2
+        - Uses: 73 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `primitives/css/ui-kit` ×11
           - `primitives/data-view/view-core` ×7
           - `primitives/live-state` ×5
@@ -28607,6 +28937,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/search` ×2
           - `primitives/sortable-list` ×2
           - `fields.Fields`
+          - `ids.IdKinds`
           - `primitives/css/inline.Inline`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
@@ -28753,37 +29084,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 46 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Contributes: 48 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `ConfigV2.Register` ×46
+          - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
           - `config_v2.watchConfig`
+          - `ids.IdKinds`
           - `primitives/data-view/view-core.buildViewConfigRegistrations`
           - `primitives/data-view/view-core.viewsDescriptor`
         - Exports (values):
           - `readDataViewConfigDoc`
           - `watchDataViewConfigDoc`
-      - Cross-plugin:
-        - Imported by: 78 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `fields` ×28
-          - `apps` ×19
-          - `conversations` ×7
-          - `debug` ×7
-          - `primitives` ×7
-          - `tasks` ×3
-          - `infra` ×2
-          - `apps-core/app-launcher`
-          - `config_v2/settings`
-          - `page/links`
-          - `runs`
-          - `ui/theme-engine/theme-gallery`
-      - Exemptions:
-        - Exempts itself from: `data-view/no-adhoc-row-list` — `.` (sanctioned)
-        - Exempted by:
-          - `primitives/data-view` (0 debt)
-          - `primitives/tree` (0 debt)
-          - `reorder/editor` (0 debt)
       - Core:
+        - Uses:
+          - `ids.defineIdKind`
+          - `ids.IdOf`
         - Exports (types):
           - `CellEditorProps`
           - `ColumnConfigDerive`
@@ -28827,6 +29143,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FilterGroup`
           - `FilterLowerContext`
           - `FilterNode`
+          - `FilterNodeId`
           - `FilterOperator`
           - `FilterOperatorSet`
           - `FilterPreset`
@@ -28851,6 +29168,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveSearchableColumn`
           - `LiveSourceScope`
           - `ManualOrderConfig`
+          - `PresetId`
           - `RowTone`
           - `SectionCount`
           - `SectionsToolbar`
@@ -28871,6 +29189,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineDataView`
           - `exactCount`
           - `FilterGroupSchema`
+          - `filterNodeIdKind`
           - `FilterNodeSchema`
           - `FilterRuleSchema`
           - `formatSectionCount`
@@ -28878,10 +29197,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isHostedToolbar`
           - `isSectionsToolbar`
           - `orderFieldsBySection`
+          - `presetIdKind`
           - `scopeFilterRows`
           - `SHARED_FIELD_SECTION`
           - `splitFieldSections`
           - `UNGROUPED_FOLD_KEY`
+      - Cross-plugin:
+        - Imported by: 78 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `fields` ×28
+          - `apps` ×19
+          - `conversations` ×7
+          - `debug` ×7
+          - `primitives` ×7
+          - `tasks` ×3
+          - `infra` ×2
+          - `apps-core/app-launcher`
+          - `config_v2/settings`
+          - `page/links`
+          - `runs`
+          - `ui/theme-engine/theme-gallery`
+      - Exemptions:
+        - Exempts itself from: `data-view/no-adhoc-row-list` — `.` (sanctioned)
+        - Exempted by:
+          - `primitives/data-view` (0 debt)
+          - `primitives/tree` (0 debt)
+          - `reorder/editor` (0 debt)
       - Test helpers:
         - Web: `@plugins/primitives/plugins/data-view/web/testing`
           - `lowerFilterGroup` — Lower a DataView `FilterGroup` into a filter-language `Filter`, each rule through its operator's `lower` with `ctx.column` = the field id.
@@ -28906,13 +29246,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.
           - Web:
             - Contributes:
+              - `IdKinds.Kind` "cc"
               - `DataViewSlots.FieldExtension` "custom-columns" → `CustomColumnFieldExtension`
               - `DataViewSlots.Setting` "custom-columns" → `CustomColumnsFieldsSetting`
-            - Uses: 21 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/custom-columns/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/custom-columns/REFERENCE.md)
+            - Uses: 22 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/custom-columns/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/custom-columns/REFERENCE.md)
               - `primitives/data-view` ×9
               - `primitives/live-state` ×3
               - `config_v2` ×2
               - `primitives/css/control-panel` ×2
+              - `ids.IdKinds`
               - `infra/endpoints.useEndpointMutation`
               - `network/live.useLive`
               - `primitives/css/ui-kit.Input`
@@ -28929,6 +29271,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSetCustomColumnValue`
           - Server:
             - Contributes:
+              - `ids.kind` "cc"
               - `resource.declare` "data-view-custom-column-defs"
               - `resource.declare` "data-view-custom-values"
               - `live.columns.scoped` "custom"
@@ -28936,6 +29279,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database.db`
               - `database/derived-updated-at.deriveUpdatedAt`
               - `fields/server-capabilities.resolveFieldValueTextCast`
+              - `ids.IdKinds`
               - `infra/endpoints.implement`
               - `network/live.LiveColumns`
               - `network/live.ScopedMemberRead`
@@ -28953,10 +29297,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/data-view/custom-values/delete-column`
           - Core:
             - Uses:
+              - `ids.defineIdKind`
+              - `ids.IdOf`
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveValue`
             - Exports (types):
               - `CustomColumnDef`
+              - `CustomColumnId`
               - `CustomColumnValueRow`
               - `DeleteCustomColumnValuesBody`
               - `SetCustomColumnValueBody`
@@ -28964,6 +29311,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CUSTOM_COLUMNS_SET`
               - `customColumnDefs`
               - `CustomColumnDefSchema`
+              - `customColumnIdKind`
               - `CustomColumnValueRowSchema`
               - `customColumnValues`
               - `deleteCustomColumnValues`
@@ -29074,7 +29422,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TreeViewOptions`
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
-            - Uses: 36 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
+            - Contributes: `IdKinds.Kind` "view"
+            - Uses: 37 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
               - `primitives/css/ui-kit` ×13
               - `config_v2` ×3
               - `primitives/css/control-panel` ×2
@@ -29082,6 +29431,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state` ×2
               - `primitives/sortable-list` ×2
               - `config_v2/fields.FieldRenderer`
+              - `ids.IdKinds`
               - `primitives/css/fill.Fill`
               - `primitives/css/grow.growClass`
               - `primitives/css/rigid.rigidClass`
@@ -29109,22 +29459,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useViewsConfig`
               - `ViewSettingsPopover`
           - Server:
-            - Uses: `config_v2.ConfigV2`
+            - Contributes: `ids.kind` "view"
+            - Uses:
+              - `config_v2.ConfigV2`
+              - `ids.IdKinds`
             - Exports (values):
               - `buildViewConfigRegistrations`
               - `viewsDescriptor`
-          - Cross-plugin:
-            - Imported by:
-              - `primitives/data-view`
-              - `primitives/metrics`
           - Core:
+            - Uses:
+              - `ids.defineIdKind`
+              - `ids.IdOf`
             - Exports (types):
               - `AddableSource`
               - `AddableViewType`
               - `ViewConfigRow`
+              - `ViewId`
               - `ViewInstance`
               - `ViewSourceEntry`
               - `ViewTypeMeta`
+            - Exports (values): `viewIdKind`
+          - Cross-plugin:
+            - Imported by:
+              - `primitives/data-view`
+              - `primitives/metrics`
           - Shared:
             - Exports (values): `viewsDescriptor`
         - **`view-order`** — Per-view-instance manual row order for any DataView: subscribes to the persisted (dataViewId, viewId) ranks, synthesizes a total order, and contributes the resulting ManualOrderConfig back through data-view's global RowOrder slot. Persists a per-view-instance manual row order keyed by (dataViewId, viewId, rowKey): a generic DB table, a push live resource, and a validating upsert endpoint that writes only the drag's bounded set (the moved row plus the seeds now ahead of it) rank-ascending — O(gesture), never a full replace, nothing deleted.
@@ -31406,12 +31764,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceAppId`
           - `useSyncPaneRegistry`
       - Cross-plugin:
-        - Imported by: 160 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 164 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×57
           - `conversations` ×29
           - `debug` ×23
+          - `active-data` ×10
           - `tasks` ×8
-          - `active-data` ×6
           - `plugin-meta` ×6
           - `apps-core` ×5
           - `auth` ×5
@@ -32291,9 +32649,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots: `InlineChip.Tag`
             - Slot contributors:
               - `InlineChip.Tag` ← `active-data.attempt`
+              - `InlineChip.Tag` ← `active-data.build-run`
               - `InlineChip.Tag` ← `active-data.conv`
+              - `InlineChip.Tag` ← `active-data.event-source`
               - `InlineChip.Tag` ← `active-data.page-link`
               - `InlineChip.Tag` ← `active-data.prototype`
+              - `InlineChip.Tag` ← `active-data.report`
               - `InlineChip.Tag` ← `active-data.task-link`
               - `InlineChip.Tag` ← `primitives.ui-context.element-picker`
             - Uses:
@@ -32324,11 +32685,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `active-data`
-              - `active-data/attempt`
-              - `active-data/conv`
-              - `active-data/page-link`
-              - `active-data/prototype`
-              - `active-data/task-link`
+              - `active-data/id-chip`
               - `page/inline-page-link`
               - `page/links`
               - `primitives/ui-context/element-picker`
@@ -32747,17 +33104,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/tree`
 
 - **`release`** — Release engine web presence: eagerly registers the boot-critical release.previews live value so boot-snapshot can hydrate it before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
+  - Web:
+    - Contributes: `IdKinds.Kind` "release"
+    - Uses: `ids.IdKinds`
   - Server:
     - Contributes:
+      - `ids.kind` "release"
       - `resource.declare` "release.candidate"
       - `resource.declare` "release.history"
       - `resource.declare` "release.history:groups"
       - `resource.declare` "release.history:rows"
       - `resource.declare` "release.previews"
       - `resource.declare` "release.runs:rows"
-    - Uses: 23 symbols — full list in [`plugins/release/REFERENCE.md`](../plugins/release/REFERENCE.md)
+    - Uses: 25 symbols — full list in [`plugins/release/REFERENCE.md`](../plugins/release/REFERENCE.md)
       - `release/bundles` ×6
       - `infra/jobs/supervised-job` ×3
+      - `ids` ×2
       - `infra/endpoints` ×2
       - `infra/launcher` ×2
       - `infra/paths` ×2
@@ -32867,21 +33229,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readHeadSha`
           - `releaseOutDir`
           - `resolveBundle`
-      - Cross-plugin:
-        - Imported by:
-          - `apps/deploy/deployments`
-          - `release`
       - Core:
+        - Uses:
+          - `ids.defineIdKind`
+          - `ids.IdOf`
         - Exports (types):
           - `BundleRefusal`
           - `BundleResolution`
           - `ReleaseManifest`
+          - `ReleaseRunId`
           - `Staleness`
         - Exports (values):
           - `bundleRefusalMessage`
           - `DIRTY_WORKTREE_REASON`
           - `namespaceHint`
           - `ReleaseManifestSchema`
+          - `releaseRunIdKind`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/deploy/deployments`
+          - `release`
     - **`runs-arm`** — The release arm's presence on the merged run surface: the Release kind (whose rows open the Studio release run-detail pane), plus the composition / target / platform / provenance columns only a release row has. The release arm of the merged run space: binds `release_runs` into the runs union, mapping its own three-way status onto the shared outcome axis through a typed-total record, and contributing the composition / target / platform / provenance columns only a release row has — `release.kind` namespaced so the ledger's own kind column cannot shadow the run-kind discriminator.
       - Web:
         - Contributes:
@@ -33094,9 +33461,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots: `Reports.KindView`
     - Slot contributors: 29 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `Reports.KindView` ×29
-    - Contributes: `ConfigV2.WebRegister` "reports"
+    - Contributes:
+      - `IdKinds.Kind` "report"
+      - `ConfigV2.WebRegister` "reports"
     - Uses:
       - `config_v2.ConfigV2`
+      - `ids.IdKinds`
       - `infra/endpoints.fetchEndpoint`
       - `primitives/scope/tab-id.getTabId`
       - `primitives/slot-render.defineDispatchSlot`
@@ -33107,6 +33477,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Reports`
   - Server:
     - Contributes:
+      - `ids.kind` "report"
       - `resource.declare` "reports.list"
       - `resource.declare` "reports.list:groups"
       - `resource.declare` "reports.list:rows"
@@ -33122,6 +33493,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `database/change-feed.defineChangeProducer`
       - `database/derived-updated-at.deriveUpdatedAt`
       - `database/sql-column.parsedJson`
+      - `ids.idColumn`
+      - `ids.IdKinds`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
       - `infra/host/duress.createShedBuffer`
@@ -33144,6 +33517,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `StormSummary`
     - Exports (values):
       - `DEFAULT_REPORT_DEBOUNCE_MS`
+      - `getReportTitle`
       - `isReportKindRegistered`
       - `linkReportsToTask`
       - `recordReport`
@@ -33169,6 +33543,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `config_v2.defineConfig`
       - `fields/int/config.intField`
+      - `ids.defineIdKind`
+      - `ids.IdOf`
       - `network/live.liveCollection`
       - `network/live/filter.liveBoolean`
       - `network/live/filter.liveInstant`
@@ -33178,10 +33554,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (types):
       - `Report`
       - `ReportFingerprintContext`
+      - `ReportId`
       - `ReportSource`
     - Exports (values):
       - `CLIENT_REPORT_SOURCES`
       - `reportDetailRoute`
+      - `reportIdKind`
       - `REPORTS_SEARCHABLE`
       - `ReportSchema`
       - `reportsConfig`
@@ -33189,12 +33567,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
   - Cross-plugin:
-    - Imported by: 53 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 54 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×19
       - `debug` ×17
       - `conversations` ×7
       - `database` ×3
       - `infra` ×2
+      - `active-data/report`
       - `backup`
       - `page/place/google`
       - `stats/cost`
@@ -34139,12 +34518,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `verdictOf`
     - **`notifications`** — Persistent bell-button notifications backed by the DB.
       - Web:
-        - Contributes: `ActionBar.Item` → `BellButton`
-        - Uses: 26 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Contributes:
+          - `IdKinds.Kind` "notif"
+          - `ActionBar.Item` → `BellButton`
+        - Uses: 27 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `infra/endpoints` ×2
           - `primitives/cursor-pagination` ×2
           - `primitives/live-state` ×2
           - `apps-core/tabs.navigate`
+          - `ids.IdKinds`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
@@ -34168,6 +34550,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `toast`
       - Server:
         - Contributes:
+          - `ids.kind` "notif"
           - `resource.declare` "notifications"
           - `resource.declare` "notifications.unread"
           - `resource.declare` "notifications:groups"
@@ -34178,6 +34561,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/admin.ExcludeFromFork`
           - `database/live-state-snapshot.reconcileReadSetTable`
           - `database/sql-column.parsedJson`
+          - `ids.idColumn`
+          - `ids.IdKinds`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
@@ -34202,6 +34587,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/notifications/dismiss-all`
           - `POST /api/notifications/mark-all-read`
           - `POST /api/notifications/:id/dismiss`
+      - Core:
+        - Uses:
+          - `ids.defineIdKind`
+          - `ids.IdOf`
+        - Exports (types): `NotificationId`
+        - Exports (values): `notificationIdKind`
       - Cross-plugin:
         - Imported by: 34 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×15
@@ -35469,6 +35860,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-detail.useRegisterFlush`
           - `tasks/task-status.StatusSignal`
           - `tasks/task-track.TaskTrackControl`
+    - **`task-ids`** — The task / attempt / conversation id kinds (defineIdKind): mint, branded type, validation and inline recognition for `task-…`, `att-…` and `conv-…` (legacy alias `claude-…`). A leaf, so infra/worktree can read the attempt kind without a cycle through tasks-core.
+      - Core:
+        - Uses:
+          - `ids.defineIdKind`
+          - `ids.IdOf`
+        - Exports (types):
+          - `AttemptId`
+          - `ConversationId`
+          - `TaskId`
+        - Exports (values):
+          - `attemptIdKind`
+          - `conversationIdKind`
+          - `taskIdKind`
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, child-count, launch-agent).
       - Web:
         - Slots:
@@ -35735,32 +36139,39 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks`
           - `tasks/task-header`
     - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
+      - Web:
+        - Contributes:
+          - `IdKinds.Kind` "att|claude"
+          - `IdKinds.Kind` "conv|claude"
+          - `IdKinds.Kind` "task"
+        - Uses:
+          - `ids.IdKinds`
+          - `network/live.useLive`
+        - Exports (values):
+          - `useTaskAttempts`
+          - `useTaskConversations`
       - Server:
-        - Contributes: 23 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Contributes: 26 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `resource.declare` ×17
           - `derived-view` ×4
+          - `ids.kind` ×3
           - `derived-table` ×2
-        - Uses:
-          - `database.db`
+        - Uses: 21 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `primitives/rank` ×3
+          - `database/sql-projection` ×2
+          - `infra/entities` ×2
+          - `infra/git/git-watcher` ×2
+          - `infra/worktree` ×2
           - `database/derived-tables.DerivedTable`
           - `database/derived-views.View`
-          - `database/sql-projection.nullable`
-          - `database/sql-projection.parsed`
+          - `database.db`
+          - `ids.IdKinds`
           - `infra/attachments.Attachments`
-          - `infra/entities.defaultNow`
-          - `infra/entities.defineEntity`
           - `infra/events.defineTriggerEvent`
           - `infra/git/git-read-cache.createSignedMemo`
-          - `infra/git/git-watcher.defineRefReaction`
-          - `infra/git/git-watcher.lastKnownMainSha`
           - `infra/host/host-read-pool.withHeavyReadSlot`
-          - `infra/worktree.ensureMainWorktreeRoot`
-          - `infra/worktree.isCanonicalWorktreePath`
           - `network/live.serveCollection`
           - `primitives/commit-list.runGit`
-          - `primitives/rank.nextRankUnder`
-          - `primitives/rank.RankExecutor`
-          - `primitives/rank.withRank`
         - DB schema:
           - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`
@@ -35893,11 +36304,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `task-descriptions:rows` (keyed, point)
           - `tasks` (keyed)
           - `tasks:rows` (keyed, point)
-      - Web:
-        - Uses: `network/live.useLive`
-        - Exports (values):
-          - `useTaskAttempts`
-          - `useTaskConversations`
       - Core:
         - Uses:
           - `conversations/model-provider.FALLBACK_MODEL`
@@ -35950,9 +36356,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isAdoptedConversation`
           - `isBlockedStatus`
           - `isSettled`
-          - `newAttemptId`
-          - `newConversationId`
-          - `newTaskId`
           - `parseTrailerLog`
           - `PUSH_TRAILER_KEY`
           - `pushRows`
@@ -35998,6 +36401,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-title` (table `tasks_ext_short_title`)
           - `tasks/task-source-url` (table `tasks_ext_source_url`)
           - `tasks/task-track` (table `tasks_ext_track`)
+      - Exemptions:
+        - Exempts itself from:
+          - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+          - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
       - Test helpers:
         - Server: `@plugins/tasks/plugins/tasks-core/server/testing`
           - `canonical` — JSON with sorted keys, so a row compares by content whatever its key order.
@@ -36795,6 +37202,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/theme-engine/theme-gallery`
               - `ui/tweakcn`
               - `ui/tweakcn/community-browser`
+          - Exemptions:
+            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
           - Web:
             - Slots:
