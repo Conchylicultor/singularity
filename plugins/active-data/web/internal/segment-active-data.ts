@@ -6,6 +6,7 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { ActiveData } from "../slots";
 import type { ActiveDataBlockContribution } from "../slots";
+import { parseAttrs } from "./tag-attrs";
 
 type SealedBlockContribution = SealContributions<ActiveDataBlockContribution>;
 
@@ -14,19 +15,26 @@ export type ActiveDataSegment =
   | {
       type: "block";
       tag: string;
-      component: ComponentType<{ content: string; attrs: Record<string, string> }>;
+      component: ComponentType<{
+        content: string;
+        attrs: Record<string, string>;
+      }>;
       content: string;
       attrs: Record<string, string>;
     };
 
-function parseAttrs(attrStr: string): Record<string, string> {
-  const attrs: Record<string, string> = {};
-  const re = /(\w[\w-]*)(?:=(?:"([^"]*)"|'([^']*)'|(\S+)))?/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(attrStr)) !== null) {
-    attrs[m[1]!] = m[2] ?? m[3] ?? m[4] ?? "";
-  }
-  return attrs;
+/**
+ * Whether the match `[start, end)` stands on lines of its own: nothing but
+ * whitespace between it and the line break (or text edge) on either side.
+ */
+function standsAlone(text: string, start: number, end: number): boolean {
+  const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+  const lineEndAt = text.indexOf("\n", end);
+  const lineEnd = lineEndAt === -1 ? text.length : lineEndAt;
+  return (
+    text.slice(lineStart, start).trim() === "" &&
+    text.slice(end, lineEnd).trim() === ""
+  );
 }
 
 function buildSegments(
@@ -47,6 +55,17 @@ function buildSegments(
   let m: RegExpExecArray | null;
 
   while ((m = re.exec(rawText)) !== null) {
+    const contrib = blockContribs.find((c) => c.tag === m![1])!;
+    // An inline-capable tag is a block only when it is one: on lines of its
+    // own AND spanning lines. Beside prose, or a single line even standing
+    // alone, it stays in the markdown and renders through `inline`.
+    if (
+      contrib.inline &&
+      (!standsAlone(rawText, m.index, m.index + m[0].length) ||
+        !m[3]!.trim().includes("\n"))
+    ) {
+      continue;
+    }
     if (m.index > cursor) {
       const text = rawText.slice(cursor, m.index);
       if (text.trim()) segments.push({ type: "markdown", text });
@@ -56,7 +75,6 @@ function buildSegments(
     const attrStr = (m[2] ?? "").trim();
     const content = m[3]!.trim();
     const attrs = attrStr ? parseAttrs(attrStr) : {};
-    const contrib = blockContribs.find((c) => c.tag === tag)!;
 
     segments.push({
       type: "block",
@@ -86,5 +104,8 @@ export function useActiveDataSegments(rawText: string): ActiveDataSegment[] {
       ),
     [contributions],
   );
-  return useMemo(() => buildSegments(rawText, blockContribs), [rawText, blockContribs]);
+  return useMemo(
+    () => buildSegments(rawText, blockContribs),
+    [rawText, blockContribs],
+  );
 }

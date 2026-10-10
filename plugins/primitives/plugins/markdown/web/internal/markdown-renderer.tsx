@@ -5,7 +5,7 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { MarkdownEnhancementContext } from "./enhancement-context";
 import { buildBaseComponents, stripNodeProp } from "./base-components";
 
-const REMARK_PLUGINS = [remarkGfm];
+const BASE_REMARK_PLUGINS = [remarkGfm];
 
 // The heavy renderer: react-markdown + remark-gfm + the base component map
 // (which pulls in the syntax highlighter). Lives in its own module so
@@ -14,7 +14,8 @@ const REMARK_PLUGINS = [remarkGfm];
 // once, on the first markdown render of the session.
 export function MarkdownRenderer({ children }: { children: string }) {
   const enhancement = useContext(MarkdownEnhancementContext);
-  const { components: overrides } = enhancement;
+  const { components: overrides, remarkPlugins: extraRemarkPlugins } =
+    enhancement;
 
   // Keep the live context value in a ref so the stable accessors below read the
   // latest transforms / inline-code handlers at call time without forcing any
@@ -28,23 +29,32 @@ export function MarkdownRenderer({ children }: { children: string }) {
   const base = useMemo(
     () =>
       stripNodeProp(
+        /* eslint-disable react-hooks/refs -- the accessors run at react-markdown render time (not this hook's render); reading the latest transforms / inline-code handlers off the stable ref is what keeps the base map built ONCE while still reflecting live data */
         buildBaseComponents(
-          // eslint-disable-next-line react-hooks/refs -- the accessor runs at react-markdown render time (not this hook's render); reading the latest transforms off the stable ref is what keeps the base map built ONCE while still reflecting live data
-          (c: ReactNode) => ref.current.transforms.reduce((acc, fn) => fn(acc), c),
-          // eslint-disable-next-line react-hooks/refs -- same: latest inline-code handlers read at call time off the stable ref, never during this hook's render
+          (c: ReactNode) =>
+            ref.current.transforms.reduce((acc, fn) => fn(acc), c),
           () => ref.current.inlineCodeHandlers,
         ),
+        /* eslint-enable react-hooks/refs */
       ),
     [],
   );
 
   // Overrides re-wrap only when the override map actually changes; `code` lives
   // only in `base`, so its identity is constant forever.
-  const strippedOverrides = useMemo(() => stripNodeProp(overrides), [overrides]);
+  const strippedOverrides = useMemo(
+    () => stripNodeProp(overrides),
+    [overrides],
+  );
 
   const components = useMemo(
     () => ({ ...base, ...strippedOverrides }),
     [base, strippedOverrides],
+  );
+
+  const remarkPlugins = useMemo(
+    () => [...BASE_REMARK_PLUGINS, ...extraRemarkPlugins],
+    [extraRemarkPlugins],
   );
 
   // Memoize the rendered tree on its stable inputs. react-markdown's `Markdown`
@@ -55,8 +65,8 @@ export function MarkdownRenderer({ children }: { children: string }) {
   // other tag even when nothing changed. Pinning the element to a stable
   // reference makes React skip the subtree entirely on such re-renders (true
   // no-op). The only inputs that change the output are the source string
-  // (`children`) and the merged component map (`components`, which already
-  // collapses the base map + overrides); transforms / inline-code handlers are
+  // (`children`), the merged component map (`components`, which already
+  // collapses the base map + overrides) and the remark plugin list; transforms / inline-code handlers are
   // read off `ref.current` and only ever change alongside `overrides` (→
   // `components`) or a new `children`, so those two deps invalidate the memo
   // exactly when the output would differ. Live inline widgets (active-data
@@ -64,10 +74,10 @@ export function MarkdownRenderer({ children }: { children: string }) {
   // subscriptions; they don't depend on this component re-rendering.
   return useMemo(
     () => (
-      <ReactMarkdownLib remarkPlugins={REMARK_PLUGINS} components={components}>
+      <ReactMarkdownLib remarkPlugins={remarkPlugins} components={components}>
         {children}
       </ReactMarkdownLib>
     ),
-    [children, components],
+    [children, components, remarkPlugins],
   );
 }

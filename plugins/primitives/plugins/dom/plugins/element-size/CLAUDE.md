@@ -54,10 +54,11 @@ different need, extend the primitive rather than allowlisting a copy.
     - `useElementSize`
     - `useResizeObserver`
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×18
     - `apps` ×5
     - `shell` ×2
+    - `active-data/go`
     - `apps-core/surface/floating`
     - `reorder`
     - `screenshot`

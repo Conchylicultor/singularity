@@ -5,7 +5,8 @@ import { canSendTurn } from "@plugins/conversations/core";
 import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { promptTemplatesConfig } from "../../shared/config";
-import { TemplateChipBar, type TemplateChipItem } from "./template-chip-bar";
+import { TemplateChipBar } from "./template-chip-bar";
+import type { TemplateChipItem } from "./template-chip";
 
 export function FloatingTemplateChips({
   insertText,

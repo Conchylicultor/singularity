@@ -1,4 +1,4 @@
-// @hash 4382e150131f
+// @hash 1f41a047dc75
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
   "items": [
-    "primitives.text-editor.paste-images:paste-images"
+    "primitives.text-editor.paste-images:paste-images",
+    "active-data.go:go-region"
   ]
 }

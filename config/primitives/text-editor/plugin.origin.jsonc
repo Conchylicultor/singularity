@@ -1,4 +1,4 @@
-// @hash 4382e150131f
+// @hash 1f41a047dc75
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "active-data.go:go-region",
     "primitives.text-editor.paste-images:paste-images"
   ]
 }

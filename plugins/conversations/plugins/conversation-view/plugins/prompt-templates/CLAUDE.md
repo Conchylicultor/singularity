@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
+- Description: Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear) and its one split chip (TemplateChip: ✎ name inserts, ➤ sends) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
 - Web:
   - Contributes:
     - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
@@ -27,12 +27,17 @@
   - Exports (types):
     - `TemplateChipBarProps`
     - `TemplateChipItem`
-  - Exports (values): `TemplateChipBar`
+    - `TemplateChipProps`
+  - Exports (values):
+    - `TemplateChip`
+    - `TemplateChipBar`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
-  - Imported by: `conversations/conversation-view/selection-actions`
+  - Imported by:
+    - `active-data/go`
+    - `conversations/conversation-view/selection-actions`
 - Shared:
   - Exports (values): `promptTemplatesConfig`
 

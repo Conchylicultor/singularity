@@ -130,6 +130,7 @@ Behavior:
   - Slots: `ActiveData.Tag`
   - Slot contributors:
     - `ActiveData.Tag` ← `active-data.commit-link`
+    - `ActiveData.Tag` ← `active-data.go`
     - `ActiveData.Tag` ← `active-data.plugin-link`
     - `ActiveData.Tag` ← `active-data.task`
   - Contributes:
@@ -196,6 +197,7 @@ Behavior:
 - Cross-plugin:
   - Imported by:
     - `active-data/commit-link`
+    - `active-data/go`
     - `active-data/plugin-link`
     - `active-data/task`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
@@ -205,6 +207,7 @@ Behavior:
   - **`commit-link`** — Renders commit shas in backtick-wrapped inline code as clickable chips that open the commit-detail pane, with the subject, author and date on hover. Resolves the sha against the main checkout's…
   - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation, and presents the conversation id kind (title +…
   - **`event-source`** — Renders a bare `evs-<id>` in a transcript as the generic id chip (the source's name) that opens the event source's detail pane, and presents the event-source id kind to the id registry. The…
+  - **`go`** — Renders <go>…</go> in an agent's reply — a part of the answer the user can pick as their reply — highlighted in place with the prompt templates' split chip: ➤ sends it back as <go>…</go> (the agent…
   - **`id-chip`** — Id chips, web half: idChip({ presenter, surfaces, component? }) mints a kind's IdKinds.Presenter together with its inline chip — the pattern derived from the kind (never re-typed), a generic title +…
   - **`page-link`** — Renders raw `block-<id>` strings inline as clickable chips that open what the id names: a page id opens the page-detail pane, a content-block id opens the block-detail pane (that block as a page of…
   - **`plugin-link`** [exempt] — Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and…

@@ -1,8 +1,7 @@
 import {
   Button,
-  ButtonGroup,
-  cn,
   ControlSizeProvider,
+  cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
 import {
@@ -25,15 +24,9 @@ import {
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const editIcon = symbol("edit");
-const sendIcon = symbol("send");
+import { TemplateChip, type TemplateChipItem } from "./template-chip";
 
-/** One configured template: its chip's label and the prompt it stands for. */
-export interface TemplateChipItem {
-  id: string;
-  title: string;
-  prompt: string;
-}
+const editIcon = symbol("edit");
 
 export interface TemplateChipBarProps {
   /** Every template, in the authored (config) order — the never-used tie-break. */
@@ -66,52 +59,6 @@ export interface TemplateChipBarProps {
   /** The config the panel's gear opens. */
   config: ConfigDescriptor;
   configLabel: string;
-}
-
-function TemplateChip({
-  template,
-  onInsert,
-  onSend,
-  pinned,
-  canSend,
-}: {
-  template: TemplateChipItem;
-  onInsert: (t: TemplateChipItem) => void;
-  onSend: (t: TemplateChipItem) => void;
-  pinned?: boolean;
-  canSend: boolean;
-}) {
-  return (
-    // No text class here: `Button` writes its own rung from the ambient density
-    // (`buttonTextClassFor`), so a font-size on this wrapper never reaches the
-    // labels — it only looked like it was doing something.
-    <ButtonGroup className={cn(!pinned && "[&>*]:border-dashed")}>
-      <Button
-        variant="outline"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => onInsert(template)}
-      >
-        <Icon icon={editIcon} className="size-3" />
-        <span>{template.title}</span>
-      </Button>
-      {/* eslint-disable-next-line icon-button/prefer-icon-button -- the send half of a ButtonGroup template chip, not a standalone action: it shares the chip's outline seam and its size-3 glyph matches the label half */}
-      <Button
-        variant="outline"
-        aria-label={`Send: ${template.title}`}
-        disabled={!canSend}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => onSend(template)}
-        // The icon-only end segment: its width is the density group's
-        // `padSplitArrowX` (default the `xs` control pad) around the glyph.
-        className={cn(
-          "px-split-arrow",
-          canSend ? "text-muted-foreground" : "text-muted-foreground/30",
-        )}
-      >
-        <Icon icon={sendIcon} className="size-3" />
-      </Button>
-    </ButtonGroup>
-  );
 }
 
 /**

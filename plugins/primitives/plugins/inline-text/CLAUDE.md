@@ -45,6 +45,7 @@ Walkers register elsewhere (the primitive itself contributes none):
   - Slots: `InlineTextWalkerSlot`
   - Slot contributors:
     - `InlineTextWalkerSlot` ← `active-data`
+    - `InlineTextWalkerSlot` ← `active-data.go`
     - `InlineTextWalkerSlot` ← `conversations.conversation-view.markdown-extensions`
   - Exports (types):
     - `InlineTextWalker`
@@ -57,6 +58,7 @@ Walkers register elsewhere (the primitive itself contributes none):
 - Cross-plugin:
   - Imported by:
     - `active-data`
+    - `active-data/go`
     - `conversations/conversation-view/jsonl-viewer/user-text`
     - `conversations/conversation-view/markdown-extensions`
     - `infra/claude-cli`

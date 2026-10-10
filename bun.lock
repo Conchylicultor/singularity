@@ -86,6 +86,14 @@
       "name": "@singularity/plugin-active-data-event-source",
       "version": "0.0.1",
     },
+    "plugins/active-data/plugins/go": {
+      "name": "@singularity/plugin-active-data-go",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
+    },
     "plugins/active-data/plugins/id-chip": {
       "name": "@singularity/plugin-active-data-id-chip",
       "version": "0.0.1",
@@ -6490,6 +6498,8 @@
     "@singularity/plugin-active-data-conv": ["@singularity/plugin-active-data-conv@workspace:plugins/active-data/plugins/conv"],
 
     "@singularity/plugin-active-data-event-source": ["@singularity/plugin-active-data-event-source@workspace:plugins/active-data/plugins/event-source"],
+
+    "@singularity/plugin-active-data-go": ["@singularity/plugin-active-data-go@workspace:plugins/active-data/plugins/go"],
 
     "@singularity/plugin-active-data-id-chip": ["@singularity/plugin-active-data-id-chip@workspace:plugins/active-data/plugins/id-chip"],
 

@@ -216,6 +216,28 @@ Independent projects that live in `sidequests/`, not directly related to Singula
 - **Don't memorize gotchas — report them so they get fixed structurally.** On a footgun (silent-`undefined` API, "you must also update X" coupling, boot-crash-if-misplaced, build trap), do NOT write a memory file; surface it to the user or `add_task` it, to be removed at the highest rung of the fix ladder (Coding Style). Durable how-it-works knowledge goes in `CLAUDE.md` / `docs/`, not personal memory.
 - **When the user explicitly says "Exit"**: call exactly one MCP tool — `exit_clean` (all smooth; the conversation closes) or `flag_raise({ reason })` (caveats, partial outcomes, follow-ups, skipped work, push didn't land; short bullets) — then write the final wrap-up (summary, issues, caveats, follow-ups).
 
+### Quotable choices: `<go>`
+
+Answer normally, and wrap in `<go>…</go>` each part of your answer the user could pick as their reply — an option, a next step, a follow-up. It renders highlighted, with a split chip that sends it back (➤) or puts it in the prompt to edit (✎ Go).
+
+```
+I've done the change. Should I <go>implement it</go>? Or <go>file a task</go>?
+
+Possible follow-ups:
+
+<go>
+- [ ] Xxx
+- [ ] Yyy
+</go>
+```
+
+- One line is inline, wherever it is written; a multi-line `<go>` is a block.
+- In a block, `- [ ]` lines become a checklist and only the **picked lines** are sent; any other text in the block is for the reader. `- [x]` pre-picks the ones you recommend.
+- **One choice per item — never cluster.** `- [ ] File the 3 follow-ups` is wrong: list each follow-up on its own `- [ ]` line.
+- **A `<go>` in a USER message is the part of your answer the user picked** (possibly reworded) — do it, don't answer it as a question. A checklist comes back as just the picked `- [x]` lines; anything you listed that is missing was declined. Text around it is the user's own addition and wins over it.
+
+Details: [`plugins/active-data/plugins/go/CLAUDE.md`](plugins/active-data/plugins/go/CLAUDE.md).
+
 ### Testing
 
 **`./singularity test` is the ONLY way to run tests** — paths only, no flags, no setup (installs dependencies when stale). Never bare `bun test` / `vitest`. Optional and manual; a run is an op (host CPU grant, "Test in progress" banner).

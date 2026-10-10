@@ -1,5 +1,5 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import type { CodeClaim, CodeResolver } from "./claim";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
@@ -15,6 +15,21 @@ export interface ActiveDataBlockContribution {
   component: ComponentType<{
     content: string;
     attrs: Record<string, string>;
+  }>;
+  /**
+   * The same tag rendered in a paragraph's flow instead of as a block:
+   * written beside prose (`Done. <go>Push it</go>`), or a single line even on
+   * a line of its own. With it, only an occurrence that stands on lines of its
+   * own AND spans lines is a block (`component`); the rest stay in the
+   * markdown, where the host pairs the open and close tags into one element
+   * and renders this with `children` = the rendered markdown between them and
+   * `content` = that markdown's source. Without it, every occurrence is a
+   * block, wherever it is written.
+   */
+  inline?: ComponentType<{
+    content: string;
+    attrs: Record<string, string>;
+    children: ReactNode;
   }>;
 }
 
