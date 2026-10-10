@@ -27,13 +27,22 @@ type OpenState = "open" | "none";
 
 const stateOf = (r: AutomationEntry): AutomationState =>
   r.enabled ? "on" : "off";
+
+/** The tasks it has under way: a file-kind automation's open filing, or the
+ * tasks a launch-kind one started that still hold a slot. */
+const busyTaskIds = (r: AutomationEntry): readonly string[] =>
+  r.kind === "launch"
+    ? r.runningTaskIds
+    : r.openTaskId === null
+      ? []
+      : [r.openTaskId];
 const openOf = (r: AutomationEntry): OpenState =>
-  r.openTaskId === null ? "none" : "open";
+  busyTaskIds(r).length === 0 ? "none" : "open";
 
 /**
- * Every automation — what files a task and launches its agent with nobody
- * clicking anything — one row each: what it is, when it runs, whether it is on,
- * and whether a task it filed is still open. The set is declared in code, so
+ * Every automation — what files a task and launches its agent, or launches
+ * agents on existing tasks, with nobody clicking anything — one row each: what
+ * it is, when it runs, whether it is on, and what it has under way. The set is declared in code, so
  * the catalog is loaded whole.
  */
 export function AutomationsView({
@@ -80,8 +89,8 @@ export function AutomationsView({
         type: "enum",
         value: openOf,
         options: [
-          { value: "open", label: "Has an open task" },
-          { value: "none", label: "Nothing open" },
+          { value: "open", label: "Has tasks under way" },
+          { value: "none", label: "Nothing under way" },
         ],
         filterable: true,
         visible: false,
@@ -151,9 +160,7 @@ function AutomationRowBody({
         </Stack>
       </Fill>
       <Stack direction="row" gap="xs" align="center" className={rigidClass()}>
-        {entry.openTaskId !== null ? (
-          <Badge variant="info">Task open</Badge>
-        ) : null}
+        <BusyBadge entry={entry} />
         {entry.enabled ? (
           <Badge variant="success">On</Badge>
         ) : (
@@ -161,5 +168,18 @@ function AutomationRowBody({
         )}
       </Stack>
     </>
+  );
+}
+
+/** What it has under way: a file-kind automation's open task, or how many of
+ * a launch-kind one's agents are running. */
+function BusyBadge({ entry }: { entry: AutomationEntry }): ReactElement | null {
+  if (entry.kind === "launch") {
+    return entry.runningTaskIds.length === 0 ? null : (
+      <Badge variant="info">{`${entry.runningTaskIds.length} running`}</Badge>
+    );
+  }
+  return entry.openTaskId === null ? null : (
+    <Badge variant="info">Task open</Badge>
   );
 }

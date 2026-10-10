@@ -1026,11 +1026,11 @@ keeps every row's identity rather than re-minting each moved row.
     - `useResourceContractMismatches`
     - `useResources`
 - Cross-plugin:
-  - Imported by: 197 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 199 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×51
     - `conversations` ×38
     - `ui` ×22
-    - `tasks` ×18
+    - `tasks` ×20
     - `page` ×12
     - `debug` ×10
     - `primitives` ×9

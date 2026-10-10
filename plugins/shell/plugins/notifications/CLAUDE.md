@@ -109,9 +109,9 @@
   - Exports (types): `NotificationId`
   - Exports (values): `notificationIdKind`
 - Cross-plugin:
-  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×15
-    - `tasks` ×5
+    - `tasks` ×6
     - `apps` ×2
     - `build` ×2
     - `debug` ×2

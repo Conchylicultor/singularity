@@ -2,7 +2,12 @@ import { type ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -75,6 +80,9 @@ function ManualOrderRow({
     </div>
   );
 }
+
+const expandIcon = symbol("expand-more");
+const collapseIcon = symbol("expand-less");
 
 /** Above this row count the list windows its rows (VirtualRows finds the nearest
  *  scroll ancestor); smaller lists keep the plain `.map` — no absolute
@@ -150,6 +158,15 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   const { revealed } = useItemActionZones(itemActions, {
     hasPersistentSlot: false,
   });
+  // Row detail (`options.detail`): which rows are open is the view's expand
+  // map — the one home for per-row disclosure state.
+  const detail = options.detail;
+  if (detail && options.rowChrome === "tree") {
+    throw new Error(
+      "data-view list: `detail` needs the default row chrome — a tree-chrome row is one label line",
+    );
+  }
+  const isOpen = (key: string): boolean => props.expanded?.[key] === true;
 
   // The host owns the loading→empty precedence: it renders the skeleton and
   // skips this view while loading, so an empty section set always means empty.
@@ -345,7 +362,12 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     if (options.rowChrome === "tree") {
       return renderTreeChromeRow(row, key, toneClass, aggregateCount);
     }
-    return (
+    const itemActionNodes = revealed?.({
+      row,
+      hasChildren: props.hasChildren?.(key) ?? false,
+    });
+    const open = detail ? isOpen(key) : false;
+    const rowNode = (
       <Row
         key={key}
         // The row's identity on the DOM: what the DataView measures the rows
@@ -367,10 +389,26 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
           resolveEditor,
           own: options.leading?.(row),
         })}
-        actions={revealed?.({
-          row,
-          hasChildren: props.hasChildren?.(key) ?? false,
-        })}
+        actions={
+          detail ? (
+            <>
+              <IconButton
+                icon={open ? collapseIcon : expandIcon}
+                label={open ? "Hide details" : "Show details"}
+                aria-expanded={open}
+                onClick={() =>
+                  props.setExpanded([{ id: key, expanded: !open }])
+                }
+              />
+              {itemActionNodes}
+            </>
+          ) : (
+            itemActionNodes
+          )
+        }
+        // The disclosure must be findable, so a row with detail shows its
+        // cluster at rest.
+        actionsAlwaysVisible={detail ? true : undefined}
       >
         {options.renderRow ? (
           options.renderRow(row)
@@ -483,6 +521,17 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
           </>
         )}
       </Row>
+    );
+    if (!detail || !open) return rowNode;
+    // The detail is the row's SIBLING, so it may hold controls of its own
+    // whatever the row's activation is.
+    return (
+      <Stack key={key} gap="none">
+        {rowNode}
+        <Inset x="sm" b="sm">
+          {detail(row)}
+        </Inset>
+      </Stack>
     );
   };
 

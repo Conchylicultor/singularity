@@ -3,31 +3,43 @@ import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { liveText } from "@plugins/network/plugins/live/plugins/filter/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
+import { nullable } from "@plugins/fields/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { AutomationEntrySchema } from "./entry";
+import { ORIGIN_ROLES } from "./settings";
 
 /**
  * Every registered automation. External and bounded by the declared set (the
- * process holds the registry); pushed when an automation files a task or one of
- * its tasks changes status, since `openTaskId` moves then.
+ * process holds the registry); pushed when an automation files or launches a
+ * task, releases one, or one of its tasks changes status, since `openTaskId` /
+ * `runningTaskIds` move then.
  */
 export const automationsCatalog = liveValue("automations.catalog", {
   schema: z.array(AutomationEntrySchema),
 });
 
-// Where a task came from: one row per task an automation filed, in the
-// `tasks_ext_origin` side-table. A row is the proof; a task with none was filed
-// by a person (or an agent acting for one). `sourceKeys` are the sources the
-// filing covered (the updater ids a dependency upgrade batched); `filedAt` is
-// when it was filed — for a task adopted from before origins were recorded, the
-// task's own creation time.
+// Where a task came from: one row per task an automation filed or launched, in
+// the `tasks_ext_origin` side-table. A row is the proof; a task with none was
+// filed and started by a person (or an agent acting for one). `role` says what
+// the automation did (`ORIGIN_ROLES`): `filed` the task (and launched it), or
+// only `launched` a task someone else filed. `sourceKeys` are the sources a
+// filing covered (the updater ids a dependency upgrade batched; `[]` for a
+// launch); `filedAt` is when it was filed or launched — for a task adopted from
+// before origins were recorded, the task's own creation time. `releasedAt`
+// (launched rows only) is when the task gave its slot back
+// (`releaseLaunchedTask`, e.g. its agent reported); `null` while it holds one.
 export const taskOriginShape = defineExtensionShape({
   key: "taskId",
   fields: {
     automationId: textField(),
     sourceKeys: jsonField({ schema: z.array(z.string()), default: [] }),
     filedAt: dateField(),
+    role: enumTextField(ORIGIN_ROLES, { default: "filed" }),
+    releasedAt: nullable(dateField()),
   },
 });
 export const AutomationTaskRowSchema = taskOriginShape.schema;

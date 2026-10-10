@@ -4,13 +4,17 @@ import { recordNotification } from "@plugins/shell/plugins/notifications/server"
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { getTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { TaskStatusSchema } from "@plugins/tasks/plugins/tasks-core/core";
-import { automationDetailRoute } from "../../core";
+import {
+  automationDetailRoute,
+  SLOT_SETTLED_STATUSES,
+  type OriginRole,
+} from "../../core";
 import { automationsCatalogServed } from "./live";
-import { automationOfTask } from "./origin";
-import { registeredAutomations } from "./registry";
+import { originOfTask } from "./origin";
+import { registeredAutomation } from "./registry";
 
-// The statuses in which an automated task waits on a person: its agent asked
-// something, stopped without landing, or was held.
+// The statuses in which a task an automation FILED waits on a person: its
+// agent asked something, stopped without landing, or was held.
 const NEEDS_PERSON = new Set(["need_action", "attempted", "held"]);
 
 const STATUS_WORDS: Record<string, string> = {
@@ -19,17 +23,41 @@ const STATUS_WORDS: Record<string, string> = {
   held: "was held",
 };
 
+const SETTLES_SLOT: ReadonlySet<string> = new Set(SLOT_SETTLED_STATUSES);
+
+/**
+ * Whether a status change of an automated task is worth the bell.
+ *
+ * - A FILED task: every transition into a waiting status — each is a new
+ *   reason to look.
+ * - A LAUNCHED task (a task someone else filed, that a launch-kind automation
+ *   only started): only `attempted` while it still holds its slot — its agent
+ *   went away without reporting. Its agent leaves the person a report instead
+ *   (whose own surface asks for them), so `need_action` — which it passes
+ *   through at every turn's end, a build wait included — would only be noise;
+ *   `held` was a person's own act; and once released, closing its
+ *   conversation is the person reading the report, not news.
+ */
+function rings(
+  origin: { role: OriginRole; releasedAt: Date | null },
+  status: string,
+): boolean {
+  if (origin.role === "filed") return NEEDS_PERSON.has(status);
+  return status === "attempted" && origin.releasedAt === null;
+}
+
 /**
  * The bell is where an automated task asks for its person: nobody watches the
  * task list for tasks they did not file. One row per task (`dedupeKey`),
- * re-surfaced on every transition into a waiting status — each is a new
- * reason to look. Every status change of an automated task also re-pushes the
- * catalog, whose `openTaskId` follows it.
+ * re-surfaced on every transition that rings (`rings`). Every status change of
+ * an automated task also re-pushes the catalog, whose `openTaskId` /
+ * `runningTaskIds` follow it, and a launched task settling wakes the
+ * automation that launched it, so the next task takes its slot.
  */
 export const automationTaskStatusJob = defineJob({
   name: "automations.task-status",
   description:
-    "Notifies you when a task an automation filed needs you, and keeps the Automations list's open task current.",
+    "Notifies you when a task an automation filed or launched needs you, starts the next task when one a launch automation started settles, and keeps the Automations list current.",
   hold: "instant",
   input: z.object({}),
   dedup: "none",
@@ -38,16 +66,18 @@ export const automationTaskStatusJob = defineJob({
     .passthrough(),
   run: async ({ event }) => {
     if (!event) return;
-    const automationId = await automationOfTask(event.taskId);
-    if (automationId === null) return;
+    const origin = await originOfTask(event.taskId);
+    if (origin === null) return;
+    const { automationId } = origin;
     automationsCatalogServed.notify();
-    if (!NEEDS_PERSON.has(event.status)) return;
+    const automation = registeredAutomation(automationId);
+    if (origin.role === "launched" && SETTLES_SLOT.has(event.status)) {
+      automation?.wake();
+    }
+    if (!rings(origin, event.status)) return;
 
     const task = await getTask(event.taskId);
     if (task === null) return; // deleted since the emit — nothing to look at
-    const automation = registeredAutomations().find(
-      (a) => a.spec.id === automationId,
-    );
     const label = automation?.spec.label ?? automationId;
     await recordNotification({
       type: "automation-task",

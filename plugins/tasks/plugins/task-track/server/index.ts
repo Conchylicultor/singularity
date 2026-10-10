@@ -7,7 +7,9 @@ export {
   getTaskTrack,
   setTaskTrack,
   listSidequestIds,
+  listSidequestTasks,
 } from "./internal/mutations";
+export type { SidequestTask } from "./internal/mutations";
 
 export default {
   description:

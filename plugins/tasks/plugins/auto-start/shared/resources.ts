@@ -1,7 +1,11 @@
 import type { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
-import { parsedTextField } from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  parsedTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
+import { nullable } from "@plugins/fields/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import {
   DEFAULT_MODEL_CHOICE,
@@ -25,7 +29,16 @@ export const taskAutoStartShape = defineExtensionShape({
     autoStartModel: parsedTextField(StoredModelChoiceSchema, {
       default: DEFAULT_MODEL_CHOICE,
     }),
+    // The prompt the launch starts the agent with, when whoever armed it
+    // wrote one (an automation's filled template); `null` ⇒ the task's own
+    // (`buildTaskPrompt`). On the MARKER, not passed alongside it, so every
+    // path that claims the marker — the queue or an inline launch — launches
+    // with it. Every arm writes it, so re-arming from the UI clears an
+    // automation's prompt rather than inheriting it. Server-only: no reader
+    // shows it, and it can be long.
+    autoStartPrompt: nullable(textField()),
   },
+  serverOnly: ["autoStartPrompt"],
 });
 export const TaskAutoStartRowSchema = taskAutoStartShape.schema;
 export type TaskAutoStartRow = z.infer<typeof TaskAutoStartRowSchema>;

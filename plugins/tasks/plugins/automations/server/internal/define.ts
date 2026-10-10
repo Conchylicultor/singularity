@@ -6,19 +6,31 @@ import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { armTaskAutoStart } from "@plugins/tasks/server";
+import { listArmedTaskIds } from "@plugins/tasks/plugins/auto-start/server";
 import {
   PUSH_POLICY_TEXT,
   renderPrompt,
   SETTLE_MAX_WAIT_FACTOR,
   type AutomationConfigFields,
+  type AutomationSettings,
+  type LaunchAutomationConfigFields,
 } from "../../core";
 import { automationsCatalogServed } from "./live";
 import {
   adoptAutomationTasks,
   fileAutomationTask,
+  occupiedSlotTaskIds,
   openAutomationTaskId,
+  recordLaunch,
+  taskIdsWithOrigin,
 } from "./origin";
-import { addAutomation, type AutomationSpec } from "./registry";
+import {
+  addAutomation,
+  type AutomationSpec,
+  type FileAutomationSpec,
+  type LaunchAutomationSpec,
+} from "./registry";
+import { freeSlots, selectLaunches } from "./slots";
 import {
   automationCron,
   automationSettings,
@@ -47,8 +59,18 @@ export interface Automation extends Registration {
 }
 
 /** What one run did — the line it logs. */
-async function runAutomation(
+function runAutomation(
   spec: AutomationSpec,
+  signal: AbortSignal,
+): Promise<string> {
+  return spec.kind === "launch"
+    ? runLaunch(spec, signal)
+    : runFiling(spec, signal);
+}
+
+/** A file-kind run: detect → file ONE task → arm it; nothing while one is open. */
+async function runFiling(
+  spec: FileAutomationSpec,
   signal: AbortSignal,
 ): Promise<string> {
   const settings = automationSettings(spec);
@@ -69,25 +91,17 @@ async function runAutomation(
 
   let outcome = "nothing to do";
   if (filing !== null) {
-    const prompt = renderPrompt(settings.prompt, {
-      ...filing.variables,
-      pushPolicy: PUSH_POLICY_TEXT[settings.push],
-    });
-    if (!prompt.ok) {
-      // The pane refuses such a template; this is a hand edit. File nothing
-      // rather than a task with a hole where its evidence was.
-      throw new Error(
-        `automation ${spec.id}: its prompt template uses ${prompt.unknown.map((n) => `{{${n}}}`).join(", ")}, which it does not fill — fix the prompt in its config`,
-      );
-    }
+    const prompt = fillPrompt(spec, settings, filing.variables);
     const taskId = await fileAutomationTask({
       automationId: spec.id,
       categoryId: spec.categoryId,
       filing,
-      description: prompt.text,
+      description: prompt,
     });
     automationsCatalogServed.notify();
     if (filing.onFiled) await filing.onFiled(taskId);
+    // The prompt IS the task's description here, so the marker needs none of
+    // its own: the launch builds the same text from the task.
     await armTaskAutoStart({
       taskId,
       model: settings.model,
@@ -105,7 +119,82 @@ async function runAutomation(
   return outcome;
 }
 
-async function adoptLegacy(spec: AutomationSpec): Promise<void> {
+/**
+ * A launch-kind run — the pump: count the slots its launched tasks still hold,
+ * ask `candidates` only when one is free, and start the first ones that fit —
+ * each recorded as launched (its origin row) and armed with the filled prompt
+ * ON the marker, so whichever path claims the marker launches with it.
+ */
+async function runLaunch(
+  spec: LaunchAutomationSpec,
+  signal: AbortSignal,
+): Promise<string> {
+  const settings = automationSettings(spec);
+  if (!settings.enabled) return "disabled; nothing launched";
+  const config = getConfig(spec.config);
+
+  const running = await occupiedSlotTaskIds(spec.id);
+  const free = freeSlots(config.concurrency, running.length);
+  const load = () =>
+    `${running.length + launched.length} of ${config.concurrency} running`;
+  const launched: string[] = [];
+  if (free === 0) return `${load()}; no free slot`;
+
+  const candidates = await spec.candidates({
+    sources: includedSources(spec.sources?.() ?? [], settings),
+    settings,
+    config,
+    signal,
+  });
+  const [withOrigin, armed] = await Promise.all([
+    taskIdsWithOrigin(candidates.map((c) => c.taskId)),
+    listArmedTaskIds(),
+  ]);
+  const picks = selectLaunches(
+    candidates,
+    new Set([...withOrigin, ...armed]),
+    free,
+  );
+
+  for (const pick of picks) {
+    const prompt = fillPrompt(spec, settings, pick.variables);
+    // Lost a race to another automation's filing or launch: not ours.
+    if (!(await recordLaunch(spec.id, pick.taskId))) continue;
+    await armTaskAutoStart({
+      taskId: pick.taskId,
+      model: settings.model,
+      prompt,
+      cause: `automation:${spec.id}`,
+    });
+    launched.push(pick.taskId);
+  }
+  if (launched.length > 0) automationsCatalogServed.notify();
+  return launched.length === 0
+    ? `nothing to launch; ${load()}`
+    : `launched ${launched.join(", ")}; ${load()}`;
+}
+
+/** The automation's prompt template filled for one task — or a throw. */
+function fillPrompt(
+  spec: AutomationSpec,
+  settings: AutomationSettings,
+  variables: Readonly<Record<string, string>>,
+): string {
+  const prompt = renderPrompt(settings.prompt, {
+    ...variables,
+    pushPolicy: PUSH_POLICY_TEXT[settings.push],
+  });
+  if (!prompt.ok) {
+    // The pane refuses such a template; this is a hand edit. Start nothing
+    // rather than an agent with a hole where its evidence was.
+    throw new Error(
+      `automation ${spec.id}: its prompt template uses ${prompt.unknown.map((n) => `{{${n}}}`).join(", ")}, which it does not fill — fix the prompt in its config`,
+    );
+  }
+  return prompt.text;
+}
+
+async function adoptLegacy(spec: FileAutomationSpec): Promise<void> {
   if (!spec.adoptLegacy) return;
   const adopted = await adoptAutomationTasks(spec.id, await spec.adoptLegacy());
   if (adopted > 0) {
@@ -114,14 +203,30 @@ async function adoptLegacy(spec: AutomationSpec): Promise<void> {
   }
 }
 
+function adoptLegacyWarmup(spec: FileAutomationSpec, jobName: string) {
+  return defineWarmup({
+    name: `${jobName}.adopt-legacy`,
+    description: `Records the tasks "${spec.label}" filed before automations stored where a task came from.`,
+    scope: "worktree",
+    run: () => adoptLegacy(spec),
+  });
+}
+
 /**
- * Declare an automation. It owns its job (`automation.<id>`, singleton), which
- * runs on the schedule its config sets — re-installed live when the config
- * changes — or, set to its event, when the handle's `fire()` says so, once the
- * burst settles. Every run reads the config, files nothing while disabled or
- * while a task it filed is open, asks `detect` over the included sources, fills
- * the config's prompt template, then files ONE task (category + origin row, one
- * transaction) and arms its launch with the chosen model.
+ * Declare an automation. It owns its job (`automation.<id>`, singleton, one
+ * run at a time), which runs on the schedule its config sets — re-installed
+ * live when the config changes — or, set to its event, when the handle's
+ * `fire()` says so, once the burst settles.
+ *
+ * - **file** (default): every run reads the config, files nothing while
+ *   disabled or while a task it filed is open, asks `detect` over the included
+ *   sources, fills the config's prompt template, then files ONE task (category
+ *   + origin row, one transaction) and arms its launch with the chosen model.
+ * - **launch** (`kind: "launch"`): every run counts the slots its launched
+ *   tasks hold, and while one is free asks `candidates` and launches the first
+ *   ones that fit — origin row role `launched`, marker armed with the filled
+ *   prompt. Also woken, whatever its trigger, when a task it launched settles
+ *   or is released, when its config changes, and at boot.
  *
  * ```ts
  * export const depsUpgradesConfig = defineAutomationConfig("deps-upgrades", { … });
@@ -135,11 +240,16 @@ async function adoptLegacy(spec: AutomationSpec): Promise<void> {
  * // register: [depsUpgradesAutomation]
  * ```
  */
+export function defineAutomation<F extends LaunchAutomationConfigFields>(
+  spec: LaunchAutomationSpec<F>,
+): Automation;
 export function defineAutomation<F extends AutomationConfigFields>(
-  spec: AutomationSpec<F>,
-): Automation {
-  // The registry holds every automation at the common shape; `detect` is a
-  // method, so its context parameter is read bivariantly there.
+  spec: FileAutomationSpec<F>,
+): Automation;
+export function defineAutomation(spec: AutomationSpec): Automation {
+  // The registry holds every automation at the common shape; `detect` and
+  // `candidates` are methods, so their context parameter is read bivariantly
+  // there.
   const common: AutomationSpec = spec;
   const jobName = `automation.${spec.id}`;
 
@@ -157,6 +267,10 @@ export function defineAutomation<F extends AutomationConfigFields>(
     input: z.object({}),
     event: z.never(),
     dedup: "singleton",
+    // One run at a time: a wake while a run is in flight queues the next run
+    // behind it, so two runs can never both count a slot free (launch) or
+    // both find no open task (file).
+    serial: true,
     schedule: { cron: () => automationCron(common).cron },
     async run({ ctx }) {
       burstStartedAt = null;
@@ -166,14 +280,19 @@ export function defineAutomation<F extends AutomationConfigFields>(
       );
     },
   });
-  const adoptWarmup = spec.adoptLegacy
-    ? defineWarmup({
-        name: `${jobName}.adopt-legacy`,
-        description: `Records the tasks "${spec.label}" filed before automations stored where a task came from.`,
-        scope: "worktree",
-        run: () => adoptLegacy(common),
-      })
-    : null;
+  const adoptWarmup =
+    common.kind !== "launch" && common.adoptLegacy
+      ? adoptLegacyWarmup(common, jobName)
+      : null;
+
+  // Run as soon as possible, whatever the trigger: a launch-kind automation's
+  // slots moved. The singleton key collapses it onto the one pending row
+  // (graphile's default key mode pulls that row's start to now).
+  function wake(): void {
+    if (!isMain()) return;
+    if (!automationSettings(common).enabled) return;
+    void job.enqueue({});
+  }
 
   return {
     id: spec.id,
@@ -204,7 +323,7 @@ export function defineAutomation<F extends AutomationConfigFields>(
       void job.enqueue({}, { runAt: new Date(runAt) });
     },
     async register() {
-      addAutomation({ spec: common, jobName });
+      addAutomation({ spec: common, jobName, wake });
       await job.register();
       if (adoptWarmup !== null) await adoptWarmup.register();
     },

@@ -32,6 +32,7 @@ import {
   StatusSignal,
 } from "@plugins/tasks/plugins/task-status/web";
 import { automationTasks, type AutomationTaskRow } from "../../core";
+import { Automations } from "../internal/slots";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const HISTORY_VIEW = defineDataView("tasks.automations.history");
@@ -77,8 +78,8 @@ function HistoryFrame({ options, body }: HostedToolbarParts): ReactElement {
 const HISTORY_TOOLBAR: HostedToolbar = { kind: "hosted", frame: HistoryFrame };
 
 /**
- * The tasks this automation filed, newest first, each with its task's title and
- * status. Activating a row opens the task.
+ * The tasks this automation filed or started, newest first, each with its
+ * task's title and status. Activating a row opens the task.
  */
 export function AutomationHistory({
   automationId,
@@ -140,7 +141,7 @@ export function AutomationHistory({
       },
       {
         id: "filedAt",
-        label: "Filed",
+        label: "Filed or started",
         type: "date",
         value: (r) => new Date(r.origin.filedAt),
         sortable: true,
@@ -174,13 +175,19 @@ export function AutomationHistory({
             leading: (r: HistoryRow) =>
               r.task === null ? null : <StatusIcon status={r.task.status} />,
             renderRow: (r: HistoryRow) => <HistoryRowBody row={r} />,
+            detail: (r: HistoryRow) => (
+              <TaskDetail
+                taskId={r.origin.taskId}
+                automationId={automationId}
+              />
+            ),
           },
         }}
-        emptyState={<>It has not filed a task yet.</>}
+        emptyState={<>It has not filed or started a task yet.</>}
       />
       {truncated ? (
         <Text variant="caption" tone="muted">
-          Showing the latest {HISTORY_LIMIT} tasks it filed.
+          Showing the latest {HISTORY_LIMIT} tasks it filed or started.
         </Text>
       ) : null}
     </Stack>
@@ -200,9 +207,28 @@ function HistoryRowBody({ row }: { row: HistoryRow }): ReactElement {
       <Stack direction="row" gap="sm" align="center" className={rigidClass()}>
         {row.task !== null ? <StatusSignal status={row.task.status} /> : null}
         <Text variant="caption" tone="muted">
+          {row.origin.role === "launched" ? "Started " : null}
           <RelativeTime date={new Date(row.origin.filedAt)} />
         </Text>
       </Stack>
     </>
+  );
+}
+
+/** What the plugins contributing to `Automations.TaskDetail` say about one
+ * task — an expanded History row. */
+function TaskDetail({
+  taskId,
+  automationId,
+}: {
+  taskId: string;
+  automationId: string;
+}): ReactElement {
+  return (
+    <Automations.TaskDetail.Render>
+      {(contribution) => (
+        <contribution.component taskId={taskId} automationId={automationId} />
+      )}
+    </Automations.TaskDetail.Render>
   );
 }

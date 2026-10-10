@@ -155,7 +155,11 @@ export function TriggerSection({
       ) : (
         <ControlPanel.Section
           label="When things settle"
-          description={`A burst becomes one run: every new event restarts the wait, so the run starts ${settings.settleMinutes} min after the last one (at most ${settings.settleMinutes * SETTLE_MAX_WAIT_FACTOR} min after the first). The run files one task covering everything that qualifies, and while a task it filed is open, nothing new is filed — the next run picks up what still qualifies.`}
+          description={`A burst becomes one run: every new event restarts the wait, so the run starts ${settings.settleMinutes} min after the last one (at most ${settings.settleMinutes * SETTLE_MAX_WAIT_FACTOR} min after the first). ${
+            entry.kind === "launch"
+              ? "The run starts agents on what is ready, while a slot is free. A finished or reported agent frees its slot and starts the next one at once, without waiting for an event."
+              : "The run files one task covering everything that qualifies, and while a task it filed is open, nothing new is filed — the next run picks up what still qualifies."
+          }`}
         >
           <ControlPanel.Setting
             label="Wait"

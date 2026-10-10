@@ -47,6 +47,7 @@
     - `conversations`
     - `tasks`
     - `tasks/auto-start/launch-option`
+    - `tasks/automations`
 - Sub-plugins:
   - **`launch-option`** — Auto-start model picker as a launch option: the same controlled select on the task detail's Prompt card (bound to the task's row) and on the task-draft popover (bound to the draft card). Applies a…
 

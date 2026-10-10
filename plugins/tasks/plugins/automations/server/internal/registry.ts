@@ -2,6 +2,7 @@ import type { ConfigDescriptor, ConfigValues } from "@plugins/config_v2/core";
 import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
 import type {
   AutomationConfigFields,
+  LaunchAutomationConfigFields,
   AutomationSettings,
   AutomationSource,
   PromptVariable,
@@ -30,28 +31,43 @@ export interface AutomationDetectCtx<
   partialFailure(err: unknown): void;
 }
 
-/**
- * An automation: something that files a task and launches its agent with
- * nobody clicking anything. Declared once, in the plugin that knows what to
- * watch; the registry owns everything else — the job, the trigger, the
- * settings, the dedupe, the prompt, the filing, the launch and the origin
- * record.
- */
-export interface AutomationSpec<
-  F extends AutomationConfigFields = AutomationConfigFields,
+/** What a launch-kind automation's `candidates` is handed. */
+export interface AutomationLaunchCtx<
+  F extends LaunchAutomationConfigFields = LaunchAutomationConfigFields,
 > {
+  /** The declared sources the settings do not exclude. */
+  sources: AutomationSource[];
+  /** The resolved common settings this run uses. */
+  settings: AutomationSettings;
+  /** The whole config document — the automation's own fields included. */
+  config: ConfigValues<F>;
+  /** Aborted when the run overruns its job's budget — thread it into any wait. */
+  signal: AbortSignal;
+}
+
+/**
+ * One existing task a launch-kind automation would start, with the values of
+ * its prompt template's `{{variables}}` for that task (the registry adds
+ * `pushPolicy`).
+ */
+export interface LaunchCandidate {
+  taskId: string;
+  variables: Readonly<Record<string, string>>;
+}
+
+/** What every automation declares, whatever its kind. */
+interface AutomationSpecBase<F extends AutomationConfigFields> {
   /** Stable id: the config document's name, the job name's suffix, the origin rows' key. */
   id: string;
   /** What it is, for a person ("Dependency upgrades"). */
   label: string;
   icon: SymbolRef;
-  /** What it watches and what it files, in one or two sentences. */
+  /** What it watches and what it does, in one or two sentences. */
   description: string;
-  /** The task category the filed tasks are stamped with. */
-  categoryId: string;
   /**
-   * Its settings: `defineAutomationConfig(id, …)`, registered by the declaring
-   * plugin on both runtimes with `pluginId: AUTOMATIONS_CONFIG_PLUGIN_ID`.
+   * Its settings: `defineAutomationConfig(id, …)` (launch kind:
+   * `defineLaunchAutomationConfig`), registered by the declaring plugin on
+   * both runtimes with `pluginId: AUTOMATIONS_CONFIG_PLUGIN_ID`.
    */
   config: ConfigDescriptor<F>;
   /**
@@ -66,17 +82,34 @@ export interface AutomationSpec<
         eventLabel: string;
       };
   /**
-   * Why `detect` may run in process (its job holds a slot for minutes): what
-   * it does and what bounds it. Required by the jobs plugin for `minutes`.
+   * Why its run may hold a job slot in process (its job holds one for
+   * minutes): what it does and what bounds it. Required by the jobs plugin for
+   * `minutes`.
    */
   inProcess: string;
   /** The things it watches that a person can include or exclude. Absent ⇒ none. */
   sources?: () => AutomationSource[];
   /**
-   * The `{{variables}}` its prompt template may use — every one `detect`'s
-   * filing fills. `{{pushPolicy}}` is offered to every automation on top.
+   * The `{{variables}}` its prompt template may use — every one a filing (or a
+   * launch candidate) fills. `{{pushPolicy}}` is offered to every automation
+   * on top.
    */
   promptVariables: readonly PromptVariable[];
+}
+
+/**
+ * A file-kind automation (the default): something that files a task and
+ * launches its agent with nobody clicking anything. Declared once, in the
+ * plugin that knows what to watch; the registry owns everything else — the
+ * job, the trigger, the settings, the dedupe, the prompt, the filing, the
+ * launch and the origin record.
+ */
+export interface FileAutomationSpec<
+  F extends AutomationConfigFields = AutomationConfigFields,
+> extends AutomationSpecBase<F> {
+  kind?: "file";
+  /** The task category the filed tasks are stamped with. */
+  categoryId: string;
   /**
    * Look for work. Runs only while the automation is enabled and has no open
    * task. `null` ⇒ nothing to do.
@@ -90,10 +123,40 @@ export interface AutomationSpec<
   adoptLegacy?: () => Promise<string[]>;
 }
 
+/**
+ * A launch-kind automation: it files nothing — it starts agents on tasks that
+ * already exist, at most `concurrency` (its config) at a time, the next one
+ * when a slot frees. The plugin says which tasks (`candidates`); the registry
+ * owns the slots, the prompt, the origin record (role `launched`) and the
+ * armed launch.
+ */
+export interface LaunchAutomationSpec<
+  F extends LaunchAutomationConfigFields = LaunchAutomationConfigFields,
+> extends AutomationSpecBase<F> {
+  kind: "launch";
+  /**
+   * The tasks it would start now, BEST FIRST. Runs only while it is enabled
+   * and has a free slot. The registry skips a task an automation already filed
+   * or launched, or one someone already armed, then launches the first ones
+   * that fit — so return a bounded list, not just enough to fill the slots.
+   */
+  candidates(ctx: AutomationLaunchCtx<F>): Promise<LaunchCandidate[]>;
+}
+
+/** An automation of either kind, at the common config shape. */
+export type AutomationSpec = FileAutomationSpec | LaunchAutomationSpec;
+
 /** A registered automation and the job it owns. */
 export interface RegisteredAutomation {
   spec: AutomationSpec;
   jobName: string;
+  /**
+   * Run its job as soon as possible, whatever its trigger — for a launch-kind
+   * automation whose slots may have moved (a task it launched settled or was
+   * released, its config changed, the backend booted). A no-op off main or
+   * while it is off.
+   */
+  wake(): void;
 }
 
 // Filled during the register phase. Process state: the set is what this
@@ -112,4 +175,11 @@ export function addAutomation(entry: RegisteredAutomation): void {
 /** Every registered automation, in registration order. */
 export function registeredAutomations(): RegisteredAutomation[] {
   return [...automations.values()];
+}
+
+/** The registered automation `id`, or `undefined` when this composition has none. */
+export function registeredAutomation(
+  id: string,
+): RegisteredAutomation | undefined {
+  return automations.get(id);
 }

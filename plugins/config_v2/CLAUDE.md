@@ -329,8 +329,8 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
 - Description: Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 - Web:
   - Slots: `ConfigV2.WebRegister`
-  - Slot contributors: 83 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×83
+  - Slot contributors: 84 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×84
   - Uses:
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
@@ -482,16 +482,16 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Imported by: 103 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 104 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×24
     - `debug` ×14
     - `backup` ×13
     - `conversations` ×12
     - `ui` ×11
     - `auth` ×5
+    - `tasks` ×4
     - `config_v2` ×3
     - `primitives` ×3
-    - `tasks` ×3
     - `apps-core` ×2
     - `infra` ×2
     - `stats` ×2

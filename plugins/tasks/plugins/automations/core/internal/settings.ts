@@ -18,6 +18,41 @@ export const PUSH_POLICY_LABELS: Record<PushPolicy, string> = {
   checks: "When checks pass",
 };
 
+/**
+ * What an automation does with the work it finds.
+ *
+ * - `file` — `detect` finds work and the automation files ONE task for it and
+ *   launches its agent; it files nothing more while that task is open.
+ * - `launch` — `candidates` names EXISTING tasks, best first, and the
+ *   automation launches agents on them, at most `concurrency` at a time; the
+ *   next starts when one settles.
+ */
+export const AUTOMATION_KINDS = ["file", "launch"] as const;
+export type AutomationKind = (typeof AUTOMATION_KINDS)[number];
+
+/**
+ * What an automation did to a task, on its origin row: it `filed` the task
+ * (and launched it), or it only `launched` a task someone else filed — the
+ * task stays that person's.
+ */
+export const ORIGIN_ROLES = ["filed", "launched"] as const;
+export type OriginRole = (typeof ORIGIN_ROLES)[number];
+
+/**
+ * The task statuses that free a launch-kind automation's slot on their own:
+ * the task landed or was dropped, its agent went away without reporting
+ * (`attempted` — counted as finished, and flagged), or a person held it (the
+ * task is theirs to resume; waiting on it would stall the automation with
+ * nothing in sight). A task also stops holding a slot once it is released
+ * (`releaseLaunchedTask`, e.g. its agent submitted its report).
+ */
+export const SLOT_SETTLED_STATUSES = [
+  "done",
+  "dropped",
+  "attempted",
+  "held",
+] as const;
+
 /** How an automation is woken: on a schedule, or when its event fires. */
 export const TRIGGER_KINDS = ["schedule", "event"] as const;
 export type TriggerKind = (typeof TRIGGER_KINDS)[number];

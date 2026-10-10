@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
 import {
   _tasks,
@@ -6,14 +6,28 @@ import {
   tasksView,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
+import { SLOT_SETTLED_STATUSES, type AutomationTaskRow } from "../../core";
 import { tasksOrigin } from "./tables";
 
 const t = tasksOrigin.table;
 
 // A task an automation filed is OPEN until it is done or dropped. Held and
 // attempted-without-a-push count as open: they are a person's to look at, and
-// filing a second task beside one would only duplicate it.
-const isOpen = sql`${tasksView.status} NOT IN ('done', 'dropped')`;
+// filing a second task beside one would only duplicate it. Only FILED rows: a
+// task a launch-kind automation started is not a filing to dedupe against.
+const isOpen = and(
+  eq(t.role, "filed"),
+  sql`${tasksView.status} NOT IN ('done', 'dropped')`,
+);
+
+// A task a launch-kind automation started HOLDS one of its slots until it is
+// released (its agent reported) or it settles on its own
+// (`SLOT_SETTLED_STATUSES`).
+const holdsSlot = and(
+  eq(t.role, "launched"),
+  isNull(t.releasedAt),
+  notInArray(tasksView.status, [...SLOT_SETTLED_STATUSES]),
+);
 
 /** The open task `automationId` filed, newest first, or `null` when none is. */
 export async function openAutomationTaskId(
@@ -47,10 +61,114 @@ export async function openAutomationTaskIds(
   return open;
 }
 
-/** The automation that filed `taskId`, or `null` when no automation did. */
+/**
+ * The tasks `automationId` launched that still hold one of its slots, newest
+ * first — its occupied slots.
+ */
+export async function occupiedSlotTaskIds(
+  automationId: string,
+  exec: DbExecutor = db,
+): Promise<string[]> {
+  const rows = await exec
+    .select({ taskId: t.taskId })
+    .from(t)
+    .innerJoin(tasksView, eq(tasksView.id, t.taskId))
+    .where(and(eq(t.automationId, automationId), holdsSlot))
+    .orderBy(desc(t.filedAt));
+  return rows.map((r) => r.taskId);
+}
+
+/** Every launch-kind automation's occupied slots, keyed by automation id
+ * (absent ⇒ none), newest first. */
+export async function occupiedSlotTaskIdsByAutomation(
+  exec: DbExecutor = db,
+): Promise<Map<string, string[]>> {
+  const rows = await exec
+    .select({ automationId: t.automationId, taskId: t.taskId })
+    .from(t)
+    .innerJoin(tasksView, eq(tasksView.id, t.taskId))
+    .where(holdsSlot)
+    .orderBy(desc(t.filedAt));
+  const running = new Map<string, string[]>();
+  for (const r of rows) {
+    running.set(r.automationId, [
+      ...(running.get(r.automationId) ?? []),
+      r.taskId,
+    ]);
+  }
+  return running;
+}
+
+/** Which of `taskIds` an automation already filed or launched. */
+export async function taskIdsWithOrigin(
+  taskIds: readonly string[],
+): Promise<Set<string>> {
+  if (taskIds.length === 0) return new Set();
+  const rows = await db
+    .select({ taskId: t.taskId })
+    .from(t)
+    .where(inArray(t.taskId, [...taskIds]));
+  return new Set(rows.map((r) => r.taskId));
+}
+
+/** `taskId`'s origin row, or `null` when no automation filed or launched it. */
+export async function originOfTask(
+  taskId: string,
+): Promise<AutomationTaskRow | null> {
+  return (await tasksOrigin.get(taskId)) ?? null;
+}
+
+/**
+ * The automation that filed or launched `taskId`, or `null` when none did — a
+ * task a person filed and started.
+ */
 export async function automationOfTask(taskId: string): Promise<string | null> {
   const row = await tasksOrigin.get(taskId);
   return row === undefined ? null : row.automationId;
+}
+
+/**
+ * Record that `automationId` launched `taskId` (role `launched`), unless some
+ * automation already filed or launched it: a task has ONE origin, and taking
+ * over another's would hide it from that automation's dedupe and history.
+ * Returns whether the row was written — `false` ⇒ launch nothing.
+ */
+export async function recordLaunch(
+  automationId: string,
+  taskId: string,
+): Promise<boolean> {
+  const written = await db
+    .insert(t)
+    .values({
+      taskId,
+      automationId,
+      sourceKeys: [],
+      filedAt: new Date(),
+      role: "launched",
+      releasedAt: null,
+    })
+    .onConflictDoNothing()
+    .returning({ taskId: t.taskId });
+  return written.length > 0;
+}
+
+/**
+ * Give back the slot `taskId` holds: stamp its launched origin row released.
+ * Returns the automation that launched it when this call released it, `null`
+ * when there was nothing to release (no automation launched the task — e.g.
+ * one a file-kind automation filed — or it was released already).
+ */
+export async function markLaunchReleased(
+  taskId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .update(t)
+    .set({ releasedAt: new Date() })
+    .where(
+      and(eq(t.taskId, taskId), eq(t.role, "launched"), isNull(t.releasedAt)),
+    )
+    .returning({ automationId: t.automationId });
+  return row?.automationId ?? null;
 }
 
 /**
@@ -99,6 +217,8 @@ export async function fileAutomationTask(args: {
         automationId,
         sourceKeys: [...filing.sourceKeys],
         filedAt: new Date(),
+        role: "filed",
+        releasedAt: null,
       },
       tx,
     );

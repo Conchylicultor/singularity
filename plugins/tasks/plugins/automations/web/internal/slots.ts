@@ -26,6 +26,16 @@ export const Automations = {
     automationId: string;
     component: ComponentType;
   }>({ docLabel: (c) => c.automationId }),
+  /**
+   * More about one task an automation filed or started, shown when its row in
+   * the automation's History is expanded (e.g. the report its agent left).
+   * Every contribution renders for every expanded row, in slot order; one with
+   * nothing to say about that task renders nothing. The registry names none of
+   * them.
+   */
+  TaskDetail: defineRenderSlot<{
+    component: ComponentType<{ taskId: string; automationId: string }>;
+  }>(),
 };
 
 /**

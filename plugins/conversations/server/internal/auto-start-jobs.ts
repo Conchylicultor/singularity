@@ -12,7 +12,6 @@ import {
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import {
-  buildTaskPrompt,
   TaskStatusSchema,
   type Conversation,
 } from "@plugins/tasks/plugins/tasks-core/core";
@@ -30,6 +29,7 @@ import { checkClaudeCode } from "@plugins/infra/plugins/claude-cli/plugins/avail
 import { resolveModel } from "@plugins/conversations/plugins/model-provider/core";
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { reportAutoStartModelUnavailable } from "./auto-start-model-report";
+import { resolveLaunchPrompt } from "./launch-prompt";
 
 // The transactional heart of an auto-launch: claim the marker and commit the
 // launch on ONE transaction. Returns whether this call launched.
@@ -104,8 +104,10 @@ export type LaunchTaskNowResult =
 // after writing the marker itself. Either way the claim is the exactly-once
 // gate, so the two can never both launch one task.
 //
-// `prompt` defaults to the task's own (`buildTaskPrompt`); a caller that
-// already holds the prompt passes it and saves the task read.
+// The prompt is the caller's `prompt`, else the one stored on the marker by
+// whoever armed it (an automation's filled template), else the task's own
+// (`buildTaskPrompt`) — `resolveLaunchPrompt`. So a task an automation armed
+// launches with the automation's prompt whichever path claims it.
 //
 // The caller owns the policy gates (main-only, dropped / held, blocking deps):
 // the queue must wait on them, while an inline launch the user asked for has
@@ -118,12 +120,15 @@ export async function launchTaskNow(
   const ext = await getTaskAutoStart(taskId);
   if (!ext) return { started: false, reason: "not-armed" };
 
-  let prompt = opts.prompt;
-  if (prompt === undefined) {
-    const task = await getTask(taskId);
-    if (!task) throw new Error(`launchTaskNow: task ${taskId} not found`);
-    prompt = buildTaskPrompt(task);
-  }
+  const prompt = await resolveLaunchPrompt({
+    explicit: opts.prompt,
+    armed: ext.autoStartPrompt,
+    readTask: async () => {
+      const task = await getTask(taskId);
+      if (!task) throw new Error(`launchTaskNow: task ${taskId} not found`);
+      return task;
+    },
+  });
 
   // Reads first, outside any transaction: nothing slow runs while the
   // marker's row lock is held. A duplicate runner prepares too and then
@@ -241,13 +246,14 @@ export const maybeLaunchTaskJob = defineJob({
       return;
     }
 
-    // `launchTaskNow` reads the marker again for its model: one indexed read,
-    // and it keeps `not-armed` launchTaskNow's own answer rather than an
-    // assumption about its caller. A lost claim is the concurrent-runner case
-    // this job's header describes — nothing to do. `skip`: an attempt here is
-    // a manual start that beat the queue, so the task already has its launch.
+    // `launchTaskNow` reads the marker again for its model and its prompt:
+    // one indexed read, and it keeps `not-armed` launchTaskNow's own answer
+    // rather than an assumption about its caller. No `prompt` here: the
+    // marker's (an automation's) or else the task's own is the right one. A
+    // lost claim is the concurrent-runner case this job's header describes —
+    // nothing to do. `skip`: an attempt here is a manual start that beat the
+    // queue, so the task already has its launch.
     await launchTaskNow(taskId, {
-      prompt: buildTaskPrompt(t),
       cause,
       ifAlreadyStarted: "skip",
     });

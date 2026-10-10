@@ -1,4 +1,8 @@
-import { defineConfig, type ConfigValues } from "@plugins/config_v2/core";
+import {
+  defineConfig,
+  type ConfigDescriptor,
+  type ConfigValues,
+} from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
@@ -132,15 +136,42 @@ function automationFields(d: AutomationConfigDefaults) {
     prompt: multilineTextField({
       label: "Prompt",
       description:
-        "The filed task's description. {{variable}} placeholders are filled per run; {{pushPolicy}} says what the Push setting allows.",
+        "What the agent is told: the filed task's description, or the first prompt of an agent it launches on an existing task. {{variable}} placeholders are filled per task; {{pushPolicy}} says what the Push setting allows.",
       default: d.prompt,
       rows: 16,
     }),
   };
 }
 
+/** What a launch-kind automation's config starts as, beyond the common fields. */
+export interface LaunchAutomationConfigDefaults extends AutomationConfigDefaults {
+  /** How many of its agents may run at once. */
+  concurrency: number;
+}
+
+/** The highest `concurrency` a launch-kind automation may be set to. */
+export const MAX_LAUNCH_CONCURRENCY = 8;
+
+function launchFields(d: LaunchAutomationConfigDefaults) {
+  return {
+    concurrency: intField({
+      label: "At once",
+      description:
+        "How many of its agents may run at the same time. The next one starts when one finishes or reports.",
+      min: 1,
+      max: MAX_LAUNCH_CONCURRENCY,
+      default: d.concurrency,
+    }),
+  };
+}
+
 /** The fields every automation config has. */
 export type AutomationConfigFields = ReturnType<typeof automationFields>;
+
+/** The fields every launch-kind automation config has: the common ones and
+ * `concurrency`. */
+export type LaunchAutomationConfigFields = AutomationConfigFields &
+  ReturnType<typeof launchFields>;
 
 /**
  * Declare an automation's config document: the common fields (`enabled`,
@@ -158,6 +189,35 @@ export function defineAutomationConfig<
     name: id,
     fields: { ...automationFields(defaults), ...(extra ?? ({} as X)) },
   });
+}
+
+/**
+ * Declare a launch-kind automation's config document: everything
+ * `defineAutomationConfig` declares, plus `concurrency` — how many of its
+ * agents run at once. Registered and stored exactly like a file-kind one.
+ */
+export function defineLaunchAutomationConfig<
+  const X extends FieldsRecord = Record<never, never>,
+>(id: string, defaults: LaunchAutomationConfigDefaults, extra?: X) {
+  return defineConfig({
+    name: id,
+    fields: {
+      ...automationFields(defaults),
+      ...launchFields(defaults),
+      ...(extra ?? ({} as X)),
+    },
+  });
+}
+
+/**
+ * Whether an automation config document is a launch-kind one — the web pane
+ * holds every document at the common shape and reaches `concurrency` through
+ * this.
+ */
+export function isLaunchAutomationConfig(
+  descriptor: ConfigDescriptor<AutomationConfigFields>,
+): descriptor is ConfigDescriptor<LaunchAutomationConfigFields> {
+  return "concurrency" in descriptor.fields;
 }
 
 /**

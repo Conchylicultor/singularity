@@ -1,8 +1,17 @@
 # automations
 
-Things that file a task and launch its agent with nobody clicking anything.
+Things that start agents with nobody clicking anything. Two kinds:
+
+- **file** (the default) — `detect` finds work; the automation files ONE task
+  for it and launches its agent, and files nothing more while that task is
+  open (dependency upgrades, report investigations).
+- **launch** — `candidates` names EXISTING tasks, best first; the automation
+  launches agents on them, at most `concurrency` at a time, the next one when a
+  slot frees (the sidequest autopilot).
+
 Design: `research/2026-10-07-global-automations.md`; triggers, prompt and
-Report investigations: `research/2026-10-07-global-automations-triggers-and-reports-v2.md`.
+Report investigations: `research/2026-10-07-global-automations-triggers-and-reports-v2.md`;
+the launch kind: `research/2026-10-10-tasks-sidequest-autopilot.md`.
 
 ## Declaring one
 
@@ -30,6 +39,26 @@ export const depsUpgradesAutomation = defineAutomation({
 // web:    contributions: [...automationConfigContributions(depsUpgradesConfig)]
 ```
 
+A launch-kind one declares its config with `defineLaunchAutomationConfig`
+(the common fields plus `concurrency`) and `kind: "launch"` with `candidates`
+instead of `categoryId` / `detect` (it files nothing, so it stamps no
+category):
+
+```ts
+export const autopilotConfig = defineLaunchAutomationConfig("sidequest-autopilot", {
+  enabled: false, push: "safe", trigger: "event", settleMinutes: 2,
+  concurrency: 2, prompt: AUTOPILOT_PROMPT,
+}, { runUntil: textField({ … }) });
+
+export const autopilot = defineAutomation({
+  kind: "launch", id: "sidequest-autopilot", label, icon, description,
+  config: autopilotConfig, triggers: { kinds: ["event"], eventLabel }, inProcess,
+  promptVariables: [{ name: "title", … }, …],
+  candidates: async ({ settings, config, signal }) =>
+    tasks.map((t) => ({ taskId: t.id, variables: { title: t.title, … } })),
+});
+```
+
 **Its config is one document per automation**, named by its id and stored under
 this plugin's tree whichever plugin declares it:
 `config/tasks/automations/<id>.origin.jsonc` is the committed default (the
@@ -40,10 +69,12 @@ fields are `enabled`, `push` (`never` | `safe` = only an uncontroversial change 
 `checks`), `model` (one shared field object, so one `DynamicEnum.Options`),
 `excludedSources`, `trigger` + the schedule (`cadence` hour/day/days/week/cron,
 `at` local HH:MM, `everyDays`, `weekday`, `cron` UTC) + `settleMinutes`, and
-`prompt`.
+`prompt`; a launch-kind config adds `concurrency`.
 
-**The automation owns its job** (`automation.<id>`, singleton, `hold:
-"minutes"`, main-only), so nothing can file around its settings.
+**The automation owns its job** (`automation.<id>`, singleton, `serial` — one
+run at a time, so two runs can never both find no open task or both count a
+slot free — `hold: "minutes"`, main-only), so nothing can file or launch
+around its settings.
 
 - **Schedule.** The job's cron resolver reads the config (`automationCron`,
   `cadenceCron` converting the local time with the current UTC offset). A config
@@ -55,8 +86,18 @@ fields are `enabled`, `push` (`never` | `safe` = only an uncontroversial change 
   job with `runAt = min(now + settle, burstStart + 6 × settle)` — graphile's
   `replace` key mode moves the one pending row, so a burst is one run (re-queued
   at most every 30 s). Main only.
+- **Wake** (launch kind, whatever its trigger). The registry runs it at once
+  (`RegisteredAutomation.wake`) when its slots may have moved: a task it
+  launched settles (`automations.task-status`) or is released
+  (`releaseLaunchedTask`), its config changes (turning it on starts it), and at
+  boot (what settled while the backend was down announced nothing). The
+  trigger is then only for *new work appearing* — a launch-kind automation
+  declares the event that says a candidate may have appeared (the autopilot:
+  a task becoming `new`); a schedule would only be a coarse substitute for it.
+  Gap, by design: a task that becomes a candidate WITHOUT that event (e.g. an
+  existing task switched to the sidequest track) waits for the next wake.
 
-Each run:
+### A file-kind run
 
 1. Reads the config. Disabled ⇒ logs and stops.
 2. Adopts `adoptLegacy`'s tasks (idempotent), then **dedupes**: a task this
@@ -68,59 +109,114 @@ Each run:
 4. Fills the prompt template with the filing's `variables` + `pushPolicy`
    (`PUSH_POLICY_TEXT`). A placeholder with no value throws — never a blank.
 5. In ONE transaction: `createTask` (author `automation:<id>`), its category,
-   its origin row. Then `onFiled(taskId)`, then `armTaskAutoStart` with the
-   chosen model.
+   its origin row (role `filed`). Then `onFiled(taskId)`, then
+   `armTaskAutoStart` with the chosen model.
+
+### A launch-kind run (the pump)
+
+1. Reads the config. Disabled ⇒ logs and stops.
+2. Counts its **occupied slots**: its origin rows with role `launched`,
+   `releasedAt` null, whose task is not in `SLOT_SETTLED_STATUSES` (`done`,
+   `dropped`, `attempted` — its agent went away without reporting, counted as
+   finished and belled — and `held`, a person's own act; waiting on it would
+   stall the automation). `free = concurrency − occupied` (never below 0:
+   lowering the concurrency stops nothing). None free ⇒ stops.
+3. Calls `candidates` (best first), skips any task an automation already filed
+   or launched (a task has ONE origin) or someone already armed, and takes the
+   first `free` (`selectLaunches`).
+4. For each: fills the template with the candidate's `variables` +
+   `pushPolicy`, writes its origin row (role `launched`; insert-or-nothing, so
+   a race loses cleanly), then `armTaskAutoStart` with the model and the
+   filled prompt — stored ON the marker, so whichever path claims it (the
+   queue's `tasks.maybe-launch` or an inline launch) starts the agent with it.
+   The existing launch gates (main only, not held/dropped/blocked, Claude Code
+   ready, the model resolves) apply as for any armed task; a task waiting on
+   them still holds its slot.
+
+Dedupe ("one open task") is file-kind only. A launched task stays the person's
+task: its category, title and description are untouched; the role says the
+automation only started it.
+
+**Releasing a slot.** `releaseLaunchedTask(taskId)` (server barrel) stamps the
+launched row's `releasedAt` and wakes the automation that launched it — called
+by whatever knows the agent is done with what it was launched for (the
+outcome-report plugin, when the agent submits its report), so a conversation
+left open for the person to read does not hold a slot. The registry never
+imports such a plugin. No-op (`false`) for a task no automation launched.
 
 Every run logs one line to the `automations` log channel.
 
 ## The pane
 
-Behavior (Enabled, Model, Push), Trigger (kind, schedule presets / cron, or the
-settle wait), the `Automations.Section` contributions for this automation (a
-render slot keyed by `automationId` — e.g. Report investigations' Which reports),
-Sources, Prompt (the template; "Customized" when the user layer supplies it,
-Reset to default through config_v2's `resetConfigField`; a template naming an
-unknown variable is not saved), History.
+Behavior (Enabled, Model, At once for a launch kind, Push), Trigger (kind,
+schedule presets / cron, or the settle wait), the `Automations.Section`
+contributions for this automation (a render slot keyed by `automationId` —
+e.g. Report investigations' Which reports, the autopilot's Run until), Sources,
+Prompt (the template; "Customized" when the user layer supplies it, Reset to
+default through config_v2's `resetConfigField`; a template naming an unknown
+variable is not saved), History (filed and started tasks). A History row
+expands (the list view's `detail` option; open rows live in the view's expand
+map) into every `Automations.TaskDetail` contribution for its task — a render
+slot whose component gets `{ taskId, automationId }` and renders nothing when it
+has nothing to say (the outcome-report plugin contributes the agent's report).
+This plugin names no contributor; they import it, never the reverse.
 
 ## Where a task came from
 
 `tasks_ext_origin` (entity extension of tasks, `core/internal/resources.ts`):
-`{ taskId, automationId, sourceKeys, filedAt }`. A row PROVES an automation
-filed the task; a task with none was filed by a person or an agent acting for
-one. Served as the `automations.tasks` live collection — a window filterable
-by `automationId` (newest first), and point reads by task id.
+`{ taskId, automationId, sourceKeys, filedAt, role, releasedAt }`. A row PROVES
+an automation filed (`role: "filed"`) or launched (`"launched"`) the task; a
+task with none was filed and started by a person or an agent acting for one.
+Rows from before launches existed read `filed` (the column's DB default).
+`automationOfTask(taskId)` (server barrel) answers which automation, for a
+plugin that treats automated tasks differently (the outcome-report tool is
+offered only to them). Served as the `automations.tasks` live collection — a
+window filterable by `automationId` (newest first), and point reads by task id.
 
 ## Reads
 
 - `automationsCatalog` (`automations.catalog`, external) — every registered
-  automation with `enabled`, its trigger (supported kinds, current kind, words,
-  `jobName`, installed `cron`, `scheduleError`), sources, prompt variables and
-  `openTaskId`. Re-pushed when an automation's config changes, it files a task,
-  or one of its tasks changes status.
+  automation with `kind`, `enabled`, its trigger (supported kinds, current
+  kind, words, `jobName`, installed `cron`, `scheduleError`), sources, prompt
+  variables, and by kind: `categoryId` + `openTaskId` (file), `concurrency` +
+  `runningTaskIds` (launch; the list shows "N running"). Re-pushed when an
+  automation's config changes, it files, launches or releases a task, or one of
+  its tasks changes status.
 - `automationTasks` — see above.
 - `automationsRoute` / `automationDetailRoute` (`automation/:automationId`).
 
 ## The person's attention
 
-A trigger on `tasks.statusChanged` (`automations.task-status`): when a task
-with an origin row moves to `need_action` / `attempted` / `held`, a warning
-lands in the bell, linking to the automation's detail pane.
+A trigger on `tasks.statusChanged` (`automations.task-status`):
+
+- a FILED task moving to `need_action` / `attempted` / `held` ⇒ a warning in the
+  bell, linking to the automation's detail pane;
+- a LAUNCHED task rings only on `attempted` while unreleased (its agent went
+  away without reporting). Its agent leaves a report instead, whose own surface
+  asks for the person: `need_action` is passed at every turn's end (a build
+  wait included) and would be noise, `held` is the person's own act, and once
+  released, closing its conversation is the person reading the report;
+- a launched task reaching a settled status wakes its automation.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default; and the History of the tasks it filed), the `origin` Automation field in every task DataView, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own, and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value and the automations.tasks collection (the origin side-table), and notifies the bell when an automated task needs its person.
+- Description: Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the `origin` Automation field in every task DataView, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, concurrency slots held until a task settles or releaseLaunchedTask), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value and the automations.tasks collection (the origin side-table), and notifies the bell when an automated task needs its person.
 - Web:
   - Slots:
     - `Automations.Config`
     - `Automations.Section`
+    - `Automations.TaskDetail`
     - `automations.actions`
     - `automation-detail.actions`
   - Slot contributors:
     - `Automations.Config` ← `infra.deps.updates`
     - `Automations.Config` ← `tasks.reports-investigation`
+    - `Automations.Config` ← `tasks.sidequest-autopilot`
     - `Automations.Section` ← `tasks.reports-investigation`
+    - `Automations.Section` ← `tasks.sidequest-autopilot`
+    - `Automations.TaskDetail` ← `tasks.outcome-report`
     - `automations.actions` ← `primitives.pane`
     - `automation-detail.actions` ← `primitives.pane`
   - Contributes:
@@ -169,7 +265,7 @@ lands in the bell, linking to the automation's detail pane.
     - `resource.declare` "automations.tasks:groups"
     - `resource.declare` "automations.tasks:rows"
     - `trigger` "automations.task-status"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×5
     - `config_v2` ×3
     - `database` ×2
@@ -180,6 +276,7 @@ lands in the bell, linking to the automation's detail pane.
     - `infra/warmup.defineWarmup`
     - `primitives/log-channels.Log`
     - `shell/notifications.recordNotification`
+    - `tasks/auto-start.listArmedTaskIds`
     - `tasks/task-category.setTaskCategory`
     - `tasks.armTaskAutoStart`
   - DB schema: `plugins/tasks/plugins/automations/server/internal/tables.ts`
@@ -188,10 +285,16 @@ lands in the bell, linking to the automation's detail pane.
     - `Automation`
     - `AutomationDetectCtx`
     - `AutomationFiling`
+    - `AutomationLaunchCtx`
     - `AutomationSpec`
+    - `FileAutomationSpec`
+    - `LaunchAutomationSpec`
+    - `LaunchCandidate`
   - Exports (values):
     - `automationConfigRegistration`
+    - `automationOfTask`
     - `defineAutomation`
+    - `releaseLaunchedTask`
   - Register: `defineJob('automations.task-status')`
   - Resources:
     - `automations.catalog` (push)
@@ -199,12 +302,11 @@ lands in the bell, linking to the automation's detail pane.
     - `automations.tasks:groups` (push)
     - `automations.tasks:rows` (keyed, point)
 - Core:
-  - Uses:
-    - `config_v2.ConfigValues`
-    - `config_v2.defineConfig`
-    - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
-    - `conversations/model-provider.ModelChoiceSchema`
-    - `conversations/model-provider.normalizeModelChoice`
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `config_v2` ×3
+    - `conversations/model-provider` ×3
+    - `fields/text/config` ×2
+    - `network/live` ×2
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/dynamic-enum/config.dynamicEnumField`
@@ -213,23 +315,25 @@ lands in the bell, linking to the automation's detail pane.
     - `fields/json/config.jsonField`
     - `fields/multiline-text/config.multilineTextField`
     - `fields/string-list/config.stringListField`
-    - `fields/text/config.textField`
+    - `fields.nullable`
     - `framework/plugin-id.asPluginId`
     - `infra/entity-extensions.defineExtensionShape`
-    - `network/live.liveCollection`
-    - `network/live.liveValue`
     - `network/live/filter.liveText`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `AutomationConfigDefaults`
     - `AutomationConfigFields`
     - `AutomationEntry`
+    - `AutomationKind`
     - `AutomationSettings`
     - `AutomationSource`
     - `AutomationTaskRow`
     - `AutomationTrigger`
     - `Cadence`
     - `CadenceCron`
+    - `LaunchAutomationConfigDefaults`
+    - `LaunchAutomationConfigFields`
+    - `OriginRole`
     - `PromptVariable`
     - `PushPolicy`
     - `RenderedPrompt`
@@ -237,6 +341,7 @@ lands in the bell, linking to the automation's detail pane.
     - `TriggerKind`
     - `Weekday`
   - Exports (values):
+    - `AUTOMATION_KINDS`
     - `automationDetailRoute`
     - `AutomationEntrySchema`
     - `automationModelField`
@@ -253,7 +358,11 @@ lands in the bell, linking to the automation's detail pane.
     - `CADENCES`
     - `cadenceWords`
     - `defineAutomationConfig`
+    - `defineLaunchAutomationConfig`
+    - `isLaunchAutomationConfig`
     - `labeledOptions`
+    - `MAX_LAUNCH_CONCURRENCY`
+    - `ORIGIN_ROLES`
     - `PromptVariableSchema`
     - `PUSH_POLICIES`
     - `PUSH_POLICY_LABELS`
@@ -263,6 +372,7 @@ lands in the bell, linking to the automation's detail pane.
     - `renderPrompt`
     - `ScheduleSettingsSchema`
     - `SETTLE_MAX_WAIT_FACTOR`
+    - `SLOT_SETTLED_STATUSES`
     - `taskOriginShape`
     - `templateVariables`
     - `TRIGGER_KIND_LABELS`
@@ -273,6 +383,8 @@ lands in the bell, linking to the automation's detail pane.
 - Cross-plugin:
   - Imported by:
     - `infra/deps/updates`
+    - `tasks/outcome-report`
     - `tasks/reports-investigation`
+    - `tasks/sidequest-autopilot`
 
 <!-- AUTOGENERATED:END -->

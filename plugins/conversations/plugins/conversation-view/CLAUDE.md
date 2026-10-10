@@ -22,6 +22,7 @@
     - `Conversation.AbovePromptInput` ← `conversations.conversation-view.op-status`
     - `Conversation.AbovePromptInput` ← `conversations.conversation-view.running-agents`
     - `Conversation.AbovePromptInput` ← `conversations.conversation-view.turn-summary`
+    - `Conversation.AbovePromptInput` ← `tasks.outcome-report`
     - `conversationPane.Actions` ← `conversations.agents`
     - `conversationPane.Actions` ← `conversations.conversation-preprompt`
     - `conversationPane.Actions` ← `conversations.conversation-progress`
@@ -63,10 +64,10 @@
     - `usePromptComposer`
     - `useRegisterPromptComposer`
 - Cross-plugin:
-  - Imported by: 60 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×50
     - `active-data` ×4
-    - `tasks` ×2
+    - `tasks` ×3
     - `debug/profiling/ops`
     - `primitives/launch`
     - `review`

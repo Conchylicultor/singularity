@@ -55,6 +55,17 @@ const SymbolRefSchema: ZodParser<SymbolRef> = z.custom<SymbolRef>(
   "expected a symbol icon ref",
 );
 
+const AutomationEntryBaseSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  icon: SymbolRefSchema,
+  description: z.string(),
+  enabled: z.boolean(),
+  trigger: AutomationTriggerSchema,
+  sources: z.array(AutomationSourceSchema),
+  promptVariables: z.array(PromptVariableSchema),
+});
+
 /**
  * One registered automation, as the Automations pane lists it. Declared in code
  * (`defineAutomation`), so the set is bounded by the composition. Its settings
@@ -62,19 +73,24 @@ const SymbolRefSchema: ZodParser<SymbolRef> = z.custom<SymbolRef>(
  * with the config hooks; `enabled` and the trigger are repeated here, as the
  * server resolves them, for the list.
  *
- * `openTaskId` is the task it filed that is neither done nor dropped — at most
- * one, since an automation never files beside an open task.
+ * By kind (`AUTOMATION_KINDS`):
+ * - `file` — `categoryId` is the category its filed tasks get; `openTaskId` is
+ *   the task it filed that is neither done nor dropped — at most one, since it
+ *   never files beside an open task.
+ * - `launch` — `concurrency` is how many of its agents may run at once;
+ *   `runningTaskIds` the tasks it launched that still hold a slot (not
+ *   released, not settled), newest first.
  */
-export const AutomationEntrySchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  icon: SymbolRefSchema,
-  description: z.string(),
-  categoryId: z.string(),
-  enabled: z.boolean(),
-  trigger: AutomationTriggerSchema,
-  sources: z.array(AutomationSourceSchema),
-  promptVariables: z.array(PromptVariableSchema),
-  openTaskId: z.string().nullable(),
-});
+export const AutomationEntrySchema = z.discriminatedUnion("kind", [
+  AutomationEntryBaseSchema.extend({
+    kind: z.literal("file"),
+    categoryId: z.string(),
+    openTaskId: z.string().nullable(),
+  }),
+  AutomationEntryBaseSchema.extend({
+    kind: z.literal("launch"),
+    concurrency: z.number().int(),
+    runningTaskIds: z.array(z.string()),
+  }),
+]);
 export type AutomationEntry = z.infer<typeof AutomationEntrySchema>;

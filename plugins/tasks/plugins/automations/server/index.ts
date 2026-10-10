@@ -14,12 +14,24 @@ import {
 export { defineAutomation } from "./internal/define";
 export { automationConfigRegistration } from "./internal/config-registration";
 export type { Automation } from "./internal/define";
-export type { AutomationDetectCtx, AutomationSpec } from "./internal/registry";
+export type {
+  AutomationDetectCtx,
+  AutomationLaunchCtx,
+  AutomationSpec,
+  FileAutomationSpec,
+  LaunchAutomationSpec,
+  LaunchCandidate,
+} from "./internal/registry";
 export type { AutomationFiling } from "./internal/origin";
+// What a plugin that works WITH automated tasks uses, naming none: which
+// automation filed or launched a task, and handing a launched task's slot back
+// once its agent is done (e.g. it reported).
+export { automationOfTask } from "./internal/origin";
+export { releaseLaunchedTask } from "./internal/release";
 
 export default {
   description:
-    "Automations registry: defineAutomation declares something that files a task and launches its agent on its own, and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value and the automations.tasks collection (the origin side-table), and notifies the bell when an automated task needs its person.",
+    "Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, concurrency slots held until a task settles or releaseLaunchedTask), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value and the automations.tasks collection (the origin side-table), and notifies the bell when an automated task needs its person.",
   contributions: [
     ...automationsCatalogServed.declare,
     ...automationTasksServed.declare,

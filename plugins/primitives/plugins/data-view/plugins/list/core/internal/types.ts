@@ -52,4 +52,15 @@ export interface ListViewOptions<TRow> {
    * weight).
    */
   labelClassName?: (row: TRow) => ClassName | undefined;
+  /**
+   * Per-row detail, shown UNDER the row when it is expanded. Present ⇒ every
+   * row carries a disclosure toggle in its action cluster (shown at rest, so
+   * it can be found), and an expanded row renders `detail(row)` in a band
+   * below it — a sibling of the row, never inside it, so the detail may hold
+   * its own controls whatever the row's activation is. Which rows are open is
+   * the view's expand map (per surface, view instance and row; per device),
+   * like a tree's — never domain data. The default `Row` chrome only:
+   * combining it with `rowChrome: "tree"` throws.
+   */
+  detail?: (row: TRow) => ReactNode;
 }

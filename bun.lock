@@ -5505,8 +5505,16 @@
       "name": "@singularity/plugin-tasks-launch-options",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/outcome-report": {
+      "name": "@singularity/plugin-tasks-outcome-report",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/reports-investigation": {
       "name": "@singularity/plugin-tasks-reports-investigation",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/sidequest-autopilot": {
+      "name": "@singularity/plugin-tasks-sidequest-autopilot",
       "version": "0.0.1",
     },
     "plugins/tasks/plugins/task-attachments": {
@@ -9051,7 +9059,11 @@
 
     "@singularity/plugin-tasks-launch-options": ["@singularity/plugin-tasks-launch-options@workspace:plugins/tasks/plugins/launch-options"],
 
+    "@singularity/plugin-tasks-outcome-report": ["@singularity/plugin-tasks-outcome-report@workspace:plugins/tasks/plugins/outcome-report"],
+
     "@singularity/plugin-tasks-reports-investigation": ["@singularity/plugin-tasks-reports-investigation@workspace:plugins/tasks/plugins/reports-investigation"],
+
+    "@singularity/plugin-tasks-sidequest-autopilot": ["@singularity/plugin-tasks-sidequest-autopilot@workspace:plugins/tasks/plugins/sidequest-autopilot"],
 
     "@singularity/plugin-tasks-task-attachments": ["@singularity/plugin-tasks-task-attachments@workspace:plugins/tasks/plugins/task-attachments"],
 

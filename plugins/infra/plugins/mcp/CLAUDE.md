@@ -9,8 +9,12 @@ fresh, stateless `McpServer`; the conversation id from the URL is the context
 Both factories return a `Registration` token that goes in the plugin's server
 `register: [...]` array. Duplicate names/ids throw at register time.
 
-- `Mcp.tool({ name, description, inputSchema, handler })` — a tool the agent
-  can call.
+- `Mcp.tool({ name, description, inputSchema, when?, handler })` — a tool the
+  agent can call. `when(ctx)` gates it per conversation: when false the tool is
+  not registered on that request's server, so it is absent from `tools/list`
+  and a call to it is an unknown-tool error (the handler never runs). It runs
+  on **every** MCP request (all gates in parallel), so keep it a cheap lookup;
+  a `when` that throws fails the request. Omitted: visible everywhere.
   Optional `liveDescription(ctx)` appends a LIVE section to the fixed
   `description` (after a blank line), rendered only for a `tools/list` request
   — i.e. the data as of when the client listed the tools, typically at connect.
@@ -54,6 +58,7 @@ client sees them at connect (Claude Code connects once per conversation).
     - `page/annotations/agent-access`
     - `plugin-meta/plugin-health`
     - `tasks`
+    - `tasks/outcome-report`
 - Server:
   - Exports (types):
     - `McpInstructions`

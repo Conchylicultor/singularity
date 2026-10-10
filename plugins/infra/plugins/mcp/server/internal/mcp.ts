@@ -25,6 +25,13 @@ export interface McpTool<T extends z.ZodRawShape = z.ZodRawShape> {
    */
   liveDescription?: (ctx: McpToolContext) => Promise<string | null>;
   inputSchema: T;
+  /**
+   * Whether this conversation sees the tool. Evaluated on every MCP request
+   * (keep it to a cheap lookup); when false the tool is neither listed in
+   * `tools/list` nor callable for that request. Omitted: always visible. A
+   * `when` that throws fails the request.
+   */
+  when?: (ctx: McpToolContext) => boolean | Promise<boolean>;
   handler: (
     args: z.objectOutputType<T, z.ZodTypeAny>,
     ctx: McpToolContext,

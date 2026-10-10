@@ -490,9 +490,9 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 60 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×26
-    - `tasks` ×12
+    - `tasks` ×14
     - `debug` ×6
     - `active-data` ×5
     - `page` ×3
@@ -515,6 +515,7 @@ serves them.
     - `tasks/task-effort` (table `tasks_ext_effort`)
     - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
     - `tasks/automations` (table `tasks_ext_origin`)
+    - `tasks/outcome-report` (table `tasks_ext_outcome_report`)
     - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
     - `page/prompt/link` (table `tasks_ext_prompt_block`)
     - `tasks/task-title` (table `tasks_ext_short_title`)

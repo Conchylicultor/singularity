@@ -106,17 +106,17 @@ tokens, so anything that imports the barrels back would cycle.
     - `Fields.Identity` ×25
   - Exports (values): `Fields`
 - Cross-plugin:
-  - Imported by: 66 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 68 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×47
     - `apps` ×7
     - `debug` ×3
     - `infra` ×3
+    - `tasks` ×3
     - `config_v2`
     - `conversations/summary`
     - `ids`
     - `plugin-meta/plugin-health`
     - `primitives/data-view`
-    - `tasks/tasks-core`
 - Core:
   - Exports (types):
     - `FieldDef`

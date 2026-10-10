@@ -18,12 +18,17 @@ import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/
 // trigger the conversations plugin registers. (There are no per-dep oneShot
 // triggers any more — the dependency graph lives solely in task_dependencies,
 // and the status event now covers every task an edit affected.)
+//
+// `prompt` is what the agent starts with (an automation's filled template),
+// stored ON the marker so whichever path claims it launches with it; absent ⇒
+// the task's own text, and any prompt an earlier arm stored is cleared.
 export async function armTaskAutoStart(args: {
   taskId: string;
   model: ModelChoice;
+  prompt?: string;
   cause: string;
 }): Promise<void> {
-  const { taskId, model, cause } = args;
-  await setTaskAutoStart(taskId, { model });
+  const { taskId, model, prompt, cause } = args;
+  await setTaskAutoStart(taskId, { model, prompt });
   await maybeLaunchTaskJob.enqueue({ taskId, cause });
 }

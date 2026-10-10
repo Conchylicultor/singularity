@@ -11,7 +11,11 @@ import {
   type AutomationSettings,
   type AutomationTrigger,
 } from "../../core";
-import { openAutomationTaskIds } from "./origin";
+import { getConfig } from "@plugins/config_v2/server";
+import {
+  occupiedSlotTaskIdsByAutomation,
+  openAutomationTaskIds,
+} from "./origin";
 import { registeredAutomations, type AutomationSpec } from "./registry";
 import { automationCron, automationSettings } from "./settings";
 import { tasksOrigin } from "./tables";
@@ -39,30 +43,44 @@ function triggerOf(
 }
 
 async function loadCatalog(): Promise<AutomationEntry[]> {
-  const open = await openAutomationTaskIds();
+  const [open, running] = await Promise.all([
+    openAutomationTaskIds(),
+    occupiedSlotTaskIdsByAutomation(),
+  ]);
   return registeredAutomations().map(({ spec, jobName }) => {
     const settings = automationSettings(spec);
-    return {
+    const common = {
       id: spec.id,
       label: spec.label,
       icon: spec.icon,
       description: spec.description,
-      categoryId: spec.categoryId,
       enabled: settings.enabled,
       trigger: triggerOf(spec, jobName, settings),
       sources: spec.sources?.() ?? [],
       promptVariables: [...spec.promptVariables, PUSH_POLICY_VARIABLE],
-      openTaskId: open.get(spec.id) ?? null,
     };
+    return spec.kind === "launch"
+      ? {
+          ...common,
+          kind: "launch" as const,
+          concurrency: getConfig(spec.config).concurrency,
+          runningTaskIds: running.get(spec.id) ?? [],
+        }
+      : {
+          ...common,
+          kind: "file" as const,
+          categoryId: spec.categoryId,
+          openTaskId: open.get(spec.id) ?? null,
+        };
   });
 }
 
 /**
  * The catalog, pushed. External: the declarations are process state, the
- * installed schedule moves when an automation's config changes, and the one
- * DB-derived field (`openTaskId`) moves only when an automation files a task
- * or one of its tasks changes status — each says so (`notify`). Bounded by the
- * declared set.
+ * installed schedule and the concurrency move when an automation's config
+ * changes, and the DB-derived fields (`openTaskId`, `runningTaskIds`) move only
+ * when an automation files, launches or releases a task or one of its tasks
+ * changes status — each says so (`notify`). Bounded by the declared set.
  */
 export const automationsCatalogServed = serveValue(automationsCatalog, {
   source: "external",

@@ -10,8 +10,11 @@ export type {
   AutomationTrigger,
 } from "./internal/entry";
 export {
+  AUTOMATION_KINDS,
   AutomationSettingsSchema,
+  ORIGIN_ROLES,
   ScheduleSettingsSchema,
+  SLOT_SETTLED_STATUSES,
   CADENCES,
   CADENCE_LABELS,
   PUSH_POLICIES,
@@ -24,8 +27,10 @@ export {
   labeledOptions,
 } from "./internal/settings";
 export type {
+  AutomationKind,
   AutomationSettings,
   Cadence,
+  OriginRole,
   PushPolicy,
   ScheduleSettings,
   TriggerKind,
@@ -35,11 +40,16 @@ export {
   AUTOMATIONS_CONFIG_PLUGIN_ID,
   automationModelField,
   defineAutomationConfig,
+  defineLaunchAutomationConfig,
+  isLaunchAutomationConfig,
+  MAX_LAUNCH_CONCURRENCY,
   readAutomationSettings,
 } from "./internal/config";
 export type {
   AutomationConfigDefaults,
   AutomationConfigFields,
+  LaunchAutomationConfigDefaults,
+  LaunchAutomationConfigFields,
 } from "./internal/config";
 export { cadenceCron, cadenceWords } from "./internal/cadence";
 export type { CadenceCron } from "./internal/cadence";

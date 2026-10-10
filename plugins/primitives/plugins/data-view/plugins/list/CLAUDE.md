@@ -174,8 +174,9 @@ conditional hook.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×22
+    - `primitives/css/spacing` ×2
     - `primitives/rank-reorder` ×2
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -184,9 +185,9 @@ conditional hook.
     - `primitives/css/inline.Inline`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
     - `primitives/tree.TreeRowChrome`
     - `primitives/virtual-rows.VirtualRows`

@@ -1,4 +1,4 @@
-// @hash 5f172f223ee4
+// @hash e9e64c0be1e8
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "tasks.reports-investigation:report-scope"
+    "tasks.reports-investigation:report-scope",
+    "tasks.sidequest-autopilot:run-until"
   ]
 }

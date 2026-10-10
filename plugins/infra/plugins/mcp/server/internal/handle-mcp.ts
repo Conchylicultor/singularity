@@ -38,7 +38,17 @@ export async function handleMcpRequest(
     { instructions },
   );
 
-  for (const tool of registry.values()) {
+  // Per-conversation visibility: a tool whose `when` says no is never
+  // registered on this request's server, so it is absent from tools/list and
+  // a call to it is an unknown-tool error. The gates run in parallel.
+  const ctx = { conversationId };
+  const tools = [...registry.values()];
+  const visible = await Promise.all(
+    tools.map(async (tool) => (tool.when ? tool.when(ctx) : true)),
+  );
+
+  for (const [i, tool] of tools.entries()) {
+    if (!visible[i]) continue;
     server.registerTool(
       tool.name,
       {
@@ -46,7 +56,7 @@ export async function handleMcpRequest(
         inputSchema: tool.inputSchema,
       },
       async (args: Record<string, unknown>) => {
-        const result = await tool.handler(args, { conversationId });
+        const result = await tool.handler(args, ctx);
         return result;
       },
     );

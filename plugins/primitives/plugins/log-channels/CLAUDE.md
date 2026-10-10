@@ -195,13 +195,14 @@ count accumulates across drops.
     - `getLogChannels`
     - `MAX_EMIT_LINES`
 - Cross-plugin:
-  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×12
     - `apps` ×9
     - `infra` ×8
     - `database` ×7
     - `conversations` ×3
     - `build` ×2
+    - `tasks` ×2
     - `backup`
     - `integrations/youtube/audio-fetch`
     - `network/live`
@@ -211,7 +212,6 @@ count accumulates across drops.
     - `reports/render-loop`
     - `shell/notifications`
     - `stats/cost`
-    - `tasks/automations`
     - `upstream`
 - Exemptions:
   - Exempts itself from: `durable-signals-accounted` — `server/internal/log.ts` (sanctioned)

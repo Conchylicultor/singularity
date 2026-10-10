@@ -1,4 +1,8 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
+import {
+  tasksView,
+  type TaskStatus,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { DEFAULT_TASK_TRACK, type TaskTrack } from "../../core";
 import { tasksTrack } from "./tables";
@@ -45,4 +49,43 @@ export async function listSidequestIds(
     .from(t)
     .where(and(inArray(t.taskId, [...taskIds]), eq(t.track, "sidequest")));
   return new Set(rows.map((r) => r.taskId));
+}
+
+/** A sidequest as `listSidequestTasks` reads it. */
+export interface SidequestTask {
+  id: string;
+  title: string;
+  description: string | null;
+  createdAt: Date;
+}
+
+/**
+ * The sidequests whose derived status is one of `statuses`, OLDEST first, at
+ * most `limit` — e.g. the ones ready to start (`new`: no attempt, and not
+ * held, dropped or blocked). One `tasks_v` read, bounded by `limit` whatever
+ * the backlog's size.
+ */
+export async function listSidequestTasks(opts: {
+  statuses: readonly TaskStatus[];
+  limit: number;
+}): Promise<SidequestTask[]> {
+  if (opts.statuses.length === 0) return [];
+  const t = tasksTrack.table;
+  return db
+    .select({
+      id: tasksView.id,
+      title: tasksView.title,
+      description: tasksView.description,
+      createdAt: tasksView.createdAt,
+    })
+    .from(t)
+    .innerJoin(tasksView, eq(tasksView.id, t.taskId))
+    .where(
+      and(
+        eq(t.track, "sidequest"),
+        inArray(tasksView.status, [...opts.statuses]),
+      ),
+    )
+    .orderBy(asc(tasksView.createdAt), asc(tasksView.id))
+    .limit(opts.limit);
 }

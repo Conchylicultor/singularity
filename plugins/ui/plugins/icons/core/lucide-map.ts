@@ -120,6 +120,8 @@ export const LUCIDE_MAP = {
   event: "calendar-check",
   "event-note": "calendar-days",
   "exit-to-app": "log-out",
+  "expand-less": "chevron-up",
+  "expand-more": "chevron-down",
   extension: "puzzle",
   face: "face-slightly-smiling",
   "fast-forward": "fast-forward",

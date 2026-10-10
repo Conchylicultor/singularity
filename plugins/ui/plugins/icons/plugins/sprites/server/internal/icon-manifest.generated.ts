@@ -111,6 +111,8 @@ export const ICON_MANIFEST: {
     "event",
     "event-note",
     "exit-to-app",
+    "expand-less",
+    "expand-more",
     "extension",
     "face",
     "feedback",

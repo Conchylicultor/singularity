@@ -9613,8 +9613,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 83 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×83
+    - Slot contributors: 84 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×84
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -9766,16 +9766,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 103 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 104 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×24
       - `debug` ×14
       - `backup` ×13
       - `conversations` ×12
       - `ui` ×11
       - `auth` ×5
+      - `tasks` ×4
       - `config_v2` ×3
       - `primitives` ×3
-      - `tasks` ×3
       - `apps-core` ×2
       - `infra` ×2
       - `stats` ×2
@@ -10753,6 +10753,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Conversation.AbovePromptInput` ← `conversations.conversation-view.op-status`
           - `Conversation.AbovePromptInput` ← `conversations.conversation-view.running-agents`
           - `Conversation.AbovePromptInput` ← `conversations.conversation-view.turn-summary`
+          - `Conversation.AbovePromptInput` ← `tasks.outcome-report`
           - `conversationPane.Actions` ← `conversations.agents`
           - `conversationPane.Actions` ← `conversations.conversation-preprompt`
           - `conversationPane.Actions` ← `conversations.conversation-progress`
@@ -10794,10 +10795,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usePromptComposer`
           - `useRegisterPromptComposer`
       - Cross-plugin:
-        - Imported by: 60 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+        - Imported by: 61 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
           - `conversations` ×50
           - `active-data` ×4
-          - `tasks` ×2
+          - `tasks` ×3
           - `debug/profiling/ops`
           - `primitives/launch`
           - `review`
@@ -12815,6 +12816,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/push-and-exit`
               - `conversations/conversation-view/status`
               - `conversations/conversations-view/data-view`
+              - `tasks/outcome-report`
           - Exemptions:
             - Exempts itself from: `turn-send-safety/no-adhoc-turn-send` — `web/internal/delivery.ts` (sanctioned)
             - Exempted by:
@@ -17091,17 +17093,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×25
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 66 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 68 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×47
       - `apps` ×7
       - `debug` ×3
       - `infra` ×3
+      - `tasks` ×3
       - `config_v2`
       - `conversations/summary`
       - `ids`
       - `plugin-meta/plugin-health`
       - `primitives/data-view`
-      - `tasks/tasks-core`
   - Core:
     - Exports (types):
       - `FieldDef`
@@ -17345,6 +17347,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/tags`
               - `plugin-meta/plugin-health`
               - `tasks/automations`
+              - `tasks/outcome-report`
               - `tasks/tasks-core`
         - **`data-view-codec`** — Date field type: data-view custom-column value codec (native Date ↔ canonical ISO text).
           - Web:
@@ -17872,6 +17875,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/events`
               - `page/tags`
               - `tasks/automations`
+              - `tasks/outcome-report`
               - `tasks/tasks-core`
         - **`storage`** — JSON field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so a jsonField<T>'s shape is derived rather than asserted.
           - Server:
@@ -18412,11 +18416,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 23 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 24 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×7
+              - `tasks` ×4
               - `debug` ×3
               - `infra` ×3
-              - `tasks` ×3
               - `fields` ×2
               - `plugin-meta` ×2
               - `apps-core/surface/floating/wallpaper`
@@ -21075,9 +21079,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 32 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×13
-          - `tasks` ×8
+          - `tasks` ×9
           - `conversations` ×6
           - `page` ×3
           - `plugin-meta/plugin-health`
@@ -21172,11 +21176,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
           - `apps` ×6
           - `conversations` ×6
+          - `tasks` ×5
           - `page` ×4
-          - `tasks` ×4
           - `infra` ×3
           - `build`
           - `improve`
@@ -21967,14 +21971,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 65 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 66 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×17
           - `conversations` ×13
           - `infra` ×11
           - `debug` ×9
+          - `tasks` ×4
           - `database` ×3
           - `page` ×3
-          - `tasks` ×3
           - `build`
           - `improve`
           - `integrations/youtube/audio-fetch`
@@ -22229,6 +22233,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/annotations/agent-access`
           - `plugin-meta/plugin-health`
           - `tasks`
+          - `tasks/outcome-report`
       - Server:
         - Exports (types):
           - `McpInstructions`
@@ -23893,10 +23898,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveValue`
           - `scopedLiveColumns`
       - Cross-plugin:
-        - Imported by: 178 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 179 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×51
           - `conversations` ×35
-          - `tasks` ×21
+          - `tasks` ×22
           - `active-data` ×11
           - `infra` ×10
           - `page` ×10
@@ -28211,14 +28216,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Badge`
               - `formatStatusLabel`
           - Cross-plugin:
-            - Imported by: 159 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 160 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×37
               - `debug` ×34
               - `conversations` ×23
               - `reports` ×11
               - `plugin-meta` ×8
               - `primitives` ×8
-              - `tasks` ×7
+              - `tasks` ×8
               - `build` ×5
               - `review` ×4
               - `fields` ×3
@@ -28262,7 +28267,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `CardProps`
             - Exports (values): `Card`
           - Cross-plugin:
-            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
+            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
               - `apps` ×12
               - `primitives` ×4
               - `conversations` ×3
@@ -28271,6 +28276,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/trace/contention`
               - `plugin-meta/exhibits`
               - `review/plugin-changes`
+              - `tasks/outcome-report`
         - **`center`** — Centering layout primitive: <Center axis> centers its content on one or both axes via a grid place-items box.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -28471,13 +28477,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useControlPanelHost`
               - `usePanelStack`
           - Cross-plugin:
-            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×11
               - `page` ×5
               - `primitives` ×4
+              - `tasks` ×3
               - `config_v2` ×2
               - `fields` ×2
-              - `tasks` ×2
               - `ui` ×2
               - `apps-core/surface`
               - `fullscreen`
@@ -28984,7 +28990,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 384 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 385 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×97
               - `conversations` ×61
               - `primitives` ×50
@@ -28993,8 +28999,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×24
               - `plugin-meta` ×15
               - `apps-core` ×10
+              - `tasks` ×10
               - `fields` ×9
-              - `tasks` ×9
               - `stats` ×6
               - `build` ×5
               - `auth` ×4
@@ -29174,7 +29180,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 356 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 357 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×94
               - `conversations` ×70
               - `primitives` ×40
@@ -29182,7 +29188,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×21
               - `plugin-meta` ×14
               - `ui` ×14
-              - `tasks` ×11
+              - `tasks` ×12
               - `fields` ×8
               - `apps-core` ×6
               - `stats` ×6
@@ -29425,15 +29431,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 391 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 393 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×101
               - `apps` ×74
               - `conversations` ×52
               - `page` ×25
               - `ui` ×23
               - `debug` ×22
+              - `tasks` ×15
               - `apps-core` ×13
-              - `tasks` ×13
               - `fields` ×12
               - `plugin-meta` ×8
               - `build` ×6
@@ -30100,8 +30106,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 37 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
               - `primitives/data-view` ×22
+              - `primitives/css/spacing` ×2
               - `primitives/rank-reorder` ×2
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
@@ -30110,9 +30117,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/inline.Inline`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
-              - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
+              - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.activationProps`
               - `primitives/tree.TreeRowChrome`
               - `primitives/virtual-rows.VirtualRows`
@@ -30659,7 +30666,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `ExpandableProps`
         - Exports (values): `Expandable`
       - Cross-plugin:
-        - Imported by: `conversations/conversation-view/jsonl-viewer/user-text`
+        - Imported by:
+          - `conversations/conversation-view/jsonl-viewer/user-text`
+          - `tasks/outcome-report`
     - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable buttons that fire onFileOpen. Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.
       - Web:
         - Uses:
@@ -30994,9 +31003,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
-        - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×42
-          - `primitives` ×18
+          - `primitives` ×19
           - `conversations` ×14
           - `page` ×7
           - `tasks` ×7
@@ -31285,11 +31294,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResourceContractMismatches`
           - `useResources`
       - Cross-plugin:
-        - Imported by: 197 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 199 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×51
           - `conversations` ×38
           - `ui` ×22
-          - `tasks` ×18
+          - `tasks` ×20
           - `page` ×12
           - `debug` ×10
           - `primitives` ×9
@@ -31358,13 +31367,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LoadingVariant`
         - Exports (values): `Loading`
       - Cross-plugin:
-        - Imported by: 177 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 179 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×59
           - `ui` ×19
           - `primitives` ×17
           - `conversations` ×16
           - `debug` ×14
-          - `tasks` ×10
+          - `tasks` ×12
           - `page` ×8
           - `build` ×4
           - `plugin-meta` ×4
@@ -31452,13 +31461,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getLogChannels`
           - `MAX_EMIT_LINES`
       - Cross-plugin:
-        - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `debug` ×12
           - `apps` ×9
           - `infra` ×8
           - `database` ×7
           - `conversations` ×3
           - `build` ×2
+          - `tasks` ×2
           - `backup`
           - `integrations/youtube/audio-fetch`
           - `network/live`
@@ -31468,7 +31478,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports/render-loop`
           - `shell/notifications`
           - `stats/cost`
-          - `tasks/automations`
           - `upstream`
       - Exemptions:
         - Exempts itself from: `durable-signals-accounted` — `server/internal/log.ts` (sanctioned)
@@ -31504,6 +31513,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/markdown-extensions`
           - `debug/memory`
           - `primitives/file-viewer/markdown`
+          - `tasks/outcome-report`
     - **`metrics`** — Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails (live reads of the served metrics values — the details one a live chain of cursor pages — so a change the metric's source announces refetches what is on screen, without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig). Metrics engine: the MetricsServer.Source contribution (a source's metrics and breakdowns bound to their evaluators), the served metrics.catalog / metrics.query / metrics.details live values evaluating any of them through the one tz-aware bucketing engine — each query and drill-down page watching its source's `changes` through one refcounted subscription per source — and the sqlFlow / sqlLevel helpers joining a table against the engine's intervals.
       - Server:
         - Contributes:
@@ -32762,13 +32772,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 60 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×23
           - `debug` ×11
           - `conversations` ×9
+          - `tasks` ×4
           - `build` ×3
           - `infra` ×3
-          - `tasks` ×3
           - `active-data/commit-link`
           - `fields/date/table`
           - `history/dialog`
@@ -34059,8 +34069,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 233 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×233
+    - Contributes: 234 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×234
     - Uses: 21 symbols — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `reorder/editor` ×5
       - `config_v2` ×3
@@ -34085,8 +34095,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 232 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×232
+    - Contributes: 233 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×233
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -35369,9 +35379,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `NotificationId`
         - Exports (values): `notificationIdKind`
       - Cross-plugin:
-        - Imported by: 34 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Imported by: 35 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×15
-          - `tasks` ×5
+          - `tasks` ×6
           - `apps` ×2
           - `build` ×2
           - `debug` ×2
@@ -35936,6 +35946,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/drop-and-exit`
+          - `tasks/outcome-report`
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
       - Web:
         - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
@@ -35979,6 +35990,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations`
           - `tasks`
           - `tasks/auto-start/launch-option`
+          - `tasks/automations`
       - Plugins:
         - **`launch-option`** — Auto-start model picker as a launch option: the same controlled select on the task detail's Prompt card (bound to the task's row) and on the task-draft popover (bound to the draft card). Applies a drafted auto-start model to a newly created task: arms the launch (enqueuing immediately when nothing blocks it), only records the model when the host starts the task inline itself, or clears the marker when the draft says Off.
           - Web:
@@ -36006,17 +36018,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/model-provider.ModelChoiceSchema`
               - `tasks/launch-options.defineLaunchOption`
             - Exports (values): `autoStartLaunchOption`
-    - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default; and the History of the tasks it filed), the `origin` Automation field in every task DataView, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own, and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value and the automations.tasks collection (the origin side-table), and notifies the bell when an automated task needs its person.
+    - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the `origin` Automation field in every task DataView, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, concurrency slots held until a task settles or releaseLaunchedTask), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value and the automations.tasks collection (the origin side-table), and notifies the bell when an automated task needs its person.
       - Web:
         - Slots:
           - `Automations.Config`
           - `Automations.Section`
+          - `Automations.TaskDetail`
           - `automations.actions`
           - `automation-detail.actions`
         - Slot contributors:
           - `Automations.Config` ← `infra.deps.updates`
           - `Automations.Config` ← `tasks.reports-investigation`
+          - `Automations.Config` ← `tasks.sidequest-autopilot`
           - `Automations.Section` ← `tasks.reports-investigation`
+          - `Automations.Section` ← `tasks.sidequest-autopilot`
+          - `Automations.TaskDetail` ← `tasks.outcome-report`
           - `automations.actions` ← `primitives.pane`
           - `automation-detail.actions` ← `primitives.pane`
         - Contributes:
@@ -36065,7 +36081,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "automations.tasks:groups"
           - `resource.declare` "automations.tasks:rows"
           - `trigger` "automations.task-status"
-        - Uses: 21 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
+        - Uses: 22 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
           - `tasks/tasks-core` ×5
           - `config_v2` ×3
           - `database` ×2
@@ -36076,6 +36092,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/warmup.defineWarmup`
           - `primitives/log-channels.Log`
           - `shell/notifications.recordNotification`
+          - `tasks/auto-start.listArmedTaskIds`
           - `tasks/task-category.setTaskCategory`
           - `tasks.armTaskAutoStart`
         - DB schema: `plugins/tasks/plugins/automations/server/internal/tables.ts`
@@ -36084,10 +36101,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Automation`
           - `AutomationDetectCtx`
           - `AutomationFiling`
+          - `AutomationLaunchCtx`
           - `AutomationSpec`
+          - `FileAutomationSpec`
+          - `LaunchAutomationSpec`
+          - `LaunchCandidate`
         - Exports (values):
           - `automationConfigRegistration`
+          - `automationOfTask`
           - `defineAutomation`
+          - `releaseLaunchedTask`
         - Register: `defineJob('automations.task-status')`
         - Resources:
           - `automations.catalog` (push)
@@ -36095,12 +36118,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `automations.tasks:groups` (push)
           - `automations.tasks:rows` (keyed, point)
       - Core:
-        - Uses:
-          - `config_v2.ConfigValues`
-          - `config_v2.defineConfig`
-          - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
-          - `conversations/model-provider.ModelChoiceSchema`
-          - `conversations/model-provider.normalizeModelChoice`
+        - Uses: 23 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
+          - `config_v2` ×3
+          - `conversations/model-provider` ×3
+          - `fields/text/config` ×2
+          - `network/live` ×2
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
           - `fields/dynamic-enum/config.dynamicEnumField`
@@ -36109,23 +36131,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/json/config.jsonField`
           - `fields/multiline-text/config.multilineTextField`
           - `fields/string-list/config.stringListField`
-          - `fields/text/config.textField`
+          - `fields.nullable`
           - `framework/plugin-id.asPluginId`
           - `infra/entity-extensions.defineExtensionShape`
-          - `network/live.liveCollection`
-          - `network/live.liveValue`
           - `network/live/filter.liveText`
           - `primitives/pane.defineRoute`
         - Exports (types):
           - `AutomationConfigDefaults`
           - `AutomationConfigFields`
           - `AutomationEntry`
+          - `AutomationKind`
           - `AutomationSettings`
           - `AutomationSource`
           - `AutomationTaskRow`
           - `AutomationTrigger`
           - `Cadence`
           - `CadenceCron`
+          - `LaunchAutomationConfigDefaults`
+          - `LaunchAutomationConfigFields`
+          - `OriginRole`
           - `PromptVariable`
           - `PushPolicy`
           - `RenderedPrompt`
@@ -36133,6 +36157,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerKind`
           - `Weekday`
         - Exports (values):
+          - `AUTOMATION_KINDS`
           - `automationDetailRoute`
           - `AutomationEntrySchema`
           - `automationModelField`
@@ -36149,7 +36174,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CADENCES`
           - `cadenceWords`
           - `defineAutomationConfig`
+          - `defineLaunchAutomationConfig`
+          - `isLaunchAutomationConfig`
           - `labeledOptions`
+          - `MAX_LAUNCH_CONCURRENCY`
+          - `ORIGIN_ROLES`
           - `PromptVariableSchema`
           - `PUSH_POLICIES`
           - `PUSH_POLICY_LABELS`
@@ -36159,6 +36188,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `renderPrompt`
           - `ScheduleSettingsSchema`
           - `SETTLE_MAX_WAIT_FACTOR`
+          - `SLOT_SETTLED_STATUSES`
           - `taskOriginShape`
           - `templateVariables`
           - `TRIGGER_KIND_LABELS`
@@ -36169,7 +36199,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `infra/deps/updates`
+          - `tasks/outcome-report`
           - `tasks/reports-investigation`
+          - `tasks/sidequest-autopilot`
     - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
       - Web:
         - Slots: `TaskLaunch.Option`
@@ -36225,6 +36257,65 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `LaunchOptionDef`
         - Exports (values): `defineLaunchOption`
+    - **`outcome-report`** — The outcome report an automated task's agent submitted: a card above the prompt input of the conversation that wrote it (markdown body, pushed / branch-waiting / no-changes standing, and its question as one-click answers sent as the next turn), and OutcomeReportDetail — the same report read-only, shown in an expanded row of an automation's History (Automations.TaskDetail). Outcome reports for automated tasks: the submit_outcome_report MCP tool (visible only to conversations whose task an automation filed or launched) stores one report per task in tasks_ext_outcome_report — markdown body, the attempt's git-measured standing, an optional question with one-click answers — releases the task's automation slot, and rings the bell when a question waits. Serves the outcome-reports lookup collection.
+      - Web:
+        - Contributes:
+          - `Conversation.AbovePromptInput` → `OutcomeReportCard`
+          - `Automations.TaskDetail` → `OutcomeReportDetail`
+        - Uses:
+          - `conversations/conversation-view.Conversation`
+          - `conversations/conversation-view/pending-turn.sendConversationTurn`
+          - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
+          - `network/live.useLiveRow`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/badge.BadgeVariant`
+          - `primitives/css/card.Card`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/expandable.Expandable`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
+          - `primitives/markdown.Markdown`
+          - `primitives/relative-time.RelativeTime`
+          - `tasks/automations.Automations`
+        - Exports (values): `OutcomeReportDetail`
+      - Server:
+        - Contributes: `resource.declare` "outcome-reports:rows"
+        - Uses:
+          - `infra/entity-extensions.defineExtension`
+          - `infra/mcp.Mcp`
+          - `infra/mcp.McpToolContext`
+          - `network/live.serveCollection`
+          - `shell/notifications.recordNotification`
+          - `tasks/attempt-work.getAttemptWork`
+          - `tasks/automations.automationOfTask`
+          - `tasks/automations.releaseLaunchedTask`
+          - `tasks/tasks-core._tasks`
+          - `tasks/tasks-core.getConversation`
+        - DB schema: `plugins/tasks/plugins/outcome-report/server/internal/tables.ts`
+        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_outcome_report`)
+        - Register:
+          - `mcpTool('submit_outcome_report')`
+          - `mcpInstructions('outcome-report')`
+        - Resources: `outcome-reports:rows` (keyed, point)
+      - Core:
+        - Uses:
+          - `fields.nullable`
+          - `fields/date/config.dateField`
+          - `fields/json/config.jsonField`
+          - `fields/text/config.enumTextField`
+          - `fields/text/config.textField`
+          - `infra/entity-extensions.defineExtensionShape`
+          - `network/live.liveCollection`
+        - Exports (types):
+          - `OutcomeReport`
+          - `ReportStanding`
+        - Exports (values):
+          - `outcomeReportRows`
+          - `OutcomeReportSchema`
+          - `outcomeReportShape`
+          - `REPORT_STANDINGS`
     - **`reports-investigation`** — The Report investigations automation in the Automations pane: registers its config (trigger, push policy, model, prompt, scope) and contributes its Which reports section — severity, recurrence threshold, kind by kind with the uninvestigated reports that match right now. Files reports' investigation tasks: owns the Reports task category, registers the task-creating handler into reports' investigation sink (Investigate), and declares the Report investigations automation (off by default) — woken when a report nobody investigated is recorded (once the burst settles) or on a schedule, it files ONE task for the batch of in-scope reports (severity, recurrence, kind), links them to it, and launches an agent to find and fix the root cause.
       - Web:
         - Contributes:
@@ -36267,6 +36358,41 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes: `GET /api/report-investigations/scope`
       - Exemptions:
         - Exempts itself from: `live/no-endpoint-read` — `web/components/report-scope-section.tsx` (debt)
+    - **`sidequest-autopilot`** — The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, push policy, model, prompt) and contributes its Run until section — until you turn it off, or until a date and time after which it turns itself off. Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on ready sidequests (no attempt, not held, dropped or blocked), oldest first, `concurrency` at a time (default 2), each with the autopilot prompt — never ask, check obsolescence first, stay in scope, push only what the push policy allows, finish with submit_outcome_report — and the next starts when one reports or settles. Woken when a task becomes ready; turns itself off at its `runUntil`.
+      - Web:
+        - Contributes:
+          - `ConfigV2.WebRegister` "sidequest-autopilot"
+          - `Automations.Config` "sidequest-autopilot"
+          - `Automations.Section` "sidequest-autopilot" → `RunUntilSection`
+        - Uses:
+          - `config_v2.useConfigResult`
+          - `config_v2.useSetConfig`
+          - `primitives/css/control-panel.ControlPanel`
+          - `primitives/css/control-panel.ControlPanelPane`
+          - `primitives/css/ui-kit.Input`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
+          - `tasks/automations.automationConfigContributions`
+          - `tasks/automations.Automations`
+      - Server:
+        - Contributes:
+          - `ConfigV2.Register` "sidequest-autopilot"
+          - `trigger` "sidequest-autopilot.task-ready"
+        - Uses:
+          - `config_v2.getConfig`
+          - `config_v2.setConfig`
+          - `config_v2.watchConfig`
+          - `infra/events.Trigger`
+          - `infra/jobs.defineJob`
+          - `primitives/log-channels.Log`
+          - `tasks/automations.automationConfigRegistration`
+          - `tasks/automations.defineAutomation`
+          - `tasks/task-track.listSidequestTasks`
+          - `tasks/tasks-core.taskStatusChanged`
+        - Register:
+          - `defineAutomation('sidequest-autopilot')`
+          - `defineJob('sidequest-autopilot.task-ready')`
+          - `defineJob('sidequest-autopilot.run-until')`
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Attachments" → `TaskAttachments`
@@ -36905,11 +37031,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entity-extensions.defineExtension`
           - `network/live.serveCollection`
           - `tasks/tasks-core._tasks`
+          - `tasks/tasks-core.TaskStatus`
+          - `tasks/tasks-core.tasksView`
         - DB schema: `plugins/tasks/plugins/task-track/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_track`)
+        - Exports (types): `SidequestTask`
         - Exports (values):
           - `getTaskTrack`
           - `listSidequestIds`
+          - `listSidequestTasks`
           - `setTaskTrack`
         - Resources:
           - `task-tracks` (keyed, window)
@@ -36932,6 +37062,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/conversation-view/track`
           - `tasks`
+          - `tasks/sidequest-autopilot`
           - `tasks/task-header`
     - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Web:
@@ -37166,9 +37297,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatusSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 60 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 62 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×26
-          - `tasks` ×12
+          - `tasks` ×14
           - `debug` ×6
           - `active-data` ×5
           - `page` ×3
@@ -37191,6 +37322,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-effort` (table `tasks_ext_effort`)
           - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
           - `tasks/automations` (table `tasks_ext_origin`)
+          - `tasks/outcome-report` (table `tasks_ext_outcome_report`)
           - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
           - `page/prompt/link` (table `tasks_ext_prompt_block`)
           - `tasks/task-title` (table `tasks_ext_short_title`)

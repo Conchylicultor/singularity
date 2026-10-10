@@ -199,3 +199,73 @@ describe("Mcp.tool liveDescription", () => {
     expect(liveRenders).toBe(1);
   });
 });
+
+describe("Mcp.tool when", () => {
+  let gated: McpToolContext[] = [];
+
+  function gate(name: string, visible: boolean | Promise<boolean>): void {
+    void Mcp.tool({
+      name,
+      description: name,
+      inputSchema: {},
+      when: (ctx) => {
+        gated.push(ctx);
+        return visible;
+      },
+      handler: () => ({ content: [{ type: "text", text: name }] }),
+    }).register();
+  }
+
+  async function listed(): Promise<string[]> {
+    const res = await post({ jsonrpc: "2.0", id: 4, method: "tools/list" });
+    const json = (await res.json()) as {
+      result: { tools: Array<{ name: string }> };
+    };
+    return json.result.tools.map((t) => t.name);
+  }
+
+  async function call(name: string): Promise<unknown> {
+    const res = await post({
+      jsonrpc: "2.0",
+      id: 5,
+      method: "tools/call",
+      params: { name, arguments: {} },
+    });
+    return res.json();
+  }
+
+  beforeEach(() => {
+    gated = [];
+  });
+
+  test("a tool whose when is false is not listed", async () => {
+    gate("shown", true);
+    gate("shown-async", Promise.resolve(true));
+    gate("hidden", false);
+    expect((await listed()).sort()).toEqual(["echo", "shown", "shown-async"]);
+    expect(gated).toContainEqual({ conversationId: CONVERSATION });
+  });
+
+  test("a tool whose when is false is refused on call", async () => {
+    gate("hidden", Promise.resolve(false));
+    const json = (await call("hidden")) as {
+      result?: { isError?: boolean; content: Array<{ text: string }> };
+      error?: { message: string };
+    };
+    // The SDK answers an unknown tool with either a JSON-RPC error or an
+    // isError result depending on version; either way, the handler never ran.
+    const refused =
+      json.error !== undefined ||
+      (json.result?.isError === true &&
+        json.result.content[0]?.text !== "hidden");
+    expect(refused).toBe(true);
+  });
+
+  test("a visible gated tool is callable", async () => {
+    gate("shown", true);
+    const json = (await call("shown")) as {
+      result: { content: Array<{ text: string }> };
+    };
+    expect(json.result.content[0]?.text).toBe("shown");
+  });
+});

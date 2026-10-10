@@ -19,9 +19,13 @@ export async function listArmedTaskIds(): Promise<string[]> {
   return rows.map((r) => r.taskId);
 }
 
+// Arm (or, with `null`, disarm) a task. An arm REPLACES the whole marker:
+// `prompt` absent stores `null`, so a re-arm that names no prompt (the user
+// picking a model, re-launching from the UI) launches with the task's own text
+// and never inherits a prompt an automation wrote for an earlier arm.
 export async function setTaskAutoStart(
   id: string,
-  autoStart: { model: ModelChoice } | null,
+  autoStart: { model: ModelChoice; prompt?: string } | null,
 ): Promise<boolean> {
   const [task] = await db
     .select({ id: _tasks.id })
@@ -34,6 +38,7 @@ export async function setTaskAutoStart(
     await tasksAutoStart.upsert(id, {
       autoStartAt: now,
       autoStartModel: autoStart.model,
+      autoStartPrompt: autoStart.prompt ?? null,
     });
   } else {
     await tasksAutoStart.delete(id);
