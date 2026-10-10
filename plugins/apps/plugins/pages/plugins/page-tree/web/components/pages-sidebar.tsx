@@ -236,6 +236,18 @@ export function PagesSidebar() {
                 );
               },
             },
+            {
+              // When the page was last edited — the page row's `updatedAt`,
+              // the same "recent" the Welcome page's Recent pages reads (a
+              // derived timestamp that ignores icon changes and doc-rank
+              // re-mints). A sort/filter dimension only: the Recent section
+              // orders and windows on it, and `visibleFields` keeps it off
+              // every row.
+              id: "updatedAt",
+              label: "Edited",
+              type: "date",
+              value: (b) => b.updatedAt,
+            },
           ]}
           rowKey={(b) => b.id}
           views={["tree", "list"]}

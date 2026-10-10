@@ -81,6 +81,44 @@
       }
     },
     {
+      // The pages edited in the past week, most recent first: a flat `list`
+      // (a page on its own, never with its ancestors) sorted on the `updatedAt`
+      // field — the page row's derived edit time, which the Welcome page's
+      // Recent pages also reads. A sort overrides the view's manual row order,
+      // so this section is never drag-arranged. Scratch pages stay out (they
+      // have their own section and expire in 24h). `hideWhenEmpty`: nothing
+      // edited this week → no header.
+      "id": "recent",
+      "name": "Recent",
+      "view": {
+        "type": "list",
+        "visibleFields": ["title"],
+        "hideWhenEmpty": true,
+        "sort": [{ "fieldId": "updatedAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "recent",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "recent-edited",
+              "fieldId": "updatedAt",
+              "operatorId": "is-within-past",
+              "value": { "amount": 7, "unit": "day" }
+            },
+            {
+              "kind": "rule",
+              "id": "recent-origin",
+              "fieldId": "origin",
+              "operatorId": "is",
+              "value": "user"
+            }
+          ]
+        }
+      }
+    },
+    {
       "id": "scratch",
       "name": "Scratch",
       "icon": "edit-note",

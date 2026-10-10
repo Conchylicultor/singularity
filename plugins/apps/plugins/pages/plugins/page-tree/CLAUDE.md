@@ -81,9 +81,12 @@ a flat `list` view, so that is the normal non-tree case, not a failure.
 (`toolbar={{ kind: "sections" }}`): every view instance authored in
 `config/apps/pages/page-tree/pages-sidebar.jsonc` is on screen at once, stacked
 under its own collapsible header — **Favorites** (a `list` of starred pages),
-**Private** (the tree, `origin is user`) and **Scratch** (the tree, `origin is
-agent`). Private and Scratch split the tree with `filterScope: "roots"`, so a
-subtree stays whole in one of them; Favorites and Scratch are `hideWhenEmpty`.
+**Private** (the tree, `origin is user`), **Recent** (a `list` of the user's
+pages edited in the past week, sorted on the `updatedAt` field the sidebar
+declares — the same page-row edit time the Welcome page's Recent pages reads)
+and **Scratch** (the tree, `origin is agent`). Private and Scratch split the
+tree with `filterScope: "roots"`, so a subtree stays whole in one of them;
+Favorites, Recent and Scratch are `hideWhenEmpty`.
 The main tree keeps the view id `pages` (its saved row order is keyed by it).
 The one `new-page` creator names `views: ["pages"]`, so only Private's header
 offers `+`. The sidebar's footer rows are separate `Pages.Sidebar` items —
