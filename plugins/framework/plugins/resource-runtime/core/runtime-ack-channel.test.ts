@@ -427,6 +427,7 @@ describe("standalone ack frames — no-value-change recomputes", () => {
             members()
               .slice(0, 2)
               .map((r) => r.id),
+          limitOf: () => 2,
         },
         loader: (_p, c) =>
           c

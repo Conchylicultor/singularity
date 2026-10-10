@@ -78,22 +78,86 @@ live-state already sits downstream of endpoints (via log-channels).
 
 ## A varying list of tuples — `useResources`
 
-`useResources(resource, paramsList)` reads a list of tuples of ONE resource
-whose length changes over time (network/live's segmented scroll: one window per
-segment), which a hook call per tuple cannot express. Each tuple is read exactly
+`useResources(resource, paramsList, options?)` reads a list of tuples of ONE
+resource whose length changes over time (network/live's paged read: one window
+per live page), which a hook call per tuple cannot express. Each tuple is read exactly
 as `useResource` reads it — one shared `tupleQueryOptions` builds the query (key,
 HTTP fallback, enabled rule, GC rule), the same `observe` / `unobserve`
 refcount (a tuple another component also reads is subscribed once), the same
 cold-start prime, the same pending-mount count until its first value, the same
 once-per-tuple mount→settle report (one shared `reportTupleSettled` feeds
-`slowResourceReportSink`, so a segment's slow read reaches Debug → Slow Ops) —
+`slowResourceReportSink`, so a page's slow read reaches Debug → Slow Ops) —
 and yields the same `ResourceResult` states, in list order. No `select`, no
 `gate`. What is not shared is only the effect shape: one tuple per hook against
 a list moved by diff.
 The subscription set moves by DIFF: a tuple kept across a list change is never
 unobserved and re-observed (its socket subscription would lapse), and a removed
-tuple is released after the new ones are observed. Pinned by
-`web/__tests__/use-resources.test.tsx`.
+tuple is released after the new ones are observed.
+
+- **`{ release: "now" }`** — a tuple dropped from the list while the hook stays
+  mounted is unsubscribed at once (`unobserve(…, "now")`: the WS `unsub` goes
+  out on the 1→0 transition, no keep-alive window), for a reader that drops a
+  tuple on purpose and will not remount it (a paged read's page leaving its
+  band). The tuple's cached value goes with it (`removeQueries`): nothing keeps
+  it current any more, so observing it again reads `loading` until the server
+  vouches for a value — never the old one as `ready`. Unmounting the hook
+  still releases through the keep-alive, so a remount (StrictMode included)
+  reuses the live subs.
+- **`appliedSeq`** — each result is a `ResourceTupleResult` (`ResourceResult &
+  { appliedSeq }`): where the tuple's value was last written on the client-wide
+  apply sequence (`NotificationsClient.appliedSeq(key, params)`, bumped in
+  `markApplied` on every WS or HTTP apply). Of two tuples, the higher holds the
+  more recently applied value — what a paged read's dedup keeps a row by when
+  two pages hold it. `0`: nothing applied through this tab's sub yet (a
+  boot-hydrated value included).
+- **`{ derive }`** — per tuple of the list (`ResourceDerivation | null`, same
+  order): how to SEED a tuple from rows this tab already holds when it enters
+  the list — a paged read's split or merge, whose new page is a slice of the
+  pages it replaces. Read on a fresh sub only (`observe`'s 0→1), never on a
+  refcount bump, a replay or a forced resub. See *Seeded derivation* below.
+
+Pinned by `web/__tests__/use-resources.test.tsx` and, for the client half,
+`web/__tests__/notifications-subs.test.ts` (*release now*, *appliedSeq*).
+
+## Seeded derivation — a sub answered from rows this tab holds
+
+`observe(key, params, origin, schema, keyOf, derive?)` with a
+`ResourceDerivation` (`{ from: [{ params, appliedSeq, after, until }] }`, at
+most two sources) cuts, from each source tuple's cached rows, the slice after
+the row `after` (exclusive; `null` = its first) through the row `until`
+(inclusive; `null` = its last), by `keyOf`, and sends the sub with `derive: {
+id, from: [{ params, version, after, until }] }` — `id` minted per derivation
+(`crypto.randomUUID()`, so a duplicated tab asking the same slices tells its
+answers apart). The resource runtime's half: `resource-runtime/CLAUDE.md`,
+*Seeded derivation*. The caller vouches that those slices ARE the new tuple's
+value (its params name exactly their range); the server checks they are the
+same query, current and complete.
+
+- **Only from a value that stands as decided.** Each source must be a sub of
+  this tab whose `appliedSeq` is still the one the caller read beside the rows it
+  decided on, and whose cached value the socket built (`ActiveSub.socketValue`:
+  sub-ack / update / delta / derived ack applied in order — so it IS the
+  server's snapshot at `version`; an HTTP body clears it). Otherwise (or a bound
+  naming no row, or more than two sources) the sub goes out plain — traced
+  `derive skipped … reason=…`.
+- **The derived `sub-ack`** carries no value and echoes the derivation's `id`.
+  The tab adopts its held slice (the same row objects, no re-parse, no
+  watermark) at the ack's version only when that id is its own in-flight
+  derivation's; any other tab holding the tuple — a plain sub, or another
+  derivation, on the shared socket — drops it (`not-our-derivation`) without
+  adopting the version, and its own answer still applies. Matching on the id
+  alone, never on the sources as the server spells them back, so the asking
+  tab cannot drop its own answer.
+- **The fallback** is an ordinary value-carrying `sub-ack`; it clears the
+  derivation. So do a `sub-error`, a replay and a forced resub (each asks for a
+  full value): a derived ack arriving after one of them is dropped.
+- **Only tabs that read it share its socket.** A bundle that predates derived
+  acks would parse one's missing value and adopt its version, wedging its read.
+  The client's socket names its dialect — this module's own content-addressed
+  URL (`SOCKET_DIALECT`, `SharedWebSocketOptions.dialect`) — so a tab left
+  open across a deploy keeps a socket of its own and never sees one.
+
+Pinned by `web/__tests__/notifications-derive.test.ts`.
 
 ## Hazard tests (H1–H7) — the executable correctness argument
 
@@ -541,6 +605,9 @@ the sub. Without it, a transient unmount→remount churns an unsub→resub
 round-trip on the wire. This is a one-shot deferred-cleanup timer, **not a
 polling loop** (it mirrors React Query's own `setTimeout`-based gc).
 
+The one bypass is `unobserve(…, "now")` (`useResources`' `release: "now"`): a
+reader that drops a tuple on purpose tears its sub down on the spot.
+
 The consequence: transient observer churn — e.g. a reorderable slot rendered
 **per row** in a streaming/virtualized list — reuses the one live sub instead of
 flapping it. This is why a per-row `useLive` of a **row-invariant** value no
@@ -900,6 +967,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `PointResourceDescriptor`
     - `QueryResourceOptions`
     - `ResourceContractMismatch`
+    - `ResourceDerivation`
     - `ResourceDescriptor`
     - `ResourceErrorInfo`
     - `ResourceErrorInlineProps`
@@ -910,6 +978,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `ResourceReadiness`
     - `ResourceResult`
     - `ResourceStatus`
+    - `ResourceTupleResult`
     - `ResourceViewProps`
     - `SlowResourceInfo`
     - `TransportInfo`

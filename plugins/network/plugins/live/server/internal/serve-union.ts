@@ -502,6 +502,7 @@ export function compileUnion<
           ...(until !== undefined ? { until } : {}),
         };
       },
+      familyOf: codec.familyOf,
       validateParams: (params) => {
         codec.decode(params as LiveWindowParams, handles);
       },

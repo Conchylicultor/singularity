@@ -43,10 +43,10 @@ that test is the guard, keep it green.
 `scroll: true` over `MailThreadSchema` — H 100, M 500, default order
 `lastMessageAt desc` — served by `serveCollection(mailThreads, { from:
 _mailThreads })` (`server/internal/collection.ts`): one table, identity routes
-only. The DataView reads it as a segmented scroll through `mailThreadsSource`
+only. The DataView reads it as live key-range pages through `mailThreadsSource`
 (`web/internal/source.ts`, `liveDataSource(…, { searchable: ["subject",
 "snippet"] })`), so a thread write (sync marking it read, a new message)
-refills exactly that thread in the segments that hold or now admit it — no
+refills exactly that thread in the live pages that hold or now admit it — no
 revision tick, no refetch of the loaded pages.
 
 - **The account is a scope, stated as data.** The pane reads mail-core's
@@ -110,7 +110,7 @@ It must **never** be imported by the mail `shell` (that would cycle) — the
 
 ## Plugin reference
 
-- Description: The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter — read as a live segmented scroll of the `mail.threads` collection, scoped to the connected account. Threads DataView server: serves the `mail.threads` live collection over mail_threads — the active tab's whole filter (mailbox scope included) and the pane's account scope compile into each window tuple, and the routed change feed refills exactly the threads a write touches.
+- Description: The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter — read as live key-range pages of the `mail.threads` collection, scoped to the connected account. Threads DataView server: serves the `mail.threads` live collection over mail_threads — the active tab's whole filter (mailbox scope included) and the pane's account scope compile into each window tuple, and the routed change feed refills exactly the threads a write touches.
 - Web:
   - Slots: `mailThreadsPane.Actions`
   - Slot contributors: `mailThreadsPane.Actions` ← `primitives.pane`

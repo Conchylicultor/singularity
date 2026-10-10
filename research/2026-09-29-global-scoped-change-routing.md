@@ -679,6 +679,8 @@ collection read) is therefore not added either.
 
 #### Infinite scroll and paging past `maxLimit`: the segmented scroll (decision)
 
+> **Superseded (2026-10-09):** the segmented scroll (`useLiveScroll`, `shared/scroll-plan.ts`, every loaded segment live, the 16-segment cap) is replaced by live key-range pages (`useLiveCollectionPages`, `shared/page-plan.ts`) whose liveness follows the viewport — see `research/2026-10-09-global-live-key-range-pages-v2.md`.
+
 A window grows only to `maxLimit`, and that bound is what keeps each tuple's `windowIdsOf` and sub-ack at
 O(window). A deep scroll is therefore **several windows, each ≤ `maxLimit`, that partition the order by
 cuts**, and **every loaded segment stays live**.

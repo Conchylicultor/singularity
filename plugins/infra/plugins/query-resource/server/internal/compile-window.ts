@@ -107,6 +107,8 @@ interface WindowOuter<P extends ResourceParams> extends AssembleOuter {
   key: string;
   /** The subscription's decoded limit, clamped to `maxLimit`. */
   limitOf: (params: P) => number;
+  /** A scroll window's page family (`scroll.familyOf`): stated, a page may be derived. */
+  familyOf?: (params: P) => string;
   /** How a projected field is read off an encoded row (the order signature). */
   readField: (row: Record<string, unknown>, field: string) => unknown;
   validateParams?: (params: ResourceParams) => void;
@@ -228,10 +230,15 @@ export function assembleWindow<Row, P extends ResourceParams>(
     return rows.map((r) => String(r[arm.keyField]));
   };
 
+  // `limitOf` — the same clamped limit — and a scroll window's `familyOf`
+  // let the runtime derive a fresh tuple from rows other tuples of the same
+  // query hold (a paged read's split or merge).
   const membership: KeyedMembership<P> = {
     kind: "window",
     windowIdsOf,
     orderSignatureOf,
+    limitOf: outer.limitOf,
+    ...(outer.familyOf !== undefined ? { familyOf: outer.familyOf } : {}),
   };
   const scopePolicy: ScopePolicy<P> = scopePolicyOf(arm, membership);
 
@@ -444,6 +451,7 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
   return assembleWindow<Row, P>([arm], {
     key,
     limitOf: (params) => Math.min(decodeLimit(params), maxLimit),
+    ...(spec.scroll !== undefined ? { familyOf: spec.scroll.familyOf } : {}),
     readField:
       spec.readField ??
       ((row: Record<string, unknown>, field: string): unknown => row[field]),

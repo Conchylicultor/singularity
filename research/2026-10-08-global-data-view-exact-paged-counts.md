@@ -1,5 +1,7 @@
 # DataView: exact section counts over paged reads
 
+> **Superseded (2026-10-09):** the segmented scroll (`useLiveScroll`, `shared/scroll-plan.ts`, every loaded segment live, the 16-segment cap) is replaced by live key-range pages (`useLiveCollectionPages`, `shared/page-plan.ts`) whose liveness follows the viewport — see `research/2026-10-09-global-live-key-range-pages-v2.md`. Where this doc reads a scroll or its segments, read the paged read and its pages.
+
 ## Context
 
 Since `7535e62b2d`, a DataView over a paged read shows a section count as a lower

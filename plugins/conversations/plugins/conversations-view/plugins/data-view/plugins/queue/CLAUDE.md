@@ -27,10 +27,9 @@
     - `conversations/conversations-view/queue.TaskGroup`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
-    - `network/live.useLiveScroll`
     - `primitives/data-view.DataViewPaging`
     - `primitives/data-view.defineItemActions`
-    - `primitives/data-view.scrollPaging`
+    - `primitives/data-view.useLivePagesPaging`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.combineResources`
     - `primitives/live-state.foldResource`

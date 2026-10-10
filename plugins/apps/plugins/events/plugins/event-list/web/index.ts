@@ -17,7 +17,7 @@ export { useOpenEvent, useEventUrl } from "./internal/use-open-event";
 
 export default {
   description:
-    "The events DataView: the live `events.list` collection (a segmented scroll kept fresh by the routed change feed) rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar.",
+    "The events DataView: the live `events.list` collection (live key-range pages kept fresh by the routed change feed) rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar.",
   contributions: [
     Pane.Register({ pane: eventListPane }),
     Events.Sidebar({

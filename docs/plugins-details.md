@@ -2262,7 +2262,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RecurrenceRuleSchema`
               - `resolveAnchor`
               - `WEEKDAYS`
-        - **`event-list`** — The events DataView: the live `events.list` collection (a segmented scroll kept fresh by the routed change feed) rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the `events.list` live collection over the events table joined to its source (a required lookup, routed in reverse: a source write refills that source's events, gated on the columns the list reads), with soft-deleted events and a disabled source's events hidden by default.
+        - **`event-list`** — The events DataView: the live `events.list` collection (live key-range pages kept fresh by the routed change feed) rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the `events.list` live collection over the events table joined to its source (a required lookup, routed in reverse: a source write refills that source's events, gated on the columns the list reads), with soft-deleted events and a disabled source's events hidden by default.
           - Web:
             - Slots:
               - `EventList.Fields`
@@ -3643,7 +3643,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/live-state.ResourceResult`
               - `ui/icons.Icon`
-        - **`threads`** — The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter — read as a live segmented scroll of the `mail.threads` collection, scoped to the connected account. Threads DataView server: serves the `mail.threads` live collection over mail_threads — the active tab's whole filter (mailbox scope included) and the pane's account scope compile into each window tuple, and the routed change feed refills exactly the threads a write touches.
+        - **`threads`** — The Mail app's one mail surface (/mail/threads): a single DataView over mail_threads whose TABS are the mailboxes — each an authored view instance whose scope is an ordinary, user-editable filter — read as live key-range pages of the `mail.threads` collection, scoped to the connected account. Threads DataView server: serves the `mail.threads` live collection over mail_threads — the active tab's whole filter (mailbox scope included) and the pane's account scope compile into each window tuple, and the routed change feed refills exactly the threads a write touches.
           - Web:
             - Slots: `mailThreadsPane.Actions`
             - Slot contributors: `mailThreadsPane.Actions` ← `primitives.pane`
@@ -13275,10 +13275,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversations-view/queue.TaskGroup`
                   - `infra/endpoints.fetchEndpoint`
                   - `network/live.useLive`
-                  - `network/live.useLiveScroll`
                   - `primitives/data-view.DataViewPaging`
                   - `primitives/data-view.defineItemActions`
-                  - `primitives/data-view.scrollPaging`
+                  - `primitives/data-view.useLivePagesPaging`
                   - `primitives/icon-button.IconButton`
                   - `primitives/live-state.combineResources`
                   - `primitives/live-state.foldResource`
@@ -18953,7 +18952,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `identityPlan` — The plan `compileWindowQuery` emits for a single-table window / point set / alias: one identity route `base` on `table`, gating on `cols`, read by every tuple in the membership role.
           - `legacyFull` — The legacy router alone: every non-routed reader of `table` recomputes FULL.
           - `makeClientView`
-          - Types: `ClientView`, `FedChange`, `Harness`, `KeyedSnapshot`, `RecordedFrame`, `RoutedTable`, `RoutedTableSpec`
+          - Types: `ClientView`, `DeriveFrame`, `DeriveSourceFrame`, `FedChange`, `Harness`, `KeyedSnapshot`, `RecordedFrame`, `RoutedTable`, `RoutedTableSpec`
     - **`server-core`**
       - Core:
         - Uses:
@@ -23698,33 +23697,39 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple) and a cursor-paged one (a live chain of pages — re-minted when a boundary moves, deduped by id, capped at MAX_LIVE_PAGES); and useLiveScroll (a scroll collection read as live segments — bounded windows tiling the order by server-minted row-key cuts, grown, split, merged and collapsed so the rendered rows stay a gap-free prefix). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a cursor-paged one — external only — is loaded one page at a time, notify(q) reaching every subscribed page) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple) and a cursor-paged one (a live chain of pages — re-minted when a boundary moves, deduped by id, capped at MAX_LIVE_PAGES); and useLiveCollectionPages (a scroll collection read with no depth limit as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small, the pages near a measured viewport live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a cursor-paged one — external only — is loaded one page at a time, notify(q) reaching every subscribed page) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
       - Web:
         - Uses:
           - `primitives/live-state.PagedResourceResult`
+          - `primitives/live-state.ResourceDerivation`
           - `primitives/live-state.ResourceDescriptor`
           - `primitives/live-state.ResourceError`
           - `primitives/live-state.ResourceResult`
+          - `primitives/live-state.ResourceTupleResult`
           - `primitives/live-state.useResource`
           - `primitives/live-state.useResources`
           - `primitives/log-channels.clientLog`
         - Exports (types):
           - `LiveAllSelect`
+          - `LiveCollectionPageError`
+          - `LiveCollectionPagePlaceholder`
+          - `LiveCollectionPagesOptions`
+          - `LiveCollectionPagesQuery`
+          - `LiveCollectionPagesResult`
           - `LiveIdsQuery`
           - `LiveListResult`
           - `LivePagesOptions`
           - `LivePagesResult`
           - `LiveRowResult`
-          - `LiveScrollOptions`
-          - `LiveScrollResult`
-          - `LiveSegmentError`
-          - `ScrollTruncation`
+          - `PagesTruncation`
+          - `VisibleRange`
         - Exports (values):
           - `mapRow`
           - `MAX_LIVE_PAGES`
+          - `mintVisibleRange`
           - `useLive`
+          - `useLiveCollectionPages`
           - `useLiveRow`
-          - `useLiveScroll`
       - Server:
         - Uses: 25 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `infra/query-resource` ×22
@@ -23973,6 +23978,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-view` (1 debt)
           - `plugin-meta/plugin-view/file-tree` (1 debt)
           - `primitives/cursor-pagination` (0 debt)
+          - `primitives/data-view` (0 debt)
           - `primitives/diff-view` (1 debt)
           - `primitives/file-viewer` (3 debt)
           - `primitives/file-viewer/image` (1 debt)
@@ -29627,14 +29633,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 73 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 79 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `primitives/css/ui-kit` ×11
           - `primitives/data-view/view-core` ×7
+          - `network/live` ×6
           - `primitives/live-state` ×5
           - `primitives/css/control-panel` ×4
           - `primitives/slot-render` ×4
           - `config_v2` ×2
-          - `network/live` ×2
           - `primitives/collapsible` ×2
           - `primitives/css/row` ×2
           - `primitives/css/sticky/stack` ×2
@@ -29655,7 +29661,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/yield.yieldClass`
+          - `primitives/dom/auto-scroll.KeepAnchorAcross`
           - `primitives/dom/element-size.useElementSize`
+          - `primitives/dom/in-view.createInViewWatcher`
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/overlay/tooltip.WithTooltip`
@@ -29676,18 +29684,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewDensity`
           - `DataViewFoldLines`
           - `DataViewId`
+          - `DataViewPageNotice`
           - `DataViewPaging`
           - `DataViewPagingTotal`
           - `DataViewProps`
           - `DataViewRenderProps`
           - `DataViewRowEntry`
           - `DataViewSection`
-          - `DataViewSegmentNotice`
           - `DataViewSettingContribution`
           - `DataViewSourceBundle`
           - `DataViewSourceContribution`
           - `DataViewSourceProps`
           - `DataViewSources`
+          - `DataViewViewportSink`
           - `FieldCellProps`
           - `FieldDef`
           - `FieldExtensionContribution`
@@ -29725,6 +29734,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ItemActionsDescriptor`
           - `ItemActionZone`
           - `LeadingSlotProps`
+          - `LivePagesPaging`
           - `LoweredFilter`
           - `ManualOrderConfig`
           - `MergedDataViewProps`
@@ -29770,7 +29780,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readFallback`
           - `resolveBodyFields`
           - `rowToneClass`
-          - `scrollPaging`
           - `SectionBody`
           - `UNGROUPED_FOLD_KEY`
           - `useDataViewControls`
@@ -29784,6 +29793,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useGroupingRegistry`
           - `useIsChipField`
           - `useItemActionZones`
+          - `useLivePagesPaging`
           - `useResolveCell`
           - `useResolveCellEditor`
           - `useResolveColumnConfig`
@@ -29827,6 +29837,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewId`
           - `DataViewInMemoryOrigin`
           - `DataViewLiveOrigin`
+          - `DataViewPageNotice`
+          - `DataViewPagePlaceholder`
+          - `DataViewPagePlaceholders`
           - `DataViewPaging`
           - `DataViewPagingTotal`
           - `DataViewProps`
@@ -29837,9 +29850,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSection`
           - `DataViewSectioning`
           - `DataViewSectionPaging`
-          - `DataViewSegmentNotice`
           - `DataViewSurfaceChrome`
           - `DataViewToolbarSpec`
+          - `DataViewViewportSink`
+          - `DataViewVisibleRows`
           - `FieldDef`
           - `FieldExtensionProps`
           - `FieldExtensionsDescriptor`
@@ -29928,7 +29942,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runs`
           - `ui/theme-engine/theme-gallery`
       - Exemptions:
-        - Exempts itself from: `data-view/no-adhoc-row-list` — `.` (sanctioned)
+        - Exempts itself from:
+          - `data-view/no-adhoc-row-list` — `.` (sanctioned)
+          - `live/visible-range-minter` — `web/internal/pages-viewport.ts` (sanctioned)
         - Exempted by:
           - `primitives/data-view` (0 debt)
           - `primitives/tree` (0 debt)
@@ -30377,7 +30393,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `live/no-endpoint-read` — `web/use-file-diff.ts` (debt)
     - **`dom`** — How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).
       - Plugins:
-        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
+        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.Button`
@@ -30396,6 +30412,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FindScrollParentOptions`
               - `JumpToBottomButtonProps`
               - `JumpToBottomView`
+              - `KeepAnchorAcrossProps`
               - `KeepScrollAcrossProps`
               - `ScrollAlign`
               - `ScrollChildIntoViewOptions`
@@ -30408,6 +30425,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `captureDocumentScroll`
               - `findScrollParent`
               - `JumpToBottomButton`
+              - `KeepAnchorAcross`
               - `keepInPlace`
               - `KeepScrollAcross`
               - `restoreDocumentScroll`
@@ -30426,6 +30444,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/logs`
               - `layouts/miller`
               - `page/editor`
+              - `primitives/data-view`
               - `primitives/log-channels`
               - `primitives/outline/scroll-spy`
               - `primitives/overlay/image-viewer`
@@ -30470,8 +30489,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useElementSize`
               - `useResizeObserver`
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
-              - `primitives` ×17
+            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+              - `primitives` ×18
               - `apps` ×5
               - `shell` ×2
               - `apps-core/surface/floating`
@@ -30493,6 +30512,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `primitives/cursor-pagination`
+              - `primitives/data-view`
               - `primitives/dom/auto-scroll`
               - `primitives/outline/scroll-spy`
               - `primitives/pane`
@@ -31203,6 +31223,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PointResourceDescriptor`
           - `QueryResourceOptions`
           - `ResourceContractMismatch`
+          - `ResourceDerivation`
           - `ResourceDescriptor`
           - `ResourceErrorInfo`
           - `ResourceErrorInlineProps`
@@ -31213,6 +31234,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceReadiness`
           - `ResourceResult`
           - `ResourceStatus`
+          - `ResourceTupleResult`
           - `ResourceViewProps`
           - `SlowResourceInfo`
           - `TransportInfo`
@@ -33827,6 +33849,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/coords.Placed`
           - `primitives/css/ui-kit.cn`
           - `primitives/dom/auto-scroll.findScrollParent`
+          - `primitives/dom/element-size.useResizeObserver`
         - Exports (types):
           - `UseVirtualRowsOptions`
           - `UseVirtualRowsResult`

@@ -32,6 +32,12 @@ export type TreeRowChromeProps = {
    * keyboard navigation can find (and focus) the row a key moves to.
    */
   rowId?: string;
+  /**
+   * The row's key in a DataView's rows, stamped as `data-row-key` — the
+   * marker every DataView row carries, by which it measures the rows it has
+   * on screen (a list drawn in tree chrome is still a list).
+   */
+  rowKey?: string;
   depth: number;
   hasChildren: boolean;
   isOpen: boolean;
@@ -165,6 +171,7 @@ let firstClickTarget: EventTarget | null = null;
 
 export function TreeRowChrome({
   rowId,
+  rowKey,
   depth,
   hasChildren,
   isOpen,
@@ -214,6 +221,7 @@ export function TreeRowChrome({
       ref={rowRef as Ref<HTMLElement>}
       data-tree-row
       data-tree-id={rowId}
+      data-row-key={rowKey}
       onClick={
         onOpen
           ? (e: MouseEvent) => {

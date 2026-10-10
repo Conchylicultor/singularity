@@ -12,7 +12,12 @@ export type { KeyedSnapshot } from "../keyed-diff";
 // a socket — network/live's differential oracle compares each view against a
 // fresh FULL load.
 export { makeClientView } from "../test-support";
-export type { ClientView, RecordedFrame } from "../test-support";
+export type {
+  ClientView,
+  DeriveFrame,
+  DeriveSourceFrame,
+  RecordedFrame,
+} from "../test-support";
 // The shared routed fixture (P8 step 23b): a keyed resource declared the way a
 // compiled collection is — a minted identity route and a membership — plus the
 // change feed's delivery to both routers, and the runtime harness itself.

@@ -23,7 +23,8 @@ export type {
   DataViewSourceProps,
 } from "./internal/define-data-view-sources";
 export type { DataViewSourceBundle } from "./internal/body-types";
-export { scrollPaging } from "./internal/scroll-paging";
+export { useLivePagesPaging } from "./internal/use-live-pages-paging";
+export type { LivePagesPaging } from "./internal/use-live-pages-paging";
 export {
   defineDataView,
   DATA_VIEW_HEADER_OFFSET_VAR,
@@ -34,7 +35,8 @@ export type {
   DataViewId,
   DataViewPaging,
   DataViewPagingTotal,
-  DataViewSegmentNotice,
+  DataViewPageNotice,
+  DataViewViewportSink,
 } from "../core";
 export type {
   FieldGrouping,

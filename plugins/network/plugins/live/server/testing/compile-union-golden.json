@@ -4,7 +4,9 @@
       "membership": {
         "kind": "window",
         "windowIdsOf": "$function",
-        "orderSignatureOf": "$function"
+        "orderSignatureOf": "$function",
+        "limitOf": "$function",
+        "familyOf": "$function"
       },
       "validateParams": "$function"
     },

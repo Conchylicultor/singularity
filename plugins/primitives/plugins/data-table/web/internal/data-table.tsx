@@ -71,8 +71,8 @@ function composeRefs(
   };
 }
 
-/** Estimated px per row; dynamic measurement via `virtualizer.measureElement`
- *  refines it after mount. */
+/** The windowed body's first guess, px per row — replaced before paint by a
+ *  probed real row, then by the first row measured (`useVirtualRows`). */
 const ROW_ESTIMATE = 36;
 
 export function DataTable<TRow>({
@@ -518,14 +518,20 @@ function VirtualTableBody<TRow>({
     ? rows.findIndex((row, i) => rowKey(row, i) === selectedRowId)
     : -1;
 
-  const { measureRef, virtualizer, virtualItems, totalSize, scrollMargin } =
-    useVirtualRows<TRow>({
-      items: rows,
-      estimateSize: ROW_ESTIMATE,
-      getKey: rowKey,
-      scrollToIndex: selectedIndex >= 0 ? selectedIndex : null,
-      keepMounted,
-    });
+  const {
+    measureRef,
+    virtualizer,
+    virtualItems,
+    totalSize,
+    scrollMargin,
+    probe,
+  } = useVirtualRows<TRow>({
+    items: rows,
+    estimateSize: ROW_ESTIMATE,
+    getKey: rowKey,
+    scrollToIndex: selectedIndex >= 0 ? selectedIndex : null,
+    keepMounted,
+  });
 
   // The marker sits at the start of the row region (right after the sticky
   // header); scrollMargin is measured from it.
@@ -538,6 +544,12 @@ function VirtualTableBody<TRow>({
     return (
       <>
         {marker}
+        {/* The first commit draws no window: one real row, measured before
+            paint to become the window's estimate (never painted — the
+            window replaces it in the same frame). */}
+        {probe !== null && rows.length > 0
+          ? renderRow(rows[0]!, 0, { ref: probe, index: 0 })
+          : null}
         <div
           aria-hidden
           // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the windowed table's total height

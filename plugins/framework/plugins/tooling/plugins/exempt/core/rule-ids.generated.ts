@@ -70,6 +70,7 @@ export type ExemptableRuleId =
   | "live/no-endpoint-read"
   | "live/no-legacy-resource-spelling"
   | "live/no-sentinel-param"
+  | "live/visible-range-minter"
   | "loading/no-shadcn-skeleton"
   | "log-channels/no-console-log"
   | "marker-scan-safety/no-adhoc-binding-scan"

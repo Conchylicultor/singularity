@@ -1,5 +1,7 @@
 # Scoped change routing P6–P8, v2: the execution plan for build steps 7–24
 
+> **Superseded (2026-10-09):** the segmented scroll (`useLiveScroll`, `shared/scroll-plan.ts`, every loaded segment live, the 16-segment cap) is replaced by live key-range pages (`useLiveCollectionPages`, `shared/page-plan.ts`) whose liveness follows the viewport — see `research/2026-10-09-global-live-key-range-pages-v2.md`. The scroll parts of this plan describe the old model.
+
 ## Context
 
 This is v2 of [`2026-10-01-global-scoped-change-routing-p5-p8.md`](2026-10-01-global-scoped-change-routing-p5-p8.md)

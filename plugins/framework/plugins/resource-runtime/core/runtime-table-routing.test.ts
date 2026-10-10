@@ -236,6 +236,7 @@ function routed(opts: FixtureOpts = {}) {
             .map((r) => r.id);
         },
         orderSignatureOf: (r) => String((r as Row).n),
+        limitOf,
       },
       loader,
     });
@@ -2263,6 +2264,7 @@ describe("recomputeOn — a routed entry's compiled vocabulary moved", () => {
           kind: "window",
           windowIdsOf: async () => ["h1"],
           orderSignatureOf: () => "",
+          limitOf: () => 1,
         },
         loader: async (p, c) => {
           loads.push({ params: p, ids: c ? [...c.affectedIds] : "FULL" });
@@ -2343,6 +2345,7 @@ describe("recomputeOn — a routed entry's compiled vocabulary moved", () => {
     const membership = {
       kind: "window" as const,
       windowIdsOf: async () => [],
+      limitOf: () => 1,
     };
     expect(() =>
       h.runtime.defineResource({

@@ -58,12 +58,27 @@ export type RowChromeProps<T extends TreeItem> = {
    * and relying on RowChrome's internal `relative` wrapper.
    */
   accent?: ReactNode;
+  /**
+   * The row's key in a DataView's rows, stamped as `data-row-key` (forwarded
+   * to `TreeRowChrome.rowKey`) — the marker a DataView measures the rows it
+   * has on screen by.
+   */
+  rowKey?: string;
   className?: string;
 };
 
 export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
-  const { node, depth, children, actions, icon, menu, accent, className } =
-    props;
+  const {
+    node,
+    depth,
+    children,
+    actions,
+    icon,
+    menu,
+    accent,
+    rowKey,
+    className,
+  } = props;
   const controls = useTreeRow(node);
   const {
     addBelow,
@@ -206,6 +221,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
         <div className="relative">
           <TreeRowChrome
             rowId={node.id}
+            rowKey={rowKey}
             depth={depth}
             hasChildren={hasChildren}
             isOpen={isOpen}

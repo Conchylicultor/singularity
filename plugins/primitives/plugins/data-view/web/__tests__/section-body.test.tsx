@@ -140,6 +140,8 @@ describe("SectionBody — a declared section's own paging", () => {
     stalled: null,
     truncated: false,
     notices: [],
+    viewport: { report: () => {} },
+    placeholders: { before: [], after: [] },
     ...over,
   });
 

@@ -38,9 +38,9 @@ const LIBRARY_VIEW = defineDataView("sonata.library");
  * the library never names MIDI (or any source). Each source's create affordance
  * (`Library.Source.createOption`, a data-view `CreateOption`) is mapped into the
  * DataView's `creators` — rendered as a toolbar "+" menu (N sources). The list
- * reads the live `songLibrary` collection as a segmented scroll
+ * reads the live `songLibrary` collection as key-range pages
  * (`source={songLibrarySource}`): sort, filter and search run on the server,
- * and every loaded song stays live.
+ * and the songs near the ones on screen stay live.
  *
  * There is no bespoke card: the gallery builds the standard `DataCard` from this
  * schema, plus a `leading` music-note block. Everything the old `SongCard` drew

@@ -946,7 +946,7 @@ export function compileCollection<
             recomputeOn: scoped.map((set) => set.recomputeOn(scope)),
           }
         : {}),
-      // A scroll collection's window: segment cuts (decoded strictly by the
+      // A scroll collection's window: page cuts (decoded strictly by the
       // codec) and each row's server-minted `$key`.
       ...(collection.scroll
         ? {
@@ -955,6 +955,7 @@ export function compileCollection<
                 const { after, until } = decode(params);
                 return { after, until };
               },
+              familyOf: codec.familyOf,
               keyField: LIVE_ROW_KEY,
               maxKeyBytes: LIVE_ROW_KEY_MAX_BYTES,
             },

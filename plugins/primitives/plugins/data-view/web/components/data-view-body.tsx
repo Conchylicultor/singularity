@@ -1,5 +1,11 @@
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import {
@@ -16,7 +22,8 @@ import {
   type DataViewFoldLines,
   type DataViewPaging,
   type DataViewSectioning,
-  type DataViewSegmentNotice,
+  type DataViewPageNotice,
+  type DataViewViewportSink,
   type SortRule,
 } from "../../core";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
@@ -66,6 +73,20 @@ import {
   makeFoldKeep,
 } from "../internal/fold-sections";
 import { summarizeFilter } from "../internal/summarize-filter";
+import {
+  PAGE_PLACEHOLDER_ATTR,
+  useVisibleRowKeys,
+  visibleRowsOf,
+} from "../internal/use-visible-row-keys";
+import { KeepAnchorAcross } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import {
+  PagePlaceholders,
+  PlaceholderHeightContext,
+} from "./page-placeholders";
+import {
+  type PagedReadLayout,
+  usePlaceholderHeights,
+} from "../internal/placeholder-heights";
 import type {
   DataViewBodyProps,
   DistributiveOmit,
@@ -448,7 +469,7 @@ function DataViewBodyInner<TRow>(
 
   // Optional live source (always called; `null` without one). When present,
   // filter/sort/search/paginate run server-side over the live `activeState`,
-  // so its segments replace `rows` and the client pipeline (`useFlatRows`) is
+  // so its pages replace `rows` and the client pipeline (`useFlatRows`) is
   // neutralized into a pass-through below.
   const groupingRegistry = useGroupingRegistry();
   // The grouping clock, read ONCE per surface: one quantized `now` (local
@@ -563,7 +584,7 @@ function DataViewBodyInner<TRow>(
     [groupingRegistry, offersGrouping],
   );
 
-  // The paged read behind the rows, if any: a live source's own scroll, or
+  // The paged read behind the rows, if any: a live source's own pages, or
   // the consumer's `paging` over the rows it holds. A sectioned origin has no
   // single read to page — each section pages its own (`DataViewSection.paging`)
   // — so the body's footer is its groups read's, which never pages and says
@@ -681,7 +702,7 @@ function DataViewBodyInner<TRow>(
   // `DataViewSettingsContext` — no host wiring needed here.
 
   // Live substitution: when a `source` drives this DataView, the SQL already
-  // applied sort/filter/search, so feed the loaded segments' rows and neutralize the client pipeline (`useFlatRows` collapses to a pass-through
+  // applied sort/filter/search, so feed the loaded pages' rows and neutralize the client pipeline (`useFlatRows` collapses to a pass-through
   // when sort/filter/query are empty). Absent → the in-memory path is untouched.
   const effectiveRows: readonly unknown[] = origin
     ? origin.rows
@@ -801,6 +822,105 @@ function DataViewBodyInner<TRow>(
         ? { kind: "declared", sections: declaredSections }
         : { kind: rowSectionOrder },
     [declaredSections, rowSectionOrder],
+  );
+
+  // The flat read's pages drawn as placeholders, around the view — only when
+  // every row of the view is the read's: with `isPaged` the read's rows sit
+  // among others', so a placeholder above the view would stand above rows
+  // that are not the read's (its far pages then simply leave the screen, and
+  // come back as the read's first or last drawn page nears the viewport).
+  // A declared section's are drawn by its `SectionBody`.
+  const flatPlaceholders =
+    paging && !paging.isPaged ? paging.placeholders : null;
+
+  // The rows on screen, reported to every paged read behind them — each read
+  // keeps the pages near its visible rows live and releases the rest. One
+  // measurement per DataView (the rows the view draws, `[data-row-key]`, and
+  // the placeholders, which carry their key the same way), split per read by
+  // the keys it supplies, in its own order: the flat read's placeholders and
+  // paged rows, or each declared section's own.
+  const [rowsHost, setRowsHost] = useState<HTMLElement | null>(null);
+  const viewportTargets = useMemo(() => {
+    const out: (PagedReadLayout & { sink: DataViewViewportSink })[] = [];
+    if (declaredSections !== null) {
+      for (const section of declaredSections) {
+        const { before, after } = section.paging.placeholders;
+        out.push({
+          id: `section:${section.key}`,
+          sink: section.paging.viewport,
+          keys: [
+            ...before.map((p) => p.key),
+            ...section.rows.map((row, i) => rowKey(row, i)),
+            ...after.map((p) => p.key),
+          ],
+          placeholders: [...before, ...after],
+        });
+      }
+    } else if (paging) {
+      const isPaged = paging.isPaged;
+      const keys: string[] = [];
+      for (const p of flatPlaceholders?.before ?? []) keys.push(p.key);
+      loadedRows.forEach((row, i) => {
+        if (!isPaged || isPaged(row)) keys.push(rowKey(row, i));
+      });
+      for (const p of flatPlaceholders?.after ?? []) keys.push(p.key);
+      out.push({
+        id: "flat",
+        sink: paging.viewport,
+        keys,
+        placeholders: flatPlaceholders
+          ? [...flatPlaceholders.before, ...flatPlaceholders.after]
+          : [],
+      });
+    }
+    return out;
+  }, [declaredSections, paging, flatPlaceholders, loadedRows, rowKey]);
+  // The rows the measurement is matched against, per read: a measurement
+  // taken before they were drawn says nothing about them (`useVisibleRowKeys`
+  // is `measuring` again until one taken after), so a head that just landed
+  // — or a new query's — is never reported off screen by the rows it
+  // replaced.
+  const viewportReads = useMemo(
+    () =>
+      viewportTargets.length === 0 ? null : viewportTargets.map((t) => t.keys),
+    [viewportTargets],
+  );
+  // …and how much room each row takes (its advance), which a placeholder of
+  // released rows is sized by.
+  const {
+    keys: visibleKeys,
+    advances,
+    rowPitch,
+  } = useVisibleRowKeys(rowsHost, viewportReads);
+  useEffect(() => {
+    if (visibleKeys === "measuring") return;
+    for (const t of viewportTargets) {
+      t.sink.report(visibleRowsOf(t.keys, visibleKeys));
+    }
+  }, [visibleKeys, viewportTargets]);
+  // Every placeholder drawn at exactly the room its rows took when they were
+  // released — so a page turning into one changes no layout.
+  const placeholderHeight = usePlaceholderHeights(
+    viewportTargets,
+    advances,
+    rowPitch,
+  );
+  // What may resize the content above the reader: a page turning into a
+  // placeholder or back — drawn or not (under `isPaged` the page's rows just
+  // leave `rows`, which shrinks what is above all the same). A placeholder
+  // takes its rows' exact room, so a release moves nothing; a page's rows
+  // landing may still differ from its placeholder (rows that changed, or
+  // were never measured), and under `isPaged` nothing stands in at all. A
+  // change of it keeps the first row on screen where it is
+  // (`KeepAnchorAcross`), so rows released or landing above the viewport
+  // never move what is being read.
+  const anchorKey = useMemo(
+    () =>
+      JSON.stringify([
+        paging?.placeholders ?? null,
+        declaredSections?.map((s) => s.paging.placeholders) ?? null,
+      ]),
+    [paging, declaredSections],
   );
 
   // A hidden section still runs a sectioned origin's reads: whether it has
@@ -967,44 +1087,70 @@ function DataViewBodyInner<TRow>(
                 caches, inline editors, and local tree expand state are per-instance
                 and must not leak between two instances of the same view type. */}
             <ControlSizeProvider key={activeViewId} size="xs">
-              {bodyState.kind !== "view" ? (
-                <BodyFallback
-                  state={bodyState}
-                  errorState={errorState}
-                  loadingState={loadingState}
-                  loadingVariant={activeInstance.viewType.loadingVariant}
-                  loadingCount={activeInstance.viewType.loadingCount}
-                />
-              ) : (
-                // Holds a dropped row at its new slot until the producer's
-                // own order carries the move — no snap-back while the write
-                // is in flight, for every producer (see the hook).
-                <>
-                  {/* A live segment that could not refresh keeps its rows on
-                      screen; its notice sits above them, naming where. */}
-                  {paging && paging.notices.length > 0 ? (
-                    <SegmentNotices
-                      notices={paging.notices}
-                      rows={effectiveRows}
-                      fields={fields as FieldDef<unknown>[]}
-                      rowKey={rowKey as (row: unknown, index: number) => string}
+              {/* The box the rows on screen are measured in, and the region
+                  anchored across a page released or landing above the reader
+                  — its own anchoring alone (the box opts out of the
+                  browser's). */}
+              <KeepAnchorAcross
+                changeKey={anchorKey}
+                hostRef={setRowsHost}
+                anchorAttr="data-row-key"
+                weakAttr={PAGE_PLACEHOLDER_ATTR}
+              >
+                <PlaceholderHeightContext.Provider value={placeholderHeight}>
+                  {bodyState.kind !== "view" ? (
+                    <BodyFallback
+                      state={bodyState}
+                      errorState={errorState}
+                      loadingState={loadingState}
+                      loadingVariant={activeInstance.viewType.loadingVariant}
+                      loadingCount={activeInstance.viewType.loadingCount}
                     />
-                  ) : null}
-                  <PendingMoveOverlay
-                    config={renderProps.manualOrder}
-                    rows={effectiveRows}
-                    rowKey={renderProps.rowKey}
-                  >
-                    {(manualOrder) =>
-                      renderIsolated(
-                        DataViewSlots.View,
-                        activeInstance.viewType as unknown as Contribution,
-                        { ...renderProps, manualOrder },
-                      )
-                    }
-                  </PendingMoveOverlay>
-                </>
-              )}
+                  ) : (
+                    // Holds a dropped row at its new slot until the producer's
+                    // own order carries the move — no snap-back while the write
+                    // is in flight, for every producer (see the hook).
+                    <>
+                      {/* The paged read's far pages, above its rows. */}
+                      {flatPlaceholders ? (
+                        <PagePlaceholders
+                          placeholders={flatPlaceholders.before}
+                        />
+                      ) : null}
+                      {/* A live page that could not refresh keeps its rows on
+                      screen; its notice sits above them, naming where. */}
+                      {paging && paging.notices.length > 0 ? (
+                        <PageNotices
+                          notices={paging.notices}
+                          rows={effectiveRows}
+                          fields={fields as FieldDef<unknown>[]}
+                          rowKey={
+                            rowKey as (row: unknown, index: number) => string
+                          }
+                        />
+                      ) : null}
+                      <PendingMoveOverlay
+                        config={renderProps.manualOrder}
+                        rows={effectiveRows}
+                        rowKey={renderProps.rowKey}
+                      >
+                        {(manualOrder) =>
+                          renderIsolated(
+                            DataViewSlots.View,
+                            activeInstance.viewType as unknown as Contribution,
+                            { ...renderProps, manualOrder },
+                          )
+                        }
+                      </PendingMoveOverlay>
+                      {flatPlaceholders ? (
+                        <PagePlaceholders
+                          placeholders={flatPlaceholders.after}
+                        />
+                      ) : null}
+                    </>
+                  )}
+                </PlaceholderHeightContext.Provider>
+              </KeepAnchorAcross>
             </ControlSizeProvider>
             {/* Infinite scroll over a paged read (a live source, or the
                 consumer's `paging`): the error-gated footer (loading-more
@@ -1123,13 +1269,13 @@ function DataViewBodyInner<TRow>(
 }
 
 /**
- * A live segment's failed refresh, above the rows it could not refresh: named
+ * A live page's failed refresh, above the rows it could not refresh: named
  * by the last row before it (the head's, when there is none), with its own
- * Retry. One notice per failing segment, in the body — a notice BETWEEN two
+ * Retry. One notice per failing page, in the body — a notice BETWEEN two
  * rows would need a non-row entry kind in every view.
  */
-function SegmentNotices(props: {
-  notices: readonly DataViewSegmentNotice[];
+function PageNotices(props: {
+  notices: readonly DataViewPageNotice[];
   rows: readonly unknown[];
   fields: FieldDef<unknown>[];
   rowKey: (row: unknown, index: number) => string;

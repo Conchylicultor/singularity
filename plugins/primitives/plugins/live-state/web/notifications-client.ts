@@ -99,6 +99,18 @@ export function isTerminalResourceError(err: unknown): boolean {
  */
 const REALM_HOLDER_ID = crypto.randomUUID();
 
+/**
+ * The shared socket's dialect (`SharedWebSocketOptions.dialect`): this
+ * module's own URL, content-addressed per build of it. The server answers
+ * one tab's request with frames every tab on the socket receives, and a
+ * frame vocabulary grows (a derived `sub-ack` carries no value: a bundle that
+ * predates it would parse `undefined` as the tuple's value and adopt its
+ * version, wedging its own read). So a tab shares its socket only with tabs
+ * running this same client — an older bundle left open across a deploy keeps
+ * a socket of its own, and never sees a frame it cannot read.
+ */
+const SOCKET_DIALECT = import.meta.url;
+
 // Per-hop persistent tracing for the live-state update pipeline (Layer 1). All
 // lines route to the `live-state` log channel over plain HTTP via clientLog —
 // decoupled from the notifications WS, so traces still flush even when the WS
@@ -199,6 +211,58 @@ export interface ResourceKey {
   params?: ResourceParams;
 }
 
+/**
+ * A fresh tuple seeded from rows this tab already holds (a paged read's split
+ * or merge): its value is, in order, a slice of each `from` tuple's value —
+ * the rows after the row `after` (exclusive; `null` = from its first row)
+ * through the row `until` (inclusive; `null` = through its last), by row id
+ * (the descriptor's `keyed.keyOf`). The caller states that this IS the new
+ * tuple's value — its params name exactly the range those slices cover — and
+ * the server checks what it can (each source a range of the same query,
+ * quiescent at the version sliced, a source sliced through its end not full,
+ * the rows fit the new window): agreed, the tuple loads nothing; refused, it
+ * loads as any sub does. At most {@link DERIVE_MAX_SOURCES} sources (a split
+ * reads one, a merge two) — more seed nothing.
+ *
+ * Sliced as each source's value stands when the sub is sent, and only while
+ * that is the value `appliedSeq` was read beside (a `ResourceTupleResult`'s):
+ * a source applied since — or held through an HTTP read, or not held — seeds
+ * nothing, and the sub loads.
+ */
+export interface ResourceDerivation<P extends ResourceParams = ResourceParams> {
+  from: readonly ResourceSlice<P>[];
+}
+
+/** The most sources a derivation names — the server refuses more. */
+const DERIVE_MAX_SOURCES = 2;
+
+/** One source of a {@link ResourceDerivation}. */
+export interface ResourceSlice<P extends ResourceParams = ResourceParams> {
+  params: P;
+  /** The source's `appliedSeq` when the slice was decided. */
+  appliedSeq: number;
+  after: string | null;
+  until: string | null;
+}
+
+/** One source of a `sub` frame's `derive`, as the wire carries it. */
+interface DerivationSourceFrame {
+  params: ResourceParams;
+  version: number;
+  after: string | null;
+  until: string | null;
+}
+
+/**
+ * A `sub` frame's `derive`: its sources, and the id this client minted for
+ * it — the one thing a derived ack echoes, so matching an answer to its
+ * question never depends on how the server spells the sources back.
+ */
+interface DerivationFrame {
+  id: string;
+  from: DerivationSourceFrame[];
+}
+
 type ServerMsg =
   // `etag` (conditional revalidation): the fresh content signature accompanying a
   // full value. Present only for a resource that declares `revalidate`; the client
@@ -228,6 +292,23 @@ type ServerMsg =
       etag?: string;
       epoch?: string;
       watermark?: string;
+      derived?: undefined;
+    }
+  // A DERIVED sub-ack: the server seeded the tuple from the slice this sub's
+  // `derive` named (see `ResourceDerivation`), so no value rides it — the tab
+  // that asked adopts the slice it holds. It echoes the id of the derivation
+  // it answers: the shared socket broadcasts every frame, and a tab holding
+  // the same tuple through another request must not take it for its own. No
+  // etag, no watermark (the server ran no read).
+  | {
+      kind: "sub-ack";
+      id?: number;
+      key: string;
+      params: ResourceParams;
+      version: number;
+      epoch?: string;
+      etag?: undefined;
+      derived: { id: string };
     }
   | {
       kind: "update";
@@ -371,6 +452,27 @@ interface ActiveSub {
   /** ms epoch of the last applyUpdate/applyDelta write for this sub (0 = never). */
   lastAppliedAt: number;
   /**
+   * When this sub's value was last written (WS or HTTP), on the client-wide
+   * apply sequence (`NotificationsClient.appliedSeq`): of two tuples, the one
+   * with the higher sequence holds the more recently applied value. `0` =
+   * nothing applied on this sub yet.
+   */
+  appliedSeq: number;
+  /**
+   * The cached value is the one this socket's frames built — a `sub-ack`,
+   * `update`, `delta` or derived ack applied in order — so it IS the server's
+   * snapshot of the tuple at `version`, and a new tuple may be derived from a
+   * slice of it. An HTTP body (read apart from that snapshot) clears it.
+   */
+  socketValue: boolean;
+  /**
+   * The derivation this sub's in-flight `sub` asked for (`observe`'s
+   * `derive`): the rows to adopt, and the id a derived `sub-ack` must echo
+   * for them to be this tab's. Cleared by any answer, and by every
+   * resubscribe that asks for a full value (replay, forced resub).
+   */
+  derivation?: { rows: readonly unknown[]; id: string };
+  /**
    * Last-known conditional-revalidation ETag (content signature) for this
    * (key, params), stored from any `sub-ack`/`update` frame that carried one.
    * Sent back on the next `sub` so the server can answer `up-to-date` (keep the
@@ -498,6 +600,12 @@ export class NotificationsClient {
    * never-applied run is the wedge signature the reports consumer thresholds on.
    */
   private staleDropCounts = new Map<string, number>();
+  /**
+   * The client-wide apply sequence: bumped on every value written to a sub's
+   * cache (`markApplied`), so each sub's `appliedSeq` orders its value against
+   * every other sub's — a millisecond timestamp ties within one frame burst.
+   */
+  private applySeq = 0;
   private channelStatuses = new Map<string, WsStatus>();
   /** Latest heartbeat `flushOpenMs` per channel — see `ChannelStatuses`. Reset
    *  to 0 whenever the channel's socket status changes, so a stall reported by
@@ -580,7 +688,9 @@ export class NotificationsClient {
     },
   ) {
     // Socket factory must be set before channelFor (openChannel reads it).
-    this.makeSocket = hooks?.makeSocket ?? ((u) => new SharedWebSocket(u));
+    this.makeSocket =
+      hooks?.makeSocket ??
+      ((u) => new SharedWebSocket(u, undefined, { dialect: SOCKET_DIALECT }));
     this.fetchImpl = hooks?.fetchImpl ?? ((...a) => fetch(...a));
     this.tabId = hooks?.tabId ?? REALM_HOLDER_ID;
     // Open the worktree channel eagerly (always used). Central stays lazy —
@@ -661,6 +771,21 @@ export class NotificationsClient {
    *  prime is warranted. */
   hasEverBeenReady(origin?: ResourceOrigin): boolean {
     return this.firstReadyByKind[socketKindFor(origin)] !== null;
+  }
+
+  /**
+   * Where (key, params)'s value was last written on the client-wide apply
+   * sequence — the higher of two tuples' holds the more recently applied
+   * value. `0`: this tab holds no sub for it, or nothing was applied on it
+   * yet (a boot-hydrated value included).
+   */
+  appliedSeq(
+    key: string,
+    params: ResourceParams = {},
+    origin?: ResourceOrigin,
+  ): number {
+    const channel = this.channels[socketKindFor(origin)];
+    return channel?.subs.get(`${key}\0${paramsKey(params)}`)?.appliedSeq ?? 0;
   }
 
   subscribeStatus(fn: (s: WsStatus) => void): () => void {
@@ -984,13 +1109,19 @@ export class NotificationsClient {
     trace(`up-to-date cleared error key=${key} params=${paramsKey(params)}`);
   }
 
-  /** Observer count increased for (key, params). Sub on 0→1. */
+  /**
+   * Observer count increased for (key, params). Sub on 0→1 — seeded from
+   * rows this tab holds when `derive` names them and they still stand as
+   * decided (see `ResourceDerivation`); `derive` is read on that fresh sub
+   * only, never on a refcount bump.
+   */
   observe(
     key: string,
     params: ResourceParams = {},
     origin?: ResourceOrigin,
     schema?: ZodParser<unknown>,
     keyOf?: (row: unknown) => string,
+    derive?: ResourceDerivation,
   ): void {
     if (schema) this.schemas.set(key, schema);
     if (keyOf) this.keyedKeyOf.set(key, keyOf);
@@ -1015,6 +1146,8 @@ export class NotificationsClient {
       this.emitDebug();
       return;
     }
+    const seed =
+      derive === undefined ? null : this.seedOf(channel, key, pk, derive);
     channel.subs.set(id, {
       refcount: 1,
       key,
@@ -1024,17 +1157,89 @@ export class NotificationsClient {
       liveFrameSeq: 0,
       socket: kind,
       lastAppliedAt: 0,
+      appliedSeq: 0,
+      socketValue: false,
+      ...(seed !== null
+        ? { derivation: { rows: seed.rows, id: seed.frame.id } }
+        : {}),
     });
     trace(`observe key=${key} params=${pk} refcount=1`);
-    this.sendSub(channel, key, params);
+    this.sendSub(channel, key, params, seed?.frame);
     this.emitDebug();
   }
 
-  /** Observer count decreased. Unsub on 1→0. */
+  /**
+   * A derivation's rows and wire form, cut from the sources' cached values —
+   * or `null` (traced) when a source no longer stands as the caller decided:
+   * not held, applied since (`appliedSeq`), not a socket-built value, or a
+   * bound naming no row of it. Then the sub simply loads.
+   */
+  private seedOf(
+    channel: SocketChannel,
+    key: string,
+    pk: string,
+    derive: ResourceDerivation,
+  ): { rows: unknown[]; frame: DerivationFrame } | null {
+    const skip = (reason: string) => {
+      trace(`derive skipped key=${key} params=${pk} reason=${reason}`);
+      return null;
+    };
+    const keyOf = this.keyedKeyOf.get(key);
+    if (keyOf === undefined) return skip("not-keyed");
+    if (derive.from.length === 0) return skip("no-source");
+    if (derive.from.length > DERIVE_MAX_SOURCES) return skip("sources");
+    const rows: unknown[] = [];
+    const from: DerivationSourceFrame[] = [];
+    for (const slice of derive.from) {
+      const src = channel.subs.get(`${key}\0${paramsKey(slice.params)}`);
+      if (src === undefined) return skip("source-not-held");
+      if (src.appliedSeq === 0 || src.appliedSeq !== slice.appliedSeq) {
+        return skip("source-moved");
+      }
+      if (!src.socketValue || src.version < 0) return skip("source-not-socket");
+      const held = this.queryClient.getQueryData(
+        queryKeyFor(key, slice.params),
+      );
+      if (!Array.isArray(held)) return skip("source-not-held");
+      const ids = held.map(keyOf);
+      const start = slice.after === null ? 0 : ids.indexOf(slice.after) + 1;
+      const end =
+        slice.until === null ? ids.length : ids.indexOf(slice.until) + 1;
+      if (
+        (slice.after !== null && start === 0) ||
+        (slice.until !== null && end === 0) ||
+        end < start
+      ) {
+        return skip("slice");
+      }
+      rows.push(...held.slice(start, end));
+      from.push({
+        params: slice.params,
+        version: src.version,
+        after: slice.after,
+        until: slice.until,
+      });
+    }
+    // Minted per derivation, never reused: a tab (or a duplicated tab, which
+    // copies its session id) asking the same slices twice tells its answers
+    // apart.
+    return { rows, frame: { id: crypto.randomUUID(), from } };
+  }
+
+  /**
+   * Observer count decreased. Unsub on 1→0 — after the keep-alive window by
+   * default (a transient remount reuses the live sub), or at once with
+   * `release: "now"`: a reader that dropped the tuple on purpose (a paged
+   * read's page scrolled out of its band) and will not remount it. A tuple
+   * released at once also drops its cached value: nothing keeps it current
+   * any more, so a later observe must read `loading` until the server vouches
+   * for a value again — never hand the old one back as `ready`.
+   */
   unobserve(
     key: string,
     params: ResourceParams = {},
     origin?: ResourceOrigin,
+    release: "keep-alive" | "now" = "keep-alive",
   ): void {
     const kind = socketKindFor(origin);
     // Read-only: an unobserve can only be reached for an origin a prior observe()
@@ -1049,6 +1254,19 @@ export class NotificationsClient {
     if (existing.refcount > 0) {
       // Pure refcount decrement, not a transition: stay silent on the always-on
       // trace (emitDebug keeps the health inspector accurate).
+      this.emitDebug();
+      return;
+    }
+    if (release === "now") {
+      channel.subs.delete(id);
+      this.queryClient.removeQueries({
+        queryKey: queryKeyFor(key, params),
+        exact: true,
+      });
+      channel.ws.send(
+        JSON.stringify({ op: "unsub", key, params, tabId: this.tabId }),
+      );
+      trace(`unobserve key=${key} params=${pk} refcount=0 released now`);
       this.emitDebug();
       return;
     }
@@ -1357,6 +1575,9 @@ export class NotificationsClient {
       noteResourceWatermark(key, params, body.watermark);
     this.queryClient.setQueryData(queryKeyFor(key, params), parsed);
     if (entry) {
+      // Read apart from the server's snapshot of the tuple: no derivation may
+      // be cut from it (see `ActiveSub.socketValue`).
+      entry.socketValue = false;
       if (crossEpochAdopt) {
         // Cross-epoch adopt: the old-boot version number is meaningless, so take
         // the body's version UNCONDITIONALLY and re-stamp the entry's boot
@@ -1597,6 +1818,9 @@ export class NotificationsClient {
       // semantics a post-restart full sub-ack depends on (H2).
       const knownVersion = sub.version;
       sub.version = -1;
+      // A replay asks for full values: a derivation still in flight is no
+      // longer this sub's question (its answer died with the old socket).
+      sub.derivation = undefined;
       // The next ack is the fresh baseline. Clear it so a stale pre-resync ack
       // can't be read as the resync's (liveFrameSeq is a monotonic counter and
       // is never reset).
@@ -1636,6 +1860,7 @@ export class NotificationsClient {
     channel: SocketChannel,
     key: string,
     params: ResourceParams,
+    derive?: DerivationFrame,
   ): void {
     const socket = channel === this.channels.central ? "central" : "worktree";
     // Attach the sub's last-known ETag (if any) so the server can answer
@@ -1656,7 +1881,7 @@ export class NotificationsClient {
         ? sub.etag
         : undefined;
     trace(
-      `sendSub key=${key} params=${paramsKey(params)} socket=${socket}${etag !== undefined ? " etag=1" : ""}`,
+      `sendSub key=${key} params=${paramsKey(params)} socket=${socket}${etag !== undefined ? " etag=1" : ""}${derive !== undefined ? ` derive=${derive.from.length}` : ""}`,
     );
     channel.ws.send(
       JSON.stringify({
@@ -1665,6 +1890,8 @@ export class NotificationsClient {
         key,
         params,
         ...(etag !== undefined ? { etag } : {}),
+        // A fresh sub only (`observe`): seeded from rows this tab holds.
+        ...(derive !== undefined ? { derive } : {}),
         // Restated on every sub (fresh, recovery): the server takes the frame
         // as this tab's whole statement for the tuple, flag included.
         ...(this.wantsAcks(channel, `${key}\0${paramsKey(params)}`)
@@ -1698,6 +1925,7 @@ export class NotificationsClient {
     entry.etag = undefined;
     entry.version = -1;
     entry.lastAckVersion = -1;
+    entry.derivation = undefined;
     this.sendSub(channel, key, params);
   }
 
@@ -1756,6 +1984,7 @@ export class NotificationsClient {
       // date), then heal through the one error channel: the HTTP read now gets
       // the typed 409/404 body, so `q.error` names the reason.
       noteContractRefusal(msg.key, msg.reason, msg.verdict);
+      entry.derivation = undefined;
       this.fetchAfterSubError(channel, msg.key, msg.params);
       return;
     }
@@ -1858,6 +2087,23 @@ export class NotificationsClient {
       );
       return;
     }
+    // A DERIVED sub-ack carries no value: it says "the rows your derivation
+    // named are this tuple's value". The same invariant as above — only a tab
+    // that holds exactly those rows may adopt its version: the one whose
+    // in-flight derivation's id it echoes. Any other tab holding the tuple (it
+    // subscribed plainly, asked another derivation, or reset this one by a
+    // replay, a forced resub or a sub-error) ignores it; its own answer is in
+    // flight against its untouched baseline.
+    if (
+      msg.kind === "sub-ack" &&
+      msg.derived !== undefined &&
+      entry.derivation?.id !== msg.derived.id
+    ) {
+      trace(
+        `drop key=${msg.key} params=${pk} version=${msg.version} reason=not-our-derivation`,
+      );
+      return;
+    }
     if (msg.kind === "sub-ack") {
       trace(`sub-ack key=${msg.key} params=${pk} version=${msg.version}`);
     } else if (msg.kind === "up-to-date") {
@@ -1900,7 +2146,13 @@ export class NotificationsClient {
       return;
     }
 
+    if (msg.kind === "sub-ack" && msg.derived !== undefined) {
+      this.applyDerived(entry, msg.key, msg.params);
+      return;
+    }
     if (msg.kind === "sub-ack" || msg.kind === "update") {
+      // A value-carrying sub-ack answers a derivation too: the server loaded.
+      if (msg.kind === "sub-ack") entry.derivation = undefined;
       this.applyUpdate(
         entry,
         msg.key,
@@ -1973,6 +2225,28 @@ export class NotificationsClient {
     if (ackTx !== undefined && ackTx.length > 0)
       noteResourceTxAcks(key, params, ackTx);
     this.queryClient.setQueryData(queryKeyFor(key, params), parsed);
+    entry.socketValue = true;
+    this.markApplied(entry, key);
+  }
+
+  /**
+   * Adopt the rows this sub's derivation named as its value — the answer to
+   * it was checked to be ours (`handleServerMessage`). They are rows this tab
+   * already parsed (the sources' cached rows, same objects), so no parse; and
+   * no watermark or acks ride a derived ack.
+   */
+  private applyDerived(
+    entry: ActiveSub,
+    key: string,
+    params: ResourceParams,
+  ): void {
+    const rows = entry.derivation!.rows;
+    entry.derivation = undefined;
+    trace(
+      `derived key=${key} params=${paramsKey(params)} version=${entry.version} rows=${rows.length}`,
+    );
+    this.queryClient.setQueryData(queryKeyFor(key, params), [...rows]);
+    entry.socketValue = true;
     this.markApplied(entry, key);
   }
 
@@ -1982,6 +2256,7 @@ export class NotificationsClient {
    *  is reset on a successful apply. */
   private markApplied(entry: ActiveSub, key: string): void {
     entry.lastAppliedAt = Date.now();
+    entry.appliedSeq = ++this.applySeq;
     this.staleDropCounts.delete(`${key}\0${paramsKey(entry.params)}`);
     if (verboseTraceOn()) {
       trace(
@@ -2083,6 +2358,7 @@ export class NotificationsClient {
     if (ackTx !== undefined && ackTx.length > 0)
       noteResourceTxAcks(key, params, ackTx);
     this.queryClient.setQueryData(queryKey, result.rows);
+    entry.socketValue = true;
     this.markApplied(entry, key);
   }
 

@@ -74,6 +74,10 @@ through the shared `useVirtualRows`. Unlike `VirtualRows`, the slice renders in
 Off-screen height is instead reserved by `col-span-full` spacers, **one per gap**
 in the rendered index sequence (leading, trailing, and any interior hole). Grouped
 mode (`groups`) is never windowed — it targets bounded, sectioned lists.
+The windowed body's first commit draws the hook's `probe` row (one real row, measured before
+paint) so the window never starts from the `ROW_ESTIMATE` guess: a table that
+crosses the threshold while scrolled would otherwise shift its visible rows
+by the guess's error.
 
 The threshold is exported because a drag-reordering consumer must know whether the
 body windows, to decide whether its `RankReorderProvider` needs `measuringAlways`.

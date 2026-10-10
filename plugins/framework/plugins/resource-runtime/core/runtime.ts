@@ -175,6 +175,30 @@ export type KeyedMembership<P extends ResourceParams = ResourceParams> =
        * cost this one an ids query.
        */
       orderSignatureOf?: (row: unknown, params: P) => string;
+      /**
+       * The tuple's window size: the LIMIT its loader and `windowIdsOf` both
+       * read (pure, cheap). A window holding fewer rows than this is NOT
+       * FULL: it holds its whole range, so nothing sorts past its tail. Two
+       * paths lean on that:
+       * - a membership drain derives an exit (or an in-place change) of a
+       *   non-full window from the prior snapshot, with no `windowIdsOf` and
+       *   no backfill (`drainMembershipScoped`) — a full one may hide the row
+       *   that must fill the freed slot;
+       * - with `familyOf`, a fresh tuple may be DERIVED from rows other
+       *   tuples of this resource already hold (a `sub` frame's `derive`, see
+       *   `handleSub`): the runtime checks a derived slice fits the new
+       *   window, and that a source sliced through its end is not full.
+       */
+      limitOf: (params: P) => number;
+      /**
+       * The tuple's derivation family: one canonical string for exactly the
+       * tuples that read ONE query (the same filter and order), whatever
+       * their range and limit. A derivation copies its sources' rows and
+       * order signatures as they are, so a source must be of the new tuple's
+       * family (`foreign-source` otherwise). Pure and cheap. Absent ⇒ every
+       * sub loads.
+       */
+      familyOf?: (params: P) => string;
     }
   | { kind: "point"; idsOf: (params: P) => readonly string[] };
 
@@ -204,11 +228,20 @@ type MembershipRecord =
   | {
       kind: "window";
       windowIdsOf: (params: ResourceParams) => Promise<string[]>;
-      bounded: boolean;
-      /**
-       * Order-signature seam — see `KeyedMembership`. On the alias too
-       * (`AliasMembership`), where it makes an order move re-run `orderOf`.
-       */
+      bounded: true;
+      /** Order-signature seam — see `KeyedMembership`. */
+      orderSignatureOf?: (row: unknown, params: ResourceParams) => string;
+      /** The window size — see `KeyedMembership`. */
+      limitOf: (params: ResourceParams) => number;
+      /** The derivation family — see `KeyedMembership`. */
+      familyOf?: (params: ResourceParams) => string;
+    }
+  | {
+      kind: "window";
+      windowIdsOf: (params: ResourceParams) => Promise<string[]>;
+      /** The alias — unbounded, so it has no window size and never derives. */
+      bounded: false;
+      /** Order-signature seam — on the alias it makes an order move re-run `orderOf`. */
       orderSignatureOf?: (row: unknown, params: ResourceParams) => string;
     }
   | { kind: "point"; idsOf: (params: ResourceParams) => readonly string[] };
@@ -1124,7 +1157,77 @@ type ServerFrame =
       etag?: string;
       watermark?: string;
       epoch: string;
+    }
+  // A DERIVED sub-ack (see `deriveSub`): the tuple's value is the slice the
+  // client asked for, of rows it already holds — so no value rides it. It
+  // echoes the id the client minted for the derivation it answers, so a tab
+  // holding the same tuple through a different request (the shared socket
+  // broadcasts every frame) adopts only an answer to its own. No etag (no
+  // read ran) and no watermark (Rule B′: the slice was cut from snapshots
+  // scoped deltas built, which vouch for no commit floor).
+  | {
+      kind: "sub-ack";
+      id?: number;
+      key: string;
+      params: ResourceParams;
+      version: number;
+      epoch: string;
+      derived: { id: string };
     };
+
+/**
+ * A `sub` frame's `derive`: the id its client minted for this derivation
+ * (echoed by the derived ack — opaque here, at most `DERIVE_MAX_ID` chars)
+ * and its sources, at most `DERIVE_MAX_SOURCES` — a page split reads one, a
+ * merge two.
+ */
+interface Derivation {
+  id: string;
+  from: DeriveSource[];
+}
+
+const DERIVE_MAX_SOURCES = 2;
+const DERIVE_MAX_ID = 128;
+
+/**
+ * One source of a seeded derivation (a `sub` frame's `derive.from` entry): a
+ * tuple of the same resource the client holds at `version`, and the slice of
+ * its rows the new tuple is — those after the row `after` (exclusive; `null` =
+ * from its first row) through the row `until` (inclusive; `null` = through the
+ * end of its RANGE, which only a source that is not full holds whole). Rows are
+ * named by id (`keyOf`), in the source's window order.
+ */
+interface DeriveSource {
+  params: ResourceParams;
+  version: number;
+  after: string | null;
+  until: string | null;
+}
+
+/** Why a derivation fell back to a load — the `_debug` payload's `deriveFallbacks` keys. */
+type DeriveRefusal =
+  /** Not a bounded window that states its `familyOf` (or a `revalidate` resource). */
+  | "not-derivable"
+  /** The tuple was already subscribed: its first subscriber decided how it loaded. */
+  | "held"
+  /** The frame's `derive` did not parse (or names more than `DERIVE_MAX_SOURCES`). */
+  | "malformed"
+  /** A source is not a subscribed tuple with a snapshot (or names the new tuple). */
+  | "source-not-held"
+  /** A source reads another query than the new tuple (`familyOf` differs). */
+  | "foreign-source"
+  /** A source has a change pending or draining: not quiescent. */
+  | "source-busy"
+  /** A source's version moved past the one the client sliced. */
+  | "source-moved"
+  /** A slice bound names no row of its source, or ends before it starts. */
+  | "slice"
+  /** A source sliced through its end is full: it may hide rows past its last. */
+  | "source-full"
+  /** Two slices share a row. */
+  | "overlap"
+  /** The slices hold more rows than the new window. */
+  | "over-limit";
 
 /**
  * One socket-held subscription record for a (key, paramsKey): the params object
@@ -1853,6 +1956,17 @@ export function createResourceRuntime(
   function recordStaleFlightSupersede(key: string): void {
     staleFlightSupersedes.set(key, (staleFlightSupersedes.get(key) ?? 0) + 1);
     opts.onStaleFlightSupersede?.(key);
+  }
+  // Per-key seeded derivations (see `deriveSub`): subs answered from rows the
+  // client already held (no load), and the ones that asked but fell back to a
+  // load, by reason. Monotonic; surfaced in the `_debug` payload — a high
+  // fallback count under one reason is where a paged read pays full loads.
+  const derivedSubs = new Map<string, number>();
+  const deriveFallbacks = new Map<string, Map<DeriveRefusal, number>>();
+  function recordDeriveFallback(key: string, reason: DeriveRefusal): void {
+    let byReason = deriveFallbacks.get(key);
+    if (!byReason) deriveFallbacks.set(key, (byReason = new Map()));
+    byReason.set(reason, (byReason.get(reason) ?? 0) + 1);
   }
   let dagDirty = true;
   let topoOrder: RegistryEntry[] = [];
@@ -3012,6 +3126,17 @@ export function createResourceRuntime(
         `defineResource: a routed scopedMembership requires orderSignatureOf for key "${def.key}" — without it an UPDATE moving an ORDER BY column never reorders the alias`,
       );
     }
+    // A bounded window's size decides whether an exit re-derives (a window
+    // holding fewer rows than it holds its whole range); the types require
+    // it, this holds the line for an untyped caller or a cast.
+    if (
+      def.membership?.kind === "window" &&
+      typeof def.membership.limitOf !== "function"
+    ) {
+      throw new Error(
+        `defineResource: a window membership requires limitOf for key "${def.key}" — without it the runtime cannot tell a full window (an exit may pull a hidden row in) from one holding its whole range`,
+      );
+    }
     // Normalize both public forms into the one internal record every consumer
     // branches on. The alias is the ONLY unbounded window (`bounded: false`) —
     // it keeps L2 persistence and the retain snapshot encoder; a declared
@@ -3026,6 +3151,16 @@ export function createResourceRuntime(
             bounded: true,
             orderSignatureOf: def.membership.orderSignatureOf as
               ((row: unknown, params: ResourceParams) => string) | undefined,
+            limitOf: def.membership.limitOf as (
+              params: ResourceParams,
+            ) => number,
+            ...(def.membership.familyOf !== undefined
+              ? {
+                  familyOf: def.membership.familyOf as (
+                    params: ResourceParams,
+                  ) => string,
+                }
+              : {}),
           }
         : {
             kind: "point",
@@ -3962,6 +4097,29 @@ export function createResourceRuntime(
     }
   }
 
+  // A bounded window's size for `params`, fail-safe: a throwing `limitOf`, or
+  // one answering no number (NaN, a non-number from an untyped caller), is
+  // reported and yields NaN. Every caller compares it in the doubting
+  // direction — `!(size < limit)` ⇒ full, `!(size <= limit)` ⇒ over — so an
+  // unknown size makes a window FULL (an exit re-derives; a slice through it
+  // is refused), never a false "holds its whole range".
+  function safeLimitOf(
+    entry: RegistryEntry,
+    limitOf: (params: ResourceParams) => number,
+    params: ResourceParams,
+  ): number {
+    try {
+      const limit: unknown = limitOf(params);
+      if (typeof limit !== "number" || Number.isNaN(limit)) {
+        throw new Error(`limitOf answered ${String(limit)}, not a number`);
+      }
+      return limit;
+    } catch (err) {
+      reportLoaderError(`limitOf failed for ${entry.key}`, err);
+      return Number.NaN;
+    }
+  }
+
   // REPLACE the per-member order-signature map for `pk` from a FULL row array.
   // Called wherever a keyed snapshot is seeded/replaced from a full value
   // (sub-ack seed, membership FULL rebuild), so the map's lifecycle is identical
@@ -4383,8 +4541,8 @@ export function createResourceRuntime(
     //             BOUNDED window only `windowIdsOf` can decide whether it truly
     //             enters — it may sort past the tail);
     //   exited  — a requested id the refill omitted (where-flip exit) or a
-    //             deleted id that was a member (a leaver; for a bounded window a
-    //             leaver frees a slot the new tail row must fill).
+    //             deleted id that was a member (a leaver; for a FULL bounded
+    //             window a leaver frees a slot the new tail row must fill).
     // A pure in-place change (neither) runs NO ids query on ANY kind — the M5
     // cost model. Corollary: an in-place UPDATE never reorders the window until
     // the next membership delta, so a window's ORDER BY must be over
@@ -4455,16 +4613,27 @@ export function createResourceRuntime(
         }
       }
     } else if (membership.bounded) {
-      // Bounded window: ANY potential membership change — an entrant candidate,
-      // a leaver, OR a member whose order signature moved — re-derives the
-      // window by running `windowIdsOf` (O(window), bounded; the v1
-      // correctness-first choice — a tail-cursor comparison that skips
-      // past-the-tail entrants without the ids query is a deferred
+      // Bounded window: an entrant candidate or a member whose order signature
+      // moved re-derives the window by running `windowIdsOf` (O(window),
+      // bounded; the v1 correctness-first choice — a tail-cursor comparison
+      // that skips past-the-tail entrants without the ids query is a deferred
       // optimization). It is the entrant arbiter (an id absent from the
       // returned window did not enter; the diff drops it), the tail-pull source
       // (a leaver's freed slot names the new tail id here), and the fresh order
       // authority for a moved member.
-      if (entered || exited || orderMoved) {
+      //
+      // A leaver needs it only from a FULL window (`prev.size >= limitOf`),
+      // which may hide the row that must fill the freed slot. A window holding
+      // fewer rows than its limit holds its whole range — nothing sorts past
+      // its tail — so an exit pulls nothing in and its order is the prior
+      // snapshot's minus the leaver, derived inside the diff with no query and
+      // no backfill (the alias's exit path, below). A concurrent insert not
+      // yet routed is its own entrant on its own feed event. The test doubts:
+      // an unknown size (`safeLimitOf`'s NaN) reads as full.
+      const full = !(
+        prev.size < safeLimitOf(entry, membership.limitOf, params)
+      );
+      if (entered || orderMoved || (exited && full)) {
         try {
           orderedIds = await (opts.wrapOrigin
             ? opts.wrapOrigin("push", entry.key, () =>
@@ -4481,6 +4650,7 @@ export function createResourceRuntime(
         // (prev — the client holds those rows) nor this refill carries. Without
         // this, `diffKeyedScopedMembership`'s survivor filter would silently
         // drop the pulled-in tail row and the window would shrink. O(entrants).
+        // A backfill that comes back short is a torn read (after the diff).
         const missing = orderedIds.filter(
           (id) => !prev.has(id) && !refillIds.has(id),
         );
@@ -4549,6 +4719,25 @@ export function createResourceRuntime(
       keyOf,
       snapEncoderFor(entry),
     );
+    // A torn read: the bounded window the ids query named holds an id the diff
+    // could not keep — no bytes for it (the backfill target was deleted, or its
+    // where flipped, after `windowIdsOf` read it), or an exit `windowIdsOf`
+    // saw back in range. Recording that snapshot would leave it short of its
+    // range while a row in range stays hidden — and a window holding fewer
+    // rows than its limit is trusted to hold its whole range (exits stop
+    // re-deriving), so nothing would ever pull that row back in. The snapshot
+    // never records less than the window its query named: one bounded FULL
+    // read rebuilds a consistent one instead. (The alias keeps its recorded
+    // M5 semantics: a straggler is healed by its own feed event.)
+    if (
+      membership.kind === "window" &&
+      membership.bounded &&
+      orderedIds !== undefined &&
+      nextSnapshot.size < orderedIds.length
+    ) {
+      await drainMembershipFull(entry, pendingEntry, persisted);
+      return;
+    }
     // The tracking span this drain started in ended while it read: its snapshot
     // was evicted and its subscribers left (`snapshotOwner`). Writing
     // `nextSnapshot` back would resurrect a base nothing routes to, so the diff
@@ -5112,6 +5301,10 @@ export function createResourceRuntime(
         // on `op: "sub"` / a `sub-batch` entry it restates the tab's current
         // flag (absent = off); on `op: "sub-acks"` it flips it on a held sub.
         acks?: boolean;
+        // `op: "sub"` only: a seeded derivation (see `deriveSub`) — the new
+        // tuple's rows as a slice of tuples this client already holds.
+        // Parsed by `derivationOf`; an older client omits it → full path.
+        derive?: unknown;
         // `op: "sub-batch"` fields: one whole-set replay for ONE tab. `complete:
         // true` additionally reconciles — releases every sub that tab previously
         // held on this socket and did not restate.
@@ -5230,6 +5423,168 @@ export function createResourceRuntime(
     return { firstGlobal: prev === 0 };
   }
 
+  // ── Seeded derivation ───────────────────────────────────────────────────
+  //
+  // A paged read splits and merges its pages, and each new page's rows are —
+  // wholly or partly — a slice of pages the client and this server already
+  // hold (research/2026-10-09-global-live-key-range-pages-v2.md §4.4). So a
+  // fresh `sub` may carry `derive: { id, from: DeriveSource[] }`, and when every
+  // source is QUIESCENT at the version the client sliced and the slices are
+  // complete for the new range, the new tuple's snapshot is copied from them —
+  // no load, and a `sub-ack` with no value: the client adopts the slice it
+  // holds. Otherwise the sub falls back to today's full load; the client takes
+  // either answer.
+  //
+  // Why the copy is the new tuple's truth: a quiescent source (subscribed, a
+  // snapshot of its own span, no pending, not draining, its version the one
+  // the client sliced) holds every change routed to it so far — and the client
+  // holds exactly that snapshot at that version. Every change routed from the
+  // registration on reaches the new tuple too (`handleSub` derives in the same
+  // synchronous step as it registers), and drains against the copy. A window
+  // is a prefix of its range, so a slice ending at a row of it is complete up
+  // to that row; one through its end only when the source is not full. The
+  // rows the new tuple's range holds beyond the slices are the client's claim
+  // (the cuts it encoded in the new params): the runtime is key-agnostic and
+  // cannot check a range, only that the slices fit the window (`limitOf`).
+  //
+  // Only a bounded window that states its `familyOf`: never
+  // persisted, so no base floor to carry (an L2 floor must describe a FULL
+  // read, which nothing here did), and the hash encoder on both sides. The
+  // order signatures are copied with the rows, which holds only within one
+  // query, whose tuples order alike — so every source must be of the new
+  // tuple's family (`familyOf`), checked here rather than trusted.
+
+  /** A `derive` field, its sources canonical — `null` when it does not parse. */
+  function derivationOf(key: string, raw: unknown): Derivation | null {
+    if (raw === null || typeof raw !== "object") return null;
+    const { id, from } = raw as { id?: unknown; from?: unknown };
+    if (
+      typeof id !== "string" ||
+      id.length === 0 ||
+      id.length > DERIVE_MAX_ID
+    ) {
+      return null;
+    }
+    if (
+      !Array.isArray(from) ||
+      from.length === 0 ||
+      from.length > DERIVE_MAX_SOURCES
+    ) {
+      return null;
+    }
+    const out: DeriveSource[] = [];
+    for (const s of from as unknown[]) {
+      if (s === null || typeof s !== "object") return null;
+      const { params, version, after, until } = s as Record<string, unknown>;
+      if (
+        params === null ||
+        typeof params !== "object" ||
+        Array.isArray(params) ||
+        typeof version !== "number" ||
+        (after !== null && typeof after !== "string") ||
+        (until !== null && typeof until !== "string")
+      ) {
+        return null;
+      }
+      out.push({
+        params: canonicalFor(key, params as ResourceParams)!,
+        version,
+        after,
+        until,
+      });
+    }
+    return { id, from: out };
+  }
+
+  /**
+   * Derive the freshly registered tuple `pk` from the sources `raw` names:
+   * its snapshot (and order signatures) copied from theirs, answering the
+   * derivation to echo — or why it falls back to a load. Synchronous: the
+   * caller registered `pk` in the same step.
+   */
+  function deriveSub(
+    entry: RegistryEntry,
+    pk: string,
+    params: ResourceParams,
+    raw: unknown,
+  ): { id: string } | DeriveRefusal {
+    const m = entry.membership;
+    if (
+      entry.mode !== "keyed" ||
+      m?.kind !== "window" ||
+      !m.bounded ||
+      m.familyOf === undefined ||
+      entry.revalidate
+    ) {
+      return "not-derivable";
+    }
+    const derivation = derivationOf(entry.key, raw);
+    if (derivation === null) {
+      reportLoaderError(
+        `malformed derive for ${entry.key}`,
+        new Error(`a sub carried derive=${JSON.stringify(raw)}`),
+      );
+      return "malformed";
+    }
+    const family = m.familyOf(params);
+    const snapshots = (entry.snapshots ??= new Map());
+    const rows: [string, SnapEntry][] = [];
+    const seen = new Set<string>();
+    const sigs = new Map<string, string>();
+    for (const s of derivation.from) {
+      const spk = paramsKey(s.params);
+      const tracked = entry.tracked.get(spk);
+      const snap = snapshots.get(spk);
+      if (
+        spk === pk ||
+        tracked === undefined ||
+        !entry.spans.has(spk) ||
+        snap === undefined
+      ) {
+        return "source-not-held";
+      }
+      // Its rows are copied in its order, its signatures cut by its own
+      // order: only a range of the same query is a slice of this one's.
+      if (m.familyOf(tracked) !== family) return "foreign-source";
+      if (entry.pendingNotifies.has(spk) || entry.draining.has(spk)) {
+        return "source-busy";
+      }
+      if ((entry.versions.get(spk) ?? 0) !== s.version) return "source-moved";
+      // The snapshot's iteration order IS the window order (every write
+      // rebuilds it from the wire order — `diffKeyedScopedMembership`).
+      const order = [...snap.keys()];
+      const from = s.after === null ? 0 : order.indexOf(s.after) + 1;
+      const to = s.until === null ? order.length : order.indexOf(s.until) + 1;
+      if (from === 0 && s.after !== null) return "slice";
+      if (to === 0 && s.until !== null) return "slice";
+      if (to < from) return "slice";
+      // Doubting, like the drain's `full`: an unknown size reads as full.
+      if (
+        s.until === null &&
+        !(order.length < safeLimitOf(entry, m.limitOf, tracked))
+      ) {
+        return "source-full";
+      }
+      const sourceSigs = entry.orderSigs?.get(spk);
+      for (const id of order.slice(from, to)) {
+        if (seen.has(id)) return "overlap";
+        seen.add(id);
+        rows.push([id, snap.get(id)!]);
+        const sig = sourceSigs?.get(id);
+        if (sig !== undefined) sigs.set(id, sig);
+      }
+    }
+    if (!(rows.length <= safeLimitOf(entry, m.limitOf, params))) {
+      return "over-limit";
+    }
+    snapshots.set(pk, new Map(rows));
+    // A row the source held no signature for stays without one: the next
+    // refill of it re-derives the order (fail-safe, as everywhere).
+    if (orderSignatureFnOf(entry))
+      (entry.orderSigs ??= new Map()).set(pk, sigs);
+    return { id: derivation.id };
+  }
+
   async function handleSub(
     state: SocketState,
     m: {
@@ -5242,6 +5597,8 @@ export function createResourceRuntime(
       tabId?: string;
       acks?: boolean;
       build?: string;
+      /** A seeded derivation (see `deriveSub`) — on a fresh `sub` only. */
+      derive?: unknown;
     },
   ): Promise<void> {
     const { id, key, params = {}, etag: clientEtag } = m;
@@ -5297,6 +5654,30 @@ export function createResourceRuntime(
       typeof m.tabId === "string" ? m.tabId : "",
       m.acks === true,
     );
+    // Seeded derivation: answered (or refused) right here, synchronously after
+    // the registration — so every change routed from now on reaches this tuple,
+    // and none can land between the check and the copy.
+    let derived = false;
+    if (m.derive !== undefined) {
+      const outcome = firstGlobal
+        ? deriveSub(entry, pk, params, m.derive)
+        : "held";
+      if (typeof outcome === "string") {
+        recordDeriveFallback(key, outcome);
+      } else {
+        derived = true;
+        derivedSubs.set(key, (derivedSubs.get(key) ?? 0) + 1);
+        sendJson(state.ws, {
+          kind: "sub-ack",
+          id,
+          key,
+          params,
+          version: entry.versions.get(pk) ?? 0,
+          epoch: bootEpoch,
+          derived: outcome,
+        });
+      }
+    }
     if (firstGlobal && entry.onFirstSubscribe) {
       try {
         await entry.onFirstSubscribe(params);
@@ -5304,6 +5685,7 @@ export function createResourceRuntime(
         reportLoaderError(`onFirstSubscribe failed for ${key}`, err);
       }
     }
+    if (derived) return;
 
     // Version short-circuit: the client echoed the (epoch, version) its cached
     // value was produced under. If the epoch is THIS boot and the version equals
@@ -6048,6 +6430,8 @@ export function createResourceRuntime(
       notifyStats: NotifyCounts;
       subShortCircuits: number;
       staleFlightSupersedes: number;
+      derivedSubs: number;
+      deriveFallbacks: Partial<Record<DeriveRefusal, number>>;
       subTabs: Record<string, number>;
       externalSource: boolean;
       definition?: string | null;
@@ -6148,6 +6532,13 @@ export function createResourceRuntime(
         // revert is still reachable under load — and is now refused instead of
         // broadcast under a fresh version.
         staleFlightSupersedes: staleFlightSupersedes.get(entry.key) ?? 0,
+        // Seeded derivations for this key (see `deriveSub`): subs answered
+        // from rows the client held, and the ones that fell back to a load —
+        // by reason.
+        derivedSubs: derivedSubs.get(entry.key) ?? 0,
+        deriveFallbacks: Object.fromEntries(
+          deriveFallbacks.get(entry.key) ?? [],
+        ),
         subTabs,
         // Declared classification: was this resource defined via
         // `defineExternalResource` (truth outside Postgres)? The

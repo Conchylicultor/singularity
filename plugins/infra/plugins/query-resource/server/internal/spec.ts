@@ -278,6 +278,13 @@ export interface WindowQueryResourceSpec<
       after?: readonly (string | null)[];
       until?: readonly (string | null)[];
     };
+    /**
+     * The tuple's page family: one canonical string for exactly the tuples
+     * of ONE query (filter and order), whatever their cuts and limit — the
+     * runtime derives a page only from pages of its family (the membership's
+     * `familyOf`, see resource-runtime's *Seeded derivation*).
+     */
+    familyOf: (params: P) => string;
     /** The wire field the row key is projected under. */
     keyField: string;
     /** A row key's JSON over this many bytes is projected as `null`. */

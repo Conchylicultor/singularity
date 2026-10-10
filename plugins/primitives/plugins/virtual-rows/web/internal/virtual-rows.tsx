@@ -13,12 +13,14 @@ import {
 } from "react";
 import {
   defaultRangeExtractor,
+  measureElement as measureRowElement,
   useVirtualizer,
   type Range,
   type Virtualizer,
   type VirtualItem,
 } from "@tanstack/react-virtual";
 import { findScrollParent } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 
 export interface VirtualRowsProps<T> {
   items: readonly T[];
@@ -75,6 +77,47 @@ export interface UseVirtualRowsResult {
   virtualItems: VirtualItem[];
   totalSize: number;
   scrollMargin: number;
+  /**
+   * While the first row's real size is not known yet (the first commit, when
+   * the window draws nothing — the virtualizer waits for its scroller): the
+   * ref to put on one invisible render of `items[0]`, measured before paint
+   * to become the estimate. `null` otherwise (render no probe).
+   */
+  probe: ((el: Element | null) => void) | null;
+}
+
+/**
+ * The boxes whose size decides where `sizer` sits in `scroller`: every
+ * ancestor below the scroller (a box above the region growing inside one
+ * grows it) and every element laid out before the sizer at each of those
+ * levels (one growing at a level whose box cannot grow — the scroller's own
+ * children, a fixed-height container). A `display: contents` element draws
+ * no box, so its children stand for it.
+ */
+function boxesAbove(sizer: Element, scroller: Element): Element[] {
+  const out: Element[] = [];
+  const addBox = (el: Element) => {
+    if (getComputedStyle(el).display !== "contents") {
+      out.push(el);
+      return;
+    }
+    for (const child of el.children) addBox(child);
+  };
+  for (
+    let node: Element = sizer, parent = node.parentElement;
+    node !== scroller && parent !== null;
+    node = parent, parent = node.parentElement
+  ) {
+    for (
+      let before = node.previousElementSibling;
+      before !== null;
+      before = before.previousElementSibling
+    ) {
+      addBox(before);
+    }
+    if (parent !== scroller) out.push(parent);
+  }
+  return out;
 }
 
 /**
@@ -98,6 +141,34 @@ export function useVirtualRows<T>({
   const measureRef = useRef<HTMLDivElement>(null);
   const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
+  // The first commit renders no window (the virtualizer waits for its
+  // scroller), so the caller renders one invisible probe of a real row
+  // instead (`probe`), measured here before paint: the window's first
+  // estimate is the height rows really have under the current theme, not a
+  // constant. A wrong one misplaces every not-yet-measured row above the
+  // viewport — a list that becomes windowed while scrolled (a tree opening a
+  // big folder, a table growing past its windowing threshold) would shift
+  // its visible rows by the accumulated error.
+  const probeRef = useRef<Element | null>(null);
+  const setProbe = useCallback((el: Element | null) => {
+    probeRef.current = el;
+  }, []);
+  const [probedSize, setProbedSize] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const probe = probeRef.current;
+    if (probe === null) return;
+    const height = probe.getBoundingClientRect().height;
+    if (height > 0) setProbedSize(height);
+  }, []);
+  // The size the first row measured had — the estimate for every row not
+  // measured yet (see `estimateSize` below). A box, not state: it is read by
+  // the virtualizer, never rendered.
+  const [learnedSize] = useState<{ size: number | null }>(() => ({
+    size: null,
+  }));
+  // The items `scrollMargin` was last measured with (see the adjustment gate
+  // below the virtualizer).
+  const [marginItems, setMarginItems] = useState<readonly T[] | null>(null);
 
   // Indexes of the pinned (keepMounted) items. Empty (cheap early-out) whenever
   // nothing is pinned, which is the common, non-dragging case.
@@ -142,6 +213,35 @@ export function useVirtualRows<T>({
     );
   }, []);
 
+  // The region's offset moves whenever content ABOVE it changes height — with
+  // the rows (a paged list's far pages swapped for a placeholder before it,
+  // or back) or without them (another section's placeholders above this
+  // one). So it is re-measured in the commit that changes the items (the
+  // observer's synchronous measure on re-subscribe) and whenever a box that
+  // decides it resizes (see
+  // `boxesAbove`), and the window keeps tracking the rows it draws rather
+  // than where they started. The boxes are re-collected with the items: what
+  // sits above the region changes with what is drawn.
+  useResizeObserver(
+    () => {
+      const sizer = measureRef.current;
+      return sizer === null || scrollEl === null
+        ? null
+        : boxesAbove(sizer, scrollEl);
+    },
+    () => {
+      const sizer = measureRef.current;
+      if (!sizer || scrollEl === null) return;
+      const margin =
+        sizer.getBoundingClientRect().top -
+        scrollEl.getBoundingClientRect().top +
+        scrollEl.scrollTop;
+      setScrollMargin((prev) => (prev === margin ? prev : margin));
+      setMarginItems(items);
+    },
+    { deps: [items, scrollEl] },
+  );
+
   // eslint-disable-next-line react-hooks/incompatible-library -- @tanstack/react-virtual is genuinely compiler-incompatible (returns a mutable Virtualizer mutated outside render); this hook is the sanctioned exempt, opted out of compilation via the "use no memo" directive above.
   const virtualizer = useVirtualizer({
     count: items.length,
@@ -154,13 +254,43 @@ export function useVirtualRows<T>({
     enabled: scrollEl !== null,
     getScrollElement: () => scrollEl,
     initialOffset: () => scrollEl?.scrollTop ?? 0,
+    // One size for every row: the size the first row measured turned out to
+    // have, once one did — `estimateSize` is only a first guess (the table's
+    // constant). A wrong estimate is paid every time the window reaches a
+    // row it never drew: the rows below it shift by the difference, and one
+    // first drawn above the reader (a step longer than the overscan) has the
+    // virtualizer scroll by the difference — the reader sees the list jolt
+    // by it, a row at a time (measured: 5 px per row, a 36 px guess for 31 px
+    // table rows, tens of px per step).
     estimateSize:
-      typeof estimateSize === "number" ? () => estimateSize : estimateSize,
+      typeof estimateSize === "number"
+        ? () => learnedSize.size ?? probedSize ?? estimateSize
+        : estimateSize,
+    measureElement: (el, entry, instance) => {
+      const size = measureRowElement(el, entry, instance);
+      if (learnedSize.size === null && size > 0) learnedSize.size = size;
+      return size;
+    },
     overscan,
     getItemKey: (index) => getKey(items[index]!, index),
     rangeExtractor,
     scrollMargin,
   });
+
+  // The commit that changes the items renders the window against the margin
+  // measured for the OLD items — the margin is re-measured in that commit's
+  // layout phase, after the rows it drew were measured. When content above
+  // changed with the items (a page of rows above released into a
+  // placeholder), that window is a page away from the viewport, and its rows,
+  // measured for the first time, sit "above the scroll offset" by the
+  // stale numbers: the virtualizer would scroll to compensate for rows that
+  // are not above the reader at all — from its own cached offset, which a
+  // scroll not yet reported to it makes the offset BEFORE that scroll, so it
+  // scrolled the reader back by the whole step (−700 px, measured). Until
+  // the margin is measured for the items drawn, a size it learns adjusts
+  // nothing; the window is redrawn at the true margin before paint.
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange =
+    marginItems === items ? undefined : () => false;
 
   useEffect(() => {
     if (scrollEl === null || scrollToIndex == null || scrollToIndex < 0) return;
@@ -173,7 +303,7 @@ export function useVirtualRows<T>({
   const totalSize =
     scrollEl === null
       ? typeof estimateSize === "number"
-        ? items.length * estimateSize
+        ? items.length * (probedSize ?? estimateSize)
         : items.reduce<number>((sum, _, i) => sum + estimateSize(i), 0)
       : virtualizer.getTotalSize();
 
@@ -183,6 +313,12 @@ export function useVirtualRows<T>({
     virtualItems: virtualizer.getVirtualItems(),
     totalSize,
     scrollMargin,
+    probe:
+      typeof estimateSize === "number" &&
+      probedSize === null &&
+      items.length > 0
+        ? setProbe
+        : null,
   };
 }
 
@@ -209,30 +345,21 @@ export function VirtualRows<T>({
   raisedKey,
   children,
 }: VirtualRowsProps<T>): ReactNode {
-  // The first commit renders no window (the virtualizer waits for its scroller),
-  // so it renders one invisible probe of a real row instead and measures it: the
-  // window's estimate is then the height rows really have under the current
-  // theme, not a constant. A wrong estimate misplaces every not-yet-measured row
-  // above the viewport — a list that becomes windowed while scrolled (a tree
-  // opening a big folder) would shift its visible rows by the accumulated error.
-  const probeRef = useRef<HTMLElement>(null);
-  const [probedSize, setProbedSize] = useState<number | null>(null);
-  useLayoutEffect(() => {
-    const probe = probeRef.current;
-    if (probe === null) return;
-    const height = probe.getBoundingClientRect().height;
-    if (height > 0) setProbedSize(height);
-  }, []);
-
-  const { measureRef, virtualizer, virtualItems, scrollMargin, totalSize } =
-    useVirtualRows({
-      items,
-      estimateSize: probedSize ?? estimateSize,
-      overscan,
-      getKey,
-      scrollToIndex,
-      keepMounted,
-    });
+  const {
+    measureRef,
+    virtualizer,
+    virtualItems,
+    scrollMargin,
+    totalSize,
+    probe,
+  } = useVirtualRows({
+    items,
+    estimateSize,
+    overscan,
+    getKey,
+    scrollToIndex,
+    keepMounted,
+  });
 
   return (
     // The windowing sizer: a `relative` positioning host whose height is the full
@@ -244,9 +371,9 @@ export function VirtualRows<T>({
       className="relative w-full"
       style={{ height: totalSize }}
     >
-      {probedSize === null && virtualItems.length === 0 && items.length > 0 && (
+      {probe !== null && virtualItems.length === 0 && (
         <Placed
-          ref={probeRef}
+          ref={probe}
           aria-hidden
           inert
           x={{ start: 0, end: 0 }}

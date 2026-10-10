@@ -18,6 +18,12 @@
  *   - squeeze-out: an entrant displacing the tail drops it via `order` alone;
  *   - DELETE of an id outside the snapshot → total no-op (no query, no frame);
  *   - pure in-place UPDATE → upsert only, NO windowIdsOf (the M5 cost model);
+ *   - a window holding fewer rows than its `limitOf` (not full) derives an
+ *     exit from the prior snapshot: no windowIdsOf, no backfill; entrants and
+ *     order moves still re-derive; full ⇄ not-full transitions converge; a
+ *     `limitOf` answering no number reads as full; a torn read (a backfill
+ *     target gone, an exit back in range) rebuilds FULL, so no snapshot is
+ *     recorded short of its range;
  *   - point routing: a change reaches a subscribed tuple iff its ids intersect;
  *     upsert / delete / entrant-append all per tuple; foreign ids ship nothing;
  *   - bounded entries are EXCLUDED from persistence even when `shouldPersist`
@@ -26,8 +32,8 @@
  *     sub-ack, so the next change is incremental again;
  *   - a subscribed tuple with no snapshot (its sub-ack load failed) self-heals
  *     with a FULL update built from the entry's own (bounded) loader;
- *   - registration guards: membership XOR scopedMembership, keyed + routes
- *     required, routes require a membership.
+ *   - registration guards: membership XOR scopedMembership, a window states
+ *     its limitOf, keyed + routes required, routes require a membership.
  *
  * Every window / point case runs with the entry declaring the identity route
  * `compileWindowQuery` emits (served by `routeTableChange`,
@@ -43,7 +49,7 @@
 
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
-import { createHarness, tick, makeClientView } from "./test-support";
+import { createHarness, tick, makeClientView, rng } from "./test-support";
 import {
   defineRoutedTable,
   feedChange,
@@ -81,11 +87,16 @@ function membershipSuite(): void {
   function windowHarness(
     limit: number,
     runtimeOpts: Parameters<typeof createHarness>[0] = {},
+    /** The declared window size. Default: `limit` (the LIMIT `windowIdsOf` cuts). */
+    limitOf: () => number = () => limit,
   ) {
     const { table, members } = makeTable();
     const loaderCalls: string[] = [];
     let windowIdsOfCalls = 0;
     let failFullLoads = false;
+    // Runs inside a scoped loader call, before it reads — a write racing the
+    // drain's own reads (between its `windowIdsOf` and its backfill).
+    let beforeScopedRead: ((ids: readonly string[]) => void) | undefined;
     const h = createHarness(runtimeOpts);
     h.runtime.defineResource(
       {
@@ -104,6 +115,7 @@ function membershipSuite(): void {
               .slice(0, limit)
               .map((r) => r.id);
           },
+          limitOf,
         },
         loader: (_p, c) => {
           if (c === undefined) {
@@ -112,6 +124,7 @@ function membershipSuite(): void {
             return members().slice(0, limit);
           }
           loaderCalls.push([...c.affectedIds].sort().join(","));
+          beforeScopedRead?.(c.affectedIds);
           return c.affectedIds
             .filter((id) => table.get(id)?.where)
             .map((id) => ({ id, n: table.get(id)!.n }));
@@ -144,6 +157,10 @@ function membershipSuite(): void {
       /** Make every FULL (window) load throw until switched back off. */
       failFullLoads: (on: boolean) => {
         failFullLoads = on;
+      },
+      /** Run `fn` inside every later scoped loader call, before it reads. */
+      beforeScopedRead: (fn: (ids: readonly string[]) => void) => {
+        beforeScopedRead = fn;
       },
       feed,
       insert,
@@ -344,6 +361,313 @@ function membershipSuite(): void {
     });
   });
 
+  // A window holding fewer rows than its `limitOf` holds its whole range:
+  // nothing sorts past its tail, so a leaver frees no slot a hidden row must
+  // fill. Its exits derive from the prior snapshot — no `windowIdsOf`, no
+  // backfill; entrants and order moves still re-derive; a full window keeps
+  // the backfilling path above.
+  describe("window membership — exits from a non-full window", () => {
+    test("a DELETE of a member of a non-full window runs no query at all: delete + order from the prior snapshot", async () => {
+      const w = windowHarness(3);
+      w.table.set("a", { n: 1, where: true });
+      w.table.set("b", { n: 2, where: true });
+      await w.h.subscribe("win"); // window [a,b] — 2 of 3, not full
+      w.loaderCalls.length = 0;
+
+      w.del("a");
+      await tick();
+
+      expect(w.windowIdsOf()).toBe(0);
+      expect(w.loaderCalls).toEqual([]); // a pure DELETE refills nothing
+      const ds = deltas(w.h);
+      expect(ds).toHaveLength(1);
+      expect(ds[0]!.deletes).toEqual(["a"]);
+      expect(ds[0]!.upserts ?? []).toEqual([]);
+      expect(ds[0]!.order).toEqual(["b"]);
+
+      const cv = makeClientView(keyOf);
+      cv.applyAll(w.h.frames);
+      expect(cv.value).toEqual([{ id: "b", n: 2 }]);
+      expect(cv.driftResubs).toBe(0);
+    });
+
+    test("a where-flip exit of a non-full window costs its refill only, no windowIdsOf", async () => {
+      const w = windowHarness(3);
+      w.table.set("a", { n: 1, where: true });
+      w.table.set("b", { n: 2, where: true });
+      await w.h.subscribe("win"); // [a,b], not full
+      w.loaderCalls.length = 0;
+
+      w.update("b", (c) => {
+        c.where = false;
+      });
+      await tick();
+
+      expect(w.windowIdsOf()).toBe(0);
+      expect(w.loaderCalls).toEqual(["b"]); // the refill that found it gone
+      const ds = deltas(w.h);
+      expect(ds).toHaveLength(1);
+      expect(ds[0]!.deletes).toEqual(["b"]);
+      expect(ds[0]!.order).toEqual(["a"]);
+    });
+
+    test("an in-place change of a non-full window stays query-free", async () => {
+      const w = windowHarness(3);
+      w.table.set("a", { n: 1, where: true });
+      await w.h.subscribe("win"); // [a], not full
+      w.loaderCalls.length = 0;
+
+      w.update("a", (c) => {
+        c.n = 5;
+      });
+      await tick();
+
+      expect(w.windowIdsOf()).toBe(0);
+      expect(w.loaderCalls).toEqual(["a"]);
+      expect(deltas(w.h)[0]!.order).toBeUndefined();
+    });
+
+    test("an entrant into a non-full window still re-derives (one windowIdsOf)", async () => {
+      const w = windowHarness(3);
+      w.table.set("a", { n: 1, where: true });
+      await w.h.subscribe("win"); // [a], not full
+
+      w.insert("b", 0);
+      await tick();
+
+      expect(w.windowIdsOf()).toBe(1); // placement needs the authority
+      expect(deltas(w.h)[0]!.order).toEqual(["b", "a"]);
+    });
+
+    test("an exit and an entrant in one flush of a non-full window re-derive once", async () => {
+      const w = windowHarness(3);
+      w.table.set("a", { n: 1, where: true });
+      w.table.set("b", { n: 2, where: true });
+      await w.h.subscribe("win"); // [a,b], not full
+
+      w.table.delete("a");
+      w.table.set("c", { n: 3, where: true });
+      w.feed("D", ["a"]);
+      w.feed("I", ["c"]);
+      await tick();
+
+      expect(w.windowIdsOf()).toBe(1);
+      const cv = makeClientView(keyOf);
+      cv.applyAll(w.h.frames);
+      expect(cv.value).toEqual([
+        { id: "b", n: 2 },
+        { id: "c", n: 3 },
+      ]);
+      expect(cv.driftResubs).toBe(0);
+    });
+
+    test("full ⇄ not full: a full window's exit backfills; once it is not full its exits are query-free; an entrant refilling it makes it full again", async () => {
+      const w = windowHarness(2);
+      w.table.set("a", { n: 1, where: true });
+      w.table.set("b", { n: 2, where: true });
+      w.table.set("d", { n: 4, where: true }); // past the tail
+      await w.h.subscribe("win"); // [a,b] — full
+      w.loaderCalls.length = 0;
+      const view = () => {
+        const cv = makeClientView(keyOf);
+        cv.applyAll(w.h.frames);
+        expect(cv.driftResubs).toBe(0);
+        return cv.value;
+      };
+
+      w.del("b"); // full: re-derive + backfill d → [a,d], still full
+      await tick();
+      expect(w.windowIdsOf()).toBe(1);
+      expect(w.loaderCalls).toEqual(["d"]);
+      expect(view()).toEqual([
+        { id: "a", n: 1 },
+        { id: "d", n: 4 },
+      ]);
+
+      w.del("d"); // full: the probe finds nothing to pull in → [a], not full
+      await tick();
+      expect(w.windowIdsOf()).toBe(2);
+      expect(view()).toEqual([{ id: "a", n: 1 }]);
+
+      w.del("a"); // not full: query-free → []
+      await tick();
+      expect(w.windowIdsOf()).toBe(2);
+      expect(view()).toEqual([]);
+
+      w.insert("x", 7); // entrant → [x]
+      await tick();
+      expect(w.windowIdsOf()).toBe(3);
+      w.insert("y", 8); // entrant → [x,y], full again
+      await tick();
+      expect(w.windowIdsOf()).toBe(4);
+      expect(view()).toEqual([
+        { id: "x", n: 7 },
+        { id: "y", n: 8 },
+      ]);
+
+      w.insert("z", 9); // past the tail of the full window
+      await tick();
+      expect(w.windowIdsOf()).toBe(5);
+      w.del("x"); // full again: re-derive + backfill z
+      await tick();
+      expect(w.windowIdsOf()).toBe(6);
+      expect(view()).toEqual([
+        { id: "y", n: 8 },
+        { id: "z", n: 9 },
+      ]);
+    });
+
+    test("a window whose limitOf answers no number (or throws) is doubted as FULL: an exit still re-derives and backfills, and the failure is reported", async () => {
+      for (const limitOf of [
+        () => Number.NaN,
+        () => undefined as unknown as number,
+        () => {
+          throw new Error("limitOf broke");
+        },
+      ]) {
+        const reported: string[] = [];
+        const w = windowHarness(
+          2,
+          { reportError: (ctx) => reported.push(ctx) },
+          limitOf,
+        );
+        w.table.set("a", { n: 1, where: true });
+        w.table.set("b", { n: 2, where: true });
+        w.table.set("c", { n: 3, where: true });
+        await w.h.subscribe("win"); // [a,b]
+        w.loaderCalls.length = 0;
+
+        w.del("a");
+        await tick();
+        expect(w.windowIdsOf()).toBe(1);
+        expect(w.loaderCalls).toEqual(["c"]); // the tail backfill
+        const cv = makeClientView(keyOf);
+        cv.applyAll(w.h.frames);
+        expect(cv.value).toEqual([
+          { id: "b", n: 2 },
+          { id: "c", n: 3 },
+        ]);
+        expect(reported).toEqual(["limitOf failed for win"]);
+      }
+    });
+
+    test("a backfill whose target vanished after windowIdsOf named it is a torn read: the drain rebuilds the window FULL, never recording a not-full snapshot short of its range", async () => {
+      const w = windowHarness(2);
+      w.table.set("a", { n: 1, where: true });
+      w.table.set("b", { n: 2, where: true });
+      w.table.set("c", { n: 3, where: true });
+      w.table.set("d", { n: 4, where: true });
+      await w.h.subscribe("win"); // [a,b] — full
+      const view = () => {
+        const cv = makeClientView(keyOf);
+        cv.applyAll(w.h.frames);
+        expect(cv.driftResubs).toBe(0);
+        return cv.value;
+      };
+      // `c` is deleted between the exit's `windowIdsOf` (which names it as the
+      // new tail) and the backfill that reads its row.
+      w.beforeScopedRead((ids) => {
+        if (ids.includes("c")) w.table.delete("c");
+      });
+      w.loaderCalls.length = 0;
+
+      w.del("a");
+      await tick();
+      // The backfill came back without `c`: one bounded FULL read instead of
+      // a one-row snapshot that would read as holding its whole range.
+      expect(w.windowIdsOf()).toBe(1);
+      expect(w.loaderCalls).toEqual(["c", "FULL"]);
+      expect(view()).toEqual([
+        { id: "b", n: 2 },
+        { id: "d", n: 4 },
+      ]);
+
+      w.feed("D", ["c"]); // c's own delete: no member, nothing to do
+      await tick();
+      w.del("b"); // still full: re-derive (nothing past d) → [d]
+      await tick();
+      expect(view()).toEqual(w.members().slice(0, 2));
+      expect(view()).toEqual([{ id: "d", n: 4 }]);
+    });
+
+    test("an exit windowIdsOf sees back in range (its where flipped back mid-drain) is a torn read too: rebuilt FULL", async () => {
+      const w = windowHarness(2);
+      w.table.set("a", { n: 1, where: true });
+      w.table.set("b", { n: 2, where: true });
+      w.table.set("c", { n: 3, where: true });
+      await w.h.subscribe("win"); // [a,b] — full
+      // The refill finds `a` gone; it flips back in before `windowIdsOf` reads.
+      let flipped = false;
+      w.beforeScopedRead((ids) => {
+        if (flipped || !ids.includes("a")) return;
+        flipped = true;
+        queueMicrotask(() => {
+          w.table.get("a")!.where = true;
+        });
+      });
+      w.loaderCalls.length = 0;
+
+      w.update("a", (c) => {
+        c.where = false;
+      });
+      await tick();
+
+      expect(w.loaderCalls).toEqual(["a", "FULL"]);
+      const cv = makeClientView(keyOf);
+      cv.applyAll(w.h.frames);
+      expect(cv.driftResubs).toBe(0);
+      expect(cv.value).toEqual(w.members().slice(0, 2)); // [a,b]
+    });
+
+    test("property: under random writes the client converges to the window, and no exit-only flush of a non-full window queries", async () => {
+      for (let seed = 1; seed <= 20; seed++) {
+        const r = rng(seed);
+        const limit = 1 + Math.floor(r() * 4);
+        const w = windowHarness(limit);
+        for (let i = 0; i < 3; i++)
+          w.table.set(`r${i}`, { n: Math.floor(r() * 20), where: true });
+        await w.h.subscribe("win");
+        let next = 3;
+        for (let step = 0; step < 40; step++) {
+          const live = [...w.table.keys()];
+          const shown = w.members().slice(0, limit);
+          const notFull = shown.length < limit;
+          const before = w.windowIdsOf();
+          const pick = r();
+          let exitOnly = false;
+          if (pick < 0.35 || live.length === 0) {
+            w.insert(`r${next++}`, Math.floor(r() * 20));
+          } else {
+            const id = live[Math.floor(r() * live.length)]!;
+            const member = shown.some((m) => m.id === id);
+            if (pick < 0.6) {
+              exitOnly = member;
+              w.del(id);
+            } else if (pick < 0.8) {
+              const where = !w.table.get(id)!.where;
+              exitOnly = member && !where;
+              w.update(id, (c) => {
+                c.where = where;
+              });
+            } else if (!member) {
+              // A non-member's sort key moves (it may enter). A member's would
+              // need `orderSignatureOf`, which this harness does not state.
+              w.update(id, (c) => {
+                c.n = Math.floor(r() * 20);
+              });
+            }
+          }
+          await tick();
+          if (exitOnly && notFull) expect(w.windowIdsOf()).toBe(before);
+          const cv = makeClientView(keyOf);
+          cv.applyAll(w.h.frames);
+          expect(cv.driftResubs).toBe(0);
+          expect(cv.value).toEqual(w.members().slice(0, limit));
+        }
+      }
+    });
+  });
+
   describe("window membership — persistence exclusion + eviction", () => {
     test("a bounded window entry is NEVER persisted even when shouldPersist says yes, and evicts its snapshot on N→0", async () => {
       const persists: string[] = [];
@@ -538,6 +862,7 @@ function membershipSuite(): void {
               .map((r) => r.id);
           },
           orderSignatureOf: (row) => String((row as { n: number }).n),
+          limitOf: () => limit,
         },
         loader: (_p, c) => {
           if (c === undefined) {
@@ -932,11 +1257,35 @@ describe("membership — registration guards", () => {
             orderOf: async () => [],
             orderSignatureOf: () => "",
           },
-          membership: { kind: "window", windowIdsOf: async () => [] },
+          membership: {
+            kind: "window",
+            windowIdsOf: async () => [],
+            limitOf: () => 1,
+          },
           loader: async () => [],
         },
       ),
     ).toThrow(/mutually exclusive/);
+  });
+
+  test("a window membership requires limitOf", () => {
+    const h = createHarness();
+    expect(() =>
+      // @ts-expect-error — a bounded window states its size (`limitOf`)
+      h.runtime.defineResource(
+        {
+          key: "nolimit",
+          schema: rowsSchema,
+          keyed: { keyOf },
+          validateParams: () => {},
+        },
+        {
+          routes: identityPlan("t"),
+          membership: { kind: "window", windowIdsOf: async () => [] },
+          loader: async () => [],
+        },
+      ),
+    ).toThrow(/requires limitOf/);
   });
 
   test("membership requires keyed mode", () => {
@@ -965,7 +1314,11 @@ describe("membership — registration guards", () => {
           validateParams: () => {},
         },
         {
-          membership: { kind: "window", windowIdsOf: async () => [] },
+          membership: {
+            kind: "window",
+            windowIdsOf: async () => [],
+            limitOf: () => 1,
+          },
           loader: async () => [],
         },
       ),

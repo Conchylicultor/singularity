@@ -4,11 +4,11 @@ import { EVENT_LIST_FILTERABLE, EVENT_LIST_SORTABLE } from "./fields";
 
 /**
  * The events list's live collection: every event with its source's ref
- * (`sourceType` / `sourceConfig`), read by the DataView as a segmented scroll
+ * (`sourceType` / `sourceConfig`), read by the DataView as live key-range pages
  * (`scroll: true` — the set grows without bound) and kept fresh by the routed
  * change feed, with no revision tick and no refetch of the loaded pages:
  *
- * - an event write refills exactly that event in the segments that hold (or now
+ * - an event write refills exactly that event in the live pages that hold (or now
  *   admit) it;
  * - a source write reaches the list through the `source` lookup's REVERSE route
  *   (research/2026-09-29-global-scoped-change-routing.md, P4), gated on the

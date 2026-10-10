@@ -1,5 +1,7 @@
 # DataView: server-sectioned grouping for live sources
 
+> **Superseded (2026-10-09):** the segmented scroll (`useLiveScroll`, `shared/scroll-plan.ts`, every loaded segment live, the 16-segment cap) is replaced by live key-range pages (`useLiveCollectionPages`, `shared/page-plan.ts`) whose liveness follows the viewport — see `research/2026-10-09-global-live-key-range-pages-v2.md`. Where this doc reads a scroll or its segments, read the paged read and its pages.
+
 ## Context
 
 All-conversations grouped by **Model** shows a single "Opus 5.5" section. A live

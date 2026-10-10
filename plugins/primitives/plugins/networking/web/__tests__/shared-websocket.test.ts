@@ -6,7 +6,8 @@
  * only the OS globals are faked.
  *
  * Pins (see `research/2026-10-08-networking-shared-worker-transport.md`):
- *   - one real socket per URL however many tabs attach;
+ *   - one real socket per URL however many tabs attach (per dialect: tabs of
+ *     another dialect never share it);
  *   - onopen dispatches exactly once per server connection per tab (consumers
  *     replay their subs there): a joining tab does not re-dispatch the others,
  *     a reconnect re-dispatches everyone;
@@ -116,6 +117,33 @@ describe("SharedWebSocket", () => {
     await flush();
     expect(hub.workers.count()).toBe(2);
     expect(hub.server.all()).toHaveLength(2);
+  });
+
+  test("tabs share a socket only within one dialect: another dialect of the URL gets its own worker, and none of its frames", async () => {
+    const hub = createTransportHub();
+    const a = track(
+      new SharedWebSocket(URL_PATH, hub.tab().hooks, { dialect: "v2" }),
+    );
+    const b = track(
+      new SharedWebSocket(URL_PATH, hub.tab().hooks, { dialect: "v2" }),
+    );
+    const old = track(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    await flush();
+    expect(hub.workers.count()).toBe(2);
+    expect(hub.server.all()).toHaveLength(2);
+    for (const ws of hub.server.all()) ws.open();
+    await flush();
+
+    const got: string[] = [];
+    a.onmessage = (ev) => got.push(`a:${ev.data}`);
+    b.onmessage = (ev) => got.push(`b:${ev.data}`);
+    old.onmessage = (ev) => got.push(`old:${ev.data}`);
+    a.send("sub");
+    await flush();
+    const ws = hub.server.all().find((w) => w.sent.includes("sub"))!;
+    ws.serverSend("answer");
+    await flush();
+    expect(got).toEqual(["a:answer", "b:answer"]);
   });
 
   test("reconnect backoff: 500 → new socket, index advances to 1000, resets on open", async () => {

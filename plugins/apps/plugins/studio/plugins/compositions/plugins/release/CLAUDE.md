@@ -45,7 +45,7 @@ neither did.
   with no product to build.
 - **The history is composition-scoped and unbounded.** The section is a live
   DataView over `releaseHistory` (`source={releaseHistorySource.scoped({ where:
-  { composition } })}`) — a segmented scroll of this namespace's runs, scoped to
+  { composition } })}`) — live key-range pages of this namespace's runs, scoped to
   the composition as data; a run starting, finishing or failing reaches the rows
   through the routed runtime (no tick, no refetch). There is no 50-run cap: the
   full run history pages past one window. The surface's custom columns sort and

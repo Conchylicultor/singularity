@@ -40,6 +40,19 @@ export interface SharedWebSocketHooks {
   pageLifecycle?: PageLifecycleLike | null;
 }
 
+/** What the tab asks of the socket it shares (as opposed to the OS seams in `SharedWebSocketHooks`). */
+export interface SharedWebSocketOptions {
+  /**
+   * Which tabs this one shares a socket with: only those of the same dialect
+   * (default: none named — every tab of this networking build). The worker
+   * fans every server frame out to every tab on its socket, so a consumer
+   * whose server may answer one tab with a frame another tab's code would
+   * misread names a dialect its readers share — tabs that read frames
+   * differently then never share a socket.
+   */
+  dialect?: string;
+}
+
 function defaultMakeSharedWorker(name: string): SharedWorkerLike {
   if (typeof SharedWorker === "undefined") {
     throw new Error(
@@ -97,6 +110,7 @@ export class SharedWebSocket {
   onerror: ((ev: Event) => void) | null = null;
 
   private readonly absUrl: string;
+  private readonly dialect: string | undefined;
   private readonly makeSharedWorker: MakeSharedWorker;
   private readonly locks: LockManagerLike;
   private readonly lifecycle: PageLifecycleLike | null;
@@ -115,8 +129,13 @@ export class SharedWebSocket {
    */
   private boundConn: string | null = null;
 
-  constructor(url: string | URL, hooks?: SharedWebSocketHooks) {
+  constructor(
+    url: string | URL,
+    hooks?: SharedWebSocketHooks,
+    options?: SharedWebSocketOptions,
+  ) {
     this.url = typeof url === "string" ? url : url.toString();
+    this.dialect = options?.dialect;
     this.makeSharedWorker = hooks?.makeSharedWorker ?? defaultMakeSharedWorker;
     this.locks = hooks?.locks ?? defaultLocks();
     this.lifecycle =
@@ -197,7 +216,9 @@ export class SharedWebSocket {
 
   private attach(): void {
     const portId = crypto.randomUUID();
-    const worker = this.makeSharedWorker(sharedWsWorkerName(this.absUrl));
+    const worker = this.makeSharedWorker(
+      sharedWsWorkerName(this.absUrl, this.dialect),
+    );
     const session: PortSession = {
       worker,
       port: worker.port,

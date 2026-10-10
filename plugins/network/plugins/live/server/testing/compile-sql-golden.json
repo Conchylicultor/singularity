@@ -7,7 +7,8 @@
           "membership": {
             "kind": "window",
             "windowIdsOf": "$function",
-            "orderSignatureOf": "$function"
+            "orderSignatureOf": "$function",
+            "limitOf": "$function"
           },
           "debounceMs": 25
         },
@@ -333,7 +334,8 @@
           "membership": {
             "kind": "window",
             "windowIdsOf": "$function",
-            "orderSignatureOf": "$function"
+            "orderSignatureOf": "$function",
+            "limitOf": "$function"
           }
         },
         "membership": "window",
@@ -505,7 +507,8 @@
           "membership": {
             "kind": "window",
             "windowIdsOf": "$function",
-            "orderSignatureOf": "$function"
+            "orderSignatureOf": "$function",
+            "limitOf": "$function"
           }
         },
         "membership": "window",
@@ -679,7 +682,8 @@
           "membership": {
             "kind": "window",
             "windowIdsOf": "$function",
-            "orderSignatureOf": "$function"
+            "orderSignatureOf": "$function",
+            "limitOf": "$function"
           }
         },
         "membership": "window",
@@ -1143,7 +1147,8 @@
           "membership": {
             "kind": "window",
             "windowIdsOf": "$function",
-            "orderSignatureOf": "$function"
+            "orderSignatureOf": "$function",
+            "limitOf": "$function"
           }
         },
         "membership": "window",
@@ -1321,7 +1326,8 @@
           "membership": {
             "kind": "window",
             "windowIdsOf": "$function",
-            "orderSignatureOf": "$function"
+            "orderSignatureOf": "$function",
+            "limitOf": "$function"
           }
         },
         "membership": "window",
@@ -2103,7 +2109,8 @@
           "membership": {
             "kind": "window",
             "windowIdsOf": "$function",
-            "orderSignatureOf": "$function"
+            "orderSignatureOf": "$function",
+            "limitOf": "$function"
           },
           "validateParams": "$function"
         },
@@ -3869,7 +3876,8 @@
           "membership": {
             "kind": "window",
             "windowIdsOf": "$function",
-            "orderSignatureOf": "$function"
+            "orderSignatureOf": "$function",
+            "limitOf": "$function"
           },
           "validateParams": "$function"
         },
@@ -5664,7 +5672,8 @@
           "membership": {
             "kind": "window",
             "windowIdsOf": "$function",
-            "orderSignatureOf": "$function"
+            "orderSignatureOf": "$function",
+            "limitOf": "$function"
           },
           "validateParams": "$function"
         },
@@ -7095,7 +7104,9 @@
           "membership": {
             "kind": "window",
             "windowIdsOf": "$function",
-            "orderSignatureOf": "$function"
+            "orderSignatureOf": "$function",
+            "limitOf": "$function",
+            "familyOf": "$function"
           },
           "validateParams": "$function"
         },
@@ -8557,7 +8568,9 @@
           "membership": {
             "kind": "window",
             "windowIdsOf": "$function",
-            "orderSignatureOf": "$function"
+            "orderSignatureOf": "$function",
+            "limitOf": "$function",
+            "familyOf": "$function"
           },
           "recomputeOn": [
             {
@@ -9676,7 +9689,9 @@
           "membership": {
             "kind": "window",
             "windowIdsOf": "$function",
-            "orderSignatureOf": "$function"
+            "orderSignatureOf": "$function",
+            "limitOf": "$function",
+            "familyOf": "$function"
           },
           "validateParams": "$function"
         },

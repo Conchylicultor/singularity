@@ -1270,7 +1270,7 @@ export interface DataViewInMemoryOrigin<
    * does (loading-more, Retry on a failed page, the line saying it stops),
    * and section counts holding paged rows read as lower bounds until the read
    * is complete. For a consumer that must derive its rows in memory from a
-   * paged read (a live scroll, `scrollPaging`) — a list whose rows ARE one
+   * paged read (live pages, `pagesPaging`) — a list whose rows ARE one
    * collection's is a live `source` instead.
    */
   paging?: DataViewPaging<TRow>;
@@ -1308,7 +1308,7 @@ export interface DataViewPagingTotal {
 }
 
 /** A read failing under rows that stay on screen — a notice above them, with its own Retry. */
-export interface DataViewSegmentNotice {
+export interface DataViewPageNotice {
   /** Unique among the notices (the failing read's identity). */
   key: string;
   /** The row key of the last row before the failing read; `null` = it is the head. */
@@ -1318,9 +1318,50 @@ export interface DataViewSegmentNotice {
 }
 
 /**
+ * Which of a paged read's rows a DataView has on screen, by row key, in the
+ * read's order: the first and the last drawn and visible, or none of them. A
+ * placeholder the read draws ({@link DataViewPagePlaceholder}) is named by
+ * its `key`, in its place before or after the rows.
+ */
+export type DataViewVisibleRows =
+  { kind: "none" } | { kind: "rows"; first: string; last: string };
+
+/**
+ * A page of a paged read drawn as one placeholder — released past the read's
+ * stale budget, its rows dropped — standing in for `rows` rows: the DataView
+ * draws it (through `primitives/loading`) at the height those rows had, and
+ * reports it on screen by `key`, which subscribes the page again. Never a
+ * row: no field of it is ever rendered as a value.
+ */
+export interface DataViewPagePlaceholder {
+  /** Unique among the read's placeholders and row keys. */
+  key: string;
+  rows: number;
+}
+
+/**
+ * The placeholders of a paged read: those before its rows and those after
+ * them — never between two rows.
+ */
+export interface DataViewPagePlaceholders {
+  before: readonly DataViewPagePlaceholder[];
+  after: readonly DataViewPagePlaceholder[];
+}
+
+/**
+ * Where a DataView reports which of a paged read's rows are on screen — the
+ * `sink` of data-view's `usePagesViewport`, whose `viewport` the read pages
+ * by. Reported after every settled scroll (and whenever the rows drawn
+ * change), never while the DataView is still measuring.
+ */
+export interface DataViewViewportSink {
+  report(rows: DataViewVisibleRows): void;
+}
+
+/**
  * The paging state of a read whose loaded rows a DataView shows — see
  * {@link DataViewInMemoryOrigin.paging}. A live `source` produces one
- * internally; `scrollPaging` maps a `useLiveScroll` read onto it.
+ * internally; `pagesPaging` maps a `useLiveCollectionPages` read onto it.
  */
 export interface DataViewPaging<TRow> {
   /** A next page would add rows. */
@@ -1335,7 +1376,22 @@ export interface DataViewPaging<TRow> {
   /** Rows exist past the tail that cannot be paged to; `hint` says how to reach them. */
   truncated: false | { hint: string };
   /** Reads failing under rows that stay on screen. */
-  notices: readonly DataViewSegmentNotice[];
+  notices: readonly DataViewPageNotice[];
+  /**
+   * Where the DataView reports which of the read's rows it has on screen
+   * (`usePagesViewport().sink`) — the read keeps the pages near them live.
+   * A read that pages by no viewport (one bounded read, a section not read
+   * yet) passes a sink that discards the report.
+   */
+  viewport: DataViewViewportSink;
+  /**
+   * The read's pages drawn as placeholders. The DataView draws them before
+   * and after the read's rows: a flat read's around the whole view (when
+   * every row of the view is the read's — with `isPaged` they are not drawn,
+   * since the read's rows sit among others), a declared section's inside its
+   * band (`SectionBody`).
+   */
+  placeholders: DataViewPagePlaceholders;
   /**
    * The read's known total, if any: section counts holding its rows read
    * exact rather than "N+" before every page is loaded (while no search or
@@ -1352,7 +1408,7 @@ export interface DataViewPaging<TRow> {
 }
 
 /**
- * A live `network/live` collection read as a segmented scroll
+ * A live `network/live` collection read as key-range pages
  * (`liveDataSource`): the view's sort, filter, search and group-by lower onto
  * its window params, and the rows stay live through the routed runtime.
  */

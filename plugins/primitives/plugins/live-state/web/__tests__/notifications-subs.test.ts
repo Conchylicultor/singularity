@@ -41,7 +41,7 @@ import {
   createTransportHub,
   type FakeWebSocket,
 } from "@plugins/primitives/plugins/networking/web/testing";
-import { NotificationsClient } from "../notifications-client";
+import { NotificationsClient, queryKeyFor } from "../notifications-client";
 import { getResourceWatermark } from "../watermark-registry";
 import { hasResourceTxAck } from "../tx-ack-registry";
 import {
@@ -142,6 +142,68 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     await vi.advanceTimersByTimeAsync(2);
     expect(unsubFrames(socket)).toHaveLength(1);
     expect(client.debugSnapshot().subs).toHaveLength(0);
+  });
+
+  test("release now: the last observer leaving with `now` unsubscribes at once, drops the cached value, and a remount is a new sub", async () => {
+    const { client, socket, qc } = await setup();
+    client.observe("k", { a: "1" }, undefined, pushSchema);
+    client.observe("k", { a: "1" }, undefined, pushSchema);
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "k",
+      params: { a: "1" },
+      value: { status: "held" },
+      version: 1,
+    });
+    await flush();
+    expect(qc.getQueryData(queryKeyFor("k", { a: "1" }))).toEqual({
+      status: "held",
+    });
+    // Another observer still holds it: a refcount drop, no transition.
+    client.unobserve("k", { a: "1" }, undefined, "now");
+    await flush();
+    expect(unsubFrames(socket)).toHaveLength(0);
+    client.unobserve("k", { a: "1" }, undefined, "now");
+    await flush();
+    expect(unsubFrames(socket)).toHaveLength(1);
+    expect(client.debugSnapshot().subs).toHaveLength(0);
+    // Nothing keeps the cached value current any more: a remount reads
+    // `loading` until the server vouches for one again.
+    expect(qc.getQueryState(queryKeyFor("k", { a: "1" }))).toBeUndefined();
+    // No parked teardown fires later.
+    await vi.advanceTimersByTimeAsync(SUB_KEEPALIVE_MS + 1);
+    expect(unsubFrames(socket)).toHaveLength(1);
+    client.observe("k", { a: "1" }, undefined, pushSchema);
+    await flush();
+    expect(subFrames(socket, "k")).toHaveLength(2);
+  });
+
+  test("appliedSeq orders every sub's value on one client-wide sequence", async () => {
+    const { client, socket } = await setup();
+    client.observe("k", { a: "1" }, undefined, pushSchema);
+    client.observe("k", { a: "2" }, undefined, pushSchema);
+    await flush();
+    expect(client.appliedSeq("k", { a: "1" })).toBe(0);
+    const frame = (a: string, version: number) => ({
+      kind: "sub-ack",
+      key: "k",
+      params: { a },
+      value: { status: `v${version}` },
+      version,
+    });
+    socket.serverSend(frame("2", 1));
+    await flush();
+    socket.serverSend(frame("1", 1));
+    await flush();
+    const one = client.appliedSeq("k", { a: "1" });
+    const two = client.appliedSeq("k", { a: "2" });
+    expect(one).toBeGreaterThan(two);
+    expect(two).toBeGreaterThan(0);
+    socket.serverSend({ ...frame("2", 2), kind: "update" });
+    await flush();
+    expect(client.appliedSeq("k", { a: "2" })).toBeGreaterThan(one);
+    // A tuple this tab holds no sub for has none.
+    expect(client.appliedSeq("k", { a: "3" })).toBe(0);
   });
 
   test("no-sub gate: a frame for a never-observed key is dropped (no throw, no cache write)", async () => {

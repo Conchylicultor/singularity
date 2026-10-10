@@ -23,6 +23,14 @@ others — there is no leader to lose. Design:
 - **One worker per networking build.** The worker script is content-addressed
   next to the tab code naming it, so a tab only ever talks to a worker of its own
   build; during a rollout old and new tabs hold one socket each.
+- **One worker per dialect.** `new SharedWebSocket(url, hooks?, { dialect })`
+  — the dialect is part of the worker's name (`sharedWsWorkerName`), so a tab
+  shares its socket only with tabs of the same dialect. The worker fans every
+  server frame out to every tab on the socket, so a consumer whose server may
+  answer one tab with a frame another bundle of it would misread names one its
+  readers share: live-state passes its own module URL (content-addressed per
+  build of it), so a tab left open across a deploy never sees a frame of a
+  newer vocabulary. No dialect = every tab of this networking build.
 - **`onopen` fires once per server connection per tab** (consumers replay their
   state there): the worker re-sends its status on every port join/leave, and the
   tab dispatches only when the connection id changes (or after a re-attach).
@@ -40,9 +48,10 @@ others — there is no leader to lose. Design:
 `SharedWebSocket` and the worker host never touch the OS globals directly — they
 go through injected factories that default to the globals:
 
-- `new SharedWebSocket(url, hooks?)` — `SharedWebSocketHooks` carries
+- `new SharedWebSocket(url, hooks?, options?)` — `SharedWebSocketHooks` carries
   `makeSharedWorker`, `locks`, `pageLifecycle` (`null` ⇒ none). Production
-  passes nothing.
+  passes nothing (`options` is not a seam: its `dialect` names who shares the
+  socket).
 - `createSharedWsHost({ makeWebSocket, locks })` — the worker entry passes the
   real ones; tests pass fakes. The structural types (`WebSocketLike`,
   `SharedWorkerLike`, `MessagePortLike`, `LockManagerLike`) live in

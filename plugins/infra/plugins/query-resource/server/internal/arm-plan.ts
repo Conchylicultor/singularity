@@ -636,7 +636,7 @@ export function planArm<Row, P extends ResourceParams>(
   };
   const orderSqlOf = (params: P): SQL[] => orderPlanOf(params).sql;
 
-  // A scroll segment's cuts, compiled on the ORDER side over the tuple's own
+  // A page's cuts, compiled on the ORDER side over the tuple's own
   // keys: `after` exclusive (the keyset seek), `until` inclusive. Each operand
   // is a key's exact text, cast back to its column's type — so Postgres
   // compares the value it stored, not a rounded one.
@@ -728,7 +728,7 @@ export function planArm<Row, P extends ResourceParams>(
   });
 
   // The tuple's `where` (checked against its declared universe by
-  // `reads.tuple`), ANDed with its segment cuts — order-side, checked against
+  // `reads.tuple`), ANDed with its page cuts — order-side, checked against
   // its order keys instead.
   const whereOf = (params: P, w: SQL | undefined): SQL | undefined => {
     const cut = cutWhere(params);

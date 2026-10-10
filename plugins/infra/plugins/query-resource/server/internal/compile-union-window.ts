@@ -170,6 +170,8 @@ export interface UnionCollectionSpec<
     /** The tuple's limit (already clamped). */
     limitOf: (params: WP) => number;
     cutsOf: (params: WP) => UnionCuts;
+    /** The tuple's page family: one string per query, whatever its cuts and limit (see `WindowQueryResourceSpec.scroll.familyOf`). */
+    familyOf: (params: WP) => string;
     validateParams?: (params: ResourceParams) => void;
   };
   /** Where a window row carries its scroll key, and the key's byte bound. */
@@ -699,6 +701,11 @@ export function compileUnionCollection<
     kind: "window",
     windowIdsOf,
     orderSignatureOf,
+    // The limit `fullRows` and `windowIdsOf` read, and the page family: a
+    // fresh page may be derived from rows other pages of its query hold (the
+    // runtime's seeded derivation).
+    limitOf: (params) => spec.window.limitOf(params),
+    familyOf: (params) => spec.window.familyOf(params),
   };
   const usesOf =
     <P extends ResourceParams>(

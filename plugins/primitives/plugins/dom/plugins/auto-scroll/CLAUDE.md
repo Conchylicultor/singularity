@@ -12,9 +12,32 @@ that wants it. Today that is six roles:
   (scroll only THIS container; never an ancestor, unlike `scrollIntoView`)
 - **gesture edge auto-scroll** — `useEdgeAutoScroll`
 - **scroll kept across a wholesale swap** — `KeepScrollAcross`
+- **the reader's anchor kept across a resize above it** — `KeepAnchorAcross`
 - **scroll carried to a new document** — `captureDocumentScroll` /
   `restoreDocumentScroll`
 - **scroll-container discovery** — `findScrollParent`
+
+## `KeepAnchorAcross` — content resized above the reader must not move them
+
+The engine-independent twin of browser scroll anchoring, for a region that
+knows when it resizes content above the viewport (data-view's paged reads
+swap far rows for a height-keeping placeholder and back). On a `changeKey`
+change, `getSnapshotBeforeUpdate` takes the first element marked with
+`anchorAttr` that is visible in the scroller (one also carrying `weakAttr` —
+a placeholder about to be replaced — only when nothing else is) and its top;
+`componentDidUpdate` finds the element of the same `anchorAttr` VALUE (content
+identity: it may be re-created) and scrolls by how far it moved. Acts only
+on a key change, so ordinary updates force no layout.
+
+**It is the only anchoring inside its region.** It renders the region's box
+itself (a plain block `div`, handed to the caller through `hostRef`) with
+`overflow-anchor: none`, so browser scroll anchoring never acts there. The two
+are NOT idempotent: each picks its own anchor, and the browser picks whatever
+box is on screen — inside a windowed list, a spacer or a row the window is
+about to recycle, and it then scrolls by how far THAT moved (measured: a
+released page's full height, skipping whole pages of rows). Owning the box
+makes the opt-out impossible to forget (a `display: contents` box would draw
+nothing for the property to apply to).
 
 ## `useStickyScroll` — following is an intent, never an inference
 
@@ -129,7 +152,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
 
 ## Plugin reference
 
-- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
+- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.Button`
@@ -148,6 +171,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `FindScrollParentOptions`
     - `JumpToBottomButtonProps`
     - `JumpToBottomView`
+    - `KeepAnchorAcrossProps`
     - `KeepScrollAcrossProps`
     - `ScrollAlign`
     - `ScrollChildIntoViewOptions`
@@ -160,6 +184,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `captureDocumentScroll`
     - `findScrollParent`
     - `JumpToBottomButton`
+    - `KeepAnchorAcross`
     - `keepInPlace`
     - `KeepScrollAcross`
     - `restoreDocumentScroll`
@@ -178,6 +203,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `debug/logs`
     - `layouts/miller`
     - `page/editor`
+    - `primitives/data-view`
     - `primitives/log-channels`
     - `primitives/outline/scroll-spy`
     - `primitives/overlay/image-viewer`

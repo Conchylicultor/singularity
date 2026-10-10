@@ -163,7 +163,7 @@ const SPEC = {
   maxLimit: 50,
 } as const;
 const collection = () => liveCollection(`test.live.joins-${seq++}`, SPEC);
-// A scroll collection: its tuples may carry segment cuts.
+// A scroll collection: its tuples may carry page cuts.
 const scrollCollection = () =>
   liveCollection(`test.live.joins-${seq++}`, { ...SPEC, scroll: true });
 

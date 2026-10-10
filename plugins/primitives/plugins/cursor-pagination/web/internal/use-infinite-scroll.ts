@@ -10,7 +10,7 @@ export interface InfiniteScrollOptions {
   /**
    * The footer's Retry after a failed next page. Defaults to `fetchNextPage` —
    * right when the failed request IS the next page; a source whose failing read
-   * is something else (a segmented scroll's tail window) passes its own, so a
+   * is something else (a paged read's last page) passes its own, so a
    * Retry never asks for yet another page.
    */
   retry?: () => void;

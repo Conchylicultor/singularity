@@ -31,7 +31,10 @@ import { notePendingMount } from "./pending-mount-tracker";
 import { dateAwareReplaceEqualDeep } from "./internal/structural-sharing";
 import { toResourceError } from "./resource-error";
 import { queryResult } from "./query-result";
-import type { ChannelStatuses } from "./notifications-client";
+import type {
+  ChannelStatuses,
+  ResourceDerivation,
+} from "./notifications-client";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import type { FailingResource } from "./resource-error-reporter";
 import type { ResourceDescriptor, ResourceError } from "../core";
@@ -699,14 +702,46 @@ function combineTuples(
 }
 
 /**
+ * One tuple of a `useResources` read: its `ResourceResult`, and where its
+ * value was last applied on the client-wide apply sequence — of two tuples,
+ * the higher `appliedSeq` holds the more recently applied value (`0`: nothing
+ * applied through this tab's sub yet, a boot-hydrated value included).
+ */
+export type ResourceTupleResult<T> = ResourceResult<T> & {
+  appliedSeq: number;
+};
+
+/** How `useResources` lets go of a tuple dropped from its list. */
+export interface UseResourcesOptions<
+  P extends ResourceParams = ResourceParams,
+> {
+  /**
+   * `"now"`: a tuple removed from the list while the hook stays mounted is
+   * unsubscribed at once instead of after the keep-alive window — for a
+   * reader that drops a tuple on purpose and will not remount it (a paged
+   * read's page leaving its band). Unmounting the hook still releases through
+   * the keep-alive (a remount reuses the live subs). Default: the keep-alive.
+   */
+  release?: "now";
+  /**
+   * Per tuple of `paramsList` (same length, same order): how to seed it from
+   * rows this tab already holds when it is first subscribed — `null` for a
+   * plain load. Read only when a tuple ENTERS the list (a fresh sub), never
+   * for one kept across a change; see `ResourceDerivation` for what the
+   * caller vouches for and what the server checks.
+   */
+  derive?: readonly (ResourceDerivation<P> | null)[];
+}
+
+/**
  * Read a VARYING number of tuples of one resource — `useResource` for a list of
- * params whose length changes over time (a segmented scroll's windows), which
- * a hook call per tuple cannot express. Each tuple is read exactly as
- * `useResource` reads it — the same query (key, HTTP fallback, enabled rule, GC
- * rule), the same `observe` / `unobserve` refcount (a tuple another component
- * also reads is subscribed once), the same cold-start prime, and the same
- * pending-mount count until its first value — and yields the same
- * `ResourceResult` states, in `paramsList` order, and each tuple's
+ * params whose length changes over time (a paged read's pages), which a hook
+ * call per tuple cannot express. Each tuple is read exactly as `useResource`
+ * reads it — the same query (key, HTTP fallback, enabled rule, GC rule), the
+ * same `observe` / `unobserve` refcount (a tuple another component also reads
+ * is subscribed once), the same cold-start prime, and the same pending-mount
+ * count until its first value — and yields the same `ResourceResult` states
+ * (each with its `appliedSeq`), in `paramsList` order, and each tuple's
  * mount→settle is reported once (`reportTupleSettled`). No `select` and no
  * `gate`.
  *
@@ -719,7 +754,15 @@ function combineTuples(
 export function useResources<T, P extends ResourceParams = ResourceParams>(
   resource: ResourceDescriptor<T, P>,
   paramsList: readonly P[],
-): readonly ResourceResult<T>[] {
+  options: UseResourcesOptions<P> = {},
+): readonly ResourceTupleResult<T>[] {
+  const release = options.release === "now" ? "now" : "keep-alive";
+  const derive = options.derive;
+  if (derive !== undefined && derive.length !== paramsList.length) {
+    throw new Error(
+      `useResources(${resource.key}): derive has ${derive.length} entries for ${paramsList.length} tuples — one per tuple, null for a plain load`,
+    );
+  }
   const notifications = useContext(NotificationsContext);
   if (!notifications) {
     throw new Error("useResources must be used within a NotificationsProvider");
@@ -746,21 +789,49 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
   const observedRef = useRef<Map<string, ResourceParams>>(new Map());
   // When each tuple was first observed, for its mount→settle report.
   const startedRef = useRef<Map<string, number>>(new Map());
+  // Each tuple's derivation, canonical like its params — read only for a
+  // tuple the effect below sees enter the list.
+  const derivations = useMemo(
+    () =>
+      derive?.map((d) =>
+        d === null
+          ? undefined
+          : {
+              from: d.from.map((s) => ({
+                ...s,
+                params: canonicalParams(s.params, resource.optionalParams),
+              })),
+            },
+      ),
+    [derive, resource.optionalParams],
+  );
   useEffect(() => {
     const next = new Map(list.map((p, i) => [tupleKeys[i]!, p]));
     const prev = observedRef.current;
-    for (const [k, p] of next) {
-      if (!prev.has(k)) {
-        if (!startedRef.current.has(k))
-          startedRef.current.set(k, performance.now());
-        notifications.observe(key, p, origin, schema, keyOf);
-      }
-    }
+    const entered = new Set<string>();
+    list.forEach((p, i) => {
+      const k = tupleKeys[i]!;
+      if (prev.has(k) || entered.has(k)) return;
+      entered.add(k);
+      if (!startedRef.current.has(k))
+        startedRef.current.set(k, performance.now());
+      notifications.observe(key, p, origin, schema, keyOf, derivations?.[i]);
+    });
     for (const [k, p] of prev) {
-      if (!next.has(k)) notifications.unobserve(key, p, origin);
+      if (!next.has(k)) notifications.unobserve(key, p, origin, release);
     }
     observedRef.current = next;
-  }, [notifications, key, origin, schema, keyOf, list, tupleKeys]);
+  }, [
+    notifications,
+    key,
+    origin,
+    schema,
+    keyOf,
+    list,
+    tupleKeys,
+    release,
+    derivations,
+  ]);
   useEffect(
     () => () => {
       for (const p of observedRef.current.values()) {
@@ -832,8 +903,11 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
 
   return useMemo(
     () =>
-      states.map((st, i): ResourceResult<T> => {
+      states.map((st, i): ResourceTupleResult<T> => {
         const queryKey = queryKeyFor(key, list[i]!);
+        // Read beside the value it describes: the apply that wrote this
+        // tuple's value bumped it before the render this value reaches.
+        const appliedSeq = notifications.appliedSeq(key, list[i]!, origin);
         // A manual refetch ignores `enabled`, as `useResource`'s does.
         const refetch = () =>
           (
@@ -846,12 +920,18 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
         if (st.error !== null) {
           const error = toResourceError(st.error);
           return st.hasValue
-            ? { status: "error", error, stale: st.data as T, refetch }
-            : { status: "error", error, refetch };
+            ? {
+                status: "error",
+                error,
+                stale: st.data as T,
+                refetch,
+                appliedSeq,
+              }
+            : { status: "error", error, refetch, appliedSeq };
         }
-        if (!st.hasValue) return { status: "loading", refetch };
-        return { status: "ready", data: st.data as T, refetch };
+        if (!st.hasValue) return { status: "loading", refetch, appliedSeq };
+        return { status: "ready", data: st.data as T, refetch, appliedSeq };
       }),
-    [states, list, key, queryClient],
+    [states, list, key, queryClient, notifications, origin],
   );
 }

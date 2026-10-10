@@ -243,6 +243,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     // rows and nothing else, so every declared affordance is wired either way.
     const card = (
       <DataCard
+        rowKey={key}
         size={options.size}
         selected={key === props.selectedRowId}
         onActivate={props.rowActivation?.(row)}

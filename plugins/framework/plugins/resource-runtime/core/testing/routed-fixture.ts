@@ -94,7 +94,29 @@ type Loader<Row> = (
   ctx?: { affectedIds: readonly string[] },
 ) => Row[] | Promise<Row[]>;
 
-export interface RoutedTableSpec<Row> {
+/**
+ * A `window`'s ids query and its size, stated together or not at all: a
+ * suite whose `windowIdsOf` cuts a LIMIT must say how many rows a full window
+ * holds, or every window reads as not full and its exits stop backfilling.
+ * Omitted, the window is the FULL loader's ids, unlimited (`limitOf` =
+ * `Infinity`) — the suite's FULL loader then cuts no LIMIT either.
+ */
+type WindowBounds =
+  | { windowIdsOf?: never; limitOf?: never }
+  | {
+      /** `window`: the bounded ordered id list. */
+      windowIdsOf: (params: ResourceParams) => Promise<string[]>;
+      /**
+       * `window`: the tuple's window size, the LIMIT `windowIdsOf` cuts (a
+       * window holding fewer rows is not full; stated with `familyOf`, a fresh
+       * tuple may be derived — see `deriveSub`).
+       */
+      limitOf: (params: ResourceParams) => number;
+    };
+
+export type RoutedTableSpec<Row> = RoutedTableFields<Row> & WindowBounds;
+
+interface RoutedTableFields<Row> {
   key: string;
   /** The base table the identity route names. */
   table: string;
@@ -108,14 +130,14 @@ export interface RoutedTableSpec<Row> {
   loader: Loader<Row>;
   /** `alias`: the ordered id list. Default: the FULL loader's ids, in order. */
   orderOf?: (params: ResourceParams) => Promise<string[]>;
-  /** `window`: the bounded ordered id list. Default: the FULL loader's ids. */
-  windowIdsOf?: (params: ResourceParams) => Promise<string[]>;
   /**
    * `alias` / `window`: the order signature of one row. The alias requires one
    * (a routed alias always knows its ORDER BY); the default `() => ""` says the
    * order never moves in place.
    */
   orderSignatureOf?: (row: unknown, params: ResourceParams) => string;
+  /** `window`: the tuple's derivation family (the query it is a range of). */
+  familyOf?: (params: ResourceParams) => string;
   /** `point`: the tuple's id set. Default: `params.ids`, comma-separated. */
   idsOf?: (params: ResourceParams) => readonly string[];
   /** Default: `identityPlan(table)`. */
@@ -166,9 +188,17 @@ export function defineRoutedTable<Row>(
         ? {
             membership: {
               kind: "window" as const,
-              windowIdsOf: spec.windowIdsOf ?? fullIds,
+              ...(spec.windowIdsOf !== undefined
+                ? { windowIdsOf: spec.windowIdsOf, limitOf: spec.limitOf }
+                : {
+                    windowIdsOf: fullIds,
+                    limitOf: () => Number.POSITIVE_INFINITY,
+                  }),
               ...(spec.orderSignatureOf !== undefined
                 ? { orderSignatureOf: spec.orderSignatureOf }
+                : {}),
+              ...(spec.familyOf !== undefined
+                ? { familyOf: spec.familyOf }
                 : {}),
             },
           }

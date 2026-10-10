@@ -69,6 +69,7 @@ allowlisting a copy.
 - Cross-plugin:
   - Imported by:
     - `primitives/cursor-pagination`
+    - `primitives/data-view`
     - `primitives/dom/auto-scroll`
     - `primitives/outline/scroll-spy`
     - `primitives/pane`

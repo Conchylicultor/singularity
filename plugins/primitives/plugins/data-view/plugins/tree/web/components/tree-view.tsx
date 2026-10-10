@@ -198,6 +198,10 @@ function DefaultRow<TRow>(props: {
     <RowChrome
       node={node}
       depth={depth}
+      // The row's identity on the DOM, by which the DataView measures the
+      // rows on screen: the row's key, which a real node's id is (an alias
+      // is a second drawing of a row the real node already marks).
+      rowKey={isAlias ? undefined : node.id}
       accent={accent}
       actions={
         revealedActions && !isAlias

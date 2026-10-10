@@ -1,8 +1,8 @@
 // The page chain of a cursor-paged value, as pure data — `useLive(paged, query,
 // { first })` (`web/internal/use-live-pages.ts`) feeds it what each page's read
-// settled on and renders what it assembles. The twin of `scroll-plan.ts` for a
-// value paged by a SERVER cursor: there are no cuts to split or merge at, only
-// a chain — page k+1 is asked with page k's `nextCursor` — and every loaded
+// settled on and renders what it assembles. The twin of `page-plan.ts` (a
+// scroll collection's key-range pages) for a value paged by a SERVER cursor:
+// there are no cuts to split or merge at, only a chain — page k+1 is asked with page k's `nextCursor` — and every loaded
 // page stays live (each is its own tuple, invalidated and refetched on its own).
 // See `plugins/network/plugins/live/CLAUDE.md` (*Paged values*) and
 // research/2026-10-09-global-live-structured-paged-values.md §2.
@@ -11,7 +11,7 @@
 // the `nextCursor` its predecessor answers. A refresh that moves a boundary
 // (page k now answers a different `nextCursor`) RE-MINTS page k+1 from it; the
 // page it replaces stays read and rendered until the replacement settles, so
-// the chain never flips back to loading (the scroll plan's handoff rule).
+// the chain never flips back to loading (the page plan's handoff rule).
 
 /** One page tuple of the chain: the cursor it is asked with and its size. */
 export interface PageSpec {

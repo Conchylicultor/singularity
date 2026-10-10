@@ -347,27 +347,30 @@ useLive(graphNodes, { select: countNodes });                          // a slice
   (`useLiveRow` has no `data` to collapse), and both on `no-ready-negation`'s:
   never `status !== "ready"` — name `"loading"` and `"error"`.
 
-## Scroll collections — `scroll: true` / `useLiveScroll`
+## Paged collections — `scroll: true` / `useLiveCollectionPages`
 
-A list that scrolls past `maxLimit` (a live DataView source) reads a collection
-declared `scroll: true` as a **segmented scroll**: several windows, each ≤
-`maxLimit`, that tile the order by cuts — and every loaded segment stays live.
-Design: research/2026-09-29-global-scoped-change-routing.md, "P2 — DataView
-live-window adapter".
+A list that scrolls with no depth limit (a live DataView source) reads a
+collection declared `scroll: true` as **key-range pages**: each page is one
+bounded window tuple `(after, until]` at a `limit`, the pages tile the order by
+server-minted cuts, and **liveness follows the viewport** — the pages near the
+rows on screen are subscribed, the rest keep the rows they last held (stale).
+Design: research/2026-10-09-global-live-key-range-pages-v2.md (P1: the plan,
+the hook, the viewport and the reader swap; P2: the stale budget and its
+placeholders; P3: seeded derivation).
 
-- **Declare.** `scroll: true` needs `maxLimit ≥ 3 · default.limit` (a
-  declaration throw): a full segment splits at `maxLimit − default.limit` and two
-  merge below `maxLimit − 2 · default.limit`. The collection is typed
-  `LiveScrollCollection` (`scroll: true`), which is what `useLiveScroll` and
-  `liveDataSource` take.
+- **Declare.** `scroll: true` needs `maxLimit ≥ 2 · default.limit` (a
+  declaration throw): a page that splits is read at `2 · default.limit`, a step
+  of headroom over the rows it holds. `maxLimit` bounds one page's `limit`; it is
+  no depth bound. The collection is typed `LiveScrollCollection` (`scroll:
+  true`), which is what `useLiveCollectionPages` and `liveDataSource` take.
 - **`$key` — the server-minted row key.** Every full and scoped row of a scroll
   window carries `$key`: the canonical JSON array of the tuple's order keys as
   exact Postgres text (`col::text` — a µs `timestamptz`, a long `numeric`, a
   `float8` cross exactly), then the id (omitted when the order already names it).
-  Over `LIVE_ROW_KEY_MAX_BYTES` (1 KiB, a long text sort key) it is `null`: the
-  scroll cannot cut there. It is declared on the window's wire schema only (never
+  Over `LIVE_ROW_KEY_MAX_BYTES` (1 KiB, a long text sort key) it is `null`: no
+  page can be cut there. It is declared on the window's wire schema only (never
   a row field, never on `:rows`), and every read hands rows out WITHOUT it
-  (`useLive` and `useLiveScroll` split it off, one copy per row object).
+  (`useLive` and `useLiveCollectionPages` split it off, one copy per row object).
 - **Cuts.** A window tuple may carry `after` (exclusive) and `until` (inclusive)
   — each a `$key` verbatim, never derived on the client (a decoded row lost the
   exact text). The codec refuses them on a collection not declared `scroll`, and
@@ -376,47 +379,149 @@ live-window adapter".
   (keyset's `seekPredicate` / `atOrBeforePredicate`, each operand cast back to its
   column's type) — never through `where`, so a sortable-but-not-filterable order
   column takes cuts, and the routes and roles are those of the tuple without them.
-- **`useLiveScroll(c, query | null, { resetKey? })`** → `{ status: "loading" }
-  | { status: "error"; error; refetch }` (the first segment failed with no rows;
-  `error` is that read's `ResourceError`, unwidened — the plan is generic over
-  its reader's error type — so a consumer renders it like any read's error arm)
-  `| { status: "ready"; rows; exhausted; canGrow; growing; loadMore; truncated;
-  segmentErrors }`. The plan is pure data (`shared/scroll-plan.ts`,
-  shared by the hook and the DB oracle); the hook reads one window tuple per
-  segment through live-state's `useResources` (subscribed by diff).
-  - Grow by `default.limit` up to `maxLimit`; a full segment at `maxLimit` splits
-    at row `maxLimit − default.limit` (`S1 = (a, cut]` at `maxLimit`, `S2 = (cut, b]`
-    at `2·default.limit`); neighbours holding ≤ `maxLimit − 2·default.limit` rows
-    merge; an empty segment folds into its neighbour at once.
-  - **The rows counted are a gap-free prefix of the order** — the segments up to
-    and including the first full BOUNDED one (it may hide rows). `exhausted`,
-    `canGrow` and the empty state read that prefix only.
-  - **Cap and collapse.** At most `MAX_SCROLL_SEGMENTS` (16). A segment that must
-    split and cannot (the cap, a `null` key) drops every segment after it and
-    becomes the tail at `maxLimit` (one `clientLog` line); only a tail that cannot
-    split says `truncated` — a `ScrollTruncation` KIND (`"segment-cap"` |
-    `"long-sort-key"`, exported for the surface to word for its user), logged
-    once in the plan's own terms (`TRUNCATION_DETAIL`).
-  - **Handoff.** Every structural change mints new tuples; the replaced segments
-    stay subscribed and rendered until every replacement settles, so the result
-    never flips back from `ready`. A replacement that fails keeps the old rows and
-    adds a `segmentErrors` entry (`key`, `afterRowId`, `error`, `blocksPaging`,
-    `retry` — which re-reads that tuple, never `loadMore`). The failed change is
-    SET ASIDE (`ScrollState.stalled`), not held open: its replacements stay read
-    (a retry, or the server answering again, commits it), the scroll is idle
-    again, and it is not re-minted while it is still the step to take — so a
-    failed merge never stops the tail from paging. `blocksPaging` marks the
-    failure paging stopped on: the tail's own read, a failed page past the tail,
-    or — when the scroll can neither grow nor is exhausted — every failure
-    (`growing` is false once a page's read failed).
+- **`useLiveCollectionPages(c, query | null, { viewport, resetKey? })`** → `{ status:
+  "loading" } | { status: "error"; error; refetch }` (the first page failed with
+  no rows; `error` is that read's `ResourceError`, unwidened) `| { status:
+  "ready"; rows; exhausted; canGrow; growing; loadMore; truncated; pageErrors;
+  placeholders }`.
+  The plan is pure data (`shared/page-plan.ts`, shared by the hook and the DB
+  oracle); the hook reads one window tuple per LIVE page through live-state's
+  `useResources(…, { release: "now" })` (subscribed by diff, a page leaving its
+  band unsubscribed at once).
+  - **`viewport: VisibleRange` is required and branded** (`web/internal/visible-range.ts`):
+    `measuring` (liveness stays as it is), `none` (every page releases), or the
+    first and last row on screen, by id. Only data-view mints one
+    (`mintVisibleRange`), from the rows a DataView draws — enforced by the
+    `live/visible-range-minter` lint (any import of the minter from this
+    barrel; data-view's `exempt/index.ts` holds the one sanctioned entry). A
+    surface reads pages through data-view's `useLivePagesPaging`, which hands
+    out the read and the paging whose sink feeds its viewport together — so a
+    reader with nothing measuring a viewport (a set reader, a count) cannot
+    page: it reads one bounded window with `useLive`, which never widens past
+    `maxLimit`.
+  - **One structural operation: split a full page at a row's key.** `loadMore`
+    splits the full last page at its last cuttable row: `(a, k]` at
+    `2·default.limit` keeps its rows with headroom, and `(k, ∞)` at
+    `default.limit` is the new page. A full page that is not last (inserts
+    filled its headroom — it may be hiding rows) splits at its median cuttable
+    key into two pages at `2·default.limit`. Two adjacent pages holding ≤
+    `default.limit` rows between them merge (the cut between them dropped); an
+    empty page always merges. Every structural step applies at once: each new
+    page shows its slice of the rows it replaces (handed over, stale) until its
+    own read lands, so the result never flips back from `ready`.
+  - **Seeded pages — `loadMore` reads only the new page, a merge reads
+    nothing.** A page a step mints whose whole range is a slice of the rows the
+    pages it replaces hold carries a `seed` (`PageSeed`): the known part of a
+    split — `(a, k]` of `loadMore`, an overflow's half up to its cut — and a
+    merge of two pages neither full (each holds its whole range) sharing no
+    row. The hook passes it to `useResources` as the tuple's `derive`
+    (live-state's seeded derivation): the server answers from the snapshots it
+    holds when the sources are pages of the same query (the codec's
+    `familyOf`: the `where` and `order`, served as the window's
+    `scroll.familyOf`) and quiescent at the version sliced — no load, a
+    value-less `sub-ack` the client fills with its slice — and loads the tuple
+    whole otherwise. The hook subscribes a seeded page before it releases the
+    pages it replaces (`useResources` observes the new tuples first), so the
+    server still holds the sources when the sub arrives. The unknown part — `loadMore`'s `(k, ∞)`, the half of an
+    overflow past its cut (its page was full: it may hide rows) — is always
+    read. A seed is read on the page's first subscribe only; a released page
+    drops it.
+  - **Liveness.** A page within one page of what is on screen is live; three
+    or more pages away it is released (its rows kept, stale — it does not see a
+    change until it is live again); two away it stays as it was (the band that
+    keeps a back-and-forth scroll from churning subscriptions). A live page
+    whose read has not answered yet (just minted) stays live until it does, and
+    a read showing no row at all stays live (an empty list has no row to be
+    seen by); a page whose read FAILED follows its band like any other
+    (released with what it shows, retried in view). Live cost per reader is ≤
+    visible pages + 4 (plus reads in flight), whatever the depth; there is no
+    segment cap. A page released is unsubscribed AND its cached value dropped
+    (live-state's `release: "now"`), so coming back it is pending — showing
+    the rows it held — until the server vouches for a value again; a stale
+    cache never passes for a settled read.
+  - **The stale budget — placeholders.** The released pages of one read keep
+    at most `8 · default.limit` rows between them (`PageLimits.staleRows`;
+    `STALE_STEPS` in the hook), handed out walking away from the visible
+    pages one page each side at a time (from the head when nothing is on
+    screen). The first released page past it — and every page beyond it on
+    that side, as does any page past one already DRAWN as a placeholder —
+    drops its rows and becomes a PLACEHOLDER (`held: { kind: "placeholder",
+    size }`, the count it held). "Drawn as" is read from what the page shows,
+    not from `held`: a page subscribed again from a placeholder keeps that
+    `held` until released, also once its read landed and it is drawn as rows,
+    and it ends no side. What a read holds, and what a surface draws, is
+    O(viewport + budget) whatever the depth: one placeholder element per far
+    page.
+    - **Drawn only at the edges.** The pages drawn as rows are one contiguous
+      run (the core — the run holding the most live pages); every page outside
+      it is a placeholder, so `placeholders: { before, after }` sit before and
+      after `rows`, never between two rows (no view has an entry kind for
+      that). A page holding rows past a placeholder (a read that landed out
+      there) is drawn as a placeholder of their count until it joins the core.
+    - **Never a value.** A placeholder carries a `key` (`placeholderKey(page)`,
+      unique among row ids) and a row count — no row. Subscribed again, it
+      stays a placeholder until its own read lands.
+    - **Re-subscribed when seen.** A viewport names a placeholder by its key
+      as it names a row by its id: on screen, its page is in the band and
+      live again (as is its neighbour, ±1), and its rows replace it.
+    - `exhausted` is false while any page is a placeholder (its rows are not
+      held), and `canGrow` needs the last page drawn as rows.
+  - **Dedup.** A row two pages hold (a sort-key move, between the frames of the
+    page it left and the page it entered) is shown once: a live copy beats a
+    stale one, and between two of the same kind the page whose value was
+    APPLIED most recently wins — live-state's per-tuple `appliedSeq` — never
+    "the later page", since a sort key can move a row backwards.
+  - **`exhausted` / `canGrow`.** `exhausted` once every page knows its own rows
+    and the last is not full. `canGrow` only on a LIVE, cleanly settled, full
+    last page with a cuttable row: a stale last page never pages (`loadMore`
+    re-subscribes it first). `truncated` is `{ reason: "long-sort-key" }` — a
+    `PagesTruncation` KIND the surface words for its user, logged in the plan's
+    own terms (`TRUNCATION_DETAIL`) — when the full last page has no cuttable
+    row. A full page that is not last with no cuttable row COLLAPSES: the pages
+    after it are dropped and it becomes the last page (one `clientLog` line),
+    so no row is ever hidden between pages.
+  - **Failures.** A page whose read fails keeps its rows and adds a `pageErrors`
+    entry (`key`, `afterRowId`, `error`, `blocksPaging`, `retry` — which re-reads
+    that page's tuple, never `loadMore`). `blocksPaging` marks the failure paging
+    stopped on: the last page's own read, or — when the read can neither grow nor
+    is exhausted, nothing is loading and no page is a placeholder — every
+    failure. (A read with placeholders is held short by the viewport, not by
+    a failure: its other failures stay notices over the rows.)
   - **Keys.** A plan is one collection's: its key is the collection's key and
     the query's encoding, so a surface switching collection starts over even
     when the two queries encode alike. A query changed and then changed back
     before the new head settled restores the plan still on screen.
+  - **A `columns` change keeps the plan.** The column sets a query brings only
+    name what its `where` / `orderBy` may read — they are not wire params, and
+    every row carries the collection's whole projection (each contributor's
+    `$columns` slice) whichever the query brings. So a change of them alone
+    (a custom column added to the surface) keeps the plan, its cuts and its
+    rows, re-reads nothing, and new pages encode with the new sets; no held
+    row can lack a column the new query names. (A projection that varies per
+    query — a follow-up — would re-read the live pages and turn the released
+    ones into placeholders.)
   - **`resetKey`**: a query change under the same key keeps the previous rows until
     the new head settles (a search typed into a list); any other change starts over,
     loading. A `null` collection and query read nothing (a surface whose origin is
     not live still calls the hook, so its hook order is fixed).
+  - **Logs.** The `live-pages` channel records the plan's shape as it changes
+    (`pages=N live=M`), a collapse, and a read that stops short.
+  - Pinned by `shared/page-plan.test.ts` (the plan against a simulated server:
+    loadMore as a split, overflow, no cuttable key, the merge bound, the live
+    band and its hysteresis, dedup on a backward move, contiguity, a stale last
+    page's `canGrow`, the stale budget and its placeholders at the edges, a
+    placeholder on screen subscribed again, random walks),
+    `web/__tests__/use-live-collection-pages.test.tsx` (the hook over a real
+    NotificationsProvider: placeholders past the budget, a `columns` change,
+    a `loadMore` sent seeded, a merge seeded from both pages and an overflow
+    split from its known half, each before the replaced pages' release),
+    data-view's `web/__tests__/page-placeholders.test.tsx` (the DOM: height,
+    anchoring, bounded on a deep scroll), and
+    `server/internal/serve-collection-pages-oracle.test.ts` (the real feed:
+    random writes, paging and viewport moves — live pages converge, no row twice,
+    refills O(changed), a gap-free prefix once all are in view, a head-burst
+    splitting past any cap; seeded, `loadMore` loads exactly `step` rows and a
+    merge loads none).
 
 ## Contributed columns — `contributed: true` / `liveColumns` / `serveColumns`
 
@@ -504,7 +609,7 @@ DataView surface (research/2026-09-29-global-scoped-change-routing.md P3).
 - **A member a tuple ORDERS BY** rides the window row under `$scoped`
   (`LIVE_SCOPED_KEY`, by join alias) — declared on the window's wire schema like
   `$key`, read by the order signature, split off by every read (`useLive`,
-  `useLiveScroll`). Values a list DISPLAYS still come from the custom-columns value
+  `useLiveCollectionPages`). Values a list DISPLAYS still come from the custom-columns value
   (`customColumnValues`): only a sort / filter joins a member, so an unused column
   costs nothing.
 - **`recomputeOn`**: the window's routed entry recomputes on each set's
@@ -862,13 +967,13 @@ useLive(metricDetails, selector, { first: 5 }); // → LivePagesResult<Item, Met
 - **`notify(q)`** recomputes every page of that question a tab holds right now
   — `shared/compile-value.ts` tracks the subscribed page tuples per `q` from
   the runtime's own 0→1 / N→0 hooks.
-- **The chain** is pure data (`shared/page-chain.ts`, the twin of
-  `scroll-plan.ts`); `web/internal/use-live-pages.ts` reads it through
+- **The chain** is pure data (`shared/page-chain.ts`, the cursor twin of
+  `shared/page-plan.ts`); `web/internal/use-live-pages.ts` reads it through
   live-state's `useResources`. Page 0 is `{ q, n: first ?? limit }`; page k+1
   is `{ q, n: limit, c: page_k.nextCursor }`, minted only by `loadMore()`.
   - **Re-mint.** A refreshed page whose `nextCursor` moved re-mints its
     successor from it; the page it replaces stays read and rendered until the
-    new one settles (the scroll's handoff), so the chain never flips back to
+    new one settles (the key-range pages' handoff), so the chain never flips back to
     loading. A page that now answers `nextCursor: null` drops the pages after
     it.
   - **Dedupe** by `id`, first occurrence kept (data that shifted across a
@@ -963,7 +1068,7 @@ never add one.
 - Window: `{ limit: string; where?: string; order?: string; after?: string;
   until?: string }` — `where` is the filter language's `encodeFilter` output
   (e.g. `{"column":"enabled","op":"eq","operand":true}`), `order` canonical
-  JSON, `after` / `until` a scroll segment's cuts (server-minted `$key`s,
+  JSON, `after` / `until` a page's cuts (server-minted `$key`s,
   verbatim); each present only when it differs from the default, so the default
   window stays byte-identical `{ limit: "100" }`.
 - Groups: `{ groupBy: string; limit: string; where?: string }` — `where` is the
@@ -982,33 +1087,39 @@ never add one.
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple) and a cursor-paged one (a live chain of pages — re-minted when a boundary moves, deduped by id, capped at MAX_LIVE_PAGES); and useLiveScroll (a scroll collection read as live segments — bounded windows tiling the order by server-minted row-key cuts, grown, split, merged and collapsed so the rendered rows stay a gap-free prefix). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a cursor-paged one — external only — is loaded one page at a time, notify(q) reaching every subscribed page) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple) and a cursor-paged one (a live chain of pages — re-minted when a boundary moves, deduped by id, capped at MAX_LIVE_PAGES); and useLiveCollectionPages (a scroll collection read with no depth limit as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small, the pages near a measured viewport live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a cursor-paged one — external only — is loaded one page at a time, notify(q) reaching every subscribed page) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Uses:
     - `primitives/live-state.PagedResourceResult`
+    - `primitives/live-state.ResourceDerivation`
     - `primitives/live-state.ResourceDescriptor`
     - `primitives/live-state.ResourceError`
     - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.ResourceTupleResult`
     - `primitives/live-state.useResource`
     - `primitives/live-state.useResources`
     - `primitives/log-channels.clientLog`
   - Exports (types):
     - `LiveAllSelect`
+    - `LiveCollectionPageError`
+    - `LiveCollectionPagePlaceholder`
+    - `LiveCollectionPagesOptions`
+    - `LiveCollectionPagesQuery`
+    - `LiveCollectionPagesResult`
     - `LiveIdsQuery`
     - `LiveListResult`
     - `LivePagesOptions`
     - `LivePagesResult`
     - `LiveRowResult`
-    - `LiveScrollOptions`
-    - `LiveScrollResult`
-    - `LiveSegmentError`
-    - `ScrollTruncation`
+    - `PagesTruncation`
+    - `VisibleRange`
   - Exports (values):
     - `mapRow`
     - `MAX_LIVE_PAGES`
+    - `mintVisibleRange`
     - `useLive`
+    - `useLiveCollectionPages`
     - `useLiveRow`
-    - `useLiveScroll`
 - Server:
   - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/query-resource` ×22
@@ -1257,6 +1368,7 @@ never add one.
     - `plugin-meta/plugin-view` (1 debt)
     - `plugin-meta/plugin-view/file-tree` (1 debt)
     - `primitives/cursor-pagination` (0 debt)
+    - `primitives/data-view` (0 debt)
     - `primitives/diff-view` (1 debt)
     - `primitives/file-viewer` (3 debt)
     - `primitives/file-viewer/image` (1 debt)

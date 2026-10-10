@@ -935,6 +935,8 @@ describe("declared sections (a server-sectioned live source)", () => {
     stalled: null,
     truncated: false,
     notices: [],
+    viewport: { report: () => {} },
+    placeholders: { before: [], after: [] },
   });
   const declared: DataViewSectioning<Task> = {
     kind: "declared",

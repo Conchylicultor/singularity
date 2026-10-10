@@ -88,6 +88,7 @@ function fixture(sockets: number) {
         windowIdsOf: async (p: ResourceParams) =>
           members(Number(p.limit)).map((r) => r.id),
         orderSignatureOf: (r: unknown) => String((r as Row).n),
+        limitOf: (p: ResourceParams) => Number(p.limit),
       },
       loader: async (
         p: ResourceParams,

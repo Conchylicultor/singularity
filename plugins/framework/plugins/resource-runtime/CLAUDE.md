@@ -141,9 +141,10 @@ and reconciles membership against the per-pk snapshot via
 `diffKeyedScopedMembership`. Three shapes, folded into one internal record (see `research/2026-07-03-global-scoped-membership-m5.md` and
 `research/2026-07-18-global-bounded-working-set-resource-contract.md`):
 
-- **`membership: { kind: "window", windowIdsOf }`** — the params tuple names a
+- **`membership: { kind: "window", windowIdsOf, limitOf }`** — the params tuple names a
   **bounded ordered window** (`WHERE … ORDER BY … LIMIT n`). `windowIdsOf(params)`
-  returns the bounded ordered id list; the entry's loader at the same params MUST
+  returns the bounded ordered id list, `limitOf(params)` its `n` (required: the
+  window is a bounded read, so it has one); the entry's loader at the same params MUST
   be the matching windowed query — so the FULL branch (no snapshot, sticky-FULL,
   a subscribed tuple whose sub-ack load failed) is **bounded by construction**: "FULL"
   means the window loader, never a whole-collection sweep. A membership change
@@ -168,12 +169,31 @@ The window path (`drainMembershipScoped`, `drainEntry` branch 4) classifies each
 flush against the prior snapshot — *entered* (a refilled id not already a member)
 / *exited* (a requested id the refill omitted, or a deleted member):
 
-- **Bounded window**: any entered-or-exited runs `windowIdsOf` once (O(window) —
+- **Bounded window**: an entrant, or an exit from a **full** window (the prior
+  snapshot holds `limitOf(params)` rows), runs `windowIdsOf` once (O(window) —
   it is both the entrant arbiter and the tail-pull source), then **backfills**
   window ids whose bytes neither the client base nor the refill holds (the new
   tail row after a leaver) with one extra scoped refill. An entrant sorting past
   the tail diffs to empty → no frame, no version bump. A DELETE of an id outside
   the snapshot is a total no-op (a window is a prefix of the total order).
+- **A window that is not full** (fewer rows than `limitOf`) holds its whole
+  range — nothing sorts past its tail — so an exit-only change derives its order
+  from the prior snapshot like the alias's: no `windowIdsOf`, no backfill (zero
+  queries for a pure DELETE). Entrants and order moves still re-derive. This is
+  what keeps a paged read cheap: a split page has headroom, so most of its exits
+  land while it is not full. "Not full ⇒ whole range" holds for every snapshot
+  the runtime keeps — a loaded window, one rebuilt from a wire `order`, and a
+  derived one (a slice through a source's end needs a source that is not full;
+  that the slices span the new range is the client's claim — see *Seeded
+  derivation*'s trust boundary). A drain never records a snapshot shorter than
+  the window its `windowIdsOf` named: an id it could not keep (a backfill
+  target deleted or flipped out after the ids query read it, an exit the ids
+  query saw back in range) is a **torn read**, rebuilt by one bounded FULL read
+  (`drainMembershipFull`) — otherwise the short snapshot would read as holding
+  its whole range and its exits would never pull the hidden row back in. The
+  size test doubts: a `limitOf` that throws or answers no number is reported
+  and the window reads as full (an exit re-derives, a derive slice through it
+  is refused); `buildEntry` refuses a window membership with no `limitOf`.
 - **Alias (unbounded)**: `orderOf` runs **only on an entry or an order move**
   (`entered || orderMoved` — a member whose order signature moved, for an alias
   that declared one); an exit-only or in-place change derives its order from the
@@ -243,6 +263,74 @@ parse on its own, seeding nothing (`valid` | `invalid` | `skipped` for a key
 that is no alias): live-state-snapshot runs it over every persisted alias row
 in `onReadyBlocking` and clears the rows that fail, before readiness flips —
 boot-snapshot's persisted fast path is open from readiness, before the seed.
+
+## Seeded derivation (a `sub` frame's `derive`)
+
+A paged read (network/live's `useLiveCollectionPages`) splits and merges its pages, and
+each new page's rows are wholly or partly a slice of pages the client and the
+server already hold (`research/2026-10-09-global-live-key-range-pages-v2.md`
+§4.4). So a fresh `sub` may carry `derive: { id, from: [{ params, version,
+after, until }] }` — the new tuple as, in order, a slice of each source tuple's
+rows (after the row `after`, exclusive, `null` = from its first; through the
+row `until`, inclusive, `null` = through the end of its range), rows named by
+id, under an `id` the client minted for this derivation (opaque, at most 128
+chars). At most `DERIVE_MAX_SOURCES` (2) sources: a split reads one, a merge
+two — more is `malformed`, so one frame cannot cost O(sources × window).
+`deriveSub` answers it synchronously, in the same step `handleSub` registers
+the tuple — so every change routed from then on reaches the new tuple, and none
+lands between the check and the copy:
+
+- **Derived** when the entry is a bounded window that states its
+  `membership.familyOf` (and no `revalidate`), the
+  tuple's subscription OPENED its span (`firstGlobal` — a held tuple's first
+  subscriber decided its load), and every source is of the new tuple's
+  FAMILY (`familyOf` — the same query, whatever the range and limit:
+  query-resource states it for a scroll window, from network/live's codec —
+  the `where` and `order`) and QUIESCENT at the version the client sliced:
+  subscribed, its span's snapshot present, no pending, not draining,
+  `versions` equal. Its snapshot order is the window order (every write
+  rebuilds it from the wire order), so the slice is cut by position from it; a
+  slice through its end needs a source that is not full (a full window may
+  hide rows past its last); the slices may not share a row nor exceed the new
+  tuple's `limitOf`. The new pk's snapshot is the copied entries, its order
+  signatures the sources' (sound because they are one query's, which the family
+  check makes a fact rather than the client's claim; a row with none is
+  re-derived on its next refill, fail-safe). It answers `sub-ack { version,
+  epoch, derived: { id } }` — NO value, no etag (no read ran), no watermark
+  (Rule B′: the slice was cut from snapshots scoped deltas built, which vouch
+  for no commit floor) — and runs no load. No base floor: a bounded window is
+  never persisted.
+- **Otherwise** it falls back to today's path (`serveSub`, a full load), and the
+  client takes either answer. Every refusal is counted by reason in `_debug`'s
+  `deriveFallbacks` (`not-derivable`, `held`, `malformed` — also reported —,
+  `source-not-held`, `foreign-source`, `source-busy`, `source-moved`, `slice`,
+  `source-full`, `overlap`, `over-limit`), every derivation in `derivedSubs`.
+- **Trust boundary.** The runtime is key-agnostic: that the slices are all of
+  the new tuple's RANGE (the cuts in its params) is the client's claim; what it
+  checks is that they are the same query (family), current (quiescence),
+  complete up to where they stop (not-full), and fit the window. A derived
+  tuple is exactly as current as its sources' subscribers — their next delta is
+  diffed against the same base.
+- **The echo** is the client's minted `id`, because the shared socket
+  broadcasts every frame: a tab holding the same tuple through another request
+  adopts only an answer to its own (live-state's half). Matching on an id the
+  client chose — never on the sources re-spelled — means a server that
+  canonicalizes a source's params differently cannot strand the asking tab.
+- **Version skew.** A tab whose bundle predates derived acks would read one as
+  a `sub-ack` with an `undefined` value (a parse error) and adopt its version,
+  dropping its own value ack as stale. It never receives one: live-state
+  shares its socket only with tabs running the same client
+  (`SharedWebSocketOptions.dialect`, see `networking/CLAUDE.md`), and a derived
+  ack goes only to the socket whose tab asked.
+- `sub-batch` entries never derive (a replay asks for full values).
+
+Pinned by `runtime-derive.test.ts` (the derived ack and its frame shape, a
+change after it as a delta, a merge — also with its sources unsubscribed in the
+same burst as the derived sub —, a commit racing the registration, an echo
+answering another derivation, every refusal falling back and converging — a
+foreign source and more than two sources included —, and the `makeClientView`
+convergence property under random interleavings of writes, plain and derived
+subs, unsubs and flush timing).
 
 ## L2 persists: replace and floor (`PersistMeta`)
 
@@ -821,7 +909,8 @@ Each suite's `describe`/`test` names state what it pins; read them there.
   revalidate, `authorize`, the D37 / D31 / T15 refusals), `keyed-diff.test.ts` (all three diffs, scenario + property, under
   BOTH encoders), `runtime-h5.test.ts` (notify-vs-fresh-sub race),
   `runtime-scoped-routing.test.ts`, `runtime-scoped-membership.test.ts` (M5 alias),
-  `runtime-window-membership.test.ts` (bounded window / point / order signature),
+  `runtime-window-membership.test.ts` (bounded window / point / order signature,
+  exits from a non-full window and the full ⇄ not-full transitions),
   `runtime-catchup.test.ts` (over-replay
   idempotence + the L2 persist-hook calling contract),
   `runtime-version-shortcircuit.test.ts`, `runtime-gate-dedup.test.ts`,
@@ -836,7 +925,11 @@ Each suite's `describe`/`test` names state what it pins; read them there.
   (the routed-entry matrix, the named routing scenarios, the `reach` arm and the
   A5 / A8 / A22 guards, and the reverse resolve's `cascade` origin),
   `runtime-debug-policy.test.ts` (A26: every key in `_debug` under one policy,
-  before and after a deferred bind, and the central-shaped degradation).
+  before and after a deferred bind, and the central-shaped degradation),
+  `runtime-derive.test.ts` (seeded derivation: the derived ack, every refusal's
+  fallback, and convergence under random interleavings).
+  `makeClientView` mirrors the derived sub: `expectDerived(rows, { id })` arms
+  the slice a derived `sub-ack` echoing that derivation's id adopts.
 - `testing/routed-fixture.ts` (re-exported from `core/testing`) — the shared
   routed fixture: `identityPlan(table, cols)` (the identity route
   `compileWindowQuery` emits), `defineRoutedTable(h, { key, table, membership,
@@ -963,6 +1056,6 @@ and those plugins' `CLAUDE.md`.
     - `identityPlan` — The plan `compileWindowQuery` emits for a single-table window / point set / alias: one identity route `base` on `table`, gating on `cols`, read by every tuple in the membership role.
     - `legacyFull` — The legacy router alone: every non-routed reader of `table` recomputes FULL.
     - `makeClientView`
-    - Types: `ClientView`, `FedChange`, `Harness`, `KeyedSnapshot`, `RecordedFrame`, `RoutedTable`, `RoutedTableSpec`
+    - Types: `ClientView`, `DeriveFrame`, `DeriveSourceFrame`, `FedChange`, `Harness`, `KeyedSnapshot`, `RecordedFrame`, `RoutedTable`, `RoutedTableSpec`
 
 <!-- AUTOGENERATED:END -->

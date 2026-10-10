@@ -21,7 +21,7 @@ import type {
   LiveSortDirection,
   LiveWhere,
 } from "@plugins/network/plugins/live/core";
-import { useLive, useLiveScroll } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import type {
@@ -54,13 +54,17 @@ import {
   UnavailableSortRuleError,
   useViewFilter,
 } from "./live-filter";
-import { scrollPaging } from "./scroll-paging";
+import { NO_VIEWPORT } from "./pages-viewport";
+import { NO_PLACEHOLDERS } from "./pages-paging";
+import { useLivePagesPaging } from "./use-live-pages-paging";
 
 // The DataView → live-window adapter (research/2026-09-29-global-scoped-change-routing.md,
-// "P2 — DataView live-window adapter"): a `source` DataView reads its collection
-// as a segmented scroll (`useLiveScroll`), with the view's sort, filter, search
-// and group-by lowered onto the window query. Field ids stay the persisted
-// vocabulary; `FieldDef.column` maps one to the collection column it reads.
+// "P2 — DataView live-window adapter"; the pages:
+// research/2026-10-09-global-live-key-range-pages-v2.md): a `source` DataView
+// reads its collection as key-range pages (`useLiveCollectionPages`) kept live by the
+// rows it has on screen, with the view's sort, filter, search and group-by
+// lowered onto the window query. Field ids stay the persisted vocabulary;
+// `FieldDef.column` maps one to the collection column it reads.
 
 /** The search box, debounced: each keystroke would otherwise mint, load and release a tuple. */
 function useDebounced<T>(value: T, delayMs: number): T {
@@ -73,14 +77,14 @@ function useDebounced<T>(value: T, delayMs: number): T {
 }
 
 /**
- * A live origin's answer, as the body renders it: one scroll partitioned in
- * memory (`flat`), or — grouped by a groupable column — sections the server
+ * A live origin's answer, as the body renders it: one paged read partitioned
+ * in memory (`flat`), or — grouped by a groupable column — sections the server
  * declared, each paging its own read (`sectioned`).
  */
 export type SourceView<TRow> = FlatSourceView<TRow> | SectionedSourceView<TRow>;
 
 interface SourceViewBase<TRow> {
-  /** Every row loaded: the scroll's, or the open sections' reads, in section order. */
+  /** Every row loaded: the paged read's, or the open sections' reads, in section order. */
   rows: readonly TRow[];
   loading: boolean;
   /**
@@ -89,7 +93,7 @@ interface SourceViewBase<TRow> {
    */
   error: Error | null;
   /**
-   * The read itself failed with nothing to show (a live scroll's head): the
+   * The read itself failed with nothing to show (a paged read's head): the
    * same arm a `readiness` read fails with, so it renders the same way — the
    * host's `errorState`, else `ResourceErrorInline` with Retry (and the reload
    * a stale tab needs).
@@ -97,10 +101,10 @@ interface SourceViewBase<TRow> {
   readError: Extract<ResourceReadiness, { status: "error" }> | null;
 }
 
-/** One scroll over the whole query; any grouping partitions its loaded rows. */
+/** One paged read over the whole query; any grouping partitions its loaded rows. */
 export interface FlatSourceView<TRow> extends SourceViewBase<TRow> {
   kind: "flat";
-  /** How the scroll pages; `complete` once every row of the query is loaded. */
+  /** How the read pages; `complete` once every row of the query is loaded. */
   paging: DataViewPaging<TRow>;
   sectionOrder: "bucket" | "appearance";
 }
@@ -139,9 +143,10 @@ const SEARCH_DEBOUNCE_MS = 200;
 
 /**
  * Read a live `source` for the active view: lower its sort, filter, search and
- * group-by onto a segmented scroll, and map the scroll onto the body's
+ * group-by onto key-range pages, and map the read onto the body's
  * `SourceView`. Always called; returns `null` without a source (the hook order
- * stays fixed).
+ * stays fixed). The body reports the rows it has on screen to the paging's
+ * `viewport` sink, which keeps the pages near them live.
  *
  * - A saved rule on a field that does not resolve is PENDING while the
  *   deferred plugin tier is still loading (a contributor may not have
@@ -195,7 +200,7 @@ export function useLiveSource<TRow>(args: {
     | {
         kind: "ok";
         where: Filter | undefined;
-        /** The query minus search — a change of it starts the scroll over. */
+        /** The query minus search — a change of it starts the read over. */
         resetKey: string;
         orderBy: LiveOrderBy<string> | undefined;
         /** The contributed-column handles the query names — the codec validates against them. */
@@ -370,7 +375,7 @@ export function useLiveSource<TRow>(args: {
     resolveGrouping,
   ]);
 
-  const scrollQuery = useMemo(
+  const pagesQuery = useMemo(
     () =>
       lowering.kind === "ok" && lowering.grouped.kind === "rows"
         ? {
@@ -387,12 +392,12 @@ export function useLiveSource<TRow>(args: {
         : null,
     [lowering],
   );
-  const scroll = useLiveScroll(
+  const { pages, paging: pagesPaging } = useLivePagesPaging(
     // No source, or a sectioned view (each section reads its own): a
-    // detached scroll, which reads nothing.
-    scrollQuery === null ? null : (source?.collection ?? null),
-    scrollQuery,
-    lowering.kind === "ok" ? { resetKey: lowering.resetKey } : {},
+    // detached read, which reads nothing.
+    pagesQuery === null ? null : (source?.collection ?? null),
+    pagesQuery,
+    lowering.kind === "ok" ? { resetKey: lowering.resetKey } : undefined,
   );
   const sectionedLowering = useMemo(
     (): SectionedLowering<TRow> | null =>
@@ -446,17 +451,17 @@ export function useLiveSource<TRow>(args: {
   });
 
   const settled =
-    scroll.status === "loading" || scroll.status === "error" ? null : scroll;
+    pages.status === "loading" || pages.status === "error" ? null : pages;
   const rows = (settled?.rows ?? NO_ROWS) as readonly TRow[];
   const paging = useMemo(
     () =>
-      settled === null
+      pagesPaging === null
         ? NOT_PAGING
         : {
-            ...scrollPaging<TRow>(settled),
+            ...pagesPaging,
             total: totalCount === null ? null : { count: totalCount },
           },
-    [settled, totalCount],
+    [pagesPaging, totalCount],
   );
 
   if (!source) return null;
@@ -475,9 +480,9 @@ export function useLiveSource<TRow>(args: {
   return {
     kind: "flat",
     rows,
-    loading: lowering.kind !== "ok" || scroll.status === "loading",
+    loading: lowering.kind !== "ok" || pages.status === "loading",
     error: null,
-    readError: scroll.status === "error" ? scroll : null,
+    readError: pages.status === "error" ? pages : null,
     paging: paging as DataViewPaging<TRow>,
     sectionOrder:
       lowering.kind === "ok" && lowering.grouped.kind === "rows"
@@ -732,6 +737,8 @@ function unreadPaging(activate: () => void): DataViewPaging<unknown> {
     stalled: null,
     truncated: false,
     notices: [],
+    viewport: NO_VIEWPORT,
+    placeholders: NO_PLACEHOLDERS,
   };
 }
 
@@ -746,23 +753,27 @@ const SECTION_PENDING: DataViewPaging<unknown> = {
   stalled: null,
   truncated: false,
   notices: [],
+  viewport: NO_VIEWPORT,
+  placeholders: NO_PLACEHOLDERS,
 };
 
 const GROUPS_TRUNCATED_HINT =
   "the smallest groups are not listed; narrow the filter to see them";
 const NO_KEYS: ReadonlySet<string> = new Set();
 
-/** A scroll with nothing settled yet: no page to ask for, and not complete. */
+/** A read with nothing settled yet: no page to ask for, and not complete. */
 const NOT_PAGING: DataViewPaging<unknown> = {
   canGrow: false,
   growing: false,
   loadMore: () => {
-    throw new Error("live-source: loadMore() before the scroll settled");
+    throw new Error("live-source: loadMore() before the read settled");
   },
   complete: false,
   stalled: null,
   truncated: false,
   notices: [],
+  viewport: NO_VIEWPORT,
+  placeholders: NO_PLACEHOLDERS,
 };
 
 const NO_FIELDS: FieldDef<never>[] = [];

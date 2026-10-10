@@ -68,6 +68,8 @@ export interface RecordedFrame {
   params?: ResourceParams;
   /** Boot epoch stamped on sub-ack / up-to-date / up-to-date-batch frames. */
   epoch?: string;
+  /** A DERIVED sub-ack's echo of the id of the derivation it answers (no `value` rides it). */
+  derived?: { id: string };
   /** `up-to-date-batch` entries. */
   entries?: Array<{
     id?: number;
@@ -75,6 +77,20 @@ export interface RecordedFrame {
     params: ResourceParams;
     version: number;
   }>;
+}
+
+/** A `sub` frame's seeded derivation (the runtime's `Derivation`): its minted id and sources. */
+export interface DeriveFrame {
+  id: string;
+  from: DeriveSourceFrame[];
+}
+
+/** One source of a `sub` frame's seeded derivation (the runtime's `DeriveSource`). */
+export interface DeriveSourceFrame {
+  params: ResourceParams;
+  version: number;
+  after: string | null;
+  until: string | null;
 }
 
 export interface Harness {
@@ -97,6 +113,8 @@ export interface Harness {
       acks?: boolean;
       /** The client's build graph (the frame's `build`); absent = a pre-protocol bundle. */
       build?: string;
+      /** A seeded derivation: the new tuple as slices of tuples this socket holds. */
+      derive?: DeriveFrame;
     },
   ) => Promise<void>;
   /** Send `op:sub-batch` (one tab's whole-set replay) and await the next macrotask. */
@@ -197,6 +215,7 @@ export function createHarness(
           ...(o.tabId !== undefined ? { tabId: o.tabId } : {}),
           ...(o.acks !== undefined ? { acks: o.acks } : {}),
           ...(o.build !== undefined ? { build: o.build } : {}),
+          ...(o.derive !== undefined ? { derive: o.derive } : {}),
         }),
       );
       await tick(); // let the async sub-ack (initial load) complete
@@ -434,6 +453,14 @@ export interface ClientView {
   readonly driftResubs: number;
   /** Set by an `invalidate` frame; a test converges it via `applyHttpRefetch`. */
   readonly stale: boolean;
+  /**
+   * Mirror of live-state's derived sub: the slice this view's `sub` asked to
+   * be seeded with, and the id of the derivation it sent. A DERIVED `sub-ack`
+   * echoing exactly that id adopts the slice as the value; one echoing
+   * another is dropped (it answers someone else's request); a value-carrying
+   * `sub-ack` (the fallback) clears it.
+   */
+  expectDerived(value: readonly unknown[], derive: { id: string }): void;
   apply(frame: RecordedFrame): void;
   applyAll(frames: readonly RecordedFrame[]): void;
   /**
@@ -467,6 +494,9 @@ export function makeClientView(
   let entryEpoch: string | undefined = undefined;
   // The WS channel's current server identity — the last epoch seen on any frame.
   let serverEpoch: string | undefined = undefined;
+  // The derivation this view's `sub` asked for, and the slice it adopts if the
+  // answer is that derivation's (see `expectDerived`).
+  let derivation: { value: readonly unknown[]; id: string } | undefined;
 
   return {
     get value() {
@@ -484,6 +514,9 @@ export function makeClientView(
     get stale() {
       return stale;
     },
+    expectDerived(slice, derive): void {
+      derivation = { value: slice, id: derive.id };
+    },
     apply(frame: RecordedFrame): void {
       // Any epoch-carrying frame refreshes the channel's known server identity,
       // even if its version fails the guard below (an old-boot replay still tells
@@ -492,6 +525,19 @@ export function makeClientView(
       if (frame.version === undefined) return; // sub-error / ping — no version
       // WS version guard: drop anything not strictly newer than what we hold.
       if (frame.version <= version) return;
+      if (frame.kind === "sub-ack" && frame.derived !== undefined) {
+        // An answer to someone else's derivation: nothing to adopt, and no
+        // version claim about a value this view holds.
+        if (derivation === undefined || derivation.id !== frame.derived.id) {
+          return;
+        }
+        version = frame.version;
+        value = [...derivation.value];
+        derivation = undefined;
+        if (frame.epoch !== undefined) entryEpoch = frame.epoch;
+        return;
+      }
+      if (frame.kind === "sub-ack") derivation = undefined;
       if (frame.kind === "sub-ack" || frame.kind === "update") {
         version = frame.version;
         value = frame.value;

@@ -4,7 +4,7 @@ The Events app's main surface: every event, as a **live DataView**
 (`defineDataView("events.list")`) over the `events.list` collection
 (`core/internal/collection.ts`). The set grows without bound and the user
 filters/sorts across all of it, so filter/sort/search compile to SQL per window
-tuple, read as a segmented scroll (`scroll: true`) — the mail threads shape.
+tuple, read as live key-range pages (`scroll: true`) — the mail threads shape.
 
 ```
 core/internal/fields.ts       the shared field-id vocabulary (browser-safe data)
@@ -124,7 +124,7 @@ ascending), `All`, and `By category` (grouped). The surface is the collection's
 
 ## Plugin reference
 
-- Description: The events DataView: the live `events.list` collection (a segmented scroll kept fresh by the routed change feed) rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the `events.list` live collection over the events table joined to its source (a required lookup, routed in reverse: a source write refills that source's events, gated on the columns the list reads), with soft-deleted events and a disabled source's events hidden by default.
+- Description: The events DataView: the live `events.list` collection (live key-range pages kept fresh by the routed change feed) rendered as list / table / gallery, with every typed field a filter and sort dimension and the saved views authored in config. Reachable from the Events sidebar. Events DataView server: the `events.list` live collection over the events table joined to its source (a required lookup, routed in reverse: a source write refills that source's events, gated on the columns the list reads), with soft-deleted events and a disabled source's events hidden by default.
 - Web:
   - Slots:
     - `EventList.Fields`

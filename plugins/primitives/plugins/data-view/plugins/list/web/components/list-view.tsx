@@ -276,6 +276,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     return (
       <TreeRowChrome
         key={key}
+        rowKey={key}
         depth={0}
         hasChildren={false}
         isOpen={false}
@@ -347,6 +348,9 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     return (
       <Row
         key={key}
+        // The row's identity on the DOM: what the DataView measures the rows
+        // it has on screen by.
+        data-row-key={key}
         selected={key === props.selectedRowId}
         size={rowSize}
         // Straight through, `undefined` and all — NEVER `() => activate?.()`.

@@ -53,11 +53,14 @@ export type WorkerToTab =
   | { kind: "fatal"; message: string };
 
 /**
- * The SharedWorker name for one server URL. SharedWorker identity is
- * (script URL, name), so each URL gets its own worker — and its own socket.
+ * The SharedWorker name for one server URL and dialect. SharedWorker identity
+ * is (script URL, name), so each URL gets its own worker — and its own socket
+ * — and so does each dialect of it (see `SharedWebSocketOptions.dialect`).
  */
-export function sharedWsWorkerName(absUrl: string): string {
-  return `singularity:shared-ws:${absUrl}`;
+export function sharedWsWorkerName(absUrl: string, dialect?: string): string {
+  return dialect === undefined
+    ? `singularity:shared-ws:${absUrl}`
+    : `singularity:shared-ws:${absUrl}:${dialect}`;
 }
 
 /**

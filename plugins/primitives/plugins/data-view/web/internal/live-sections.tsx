@@ -14,7 +14,7 @@ import type {
   LiveOrderBy,
   LiveWhere,
 } from "@plugins/network/plugins/live/core";
-import { useLive, useLiveScroll } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import type {
   DataViewPaging,
@@ -24,7 +24,9 @@ import type {
   LiveDataSource,
 } from "../../core";
 import type { LiveGroupColumn } from "./live-fields";
-import { scrollPaging } from "./scroll-paging";
+import { NO_VIEWPORT } from "./pages-viewport";
+import { NO_PLACEHOLDERS } from "./pages-paging";
+import { useLivePagesPaging } from "./use-live-pages-paging";
 import { NULL_GROUP_KEY, NULL_GROUP_LABEL } from "./use-data-view-sections";
 
 // A live source grouped by a groupable column, server-sectioned
@@ -196,9 +198,11 @@ export interface SectionQuery {
 }
 
 /**
- * One section's own scroll (renders nothing), reported up. Keyed by section,
- * so a search typed into the list keeps its rows until the new head settles
- * (the scroll's own keep-previous handoff over the same `resetKey`).
+ * One section's own paged read (renders nothing), reported up. Keyed by
+ * section, so a search typed into the list keeps its rows until the new head
+ * settles (the read's own keep-previous handoff over the same `resetKey`).
+ * Its pages follow the section's own rows on screen: the body reports them to
+ * the section paging's `viewport` sink.
  */
 export function SectionRead(props: {
   source: LiveDataSource<unknown>;
@@ -212,7 +216,7 @@ export function SectionRead(props: {
   ) => void;
 }): ReactNode {
   const { source, sectionKey, query, resetKey, onResult } = props;
-  const scrollQuery = useMemo(
+  const pagesQuery = useMemo(
     () => ({
       where: query.where as LiveWhere<unknown>,
       ...(query.orderBy !== undefined ? { orderBy: query.orderBy } : {}),
@@ -220,7 +224,11 @@ export function SectionRead(props: {
     }),
     [query],
   );
-  const read = useLiveScroll(source.collection, scrollQuery, { resetKey });
+  const { pages: read, paging } = useLivePagesPaging(
+    source.collection,
+    pagesQuery,
+    { resetKey },
+  );
   const report = useMemo((): SectionReport<unknown> => {
     switch (read.status) {
       case "loading":
@@ -237,9 +245,9 @@ export function SectionRead(props: {
           },
         };
       case "ready":
-        return { rows: read.rows, paging: scrollPaging(read) };
+        return { rows: read.rows, paging: paging! };
     }
-  }, [read]);
+  }, [read, paging]);
   useEffect(
     () => onResult(sectionKey, resetKey, report),
     [onResult, sectionKey, resetKey, report],
@@ -258,6 +266,8 @@ const SECTION_LOADING: DataViewPaging<unknown> = {
   stalled: null,
   truncated: false,
   notices: [],
+  viewport: NO_VIEWPORT,
+  placeholders: NO_PLACEHOLDERS,
 };
 
 const NO_ROWS: readonly unknown[] = [];

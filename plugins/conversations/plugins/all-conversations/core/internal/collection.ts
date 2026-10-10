@@ -52,7 +52,7 @@ const CONVERSATION_LIST_MAX_LIMIT = 500;
 
 /**
  * The All-conversations pane's list: every conversation, newest first, read as
- * a segmented scroll and kept fresh by the routed change feed — a
+ * live key-range pages and kept fresh by the routed change feed — a
  * conversation write refills that row, an attempt's worktree / task move
  * refills its conversations, a task rename refills the task's conversations a
  * window holds. System conversations are hidden by a DEFAULT scope (served

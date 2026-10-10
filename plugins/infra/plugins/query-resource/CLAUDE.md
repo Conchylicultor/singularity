@@ -736,7 +736,13 @@ see *Routes* above):
   the Layer-2 scoped refill (`pk IN affectedIds`, no order/limit), `windowIdsOf`
   (the ids-only windowed query — same where/order/limit as the loader, so the
   membership authority cannot drift from it), and `orderSignatureOf`, emitted as
-  `membership: { kind: "window", windowIdsOf, orderSignatureOf }`. `orderBy` is
+  `membership: { kind: "window", windowIdsOf, orderSignatureOf, limitOf,
+  familyOf? }` — `limitOf` the same clamped limit (required by the runtime: a
+  window holding fewer rows is not full, so its exits need no `windowIdsOf`)
+  and, for a scroll window, `familyOf` its `scroll.familyOf`, which together
+  let the runtime derive a fresh tuple from rows other tuples of the same query
+  hold (resource-runtime's *Seeded derivation*; the union window states both,
+  its `window.familyOf` required). `orderBy` is
   `{ col, dir }` pairs, not raw SQL: the compiler appends the pk tiebreaker (a
   window must be a prefix of a strict total order) and renders explicit
   `NULLS LAST`, and a future cursor derives its keyset seek
@@ -776,11 +782,14 @@ query (content-only updates stay on the zero-ids-query in-place path), so prefer
 mostly-stable order columns for very hot rows. The mutable-`where` rule above does
 NOT apply here: a where-flip is a detected membership exit/entry.
 
-**Scroll segments (`scroll`).** A window spec may declare `scroll: { cutsOf,
-keyField, maxKeyBytes }` (network/live passes it for a collection declared
-`scroll: true`): each tuple may be one segment of a deep scroll — its order cut
+**Scroll pages (`scroll`).** A window spec may declare `scroll: { cutsOf,
+familyOf, keyField, maxKeyBytes }` (network/live passes it for a collection declared
+`scroll: true`): each tuple may be one key-range page of a paged read — its order cut
 by an exclusive `after` and an inclusive `until` row key — and every full and
-scoped row carries its own row key in `keyField`. ONE key list per tuple order
+scoped row carries its own row key in `keyField`. `familyOf` names the query a
+page belongs to (one string for every page of it, whatever its cuts and limit:
+network/live's codec reads its `where` and `order`) — only a scroll window
+states one, so only a page derives. ONE key list per tuple order
 (the declared keys, then the pk unless one already is) feeds the ORDER BY, the
 cuts and the row keys, so the three cannot disagree. The row key is the
 canonical JSON of each key's `col::text` (projected under `__row_key_<i>` and

@@ -31,7 +31,8 @@ export {
   subscribePendingMounts,
 } from "./pending-mount-tracker";
 export type { PendingMountSnapshot } from "./pending-mount-tracker";
-export type { ResourceResult } from "./use-resource";
+export type { ResourceResult, ResourceTupleResult } from "./use-resource";
+export type { ResourceDerivation } from "./notifications-client";
 export {
   combineResources,
   useCombinedResources,

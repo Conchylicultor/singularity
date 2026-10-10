@@ -10,8 +10,8 @@ import {
 
 /**
  * The threads list's live collection: `mail_threads`, read by the DataView as
- * a segmented scroll (`scroll: true`) and kept fresh by the routed change feed
- * — a thread write refills exactly that thread in the segments that hold (or
+ * live key-range pages (`scroll: true`) and kept fresh by the routed change
+ * feed — a thread write refills exactly that thread in the live pages that hold (or
  * now admit) it, with no revision tick and no refetch of the loaded pages.
  *
  * `filterable` is the ONE declaration of what the list can filter on: the

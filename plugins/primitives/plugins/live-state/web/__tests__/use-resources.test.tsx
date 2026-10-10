@@ -8,7 +8,9 @@
  * - a tuple also read by a `useResource` shares its refcount: unmounting one
  *   reader leaves it subscribed for the other;
  * - each tuple's result is `useResource`'s: loading until its own value lands;
- * - each tuple's mount→settle is reported once, as `useResource` reports its one.
+ * - each tuple's mount→settle is reported once, as `useResource` reports its one;
+ * - `release: "now"` lets a dropped tuple go at once (unmount keeps the
+ *   keep-alive), and each tuple carries its `appliedSeq`.
  */
 
 import { describe, expect, it, vi } from "vitest";
@@ -110,6 +112,54 @@ describe("useResources", () => {
 
     unmount();
     expect(names(unobserve).sort()).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("release now: a tuple dropped from the list is let go at once; unmounting keeps the keep-alive", () => {
+    const d = descriptor();
+    const client = makeClient();
+    const { rerender, unmount } = renderHook(
+      ({ list }: { list: { n: string }[] }) =>
+        useResources(d, list, { release: "now" }),
+      {
+        wrapper: wrapperFor(client),
+        initialProps: { list: [tuple("a"), tuple("b")] },
+      },
+    );
+    const { unobserve } = spyNotifications();
+    unobserve.mockClear();
+    rerender({ list: [tuple("a")] });
+    expect(
+      unobserve.mock.calls.map((c) => [(c[1] as { n: string }).n, c[3]]),
+    ).toEqual([["b", "now"]]);
+    unmount();
+    expect(
+      unobserve.mock.calls.map((c) => [(c[1] as { n: string }).n, c[3]]),
+    ).toEqual([
+      ["b", "now"],
+      ["a", undefined],
+    ]);
+  });
+
+  it("each tuple carries where its value was last applied (appliedSeq)", async () => {
+    const d = descriptor();
+    const client = makeClient();
+    const { result } = renderHook(
+      () => useResources(d, [tuple("a"), tuple("b")]),
+      { wrapper: wrapperFor(client) },
+    );
+    const { notifications } = spyNotifications();
+    expect(result.current.map((r) => r.appliedSeq)).toEqual([0, 0]);
+    vi.spyOn(notifications, "appliedSeq").mockImplementation((_key, params) =>
+      (params as { n: string }).n === "a" ? 7 : 3,
+    );
+    act(() => {
+      client.setQueryData(queryKeyFor(d.key, tuple("a")), [1]);
+      client.setQueryData(queryKeyFor(d.key, tuple("b")), [2]);
+    });
+    await waitFor(() =>
+      expect(result.current.map((r) => r.status)).toEqual(["ready", "ready"]),
+    );
+    expect(result.current.map((r) => r.appliedSeq)).toEqual([7, 3]);
   });
 
   it("shares a tuple's refcount with a useResource on the same tuple", () => {

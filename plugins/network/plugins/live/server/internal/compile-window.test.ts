@@ -808,9 +808,9 @@ describe("compileWindowQuery — joins", () => {
   });
 });
 
-// ── A scroll collection's window: segment cuts and the `$key` row key ──────
+// ── A scroll collection's window: page cuts and the `$key` row key ─────────
 
-describe("compileWindowQuery — scroll segments (serveCollection over a scroll collection)", () => {
+describe("compileWindowQuery — scroll pages (serveCollection over a scroll collection)", () => {
   const tracks = pgTable("tracks", {
     id: text("id").primaryKey(),
     title: text("title").notNull(),

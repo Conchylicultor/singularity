@@ -22,7 +22,7 @@
  * - every refill names only ids the batch emitted, or a row the tuple now holds
  *   that one of them made room for (a window's tail entrant).
  *
- * Window tuples are read as head windows (a scroll's first segment is one).
+ * Window tuples are read as head windows (a paged read's first page is one).
  *
  * Requires a running Postgres cluster (started by ./singularity build).
  * Run: `./singularity test plugins/reports`.
@@ -196,7 +196,7 @@ const w = reportsList.window.window;
 const g = reportsList.groups.groups;
 const POINT_IDS = ["r-fp-0", "r-fp-1", "r-fp-2", "r-fp-3"];
 const TUPLES: Array<{ key: string; params: ResourceParams }> = [
-  // The default order (last seen, newest first) — the pane's first segment.
+  // The default order (last seen, newest first) — the pane's first page.
   { key: reportsList.key, params: w.encode({ limit: 4 }) },
   // Membership by a flipped flag.
   {

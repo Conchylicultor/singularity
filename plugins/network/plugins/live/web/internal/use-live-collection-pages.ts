@@ -1,0 +1,580 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { z } from "zod";
+import {
+  useResources,
+  type ResourceDerivation,
+  type ResourceDescriptor,
+  type ResourceError,
+  type ResourceTupleResult,
+} from "@plugins/primitives/plugins/live-state/web";
+import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
+import {
+  LIVE_ROW_KEY,
+  type LiveQuery,
+  type LiveScrollCollection,
+  type LiveWindowParams,
+} from "@plugins/network/plugins/live/core";
+import { withoutWindowFields } from "./window-fields";
+import type { VisibleRange } from "./visible-range";
+import {
+  assemble,
+  loadMore as loadMorePages,
+  pageKey,
+  reconcile,
+  startPages,
+  TRUNCATION_DETAIL,
+  type Page,
+  type PageEntry,
+  type PageLimits,
+  type PageObservation,
+  type PagePlaceholder,
+  type PagePlan,
+  type PagesTruncation,
+} from "../../shared/page-plan";
+
+// `useLiveCollectionPages` — a live read of a `scroll: true` collection with no depth
+// limit, built from KEY-RANGE pages (`shared/page-plan`), each one bounded
+// window tuple. The plan decides the pages and which of them are live — those
+// near the viewport the caller measured; this hook reads the live ones
+// (`useResources`, released at once when a page leaves its band), feeds the
+// plan what each holds, and assembles the rows — split off from each row's
+// `$key`, which the plan cuts at and a consumer never sees — with the pages
+// past the stale budget as placeholders before and after them.
+
+/**
+ * The stale budget, in steps (`default.limit`s): how many rows the released
+ * pages of one read keep between them before the farthest become
+ * placeholders — a few pages either side of the live band, so a scroll back
+ * shows rows at once, while what a read holds stays O(viewport + budget)
+ * however deep it went.
+ */
+const STALE_STEPS = 8;
+
+/** A paged read's query: the window query without `limit` — the pages own the limits. */
+export type LiveCollectionPagesQuery<F, S extends string> = Omit<
+  LiveQuery<F, S>,
+  "limit"
+>;
+
+export interface LiveCollectionPagesOptions {
+  /**
+   * Which of the read's rows are on screen — measured by the surface drawing
+   * them (data-view's `usePagesViewport`), naming a page drawn as a
+   * placeholder by its placeholder's `key`. Pages near it are live; pages far
+   * from it are released and keep their rows, stale, or — past the stale
+   * budget — are placeholders.
+   */
+  viewport: VisibleRange;
+  /**
+   * Which query changes keep the previous rows on screen until the new query's
+   * first page settles: a change whose `resetKey` equals the previous one's is
+   * such a keep-previous handoff (a search typed into a list); any other
+   * change starts over, loading. Absent: every change starts over.
+   */
+  resetKey?: string;
+}
+
+/** A page's read failing under rows that stay on screen. */
+export interface LiveCollectionPageError {
+  /** The failing read's identity — unique among the result's errors (a React key). */
+  key: string;
+  /** The last row before the failing page; `null` = it is the head. */
+  afterRowId: string | null;
+  error: ResourceError;
+  /**
+   * Paging is stopped on it — the last page's own read, or a failure that
+   * holds the read short of its end — so it belongs where paging stopped (a
+   * list's footer), not above the rows.
+   */
+  blocksPaging: boolean;
+  /** Re-read that page. Never `loadMore`. */
+  retry: () => void;
+}
+
+/**
+ * A page drawn as one placeholder: a released page past the stale budget (its
+ * rows dropped), or one that cannot join the rows drawn — never a row value.
+ * It stands in for `rows` rows, so the surface keeps the height they had;
+ * drawn where the viewport sees it, and reported by `key`, it is subscribed
+ * again and replaced by its rows once they land.
+ */
+export interface LiveCollectionPagePlaceholder {
+  /** What the viewport names it by — unique among the read's placeholders and rows. */
+  key: string;
+  rows: number;
+}
+
+/**
+ * A paged read, in the states every read has: `loading` until the first page
+ * has rows, `error` when that first page failed with nothing to show (its
+ * `refetch` re-reads it), then `ready` — for good: a failure under rows
+ * already shown is a `pageErrors` entry, never the error arm.
+ */
+export type LiveCollectionPagesResult<Row> =
+  | { status: "loading" }
+  | { status: "error"; error: ResourceError; refetch: () => Promise<void> }
+  | {
+      status: "ready";
+      rows: readonly Row[];
+      /** Every row of the query is loaded (nothing past the last page). */
+      exhausted: boolean;
+      /** `loadMore()` would add rows. */
+      canGrow: boolean;
+      /** A `loadMore()` is in flight; the rows shown are the previous ones. */
+      growing: boolean;
+      loadMore: () => void;
+      /** The last page is full and cannot be paged past (an over-long sort key). */
+      truncated: false | { reason: PagesTruncation };
+      pageErrors: readonly LiveCollectionPageError[];
+      /**
+       * The pages drawn as placeholders: those before `rows` and those after
+       * — never between two rows. Empty until the read is scrolled past the
+       * stale budget.
+       */
+      placeholders: {
+        before: readonly LiveCollectionPagePlaceholder[];
+        after: readonly LiveCollectionPagePlaceholder[];
+      };
+    };
+
+/** One row as the plan holds it: its id, its cut key and the wire row itself. */
+interface RowEntry extends PageEntry {
+  row: unknown;
+}
+
+interface Plan {
+  /** The collection and canonical query (no limit, no cuts) this plan's pages read. */
+  base: string;
+  query: LiveCollectionPagesQuery<unknown, string>;
+  state: PagePlan<RowEntry>;
+}
+
+interface HookState {
+  /** The collection's key and the caller's `resetKey` (a new collection always starts over). */
+  resetKey: string | null;
+  current: Plan | null;
+  /** The previous query's rows, kept while the current one's head loads (a keep-previous handoff). */
+  previous: Plan | null;
+  /** The last full page that could not split — reported once, from an effect. */
+  collapse: { seq: number; reason: string; at: number } | null;
+}
+
+type Observation = PageObservation<RowEntry, ResourceError>;
+
+/**
+ * Read a `scroll: true` collection as live key-range pages. `query` is its
+ * filter and order (`null` = nothing to read yet: loading, nothing read); the
+ * read starts at one `default.limit` and pages through `loadMore()`, with no
+ * depth limit. The pages near `viewport` are subscribed, so a row that stops
+ * matching leaves and a new one enters wherever it falls on screen; a page
+ * scrolled away keeps the rows it held until it comes back.
+ *
+ * The result is `loading` (or `error`, when the first page failed) until the
+ * first page settles; after that it is `ready` and never flips back — a
+ * split or merge hands each new page the rows of the one it replaces until
+ * its own read lands, and a page whose read fails keeps its rows with a
+ * `pageErrors` entry to retry.
+ */
+export function useLiveCollectionPages<Row, F, S extends string>(
+  collection: LiveScrollCollection<Row, F, S> | null,
+  query: LiveCollectionPagesQuery<F, S> | null,
+  options: LiveCollectionPagesOptions,
+): LiveCollectionPagesResult<Row> {
+  if (collection === null && query !== null) {
+    throw new Error(
+      "useLiveCollectionPages: a query with no collection — pass null for both to read nothing.",
+    );
+  }
+  const { viewport } = options;
+  const codec = collection?.window.window ?? DETACHED.codec;
+  const limits: PageLimits = useMemo(
+    () => ({
+      step: codec.defaultLimit,
+      maxLimit: codec.maxLimit,
+      staleRows: STALE_STEPS * codec.defaultLimit,
+    }),
+    [codec],
+  );
+  // The query's canonical key: the collection and the query's encoding at the
+  // default limit, with no cut — two collections' queries may encode alike,
+  // and a plan's cuts are one collection's row keys. The column sets a query
+  // brings (`columns`) are not in it: they only name what `where` / `orderBy`
+  // may read, and a row carries the collection's whole projection whichever
+  // the query brings — so a change of them alone keeps the plan, its cuts
+  // and its rows (the plan reads the new query from then on).
+  const base =
+    query === null
+      ? null
+      : JSON.stringify([collection!.key, codec.encode(query)]);
+  const resetKey =
+    collection === null
+      ? null
+      : JSON.stringify([collection.key, options.resetKey ?? base]);
+
+  const [hook, setHook] = useState<HookState>(() => ({
+    resetKey,
+    current:
+      query === null
+        ? null
+        : {
+            base: base!,
+            query: query as LiveCollectionPagesQuery<unknown, string>,
+            state: startPages<RowEntry>(limits),
+          },
+    previous: null,
+    collapse: null,
+  }));
+
+  // A new query: a fresh plan — keeping the previous rows on screen when only
+  // what `resetKey` leaves out changed (adjusting state during render, the
+  // React pattern for state derived from a changed prop).
+  let state = hook;
+  if ((state.current?.base ?? null) !== base) {
+    const keep =
+      state.current !== null && base !== null && state.resetKey === resetKey;
+    // Back to the query still on screen (a search typed, then undone before
+    // its head settled): that plan is current again, nothing restarts.
+    const restored =
+      keep && state.previous !== null && state.previous.base === base
+        ? state.previous
+        : null;
+    state = {
+      resetKey,
+      current:
+        restored ??
+        (query === null
+          ? null
+          : {
+              base: base!,
+              query: query as LiveCollectionPagesQuery<unknown, string>,
+              state: startPages<RowEntry>(limits),
+            }),
+      previous:
+        keep && restored === null ? (state.previous ?? state.current) : null,
+      collapse: state.collapse,
+    };
+  } else if (
+    state.current !== null &&
+    query !== null &&
+    !sameColumns(state.current.query.columns, query.columns)
+  ) {
+    state = {
+      ...state,
+      current: {
+        ...state.current,
+        query: query as LiveCollectionPagesQuery<unknown, string>,
+      },
+    };
+  }
+  // What this render reads: the plans as they stand before the reconcile
+  // below (which may change the pages the next render reads).
+  const readState = state;
+
+  // Every live page either plan reads, one window tuple per page — each
+  // encoded once per plan state (not per lookup), and each read once however
+  // many pages name it. A page a split or merge minted carries its seed: the
+  // slices of the pages it replaces that are its whole range, so its first
+  // sub may be answered from rows this tab holds (live-state's derivation —
+  // `loadMore` then reads only the new page's rows, a merge reads nothing).
+  const { current: readCurrent, previous: readPrevious } = readState;
+  const reads = useMemo(() => {
+    const plans = [readCurrent, readPrevious].filter(
+      (p): p is Plan => p !== null,
+    );
+    const paramsOf = (plan: Plan, page: Page): LiveWindowParams =>
+      codec.encode(
+        {
+          ...(plan.query as LiveCollectionPagesQuery<F, S>),
+          limit: page.limit,
+        },
+        {
+          ...(page.after !== null ? { after: page.after } : {}),
+          ...(page.until !== null ? { until: page.until } : {}),
+        },
+      );
+    /** `pageKeyOf(plan, page)` → its tuple's key. */
+    const tupleKeyOf = new Map<string, string>();
+    const tuples = new Map<
+      string,
+      {
+        params: LiveWindowParams;
+        derive: ResourceDerivation<LiveWindowParams> | null;
+      }
+    >();
+    for (const plan of plans) {
+      for (const { page, live, seed } of plan.state.pages) {
+        if (!live) continue;
+        const pk = pageKeyOf(plan, page);
+        if (tupleKeyOf.has(pk)) continue;
+        const params = paramsOf(plan, page);
+        const tk = JSON.stringify(params);
+        tupleKeyOf.set(pk, tk);
+        tuples.set(tk, {
+          params,
+          derive:
+            seed === null
+              ? null
+              : {
+                  from: seed.from.map((s) => ({
+                    params: paramsOf(plan, s.page),
+                    appliedSeq: s.appliedSeq,
+                    after: s.after,
+                    until: s.until,
+                  })),
+                },
+        });
+      }
+    }
+    const list = [...tuples.values()];
+    return {
+      tupleKeyOf,
+      keys: [...tuples.keys()],
+      params: list.map((t) => t.params),
+      derive: list.map((t) => t.derive),
+    };
+  }, [readCurrent, readPrevious, codec]);
+  const results = useResources(
+    (collection?.window ??
+      DETACHED.descriptor) as unknown as ResourceDescriptor<
+      Row[],
+      LiveWindowParams
+    >,
+    reads.params,
+    { release: "now", derive: reads.derive },
+  );
+
+  // Each tuple's result and what the plan observes of it, by tuple.
+  const byTuple = useMemo(() => {
+    const map = new Map<
+      string,
+      { result: ResourceTupleResult<Row[]>; obs: Observation }
+    >();
+    reads.keys.forEach((tk, i) => {
+      const result = results[i]!;
+      const rows = rowsOfResult(result);
+      const obs: Observation =
+        rows === undefined
+          ? result.status === "error"
+            ? { kind: "failed", error: result.error }
+            : { kind: "pending" }
+          : {
+              kind: "settled",
+              entries: rows.map((row) => entryOf(row, collection!.id)),
+              error: result.status === "error" ? result.error : null,
+              appliedSeq: result.appliedSeq,
+            };
+      map.set(tk, { result, obs });
+    });
+    return map;
+  }, [reads, results, collection]);
+  /** A page's read — `null` for a page this render does not read (minted or made live since). */
+  const read = useCallback(
+    (plan: Plan, page: Page) => {
+      const tk = reads.tupleKeyOf.get(pageKeyOf(plan, page));
+      const hit = tk === undefined ? undefined : byTuple.get(tk);
+      return hit === undefined || tk === undefined
+        ? null
+        : { ...hit, tupleKey: tk };
+    },
+    [reads, byTuple],
+  );
+  const observeIn = useCallback(
+    (plan: Plan) =>
+      (page: Page): Observation =>
+        read(plan, page)?.obs ?? PENDING,
+    [read],
+  );
+
+  // Advance the plan (structural steps, then the viewport's live set), and
+  // retire the previous rows once the current head has an answer.
+  if (state.current !== null) {
+    const plan = state.current;
+    const outcome = reconcile(plan.state, observeIn(plan), viewport, limits);
+    if (outcome.plan !== plan.state) {
+      state = {
+        ...state,
+        current: { ...plan, state: outcome.plan },
+        ...(outcome.collapsed
+          ? {
+              collapse: {
+                seq: (state.collapse?.seq ?? 0) + 1,
+                ...outcome.collapsed,
+              },
+            }
+          : {}),
+      };
+    }
+    if (state.previous !== null) {
+      const head = assemble(plan.state, observeIn(plan));
+      if (head.loaded || head.headError !== null) {
+        state = { ...state, previous: null };
+      }
+    }
+  }
+  if (state !== hook) setHook(state);
+
+  // A full page that could not split is reported loudly, once.
+  const collapse = readState.collapse;
+  useEffect(() => {
+    if (collapse === null) return;
+    clientLog(
+      "live-pages",
+      `[${collection?.key ?? ""}] page ${collapse.at} could not split (${collapse.reason}) — collapsed the pages after it into it`,
+    );
+  }, [collapse, collection]);
+
+  // The plan's shape, logged as it changes: how deep the read is, and how
+  // much of it is live.
+  const shape =
+    readCurrent === null
+      ? null
+      : `pages=${readCurrent.state.pages.length} live=${readCurrent.state.pages.filter((p) => p.live).length}`;
+  useEffect(() => {
+    if (shape === null) return;
+    clientLog("live-pages", `[${collection?.key ?? ""}] ${shape}`);
+  }, [shape, collection]);
+
+  // Pages past the last page of the plan this render read — a no-op if it
+  // moved on since.
+  const loadMore = useCallback(() => {
+    setHook((prev) => {
+      if (prev.current === null || prev.current !== readCurrent) return prev;
+      const plan = prev.current;
+      const next = loadMorePages(plan.state, observeIn(plan), limits);
+      return next === plan.state
+        ? prev
+        : { ...prev, current: { ...plan, state: next } };
+    });
+  }, [readCurrent, observeIn, limits]);
+
+  const result = useMemo((): LiveCollectionPagesResult<Row> => {
+    const plan = readCurrent;
+    if (plan === null) return { status: "loading" };
+    const own = assemble(plan.state, observeIn(plan));
+    const handoff =
+      readPrevious !== null && !own.loaded && own.headError === null;
+    const shown = handoff ? readPrevious : plan;
+    const a = handoff ? assemble(shown.state, observeIn(shown)) : own;
+    if (a.headError !== null) {
+      const head = read(shown, shown.state.pages[0]!.page)!.result;
+      return { status: "error", error: a.headError, refetch: head.refetch };
+    }
+    if (!a.loaded) return { status: "loading" };
+    const rows = a.entries.map((e) => withoutWindowFields(e.row as Row));
+    const pageErrors: LiveCollectionPageError[] = a.failures.map((f) => {
+      const before = a.firstOf[f.index]! - 1;
+      const { result, tupleKey } = read(shown, f.page)!;
+      return {
+        key: tupleKey,
+        afterRowId: before < 0 ? null : a.entries[before]!.id,
+        error: f.error,
+        blocksPaging: f.blocksPaging,
+        retry: () => void result.refetch(),
+      };
+    });
+    const placeholderOf = (
+      p: PagePlaceholder,
+    ): LiveCollectionPagePlaceholder => ({
+      key: p.key,
+      rows: p.size,
+    });
+    return {
+      status: "ready",
+      rows,
+      placeholders: {
+        before: a.before.map(placeholderOf),
+        after: a.after.map(placeholderOf),
+      },
+      exhausted: !handoff && a.exhausted,
+      canGrow: !handoff && a.canGrow,
+      growing: !handoff && a.growing,
+      loadMore,
+      truncated:
+        !handoff && a.truncated !== null ? { reason: a.truncated } : false,
+      pageErrors,
+    };
+  }, [readCurrent, readPrevious, read, observeIn, loadMore]);
+
+  // A last page that cannot be paged past, in the plan's own terms (the
+  // surface tells the user in theirs), logged once each time the read
+  // reaches it.
+  const truncatedAt =
+    result.status === "ready" && result.truncated !== false
+      ? result.truncated.reason
+      : null;
+  useEffect(() => {
+    if (truncatedAt === null) return;
+    clientLog(
+      "live-pages",
+      `[${collection?.key ?? ""}] the read stops short: ${TRUNCATION_DETAIL[truncatedAt]}`,
+    );
+  }, [truncatedAt, collection]);
+  return result;
+}
+
+/**
+ * A tuple's rows: its value, or — failed — the last one it held; `undefined`
+ * while it has none.
+ */
+function rowsOfResult<T>(result: ResourceTupleResult<T[]>): T[] | undefined {
+  switch (result.status) {
+    case "loading":
+      return undefined;
+    case "error":
+      return result.stale;
+    case "ready":
+      return result.data;
+  }
+}
+
+/** One plan entry per wire row object, so a held page keeps its rows' identity. */
+const entries = new WeakMap<object, RowEntry>();
+function entryOf(row: unknown, idField: string): RowEntry {
+  const o = row as Record<string, unknown>;
+  let e = entries.get(o);
+  if (e === undefined) {
+    e = {
+      id: String(o[idField]),
+      key: (o[LIVE_ROW_KEY] as string | null | undefined) ?? null,
+      row,
+    };
+    entries.set(o, e);
+  }
+  return e;
+}
+
+/** The same column sets, by identity — what a query's `columns` change is. */
+function sameColumns(
+  a: readonly unknown[] | undefined,
+  b: readonly unknown[] | undefined,
+): boolean {
+  if ((a?.length ?? 0) !== (b?.length ?? 0)) return false;
+  return (a ?? []).every((x, i) => x === b![i]);
+}
+
+/** A page's identity within the plan reading it: its plan's query and its bounds. */
+function pageKeyOf(plan: Plan, page: Page): string {
+  return `${plan.base}\u0000${pageKey(page)}`;
+}
+
+const PENDING: Observation = { kind: "pending" };
+
+/**
+ * What a detached read (no collection, no query) stands on: nothing is ever
+ * encoded or read through it — the hook's order just stays fixed.
+ */
+const DETACHED = {
+  codec: {
+    defaultLimit: 1,
+    maxLimit: 2,
+    encode: (..._args: unknown[]): LiveWindowParams => {
+      throw new Error(
+        "useLiveCollectionPages: a detached read encodes nothing",
+      );
+    },
+  },
+  descriptor: {
+    key: "network.live.pages:detached",
+    schema: z.array(z.never()),
+  },
+};

@@ -768,13 +768,110 @@ action (which collapses subtrees).
 
 ## Paging (`paging`)
 
-A live `source` pages its own scroll. A consumer that must derive its rows in
+A live `source` pages its own read. A consumer that must derive its rows in
 memory from a paged read — the conversation Queue, whose Done section is the
-`conversations-gone` scroll merged with ranked/active rows — passes
-`paging={…}` beside `rows` (`DataViewPaging`; `scrollPaging(settledScroll)`
-maps a `useLiveScroll` read onto it). Both reach the body as one `paging`, so
-the footer (loading-more, Retry, the cap line), the notices and the hold are
-one code path.
+`conversations-gone` pages merged with ranked/active rows — passes
+`paging={…}` beside `rows` (`DataViewPaging`; `useLivePagesPaging(c, query,
+{ resetKey? })` reads the collection as live pages and hands back the read and
+its paging together). Both reach the body as one `paging`, so the footer
+(loading-more, Retry, the stop line), the notices, the hold and the viewport
+are one code path.
+
+```ts
+const { pages, paging } = useLivePagesPaging(conversationsGone, {}); // data-view web
+// pages: network/live's LiveCollectionPagesResult; paging: null until it is ready
+<DataView rows={rows} paging={paging === null ? undefined : { ...paging, isPaged }} … />
+```
+
+- **The viewport (`paging.viewport`, required).** The body measures which rows
+  it has on screen and reports each paged read's share to its sink, in the
+  read's own order (`DataViewVisibleRows`: the first and last of its rows on
+  screen, or `none`); the internal `usePagesViewport` turns the reports into
+  the branded `VisibleRange` `useLiveCollectionPages` keeps its pages live by — the only
+  place one is minted (`live/visible-range-minter` lint; data-view's
+  sanctioned exemption). `useLivePagesPaging` mints the viewport and the
+  paging together, so a read cannot page by a viewport nothing measures: hand
+  its `paging` to the DataView drawing the rows. A read that pages by no
+  viewport passes a sink that discards the report (internal `NO_VIEWPORT`).
+  - **One measurement per DataView** (`web/internal/use-visible-row-keys.ts`):
+    every view marks each row it draws with `data-row-key` (the row key — list
+    `Row` / tree-chrome rows, the tree view's `RowChrome` (an alias carries
+    none: the real row marks it), gallery `DataCard`, the table's rows, icons'
+    tiles), and one IntersectionObserver (the `in-view` primitive) watches them
+    inside the body's box (`KeepAnchorAcross`'s). A MutationObserver only ENROLLS
+    rows a view mounts later (a windowed list); the observer's entries — one
+    per row it is handed, then one per crossing — drive the settle. The set is
+    published after the rows on screen hold still for 250 ms (`SETTLE_MS`), so
+    a fling does not subscribe every page it crosses, and at most 1 s
+    (`MAX_WAIT_MS`) after the first change it has not published, so a list
+    whose rows never hold still (a busy feed) still updates its viewport.
+  - **A measurement vouches only for the rows it saw.** The body keys it by an
+    EPOCH — the keys of every read's rows — and `useVisibleRowKeys` is
+    `measuring` for a new epoch until a settle that ran after its rows were
+    committed (re-armed in the commit). A settle waits while a row it enrolled
+    has had no entry yet, and with no `[data-row-key]` element drawn at all it
+    stays `measuring` — never an empty set. So a head that lands after the
+    skeleton was measured, or a new query's head, is never reported off screen
+    by the rows it replaced (which would release it the moment it landed). A
+    view type that forgets the marker therefore releases nothing (its pages
+    stay live, never stale) — still, **a new view type must stamp
+    `data-row-key` on its rows**, or its pages are never released.
+  - **Split per read.** A flat origin's paging gets the rows `isPaged` names
+    (all of them, absent); each declared section's paging gets its own
+    section's rows. A folded row, a collapsed section and a section scrolled
+    away are not on screen, so their pages release.
+
+- **Placeholders (`paging.placeholders`, required).** A paged read's pages
+  past its stale budget (`network/live`, *Paged collections*) are
+  `{ before, after }` lists of `DataViewPagePlaceholder` (`{ key, rows }`) —
+  never rows, never between two rows. The body draws them
+  (`web/components/page-placeholders.tsx`): one element per page, through
+  `primitives/loading`'s block, carrying its `key` as
+  `data-row-key` (and `data-page-placeholder`) so the viewport measures it
+  like a row and reports it in the read's order — a placeholder on screen
+  subscribes its page again, and its rows replace it.
+  - **Where.** A flat read's around the whole view — only when every row of
+    the view is the read's: with `isPaged` the read's rows sit among others'
+    (the Queue's Done section), so none is drawn and its far pages simply
+    leave the screen until the read's first or last drawn page nears the
+    viewport (anchored: see *Anchoring*). A declared section's inside its
+    band (`SectionBody`: `before` above the entries, `after` below them; with
+    no entries in the band — all folded, or the table drawing its rows in its
+    grid — only `after`).
+  - **Height: exactly the room its rows took** (`web/internal/placeholder-heights.ts`,
+    `usePlaceholderHeights`, provided as `PlaceholderHeightContext`). Each
+    settle also records every drawn row's ADVANCE (`useVisibleRowKeys`: its
+    top to the next entry of its read's top — a list row's height, a
+    gallery line's height on its last card and 0 on the others), kept for
+    every row still in the reads, drawn or windowed out. A placeholder is
+    sized once, in the render it appears in, from what it replaced: the
+    previous layout's entries between its surviving neighbours, at their
+    advances (several new placeholders between the same neighbours share
+    them row for row). So releasing a page changes no layout at all — the
+    invariant; nothing has to be anchored. A row never measured counts at
+    the mean advance (`rowPitch`), as does a placeholder with nothing
+    measured to replace; a standing placeholder keeps its height whatever
+    the pitch does since.
+  - **Anchoring** — the residue. Rows landing back may differ from their
+    placeholder (they changed while away), and under `isPaged` nothing
+    stands in at all; the body's rows box is `auto-scroll`'s
+    `KeepAnchorAcross`, keyed by every read's placeholders (drawn or not),
+    which keeps the first row on screen where it was (a placeholder only
+    when no row is visible). Its box opts out of browser scroll anchoring
+    (`overflow-anchor: none`): measured on the virtualized table, the
+    browser anchored on a box the window was recycling and scrolled by a
+    released page's height (+3100 px per release, no script write) —
+    whole pages of rows never seen. `virtual-rows` re-measures its
+    `scrollMargin` in the commit that changes its items, and a size it
+    learns while the margin is stale scrolls nothing.
+  - A paging that pages by no viewport passes the empty lists (internal
+    `NO_PLACEHOLDERS`). Pinned by `web/__tests__/page-placeholders.test.tsx`
+    (heights at the released rows' room, no scroll write on a release,
+    anchoring on a landing that changed, none drawn under `isPaged` yet
+    anchored, a live source scrolled deep keeping its drawn rows bounded
+    with every row accounted for), `placeholder-heights.test.ts` (the
+    sizing rules) and, deployed, `e2e/live-pages-scroll.ts` (every row seen
+    at `--step 0.4` / `0.8`, no row on screen moving on its own).
 
 - `isPaged(row)` names the rows the read supplies (absent: all). They sit in
   `rows` in the read's order, so the last one is the **tail**.
@@ -1772,7 +1869,7 @@ original index. Hook:
 stored opaquely as a `jsonField<FilterGroup>` (validated whole through
 `FilterGroupSchema` on read), git-promotable like every config row.
 
-### Live sources (`source`): a `network/live` collection as a segmented scroll
+### Live sources (`source`): a `network/live` collection as live key-range pages
 
 A DataView's rows come from exactly ONE origin — `DataViewProps` is a union, so a
 stand-in (`rows={[]}` beside a server origin) cannot be spelled:
@@ -1780,10 +1877,11 @@ stand-in (`rows={[]}` beside a server origin) cannot be spelled:
 - `{ rows; loading?; rowKey }` — in memory;
 - `{ source }` — a live collection (`liveDataSource`, web; its types are
   core's), read as
-  `network/live`'s segmented scroll (`useLiveScroll`). It refuses `rowKey` (the
+  `network/live`'s key-range pages (`useLiveCollectionPages`), kept live by the rows on
+  screen (*Paging* above). It refuses `rowKey` (the
   row key is the collection's `id`, the one the runtime keys its deltas by),
   `hierarchy` (a tree over a paged set orphans children), `manualOrder` (a rank
-  would reorder server-sorted segments) and `searchAccessor` (search is the
+  would reorder server-sorted pages) and `searchAccessor` (search is the
   source's `searchable`); the contributed `RowOrder` stays off too.
   `DataViewSourceBundle` is a DISTRIBUTIVE `Omit`, so the `MergedDataView` path
   keeps the union (pinned by `web/internal/body-types.test.ts`).
@@ -1872,7 +1970,7 @@ export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject
     `grouping.plan`, ordered by bucket ordinal × `groupOrder` — never the
     server's count order — with NULL, and for text a blank value, merged into
     the one "None", last). Each section reads its own rows — a `SectionRead`
-    scroll over `where ∧ eq(col, value)` (`isEmpty` for None), in the view's
+    paged read over `where ∧ eq(col, value)` (`isEmpty` for None), in the view's
     sort with no group prefix — only while it is **active**: its footer asked
     for its first page (it is expanded and came into view) and it is not
     collapsed; the latch resets when the query (minus search) does. Thirty
@@ -1914,22 +2012,23 @@ export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject
   only: exact when every row is loaded (`DataViewRenderProps.rowsComplete` —
   always in memory; a live origin once read to its end), or — sections in row order — when a later section has started.
   A declared section's count is the server's, exact.
-- **States.** The skeleton while the head segment (or a pending rule) is pending;
-  the empty state once every segment settled with no row; an unavailable rule
+- **States.** The skeleton while the head page (or a pending rule) is pending;
+  the empty state once the head settled with no row; an unavailable rule
   (or a filter over the bounds) in place of the view, as its message; a head
   read that failed with nothing to show as `SourceView.readError` — the same
   `error` arm a `readiness` read fails with (`resolveBodyState` → `errorState`,
   else `ResourceErrorInline`: Retry, or Reload for an out-of-date tab), so a
   live list fails exactly as a resource-backed one does; a failure paging stopped on
-  (`LiveSegmentError.blocksPaging` — the tail's, a failed page, or one holding
-  the scroll short of its end) in the footer (its own Retry —
-  `useInfiniteScroll`'s `retry`, never the next page); any other segment's error
-  as one notice above the rows ("Rows after ‹row› could not refresh — Retry"),
-  keyed by the failing read. A search-only change keeps the previous rows until the new head
-  settles; any other query change starts over. A scroll that cannot page past
-  its tail says so in the footer (`InfiniteScrollFooter`'s `truncated`), in the
-  user's words per `ScrollTruncation` kind (`TRUNCATION_HINT`: the segment cap,
-  an over-long sort key); the plan's own wording goes to the `live-scroll` log.
+  (`LiveCollectionPageError.blocksPaging` — the last page's, or one holding the read short
+  of its end) in the footer (its own Retry — `useInfiniteScroll`'s `retry`,
+  never the next page); any other page's error as one notice above the rows
+  ("Rows after ‹row› could not refresh — Retry"), keyed by the failing read. A
+  search-only change keeps the previous rows until the new head settles; any
+  other query change starts over. A read that cannot page past its last page
+  says so in the footer (`InfiniteScrollFooter`'s `truncated`), in the user's
+  words per `PagesTruncation` kind (`TRUNCATION_HINT`: an over-long sort key);
+  the plan's own wording goes to the `live-pages` log. A page scrolled far away
+  keeps its rows, stale, until it is in view again.
 - **Column headers sort only what the source sorts.** `DataViewRenderProps.sortHeader`
   carries the Sort control's sortable field ids and the ACTIVE sort (for the
   arrow — `state.sort` is emptied under a server-ordered origin); the table
@@ -2172,14 +2271,14 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 73 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 79 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×7
+    - `network/live` ×6
     - `primitives/live-state` ×5
     - `primitives/css/control-panel` ×4
     - `primitives/slot-render` ×4
     - `config_v2` ×2
-    - `network/live` ×2
     - `primitives/collapsible` ×2
     - `primitives/css/row` ×2
     - `primitives/css/sticky/stack` ×2
@@ -2200,7 +2299,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/css/spacing.Stack`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/yield.yieldClass`
+    - `primitives/dom/auto-scroll.KeepAnchorAcross`
     - `primitives/dom/element-size.useElementSize`
+    - `primitives/dom/in-view.createInViewWatcher`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.WithTooltip`
@@ -2221,18 +2322,19 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewDensity`
     - `DataViewFoldLines`
     - `DataViewId`
+    - `DataViewPageNotice`
     - `DataViewPaging`
     - `DataViewPagingTotal`
     - `DataViewProps`
     - `DataViewRenderProps`
     - `DataViewRowEntry`
     - `DataViewSection`
-    - `DataViewSegmentNotice`
     - `DataViewSettingContribution`
     - `DataViewSourceBundle`
     - `DataViewSourceContribution`
     - `DataViewSourceProps`
     - `DataViewSources`
+    - `DataViewViewportSink`
     - `FieldCellProps`
     - `FieldDef`
     - `FieldExtensionContribution`
@@ -2270,6 +2372,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ItemActionsDescriptor`
     - `ItemActionZone`
     - `LeadingSlotProps`
+    - `LivePagesPaging`
     - `LoweredFilter`
     - `ManualOrderConfig`
     - `MergedDataViewProps`
@@ -2315,7 +2418,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `readFallback`
     - `resolveBodyFields`
     - `rowToneClass`
-    - `scrollPaging`
     - `SectionBody`
     - `UNGROUPED_FOLD_KEY`
     - `useDataViewControls`
@@ -2329,6 +2431,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useGroupingRegistry`
     - `useIsChipField`
     - `useItemActionZones`
+    - `useLivePagesPaging`
     - `useResolveCell`
     - `useResolveCellEditor`
     - `useResolveColumnConfig`
@@ -2372,6 +2475,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewId`
     - `DataViewInMemoryOrigin`
     - `DataViewLiveOrigin`
+    - `DataViewPageNotice`
+    - `DataViewPagePlaceholder`
+    - `DataViewPagePlaceholders`
     - `DataViewPaging`
     - `DataViewPagingTotal`
     - `DataViewProps`
@@ -2382,9 +2488,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSection`
     - `DataViewSectioning`
     - `DataViewSectionPaging`
-    - `DataViewSegmentNotice`
     - `DataViewSurfaceChrome`
     - `DataViewToolbarSpec`
+    - `DataViewViewportSink`
+    - `DataViewVisibleRows`
     - `FieldDef`
     - `FieldExtensionProps`
     - `FieldExtensionsDescriptor`
@@ -2473,7 +2580,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `runs`
     - `ui/theme-engine/theme-gallery`
 - Exemptions:
-  - Exempts itself from: `data-view/no-adhoc-row-list` — `.` (sanctioned)
+  - Exempts itself from:
+    - `data-view/no-adhoc-row-list` — `.` (sanctioned)
+    - `live/visible-range-minter` — `web/internal/pages-viewport.ts` (sanctioned)
   - Exempted by:
     - `primitives/data-view` (0 debt)
     - `primitives/tree` (0 debt)

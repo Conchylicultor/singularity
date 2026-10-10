@@ -43,7 +43,7 @@ export interface LiveQueryCodecSpec {
   key: string;
   /** The row field that identifies a row — the order's tiebreaker, and a cut's last element. */
   id: string;
-  /** A scroll collection's window takes segment cuts (`after` / `until`); any other refuses them. */
+  /** A scroll collection's window takes page cuts (`after` / `until`); any other refuses them. */
   scroll: boolean;
   /** A contributed collection's queries may name its contributors' columns (by wire name); any other's may not. */
   contributed: boolean;
@@ -78,6 +78,13 @@ export interface LiveQueryCodec<C extends string, S extends string> {
     params: Record<string, string>,
     columns?: readonly LiveColumnsDeclaration[],
   ) => LiveDecodedQuery<S>;
+  /**
+   * The query a window tuple is one page of: one string for every page of it
+   * (its `where` and `order`), whatever its cuts and limit — the resource
+   * runtime derives a page only from pages of its family. Read off canonical
+   * params (the runtime's gate decoded them), so one query has one family.
+   */
+  familyOf: (params: LiveWindowParams) => string;
   /** Canonical encode of a grouping query — the same `where` canonicalisation as a window. */
   encodeGroups: (query: AnyGroupQuery) => LiveGroupParams;
   /** STRICT decode of a grouping query's params (throws unless exactly canonical). */
@@ -363,7 +370,7 @@ export function createLiveQueryCodec<C extends string, S extends string>(
   ): LiveCutKey => {
     if (!spec.scroll) {
       onFail(
-        `"${which}" is a segment cut — only a collection declared \`scroll: true\` takes one`,
+        `"${which}" is a page cut — only a collection declared \`scroll: true\` takes one`,
       );
     }
     const parsed = parseJson(raw, onFail);
@@ -567,6 +574,8 @@ export function createLiveQueryCodec<C extends string, S extends string>(
   return {
     encode,
     decode,
+    familyOf: (params) =>
+      JSON.stringify([params.where ?? null, params.order ?? null]),
     encodeGroups,
     decodeGroups,
     encodeCount,

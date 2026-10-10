@@ -48,14 +48,14 @@ const REPLACEMENT = {
   usePointResource: "`useLiveRow`",
   usePointResources: "`useLive(c, { ids })`",
   useWindowResource: "`useLive(c, query)`",
-  // The deferred and multi-tuple substrate the segmented scroll and the
+  // The deferred and multi-tuple substrate the paged read and the
   // contributed-column collections compile to (not a fourth way to declare,
   // serve or read one).
   defineDeferredResource:
     "`serveCollection` (a `contributed` / `columnScope` collection binds deferred)",
   deferredWindowQueryResource: "`serveCollection`",
   useResources:
-    "`useLive` (a scrolled list: a DataView `liveDataSource`, which reads `useLiveScroll`)",
+    "`useLive` (a scrolled list: a DataView `liveDataSource`, which reads `useLiveCollectionPages`)",
 } as const;
 
 type LegacyName = keyof typeof REPLACEMENT;

@@ -73,6 +73,12 @@ export interface LiveWindowCodec<F, S extends string> {
     params: Record<string, string>,
     columns?: readonly LiveColumnsDeclaration[],
   ) => LiveDecodedQuery<S>;
+  /**
+   * The query a tuple is one page of: one string for every page of one query
+   * (its filter and order), whatever its cuts and limit — what the server
+   * derives a page from (see the resource runtime's seeded derivation).
+   */
+  familyOf: (params: LiveWindowParams) => string;
 }
 
 /**
@@ -201,8 +207,9 @@ export interface LiveCollection<
   filterable: F;
   sortable: readonly S[];
   /**
-   * Declared `scroll: true`: its window takes segment cuts and projects each
-   * row's `$key`, so it may back a segmented scroll (a live DataView source).
+   * Declared `scroll: true`: its window takes page cuts and projects each
+   * row's `$key`, so it may be read as key-range pages (`useLiveCollectionPages`, a live
+   * DataView source).
    */
   scroll: boolean;
   /**
@@ -235,9 +242,9 @@ export interface LiveCollection<
 }
 
 /**
- * A collection declared `scroll: true` — the only kind a segmented scroll (and
- * so a live DataView source) reads: its window projects each row's `$key` and
- * takes `after` / `until` cuts.
+ * A collection declared `scroll: true` — the only kind read as key-range
+ * pages (`useLiveCollectionPages`, and so a live DataView source): its window projects
+ * each row's `$key` and takes `after` / `until` cuts.
  */
 export type LiveScrollCollection<Row, F, S extends string> = LiveCollection<
   Row,
@@ -353,11 +360,11 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
   /** Default `"none"`. A preload reaches the DEFAULT WINDOW only (see {@link LivePreload}). */
   preload?: LivePreload;
   /**
-   * May back a segmented scroll (`useLiveScroll`, a live DataView source): the
-   * window projects each row's `$key` and takes `after` / `until` cuts. Needs
-   * `maxLimit ≥ 3 · default.limit` (a declaration throw): a scroll splits a
-   * full segment at `maxLimit − default.limit` and merges two below
-   * `maxLimit − 2 · default.limit`, which below 3× leaves no room between them.
+   * May be read as key-range pages (`useLiveCollectionPages`, a live DataView source):
+   * the window projects each row's `$key` and takes `after` / `until` cuts.
+   * Needs `maxLimit ≥ 2 · default.limit` (a declaration throw): a page that
+   * splits is read at `2 · default.limit`, so it holds its rows with a step of
+   * headroom before it is full again.
    */
   scroll?: true;
   /**
@@ -719,11 +726,11 @@ function fullCollection<Row, F, S extends string>(
   spec: LiveCollectionSpec<Row, F, S> | LiveArmsSpec<Row, F, S, string>,
 ): LiveCollection<Row, F, S> {
   const scroll = spec.scroll === true;
-  if (scroll && spec.maxLimit < 3 * spec.default.limit) {
+  if (scroll && spec.maxLimit < 2 * spec.default.limit) {
     throw new Error(
-      `liveCollection("${key}"): \`scroll: true\` needs maxLimit ≥ 3 · default.limit ` +
-        `(${3 * spec.default.limit}), got ${spec.maxLimit} — a scroll splits a full segment at ` +
-        `maxLimit − default.limit and merges below maxLimit − 2 · default.limit, which leaves no room between them.`,
+      `liveCollection("${key}"): \`scroll: true\` needs maxLimit ≥ 2 · default.limit ` +
+        `(${2 * spec.default.limit}), got ${spec.maxLimit} — a page that splits is read at ` +
+        `2 · default.limit, a step of headroom over the rows it holds.`,
     );
   }
   const contributed = spec.contributed === true;
@@ -758,6 +765,7 @@ function fullCollection<Row, F, S extends string>(
     defaultOrderBy: spec.default.orderBy,
     encode: codec.encode,
     decode: codec.decode,
+    familyOf: codec.familyOf,
   };
   // Built on the window factory (descriptor registration, keyed `keyOf`,
   // `queryPk`), then its limit-only codec is replaced by the query codec. The
@@ -772,7 +780,7 @@ function fullCollection<Row, F, S extends string>(
       : { preload: spec.preload };
   // A scroll window's rows carry the server-minted `$key` beside the row
   // fields: declared on the wire schema (so the runtime's parse keeps it), and
-  // split off by the scroll before rows reach a consumer.
+  // split off by every read before rows reach a consumer.
   // A scoped collection's window rows carry `$scoped` beside them when the
   // tuple orders by a scoped column (the member values its order signature
   // reads) — declared the same way, split off the same way.

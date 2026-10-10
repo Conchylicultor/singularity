@@ -689,7 +689,7 @@ describe("which failures are a contract mismatch", () => {
   });
 });
 
-describe("scroll collection: segment cuts", () => {
+describe("scroll collection: page cuts", () => {
   const scrolled = liveCollection("live-test.codec-scroll", {
     row: RowSchema,
     id: "id",
@@ -714,7 +714,7 @@ describe("scroll collection: segment cuts", () => {
     );
   });
 
-  it("needs maxLimit ≥ 3 · default.limit", () => {
+  it("needs maxLimit ≥ 2 · default.limit", () => {
     expect(() =>
       liveCollection("live-test.codec-scroll-tight", {
         row: RowSchema,
@@ -722,10 +722,10 @@ describe("scroll collection: segment cuts", () => {
         filterable: {},
         sortable: ["name"],
         default: { orderBy: [["name", "asc"]], limit: 100 },
-        maxLimit: 299,
+        maxLimit: 199,
         scroll: true,
       }),
-    ).toThrow(/maxLimit ≥ 3 · default.limit \(300\), got 299/);
+    ).toThrow(/maxLimit ≥ 2 · default.limit \(200\), got 199/);
   });
 
   it("cuts are absent by default: the default tuple stays byte-identical", () => {

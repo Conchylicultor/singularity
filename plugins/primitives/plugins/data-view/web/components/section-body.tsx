@@ -6,6 +6,7 @@ import type {
 } from "@plugins/primitives/plugins/data-view/core";
 import { FoldLine } from "./fold-line";
 import { SectionPagingFooter } from "./section-paging-footer";
+import { PagePlaceholders } from "./page-placeholders";
 
 export interface SectionBodyProps {
   /** The section this band renders. Its fold line (when it carries `fold`) is
@@ -45,7 +46,11 @@ export interface SectionBodyProps {
  * band ends in its footer — loading-more, Retry, and the sentinel whose first
  * sighting starts the section's read — so a section with no row loaded yet
  * still draws its band, and no view can render a declared section that never
- * loads.
+ * loads. Its read's pages past the stale budget are drawn here too, as
+ * height-keeping placeholders before the entries and after them; with no
+ * entries in the band (every row folded, or a view drawing its rows outside
+ * it — the table's grid) only those after them are drawn, since the band has
+ * no rows to stand above.
  *
  * Its content must not follow the rail again — the band has paid it, and a
  * nested `rail-follow` pays it twice (the rail guard's nested-follower check).
@@ -61,7 +66,13 @@ export function SectionBody({
   if (empty && !folds && !section.paging) return null;
   return (
     <div className={cn("rail-follow", !empty && className)}>
+      {section.paging && !empty ? (
+        <PagePlaceholders placeholders={section.paging.placeholders.before} />
+      ) : null}
       {children}
+      {section.paging ? (
+        <PagePlaceholders placeholders={section.paging.placeholders.after} />
+      ) : null}
       <FoldLine section={section} foldLines={foldLines} />
       {section.paging ? (
         <SectionPagingFooter

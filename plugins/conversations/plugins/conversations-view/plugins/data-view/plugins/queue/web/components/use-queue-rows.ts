@@ -1,4 +1,4 @@
-import { useLive, useLiveScroll } from "@plugins/network/plugins/live/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { useMemo, useState } from "react";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
@@ -15,7 +15,7 @@ import {
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
-  scrollPaging,
+  useLivePagesPaging,
   type DataViewPaging,
 } from "@plugins/primitives/plugins/data-view/web";
 import {
@@ -77,7 +77,8 @@ type QueueDisplay = {
 
 /**
  * Combines the queue's live resources — active + gone conversations (gone read
- * as a live scroll, so the Done section pages as the user scrolls), tasks, and
+ * as live pages, so the Done section pages as the user scrolls, kept live
+ * where it is on screen), tasks, and
  * the bounded POINT ranks (subscribed to the LIVE conversation id set, replayed
  * through the optimistic overlay) — runs the shared {@link classifyQueue}, and
  * flattens the classification into one `QueueRow[]` in display order (Pinned,
@@ -94,17 +95,21 @@ export function useQueueRows(): {
   paging: DataViewPaging<QueueRow> | undefined;
 } {
   const activeResult = useLive(conversationsActive);
-  // The ended conversations (the Done section), newest first, as a scroll:
-  // its first segment is the default window, and the rest load as the user
-  // scrolls past the tail. Gated like the other reads through a `ResourceResult`
-  // view of it.
-  const goneScroll = useLiveScroll(conversationsGone, GONE_QUERY);
+  // The ended conversations (the Done section), newest first, as live pages:
+  // the first page is the default window, the rest load as the user scrolls
+  // past the tail, and only those near the Done rows on screen stay live —
+  // the DataView reports them to `paging.viewport`. Gated like the other
+  // reads through a `ResourceResult` view of it.
+  const { pages: gonePages, paging: gonePaging } = useLivePagesPaging(
+    conversationsGone,
+    GONE_QUERY,
+  );
   const goneResult = useMemo(
     () =>
-      goneScroll.status === "ready"
-        ? { status: "ready" as const, data: [...goneScroll.rows] }
-        : goneScroll,
-    [goneScroll],
+      gonePages.status === "ready"
+        ? { status: "ready" as const, data: [...gonePages.rows] }
+        : gonePages,
+    [gonePages],
   );
   // How many have ended in all — the Done section's exact count before every
   // page is loaded: every ended conversation is a "done" row, so grouped by
@@ -118,18 +123,18 @@ export function useQueueRows(): {
     error: (_error, stale) => stale ?? null,
   });
   const paging = useMemo(
-    () =>
-      goneScroll.status === "ready"
-        ? {
-            ...scrollPaging<QueueRow>(goneScroll),
+    (): DataViewPaging<QueueRow> | undefined =>
+      gonePaging === null
+        ? undefined
+        : {
+            ...gonePaging,
             isPaged: (r: QueueRow) => r.section === "done",
             total:
               goneTotal === null
                 ? null
                 : { count: goneTotal, uniform: GONE_UNIFORM },
-          }
-        : undefined,
-    [goneScroll, goneTotal],
+          },
+    [gonePaging, goneTotal],
   );
   const tasksResult = useLive(taskRows);
 
@@ -336,7 +341,7 @@ export function useQueueRows(): {
   };
 }
 
-// The scroll's query: the collection's default order, every ended conversation.
+// The pages' query: the collection's default order, every ended conversation.
 const GONE_QUERY = {};
 // The same set's total.
 const GONE_COUNT = { count: true } as const;

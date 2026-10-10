@@ -419,7 +419,7 @@ const search = (q: string): LiveWhere<typeof allConversations.filterable> => ({
 });
 
 const TUPLES: Tuple[] = [
-  // The All pane's first segment (system hidden by the default).
+  // The All pane's first page (system hidden by the default).
   { key: allConversations.key, params: aw.encode({ limit: 4 }) },
   // Kind = System: the default dropped.
   {
@@ -440,7 +440,7 @@ const TUPLES: Tuple[] = [
       limit: 3,
     }),
   },
-  // History's first segment (system included).
+  // History's first page (system included).
   { key: conversationHistory.key, params: hw.encode({ limit: 5 }) },
   // History by title.
   {

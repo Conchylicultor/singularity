@@ -36,6 +36,11 @@ export interface DataCardProps {
    *  the padding and the region gap for dense pickers. */
   size?: "sm" | "md";
   className?: string;
+  /**
+   * The card's row key in a DataView, stamped as `data-row-key` — the marker
+   * every DataView row carries, by which it measures the rows on screen.
+   */
+  rowKey?: string;
 }
 
 /**
@@ -56,6 +61,7 @@ export function DataCard(props: DataCardProps) {
     selected,
     size = "md",
     className,
+    rowKey,
   } = props;
 
   // eslint-disable-next-line layout/no-adhoc-layout -- card body fills the column and allows its children to truncate horizontally
@@ -69,6 +75,7 @@ export function DataCard(props: DataCardProps) {
 
   return (
     <Card
+      data-row-key={rowKey}
       interactive={activates}
       role={activates ? "button" : undefined}
       tabIndex={activates ? 0 : undefined}

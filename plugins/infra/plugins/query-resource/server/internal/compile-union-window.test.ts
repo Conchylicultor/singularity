@@ -83,6 +83,7 @@ function spec(
       orderOf: (p) => [{ name: p.order ?? "startedAt", dir: "desc" }],
       limitOf: () => 10,
       cutsOf: (p) => (p.after ? { after: JSON.parse(p.after) } : {}),
+      familyOf: (p) => JSON.stringify([p.kinds ?? null, p.order ?? null]),
     },
     scroll: { keyField: "$key", maxKeyBytes: 1024 },
     point: { idsOf: (p) => (p.kinds ?? "").split(",").filter(Boolean) },

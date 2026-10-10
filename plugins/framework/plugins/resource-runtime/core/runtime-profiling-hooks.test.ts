@@ -81,6 +81,7 @@ describe("window membership", () => {
             members()
               .slice(0, 3)
               .map((r) => r.id),
+          limitOf: () => 3,
         },
         loader: (_p, c) =>
           c === undefined
