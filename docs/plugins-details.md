@@ -11,6 +11,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots: `ActiveData.Tag`
     - Slot contributors:
       - `ActiveData.Tag` ← `active-data.commit-link`
+      - `ActiveData.Tag` ← `active-data.go`
       - `ActiveData.Tag` ← `active-data.plugin-link`
       - `ActiveData.Tag` ← `active-data.task`
     - Contributes:
@@ -77,6 +78,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Cross-plugin:
     - Imported by:
       - `active-data/commit-link`
+      - `active-data/go`
       - `active-data/plugin-link`
       - `active-data/task`
       - `conversations/conversation-view/jsonl-viewer/assistant-text`
@@ -201,6 +203,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
       - Core:
         - Exports (values): `EVENT_SOURCE_CHIP_SURFACES`
+    - **`go`** — Renders <go>…</go> in an agent's reply — a part of the answer the user can pick as their reply — highlighted in place with the prompt templates' split chip: ➤ sends it back as <go>…</go> (the agent reads the part of its answer the user picked), ✎ Go puts it in the draft as an editable highlighted region with a GO tab. One line is inline wherever it is written; a multi-line block turns `- [ ]` lines into pickable rows and sends only the picked ones. The user's sent message shows the accepted <go> in full.
+      - Web:
+        - Contributes:
+          - `ActiveData.Tag` "go" → `GoBlock`
+          - `InlineTextWalkerSlot`
+          - `TextEditorSlots.Plugin` → `GoRegionPlugin`
+        - Uses:
+          - `active-data.ActiveData`
+          - `conversations/conversation-view.usePromptComposer`
+          - `conversations/conversation-view/prompt-templates.TemplateChip`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/selection-indicator.CheckboxIndicator`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/dom/element-size.useResizeObserver`
+          - `primitives/inline-text.InlineText`
+          - `primitives/inline-text.InlineTextWalker`
+          - `primitives/inline-text.InlineTextWalkerContext`
+          - `primitives/inline-text.InlineTextWalkerSlot`
+          - `primitives/inline-text.useInlineTextWalker`
+          - `primitives/markdown.Markdown`
+          - `primitives/text-editor.registerNodeExtension`
+          - `primitives/text-editor.TextEditorSlots`
     - **`id-chip`** — Id chips, web half: idChip({ presenter, surfaces, component? }) mints a kind's IdKinds.Presenter together with its inline chip — the pattern derived from the kind (never re-typed), a generic title + icon chip unless the family brings its own component. rowReferent folds a live by-id row read into a presenter's referent state. Id chips, server half: idChipServer({ kind, surfaces, resolve }) contributes the kind's IdKinds.Referent, the InlineTokenReferentSource that hands a model the referent's title, and — for a chip that belongs in documents — the Editor.InlineToken that keeps a page block holding it agent-readable.
       - Web:
         - Uses:
@@ -10795,9 +10822,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usePromptComposer`
           - `useRegisterPromptComposer`
       - Cross-plugin:
-        - Imported by: 61 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+        - Imported by: 62 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
           - `conversations` ×50
-          - `active-data` ×4
+          - `active-data` ×5
           - `tasks` ×3
           - `debug/profiling/ops`
           - `primitives/launch`
@@ -12844,7 +12871,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `conversations/conversation-view/push-and-exit`
               - `conversations/conversation-view/rewind`
-        - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
+        - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear) and its one split chip (TemplateChip: ✎ name inserts, ➤ sends) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
           - Web:
             - Contributes:
               - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
@@ -12867,12 +12894,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `TemplateChipBarProps`
               - `TemplateChipItem`
-            - Exports (values): `TemplateChipBar`
+              - `TemplateChipProps`
+            - Exports (values):
+              - `TemplateChip`
+              - `TemplateChipBar`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
           - Cross-plugin:
-            - Imported by: `conversations/conversation-view/selection-actions`
+            - Imported by:
+              - `active-data/go`
+              - `conversations/conversation-view/selection-actions`
           - Shared:
             - Exports (values): `promptTemplatesConfig`
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
@@ -19488,7 +19520,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 143 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 144 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×44
               - `primitives` ×24
               - `page` ×23
@@ -19496,10 +19528,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core` ×5
               - `debug` ×4
               - `tasks` ×4
+              - `active-data` ×3
               - `config_v2` ×3
               - `shell` ×3
               - `ui` ×3
-              - `active-data` ×2
               - `infra` ×2
               - `reorder` ×2
               - `build`
@@ -28530,7 +28562,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 150 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 151 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×42
               - `primitives` ×28
               - `conversations` ×23
@@ -28544,6 +28576,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth` ×2
               - `config_v2` ×2
               - `shell` ×2
+              - `active-data/go`
               - `apps-core/app-launcher`
               - `build/deployment`
               - `code-explorer/commit-detail`
@@ -28602,7 +28635,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 84 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `debug` ×16
               - `apps` ×15
               - `reports` ×12
@@ -28613,6 +28646,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×3
               - `tasks` ×3
               - `ui` ×2
+              - `active-data/go`
               - `backup/runs-arm`
               - `config_v2/settings`
               - `database/query-deadline`
@@ -28943,6 +28977,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RadioIndicator`
           - Cross-plugin:
             - Imported by:
+              - `active-data/go`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `page/read-only-view`
               - `primitives/css/control-panel`
@@ -28990,7 +29025,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 385 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 386 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×97
               - `conversations` ×61
               - `primitives` ×50
@@ -29005,10 +29040,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×5
               - `auth` ×4
               - `review` ×4
+              - `active-data` ×3
               - `infra` ×3
               - `reorder` ×3
               - `shell` ×3
-              - `active-data` ×2
               - `backup` ×2
               - `code-explorer` ×2
               - `config_v2` ×2
@@ -29180,7 +29215,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Imported by: 357 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 358 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×94
               - `conversations` ×70
               - `primitives` ×40
@@ -29193,9 +29228,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core` ×6
               - `stats` ×6
               - `build` ×5
+              - `active-data` ×4
               - `auth` ×4
               - `review` ×4
-              - `active-data` ×3
               - `infra` ×3
               - `reorder` ×3
               - `backup` ×2
@@ -29431,7 +29466,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
-            - Imported by: 393 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 394 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×101
               - `apps` ×74
               - `conversations` ×52
@@ -29450,11 +29485,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2` ×3
               - `infra` ×3
               - `integrations` ×3
+              - `active-data` ×2
               - `backup` ×2
               - `layouts` ×2
               - `screenshot` ×2
               - `stats` ×2
-              - `active-data/task`
               - `code-explorer/commit-detail`
               - `framework/web-core`
               - `history/dialog`
@@ -30499,10 +30534,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useElementSize`
               - `useResizeObserver`
           - Cross-plugin:
-            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×18
               - `apps` ×5
               - `shell` ×2
+              - `active-data/go`
               - `apps-core/surface/floating`
               - `reorder`
               - `screenshot`
@@ -31050,6 +31086,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `InlineTextWalkerSlot`
         - Slot contributors:
           - `InlineTextWalkerSlot` ← `active-data`
+          - `InlineTextWalkerSlot` ← `active-data.go`
           - `InlineTextWalkerSlot` ← `conversations.conversation-view.markdown-extensions`
         - Exports (types):
           - `InlineTextWalker`
@@ -31062,6 +31099,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `active-data`
+          - `active-data/go`
           - `conversations/conversation-view/jsonl-viewer/user-text`
           - `conversations/conversation-view/markdown-extensions`
           - `infra/claude-cli`
@@ -31492,7 +31530,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/latest-ref.useLatestRef`
           - `primitives/lazy-component.lazyComponent`
           - `primitives/syntax-highlight.HighlightedCode`
-        - Exports (types): `MarkdownEnhancement`
+        - Exports (types):
+          - `MarkdownEnhancement`
+          - `RemarkPlugins`
         - Exports (values):
           - `InlineCode`
           - `langFromClassName`
@@ -31504,6 +31544,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `active-data`
+          - `active-data/go`
           - `conversations/conversation-view/jsonl-viewer/assistant-text`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/conversation-view/jsonl-viewer/teammate-message`
@@ -33268,7 +33309,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Web:
         - Slots: `TextEditorSlots.Plugin`
-        - Slot contributors: `TextEditorSlots.Plugin` ← `primitives.text-editor.paste-images`
+        - Slot contributors:
+          - `TextEditorSlots.Plugin` ← `active-data.go`
+          - `TextEditorSlots.Plugin` ← `primitives.text-editor.paste-images`
         - Uses:
           - `primitives/css/ui-kit.cn`
           - `primitives/css/yield.yieldClass`
@@ -33291,6 +33334,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTakeMarkdownWith`
       - Cross-plugin:
         - Imported by:
+          - `active-data/go`
           - `active-data/task`
           - `apps/website/improve`
           - `conversations/agents`

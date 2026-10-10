@@ -17,7 +17,7 @@ export function GoInline({
 }) {
   return (
     <>
-      <span className="rounded-sm bg-primary/10 px-2xs text-primary box-decoration-clone">
+      <span className="rounded-sm bg-primary/10 px-2xs text-primary-text box-decoration-clone">
         {children}
       </span>{" "}
       <GoChip wire={goWire(content, [])} />

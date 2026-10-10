@@ -39,7 +39,9 @@ Design rationale lives in:
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
     - `primitives/syntax-highlight.HighlightedCode`
-  - Exports (types): `MarkdownEnhancement`
+  - Exports (types):
+    - `MarkdownEnhancement`
+    - `RemarkPlugins`
   - Exports (values):
     - `InlineCode`
     - `langFromClassName`
@@ -51,6 +53,7 @@ Design rationale lives in:
 - Cross-plugin:
   - Imported by:
     - `active-data`
+    - `active-data/go`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/conversation-view/jsonl-viewer/teammate-message`

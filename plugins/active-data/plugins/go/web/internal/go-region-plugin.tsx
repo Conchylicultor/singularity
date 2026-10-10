@@ -13,8 +13,8 @@ import { goMarkerWebNode } from "./marker-node";
 
 // Painted onto the editor's own DOM — classes and the root's background, never
 // nodes — so the draft's text, and therefore what is sent, is untouched.
-const INLINE_CLASSES = ["bg-primary/10", "text-primary", "rounded-sm"];
-const BLOCK_TEXT_CLASSES = ["text-primary"];
+const INLINE_CLASSES = ["bg-primary/10", "text-primary-text", "rounded-sm"];
+const BLOCK_TEXT_CLASSES = ["text-primary-text"];
 
 interface Region {
   open: string;

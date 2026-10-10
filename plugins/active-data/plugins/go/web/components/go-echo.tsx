@@ -14,14 +14,14 @@ export function GoEcho({ body }: { body: string }) {
   const text = body.replace(/^\n+|\n+$/g, "");
   if (!text.includes("\n")) {
     return (
-      <span className="rounded-sm bg-primary/10 px-2xs text-primary box-decoration-clone">
+      <span className="rounded-sm bg-primary/10 px-2xs text-primary-text box-decoration-clone">
         <GoTag />
         <InlineText text={text} />
       </span>
     );
   }
   return (
-    <span className="block rounded-md bg-primary/10 px-sm py-xs text-primary">
+    <span className="block rounded-md bg-primary/10 px-sm py-xs text-primary-text">
       <GoTag />
       {text.split("\n").map((line, i) => {
         const picked = PICKED_RE.exec(line);

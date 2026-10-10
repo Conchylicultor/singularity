@@ -64,9 +64,9 @@
     - `usePromptComposer`
     - `useRegisterPromptComposer`
 - Cross-plugin:
-  - Imported by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×50
-    - `active-data` ×4
+    - `active-data` ×5
     - `tasks` ×3
     - `debug/profiling/ops`
     - `primitives/launch`

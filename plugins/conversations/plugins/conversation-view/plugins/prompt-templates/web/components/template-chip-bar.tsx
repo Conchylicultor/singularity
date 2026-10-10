@@ -1,5 +1,4 @@
 import {
-  Button,
   ControlSizeProvider,
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
