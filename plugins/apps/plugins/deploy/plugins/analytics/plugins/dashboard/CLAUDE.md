@@ -124,6 +124,8 @@ Run with `./singularity test plugins/apps/plugins/deploy/plugins/analytics/plugi
     - `DeploymentAnalyticsBodySchema`
     - `DeploymentAnalyticsResultSchema`
     - `queryDeploymentAnalytics`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-deployment-analytics.ts` (debt)
 - Test helpers:
   - Web: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/web/testing`
     - `metrics`

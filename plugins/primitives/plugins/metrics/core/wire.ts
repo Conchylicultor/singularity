@@ -3,9 +3,9 @@ import { BREAKDOWN_ORDERS, MEASURES, POLARITIES, UNITS } from "./define-metric";
 import { BUCKET_UNITS, PRESETS, isTimeZone } from "./intervals";
 import { ParamSpecWireSchema } from "./params";
 
-// The wire contract between the metrics endpoints and every surface that draws
-// a metric. The browser never imports a provider: it reads the catalog and
-// sends queries.
+// The wire contract between the served metrics values (`./live.ts`) and every
+// surface that draws a metric. The browser never imports a provider: it reads
+// the catalog and asks queries.
 
 const isoInstant = z.string().datetime({ offset: true });
 
@@ -105,6 +105,11 @@ export const DrillItemSchema = z.object({
 });
 export type DrillItem = z.infer<typeof DrillItemSchema>;
 
+/**
+ * One page of the records behind a bucket, as a provider's `details` returns
+ * it: the items, the next page's cursor, and how many records there are in
+ * all. The served `metrics.details` value carries the total as its page meta.
+ */
 export const DrillPageSchema = z.object({
   items: z.array(DrillItemSchema),
   total: z.number().int().nonnegative(),
@@ -112,19 +117,26 @@ export const DrillPageSchema = z.object({
 });
 export type DrillPage = z.infer<typeof DrillPageSchema>;
 
-/** The records behind one bucket (or one series of it). */
-export const DetailsQuerySchema = z
+/** What every page of a drill-down shares: how many records the bucket holds. */
+export const DrillMetaSchema = z.object({
+  total: z.number().int().nonnegative(),
+});
+export type DrillMeta = z.infer<typeof DrillMetaSchema>;
+
+/**
+ * Which records to list: one bucket (or one series of it). The page — cursor
+ * and size — is the paged value's own tuple, never part of the question.
+ */
+export const DetailsSelectorSchema = z
   .object({
     metric: z.string(),
     interval: IntervalSchema,
     /** The split dimension and the one key whose records to list; null = every record. */
     split: z.object({ id: z.string(), key: z.string() }).nullable(),
     params: z.record(z.unknown()),
-    cursor: z.string().nullable(),
-    limit: z.number().int().positive().max(200),
   })
   .strict();
-export type DetailsQuery = z.infer<typeof DetailsQuerySchema>;
+export type DetailsSelector = z.infer<typeof DetailsSelectorSchema>;
 
 const SplitDeclSchema = z.object({ id: z.string(), label: z.string() });
 

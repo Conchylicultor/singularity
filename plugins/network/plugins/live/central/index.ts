@@ -1,7 +1,10 @@
 import type { CentralPluginDefinition } from "@plugins/framework/plugins/central-core/core";
 
 export { serveValue } from "./internal/serve-value";
-export type { CentralServedValue } from "./internal/serve-value";
+export type {
+  CentralServedQueryValue,
+  CentralServedValue,
+} from "./internal/serve-value";
 
 export default {
   description:

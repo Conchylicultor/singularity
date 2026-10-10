@@ -86,7 +86,7 @@ export function MetricCard({
   const chart =
     metricRef.chart ?? defaultChart(entry, split !== null, isCumulative);
   const query = boardQuery(entry, context, split);
-  const result = useMetric(entry.source, query);
+  const result = useMetric(query);
 
   const illegal = displayError(entry, { chart, cumulative: isCumulative });
   if (illegal !== null) {

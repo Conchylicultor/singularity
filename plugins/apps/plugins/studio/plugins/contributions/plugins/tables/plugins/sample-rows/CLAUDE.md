@@ -21,6 +21,8 @@
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
   - Routes: `GET /api/studio/tables/:tableName/sample`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/sample-rows-section.tsx` (debt)
 - Shared:
   - Exports (values): `getTableSampleRows`
 

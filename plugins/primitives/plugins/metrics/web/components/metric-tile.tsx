@@ -31,7 +31,7 @@ export function MetricTile({
   selected,
   onSelect,
 }: MetricTileProps): ReactNode {
-  const result = useMetric(entry.source, boardQuery(entry, context, null));
+  const result = useMetric(boardQuery(entry, context, null));
   return (
     <Card
       as="button"

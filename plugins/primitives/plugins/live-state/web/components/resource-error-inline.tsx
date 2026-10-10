@@ -39,7 +39,8 @@ export interface ResourceErrorInlineProps {
  * The one rendering of a failed read, with its one remedy: Retry (the read's
  * own `refetch`), or — when the tab's bundle is out of date
  * (`client-outdated`) — "App updated — reload", which reloads the page, since
- * no retry of the same bundle can succeed.
+ * no retry of the same bundle can succeed. A `refused` read shows the server's
+ * message and no remedy: asking the same question again gets the same answer.
  *
  * The error arm of a `ResourceResult` renders through this unless a surface has
  * a better answer (keeping `stale` on screen, say); `matchResource` /
@@ -57,10 +58,12 @@ export function ResourceErrorInline({
   const message = outdated
     ? "App updated — reload to load this."
     : `Couldn't load${subject === undefined ? "" : ` ${subject}`}: ${error.message}`;
+  // A refused question gets the same answer however often it is asked: no Retry.
+  const refused = error instanceof ResourceError && error.kind === "refused";
   const action: { label: string; run: () => Promise<void> | void } | null =
     outdated
       ? { label: "Reload", run: () => window.location.reload() }
-      : refetch === undefined
+      : refetch === undefined || refused
         ? null
         : { label: "Retry", run: refetch };
 

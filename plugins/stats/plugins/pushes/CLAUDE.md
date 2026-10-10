@@ -65,6 +65,8 @@ Three aggregate chart endpoints, each `?bucket=day|week|month` (default `day`):
     - `GET /api/stats/pushes/wait-time`
     - `GET /api/stats/pushes/throughput`
     - `GET /api/stats/pushes/step-breakdown`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/step-breakdown-chart.tsx`, `web/components/throughput-chart.tsx`, `web/components/wait-time-chart.tsx` (debt)
 - Shared:
   - Exports (values):
     - `getPushesStepBreakdown`

@@ -67,6 +67,7 @@ export type ExemptableRuleId =
   | "layout/no-adhoc-layout"
   | "live-state/no-handrolled-result"
   | "live-state/no-ready-negation"
+  | "live/no-endpoint-read"
   | "live/no-legacy-resource-spelling"
   | "live/no-sentinel-param"
   | "loading/no-shadcn-skeleton"

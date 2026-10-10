@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import {
@@ -7,6 +7,16 @@ import {
   type ResourcePreload,
 } from "@plugins/primitives/plugins/live-state/core";
 import type { LivePreload } from "./live-collection";
+import {
+  liveQueryCodec,
+  livePageCodec,
+  type LivePage,
+  type LivePageCodec,
+  type LivePageParams,
+  type LiveQueryCodec,
+  type LiveQueryParams,
+  type LiveQuerySchema,
+} from "./query-value";
 
 // `liveValue` — the declaration half of a live VALUE: one payload per params
 // tuple, pushed whole whenever it changes — or, with `load: "on-demand"`,
@@ -121,6 +131,10 @@ export type LiveValueLoad = "push" | "on-demand";
 
 /** A param-less value: may be preloaded. */
 export interface LiveValueSpec<T> {
+  /** A typed-query value — see {@link LiveQueryValueSpec}. */
+  query?: undefined;
+  /** A paged value — see {@link LivePagedValueSpec}. */
+  paged?: undefined;
   /** The payload's wire schema — every push and HTTP read parses through it. */
   schema: ZodParser<T>;
   params?: undefined;
@@ -138,6 +152,10 @@ export interface LiveValueSpec<T> {
  * backend's read, and it cannot load a central key.
  */
 export interface LiveCentralValueSpec<T> {
+  /** A typed-query value — see {@link LiveQueryValueSpec}. */
+  query?: undefined;
+  /** A paged value — see {@link LivePagedValueSpec}. */
+  paged?: undefined;
   schema: ZodParser<T>;
   params?: undefined;
   preload?: never;
@@ -151,6 +169,10 @@ export interface LiveCentralValueSpec<T> {
  * for one that is).
  */
 export interface LiveParamValueSpec<T, N extends readonly string[]> {
+  /** A typed-query value — see {@link LiveQueryValueSpec}. */
+  query?: undefined;
+  /** A paged value — see {@link LivePagedValueSpec}. */
+  paged?: undefined;
   schema: ZodParser<T>;
   /**
    * The param names — a const tuple; derives `P` (each name → a string; a name
@@ -174,6 +196,10 @@ export interface LiveParamValueSpec<T, N extends readonly string[]> {
  * L2-persisted (L2 rows are one param-less tuple per key). A worktree value only.
  */
 export interface LivePreloadedParamValueSpec<T, N extends readonly string[]> {
+  /** A typed-query value — see {@link LiveQueryValueSpec}. */
+  query?: undefined;
+  /** A paged value — see {@link LivePagedValueSpec}. */
+  paged?: undefined;
   schema: ZodParser<T>;
   /** As on {@link LiveParamValueSpec}. */
   params: N;
@@ -190,6 +216,10 @@ export interface LivePreloadedParamValueSpec<T, N extends readonly string[]> {
  * arriving tuple through the parsers.
  */
 export interface LiveTypedParamValueSpec<T, R extends LiveValueParamParsers> {
+  /** A typed-query value — see {@link LiveQueryValueSpec}. */
+  query?: undefined;
+  /** A paged value — see {@link LivePagedValueSpec}. */
+  paged?: undefined;
   schema: ZodParser<T>;
   /** The param parsers — every name required. */
   params: R;
@@ -211,6 +241,112 @@ export type LivePreloadedParamValue<
   T,
   P extends Record<string, string>,
 > = LiveValue<T, P> & { preload: ResourcePreload; preloadsParams: true };
+
+/**
+ * A value whose question is STRUCTURED: the read passes a typed query (any
+ * JSON-safe zod schema's input), the loader receives the schema's output, and
+ * the wire carries it as one canonical string param, `q` (see
+ * `./query-value.ts`). Mutually exclusive with `params`; never preloaded (it
+ * has no default tuple). A central one is allowed, as for `params`.
+ */
+export interface LiveQueryValueSpec<T, Q, QIn, O extends LiveValueOrigin> {
+  schema: ZodParser<T>;
+  /** The question's schema — its input is what `useLive` takes, its output what the loader gets. */
+  query: LiveQuerySchema<Q, QIn>;
+  params?: never;
+  preload?: never;
+  paged?: undefined;
+  /** Default `"push"` (see {@link LiveValueLoad}). */
+  load?: LiveValueLoad;
+  /** `"central"`: served by the central runtime (see {@link LiveValueOrigin}). */
+  origin?: O;
+}
+
+/** An item field holding a string — what a paged value dedupes its items by. */
+type StringKeyOf<Item> = {
+  [K in keyof Item]-?: Item[K] extends string ? K : never;
+}[keyof Item] &
+  string;
+
+/**
+ * How a paged value pages: each page is a list of `item`, keyed by `id`, at
+ * most `limit` long; `meta` (optional) is a per-query fact the first page
+ * carries (a total).
+ */
+export interface LivePagedSpec<Item, Meta> {
+  item: ZodParser<Item>;
+  /** The item field that identifies it — a duplicate across a page boundary is dropped by it. */
+  id: StringKeyOf<Item>;
+  meta?: ZodParser<Meta>;
+  /** The page size — and the most a read may ask for one page (its first page may ask fewer). */
+  limit: number;
+}
+
+/**
+ * A CURSOR-PAGED external value: one page per tuple `{ q, n, c? }` (the
+ * question, the page size and the server's opaque cursor — absent on the
+ * first page), its payload the derived `LivePage<Item, Meta>`
+ * (`{ items, nextCursor, meta }`). Read as a chain of pages, every one of them
+ * live (`useLive(v, query, { first })`). No `schema` (it is derived), no
+ * `params`, no preload; served `source: "external"` only — a paged Postgres
+ * list is a `liveCollection`.
+ */
+export interface LivePagedValueSpec<
+  Item,
+  Meta,
+  Q,
+  QIn,
+  O extends LiveValueOrigin,
+> {
+  schema?: never;
+  query: LiveQuerySchema<Q, QIn>;
+  paged: LivePagedSpec<Item, Meta>;
+  params?: never;
+  preload?: never;
+  /** Default `"push"` (see {@link LiveValueLoad}). */
+  load?: LiveValueLoad;
+  /** `"central"`: served by the central runtime (see {@link LiveValueOrigin}). */
+  origin?: O;
+}
+
+/** A declared typed-query value: a {@link LiveValue} over `{ q }` that carries its codec. */
+export type LiveQueryValue<
+  T,
+  Q,
+  QIn = Q,
+  O extends LiveValueOrigin = "worktree",
+> = LiveValue<T, LiveQueryParams, O> & {
+  query: LiveQueryCodec<Q, QIn>;
+  paged?: undefined;
+};
+
+/** A declared paged value: a {@link LiveValue} per page tuple, with its codec and paging. */
+export type LivePagedValue<
+  Item,
+  Meta,
+  Q,
+  QIn = Q,
+  O extends LiveValueOrigin = "worktree",
+> = LiveValue<LivePage<Item, Meta>, LivePageParams, O> & {
+  query: LivePageCodec<Q, QIn>;
+  paged: {
+    /** The item field a page's items are deduped by. */
+    id: string;
+    /** The largest page a tuple may ask. */
+    limit: number;
+  };
+};
+
+/**
+ * A value read by a params tuple — neither a typed-query nor a paged one. The
+ * overloads that take `P` take this, so a query value's `{ q }` wire tuple
+ * cannot be passed for its query.
+ */
+export type LivePlainValue<
+  T,
+  P extends Record<string, string>,
+  O extends LiveValueOrigin = "worktree",
+> = LiveValue<T, P, O> & { query?: undefined };
 
 /**
  * Declare a live value.
@@ -243,7 +379,45 @@ export type LivePreloadedParamValue<
  * `origin: "central"` declares a value the central runtime serves (the
  * browser subscribes over the central socket); its `LiveValue` carries the
  * origin in its type, so only `network/live/central`'s `serveValue` takes it.
+ *
+ * A STRUCTURED question is `query` (a typed-query value), and a cursor-paged
+ * external read is `query` + `paged` — see {@link LiveQueryValueSpec} and
+ * {@link LivePagedValueSpec}:
+ *
+ * ```ts
+ * export const metricQuery = liveValue("metrics.query", {
+ *   schema: MetricResultSchema,
+ *   query: MetricQuerySchema,        // → useLive(metricQuery, query)
+ *   load: "on-demand",
+ * });
+ * export const metricDetails = liveValue("metrics.details", {
+ *   query: DetailsSelectorSchema,
+ *   paged: { item: DrillItemSchema, id: "id", meta: TotalSchema, limit: 50 },
+ * });
+ * ```
  */
+export function liveValue<
+  Item,
+  Meta,
+  Q,
+  QIn,
+  O extends LiveValueOrigin = "worktree",
+>(
+  key: string,
+  spec: LivePagedValueSpec<Item, Meta, Q, QIn, O> & {
+    paged: { meta: ZodParser<Meta> };
+  },
+): LivePagedValue<Item, Meta, Q, QIn, O>;
+export function liveValue<Item, Q, QIn, O extends LiveValueOrigin = "worktree">(
+  key: string,
+  spec: LivePagedValueSpec<Item, undefined, Q, QIn, O> & {
+    paged: { meta?: undefined };
+  },
+): LivePagedValue<Item, undefined, Q, QIn, O>;
+export function liveValue<T, Q, QIn, O extends LiveValueOrigin = "worktree">(
+  key: string,
+  spec: LiveQueryValueSpec<T, Q, QIn, O>,
+): LiveQueryValue<T, Q, QIn, O>;
 export function liveValue<T>(
   key: string,
   spec: LiveCentralValueSpec<T>,
@@ -283,8 +457,11 @@ export function liveValue<T>(
     | LiveCentralValueSpec<T>
     | LiveParamValueSpec<T, readonly string[]>
     | LivePreloadedParamValueSpec<T, readonly string[]>
-    | LiveTypedParamValueSpec<T, LiveValueParamParsers>,
+    | LiveTypedParamValueSpec<T, LiveValueParamParsers>
+    | LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin>
+    | LivePagedValueSpec<unknown, unknown, unknown, unknown, LiveValueOrigin>,
 ): LiveValue<T, Record<string, string>, LiveValueOrigin> {
+  if (spec.query !== undefined) return queryValue(key, spec);
   // A name list (`["id", "scopeId?"]`) or a typed record of parsers.
   const declared = spec.params ?? [];
   const { params, optionalParams, parsers } = isParamNameList(declared)
@@ -325,6 +502,86 @@ export function liveValue<T>(
       : {}),
     ...(spec.load === "on-demand" ? { load: "on-demand" as const } : {}),
   };
+  registerResourceDescriptor(value as ResourceDescriptor<unknown>);
+  return value;
+}
+
+/**
+ * The typed-query and paged forms: `params` derived from the codec (`["q"]`,
+ * or `["q", "n", "c"]` with `c` optional), the gate the codec's strict decode,
+ * and — for a paged value — the derived page schema.
+ */
+function queryValue<T>(
+  key: string,
+  spec:
+    | LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin>
+    | LivePagedValueSpec<unknown, unknown, unknown, unknown, LiveValueOrigin>,
+): LiveValue<T, Record<string, string>, LiveValueOrigin> {
+  // Unreachable from typed code (each is `never` beside `query`).
+  const stray = (["params", "preload"] as const).filter(
+    (f) => (spec as unknown as Record<string, unknown>)[f] !== undefined,
+  );
+  if (stray.length > 0) {
+    throw new Error(
+      `liveValue("${key}"): \`${stray.join("`, `")}\` cannot be declared ` +
+        `beside \`query\` — a query value's tuple is its question, and it ` +
+        `has no default tuple to preload.`,
+    );
+  }
+  const common = {
+    key,
+    live: "value" as const,
+    ...(spec.origin === "central" ? { origin: "central" as const } : {}),
+    ...(spec.load === "on-demand" ? { load: "on-demand" as const } : {}),
+  };
+  let value: LiveValue<T, Record<string, string>, LiveValueOrigin>;
+  if (spec.paged === undefined) {
+    const s = spec as LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin>;
+    const query = liveQueryCodec(key, s.query);
+    value = {
+      ...common,
+      schema: s.schema,
+      params: ["q"],
+      validateParams: (params: Record<string, string>) =>
+        void query.decode(params),
+      query,
+    } as LiveValue<T, Record<string, string>, LiveValueOrigin>;
+  } else {
+    const s = spec as LivePagedValueSpec<
+      unknown,
+      unknown,
+      unknown,
+      unknown,
+      LiveValueOrigin
+    >;
+    if ((s as { schema?: unknown }).schema !== undefined) {
+      throw new Error(
+        `liveValue("${key}"): a paged value derives its schema from \`paged\` — ` +
+          `declare \`paged.item\` (and \`paged.meta\`), not \`schema\`.`,
+      );
+    }
+    const { item, id, meta, limit } = s.paged;
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw new Error(
+        `liveValue("${key}"): paged.limit ${limit} is not a positive integer.`,
+      );
+    }
+    const query = livePageCodec(key, s.query, limit);
+    value = {
+      ...common,
+      schema: z.object({
+        items: z.array(item),
+        nextCursor: z.string().min(1).nullable(),
+        meta: meta ?? z.undefined(),
+      }),
+      params: ["q", "n", "c"],
+      optionalParams: ["c"],
+      validateParams: (params: Record<string, string>) =>
+        void query.decode(params),
+      query,
+      paged: { id, limit },
+    } as unknown as LiveValue<T, Record<string, string>, LiveValueOrigin>;
+  }
   registerResourceDescriptor(value as ResourceDescriptor<unknown>);
   return value;
 }

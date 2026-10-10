@@ -22,6 +22,8 @@
     - `infra/endpoints.implement`
     - `infra/paths.worktreeArtifacts`
   - Routes: `GET /api/build/runs/:id/profile`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/build-profiling-section.tsx` (debt)
 - Shared:
   - Exports (values): `getBuildRunProfile`
 

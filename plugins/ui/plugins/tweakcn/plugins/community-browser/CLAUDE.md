@@ -45,6 +45,8 @@
   - Exports (values):
     - `applyCatalogTheme`
     - `getCatalog`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/internal/catalog-source.ts` (debt)
 - Shared:
   - Exports (types): `CatalogTheme`
 

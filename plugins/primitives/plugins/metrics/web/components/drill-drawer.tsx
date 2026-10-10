@@ -18,11 +18,14 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { formatValue } from "@plugins/primitives/plugins/metrics/plugins/chart-kit/core";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import type { LivePagesResult } from "@plugins/network/plugins/live/web";
 import {
-  ResourceErrorInline,
-  type PagedResourceResult,
-} from "@plugins/primitives/plugins/live-state/web";
-import type { CatalogMetric, DrillItem, DrillPage } from "../../core";
+  DRILL_PAGE,
+  type CatalogMetric,
+  type DrillItem,
+  type DrillMeta,
+} from "../../core";
 import { useMetricDetails } from "../internal/use-metric";
 import type { MetricBucket } from "./metric-card";
 
@@ -121,7 +124,7 @@ function DrillGroup({
 }): ReactNode {
   const { metric, params } = source;
   const label = metric.drill!.label;
-  const details = useMetricDetails(metric.source, {
+  const details = useMetricDetails({
     metric: metric.id,
     interval: { start: bucket.start, end: bucket.end },
     split: null,
@@ -147,7 +150,7 @@ function DrillGroupBody({
 }: {
   label: string;
   metric: CatalogMetric;
-  details: PagedResourceResult<DrillPage>;
+  details: LivePagesResult<DrillItem, DrillMeta>;
 }): ReactNode {
   switch (details.status) {
     case "loading":
@@ -162,10 +165,15 @@ function DrillGroupBody({
       // failure under them; a first page that failed is the failure.
       return (
         <>
-          {details.stale === undefined ? (
+          {details.stale === undefined || details.meta === undefined ? (
             <Text variant="label">{label}</Text>
           ) : (
-            <DrillList label={label} metric={metric} pages={details.stale} />
+            <DrillList
+              label={label}
+              metric={metric}
+              items={details.stale}
+              total={details.meta.total}
+            />
           )}
           <ResourceErrorInline
             variant="inline"
@@ -178,15 +186,21 @@ function DrillGroupBody({
     case "ready":
       return (
         <>
-          <DrillList label={label} metric={metric} pages={details.data} />
+          <DrillList
+            label={label}
+            metric={metric}
+            items={details.data}
+            total={details.meta.total}
+          />
           {(details.canGrow || details.growing) && (
             <Button
               variant="link"
               onClick={details.loadMore}
               disabled={details.growing}
             >
-              {details.data.length === 1
-                ? `Show all ${details.data[0]!.total} →`
+              {/* The next page completes the list: say how long it will be. */}
+              {details.meta.total <= details.data.length + DRILL_PAGE
+                ? `Show all ${details.meta.total} →`
                 : "Show more →"}
             </Button>
           )}
@@ -195,19 +209,18 @@ function DrillGroupBody({
   }
 }
 
-/** The group's heading with its total, then every record the pages hold. */
+/** The group's heading with its total, then every record loaded so far. */
 function DrillList({
   label,
   metric,
-  pages,
+  items,
+  total,
 }: {
   label: string;
   metric: CatalogMetric;
-  pages: readonly DrillPage[];
+  items: readonly DrillItem[];
+  total: number;
 }): ReactNode {
-  const items = pages.flatMap((p) => p.items);
-  // Every page carries the bucket's total; a read always holds at least one.
-  const total = pages[0]!.total;
   return (
     <>
       <Text variant="label">

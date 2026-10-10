@@ -108,6 +108,8 @@ existed, draws a generic pin / neutral circle until the next refresh.
   - Imported by:
     - `page/place/google`
     - `page/place/map-layer`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/place-search.tsx` (debt)
 - Sub-plugins:
   - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured. Google…
   - **`map-layer`** — Puts /place blocks on the /map block: a PageMap.Layer turning every located place on the page into a pin that points back at its block (picked places without coordinates are counted as unplaced, not…

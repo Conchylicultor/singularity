@@ -16,7 +16,7 @@
 export type ResourceStatus = "loading" | "error" | "ready";
 
 /**
- * Why a read failed, in the four ways a surface can act on:
+ * Why a read failed, in the five ways a surface can act on:
  *
  * - `loader-failed`   — the server tried and threw (or refused for a reason a
  *                       reload does not fix). Retry may help; otherwise a bug.
@@ -26,9 +26,14 @@ export type ResourceStatus = "loading" | "error" | "ready";
  *                       longer parses). Reloading the tab is the fix.
  * - `transport`       — the request never got an answer (offline, socket
  *                       down, a stale body raced a newer one). Retry heals it.
+ * - `refused`         — the server cannot answer the question as asked (the
+ *                       loader threw a `ResourceRefusal`: an unknown id, an
+ *                       empty range). The message is the server's own,
+ *                       written for the reader; retrying the same question
+ *                       gets the same answer, so none is offered.
  */
 export type ResourceErrorKind =
-  "loader-failed" | "not-found" | "client-outdated" | "transport";
+  "loader-failed" | "not-found" | "client-outdated" | "transport" | "refused";
 
 /**
  * The typed failure on a result's `error` arm. An `Error` subclass so every

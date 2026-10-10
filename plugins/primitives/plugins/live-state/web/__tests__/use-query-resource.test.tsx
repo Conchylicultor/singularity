@@ -1,15 +1,11 @@
 /**
- * `useQueryResource` / `useInfiniteQueryResource` — a plain TanStack query read
- * as a `ResourceResult`, against a real `QueryClient`:
+ * `useQueryResource` — a local async load (a TanStack query) read as a
+ * `ResourceResult`, against a real `QueryClient`:
  *
  *   - loading until the value lands, then ready;
  *   - a failure is the error arm, classified (endpoint 404 → not-found, other
  *     status → loader-failed, no answer → transport, schema → client-outdated);
- *   - a failed refetch keeps the last value as `stale`; a refetch heals it;
- *   - the dependent form: the dependency's loading / failure stands in until
- *     it has a value, which then keys the query;
- *   - the paged form: pages as data, canGrow / growing / loadMore, and a failed
- *     next page keeps the pages already held as `stale`.
+ *   - a failed refetch keeps the last value as `stale`; a refetch heals it.
  */
 
 import { describe, expect, it } from "vitest";
@@ -20,9 +16,7 @@ import { z } from "zod";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import {
   ResourceError,
-  useInfiniteQueryResource,
   useQueryResource,
-  type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 
 function wrapper(): (props: { children: ReactNode }) => ReactNode {
@@ -126,133 +120,5 @@ describe("useQueryResource", () => {
     const first = result.current;
     rerender();
     expect(result.current).toBe(first);
-  });
-});
-
-describe("useQueryResource — dependent form", () => {
-  const refetch = () => Promise.resolve();
-
-  it("stands on the dependency's loading arm, then keys the query by its value", async () => {
-    const seen: string[] = [];
-    const { result, rerender } = renderHook(
-      ({ dep }: { dep: ResourceResult<string> }) =>
-        useQueryResource(dep, (rev) => ({
-          queryKey: ["dep", rev],
-          queryFn: () => {
-            seen.push(rev);
-            return Promise.resolve(`answer@${rev}`);
-          },
-        })),
-      {
-        wrapper: wrapper(),
-        initialProps: { dep: { status: "loading", refetch } },
-      },
-    );
-    expect(result.current.status).toBe("loading");
-    expect(seen).toEqual([]);
-    rerender({ dep: { status: "ready", data: "r1", refetch } });
-    await waitFor(() => expect(result.current.status).toBe("ready"));
-    const r = result.current;
-    expect(r.status === "ready" && r.data).toBe("answer@r1");
-    expect(seen).toEqual(["r1"]);
-  });
-
-  it("is the dependency's failure when it failed before ever landing — never loading forever", () => {
-    const error = new ResourceError("transport", "socket down", null);
-    const { result } = renderHook(
-      () =>
-        useQueryResource(
-          { status: "error", error, refetch } as ResourceResult<string>,
-          (rev) => ({ queryKey: ["dep-fail", rev], queryFn: () => 1 }),
-        ),
-      { wrapper: wrapper() },
-    );
-    const r = result.current;
-    if (r.status !== "error")
-      throw new Error(`expected error, got ${r.status}`);
-    expect(r.error).toBe(error);
-  });
-
-  it("keys by the dependency's stale value when it failed after landing", async () => {
-    const error = new ResourceError("transport", "socket down", null);
-    const { result } = renderHook(
-      () =>
-        useQueryResource(
-          {
-            status: "error",
-            error,
-            stale: "r0",
-            refetch,
-          } as ResourceResult<string>,
-          (rev) => ({
-            queryKey: ["dep-stale", rev],
-            queryFn: () => Promise.resolve(`answer@${rev}`),
-          }),
-        ),
-      { wrapper: wrapper() },
-    );
-    await waitFor(() => expect(result.current.status).toBe("ready"));
-    const r = result.current;
-    expect(r.status === "ready" && r.data).toBe("answer@r0");
-  });
-});
-
-describe("useInfiniteQueryResource", () => {
-  type Page = { items: number[]; next: number | null };
-
-  it("reads pages as data with canGrow / growing / loadMore, and a failed next page keeps them as stale", async () => {
-    const second = deferred<Page>();
-    const { result } = renderHook(
-      () =>
-        useInfiniteQueryResource({
-          queryKey: ["pages"],
-          queryFn: ({ pageParam }: { pageParam: number }): Promise<Page> =>
-            pageParam === 0
-              ? Promise.resolve({ items: [1, 2], next: 1 })
-              : second.promise,
-          initialPageParam: 0,
-          getNextPageParam: (last: Page) => last.next ?? undefined,
-        }),
-      { wrapper: wrapper() },
-    );
-    expect(result.current.status).toBe("loading");
-    await waitFor(() => expect(result.current.status).toBe("ready"));
-    const first = result.current;
-    if (first.status !== "ready") throw new Error("unreachable");
-    expect(first.data).toEqual([{ items: [1, 2], next: 1 }]);
-    expect(first.canGrow).toBe(true);
-    expect(first.growing).toBe(false);
-
-    act(() => first.loadMore());
-    await waitFor(() => {
-      const r = result.current;
-      expect(r.status === "ready" && r.growing).toBe(true);
-    });
-    const mid = result.current;
-    expect(mid.status === "ready" && mid.canGrow).toBe(false);
-
-    await act(async () => second.reject(new EndpointError(500, "page 2")));
-    await waitFor(() => expect(result.current.status).toBe("error"));
-    const failed = result.current;
-    if (failed.status !== "error") throw new Error("unreachable");
-    expect(failed.stale).toEqual([{ items: [1, 2], next: 1 }]);
-    expect(failed.error.kind).toBe("loader-failed");
-  });
-
-  it("ends canGrow when the server names no next page", async () => {
-    const { result } = renderHook(
-      () =>
-        useInfiniteQueryResource({
-          queryKey: ["one-page"],
-          queryFn: (): Promise<Page> =>
-            Promise.resolve({ items: [1], next: null }),
-          initialPageParam: 0,
-          getNextPageParam: (last: Page) => last.next ?? undefined,
-        }),
-      { wrapper: wrapper() },
-    );
-    await waitFor(() => expect(result.current.status).toBe("ready"));
-    const r = result.current;
-    expect(r.status === "ready" && r.canGrow).toBe(false);
   });
 });

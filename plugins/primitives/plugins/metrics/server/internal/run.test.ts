@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   defineBreakdown,
   defineMetric,
@@ -9,7 +8,7 @@ import { bool } from "../../core/params";
 import type { MetricQuery } from "../../core";
 import { serveBreakdown, serveMetric, type SourceImpl } from "./contribution";
 import { buildMetricRegistry } from "./registry";
-import { runDetails, runQuery } from "./handlers";
+import { MetricQueryError, runDetails, runQuery } from "./run";
 
 const NOW = new Date("2026-09-30T15:00:00Z");
 const src = defineMetricSource({
@@ -79,14 +78,15 @@ const registry = buildMetricRegistry([source]);
 
 const base = { range: { preset: "7d" as const }, tz: "UTC", params: {} };
 
-async function status(p: Promise<unknown>): Promise<number> {
+/** Whether `p` is refused as a question the registry cannot answer. */
+async function refused(p: Promise<unknown>): Promise<boolean> {
   try {
     await p;
   } catch (err) {
-    if (err instanceof HttpError) return err.status;
+    if (err instanceof MetricQueryError) return true;
     throw err;
   }
-  return 200;
+  return false;
 }
 
 describe("catalog", () => {
@@ -224,8 +224,8 @@ describe("runQuery", () => {
         },
       },
     ],
-  ])("%s is a 400", async (_name, query) => {
-    expect(await status(runQuery(registry, query, NOW))).toBe(400);
+  ])("%s is a MetricQueryError", async (_name, query) => {
+    expect(await refused(runQuery(registry, query, NOW))).toBe(true);
   });
 });
 
@@ -239,16 +239,16 @@ describe("runDetails", () => {
     interval,
     split: null,
     params: {},
-    cursor: null,
-    limit: 5,
   };
+  const page = { cursor: null, limit: 5 };
 
   test("calls the metric's details with parsed params", async () => {
-    const page = await runDetails(registry, {
-      ...q,
-      params: { onlyMine: true },
-    });
-    expect(page.items[0]!.title).toBe("mine=true");
+    const drill = await runDetails(
+      registry,
+      { ...q, params: { onlyMine: true } },
+      page,
+    );
+    expect(drill.items[0]!.title).toBe("mine=true");
   });
 
   test.each([
@@ -261,7 +261,7 @@ describe("runDetails", () => {
       "an empty interval",
       { ...q, interval: { start: interval.end, end: interval.start } },
     ],
-  ])("%s is a 400", async (_name, query) => {
-    expect(await status(runDetails(registry, query))).toBe(400);
+  ])("%s is a MetricQueryError", async (_name, query) => {
+    expect(await refused(runDetails(registry, query, page))).toBe(true);
   });
 });

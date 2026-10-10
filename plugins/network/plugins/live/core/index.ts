@@ -22,13 +22,33 @@ export type {
   WithContributedColumns,
 } from "./internal/live-columns";
 export { liveValue } from "./internal/live-value";
+export {
+  isLivePageCursor,
+  LIVE_PAGE_CURSOR_MAX_BYTES,
+  LIVE_QUERY_MAX_BYTES,
+} from "./internal/query-value";
+export type {
+  LivePage,
+  LivePageCodec,
+  LivePageParams,
+  LivePageRequest,
+  LiveQueryCodec,
+  LiveQueryParams,
+  LiveQuerySchema,
+} from "./internal/query-value";
 export type {
   LiveCentralValueSpec,
+  LivePagedSpec,
+  LivePagedValue,
+  LivePagedValueSpec,
   LiveParamValueSpec,
+  LivePlainValue,
   LivePreloadedParamValue,
   LivePreloadedParamValueSpec,
   LiveTypedParamValueSpec,
   LiveTypedValueParams,
+  LiveQueryValue,
+  LiveQueryValueSpec,
   LiveValue,
   LiveValueOrigin,
   LiveValueParamParsers,

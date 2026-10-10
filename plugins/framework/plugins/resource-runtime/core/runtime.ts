@@ -7,6 +7,7 @@ import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   BUILD_GRAPH_HEADER,
   ResourceContractError,
+  ResourceRefusal,
   contractVerdict,
   type ContractVerdict,
   type ResourceHttpErrorBody,
@@ -2004,8 +2005,15 @@ export function createResourceRuntime(
   // `createResource` (routes are fixed at registration, so it never needs a memo).
   const routedByTable = new Map<string, RegistryEntry[]>();
 
-  // console.error ALWAYS fires here; the report hook is additive.
+  // console.error ALWAYS fires here; the report hook is additive. A
+  // `ResourceRefusal` is not a failure of the server — the reader asked a
+  // question that cannot be answered as asked, and is told so (`refused`) —
+  // so it is logged, never reported.
   function reportLoaderError(context: string, err: unknown): void {
+    if (err instanceof ResourceRefusal) {
+      console.info(`[resources] ${context}: refused — ${err.message}`);
+      return;
+    }
     console.error(`[resources] ${context}`, err);
     opts.reportError?.(context, err);
   }
@@ -5450,13 +5458,19 @@ export function createResourceRuntime(
       // tells this socket too) rather than leave every push re-failing.
       if (evictOnContractError(entry, params, err)) return;
       reportLoaderError(`loader failed for ${key}`, err);
-      sendJson(state.ws, {
-        kind: "sub-error",
-        id,
-        key,
-        params,
-        reason: "loader-failed",
-      });
+      sendJson(
+        state.ws,
+        err instanceof ResourceRefusal
+          ? {
+              kind: "sub-error",
+              id,
+              key,
+              params,
+              reason: "refused",
+              message: err.message,
+            }
+          : { kind: "sub-error", id, key, params, reason: "loader-failed" },
+      );
       return;
     }
     // Yield ONCE before touching the snapshot or the wire. A push continuation
@@ -5948,6 +5962,9 @@ export function createResourceRuntime(
         });
       }
       reportLoaderError(`loader failed for ${key}`, err);
+      if (err instanceof ResourceRefusal) {
+        return httpError(422, { reason: "refused", detail: err.message });
+      }
       return httpError(500, { reason: "loader-failed" });
     }
     // `no-store` forbids the browser HTTP cache from storing this body — the

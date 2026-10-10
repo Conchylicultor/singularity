@@ -4,15 +4,21 @@ import {
   Resource as ResourceContribution,
 } from "@plugins/framework/plugins/server-core/core";
 import type {
+  LivePage,
+  LivePagedValue,
+  LivePageParams,
   LivePreloadedParamValue,
+  LiveQueryParams,
+  LiveQueryValue,
   LiveValue,
 } from "@plugins/network/plugins/live/core";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import {
-  registerValue,
+  registerValueOf,
+  type AnyServeOptions,
   type ExternalServed,
-  type LiveValueSource,
   type ServedValueBase,
+  type ServePagedValueOptions,
   type ServeValueOptions,
 } from "../../shared/compile-value";
 
@@ -51,9 +57,30 @@ export type ServedExternalValue<
   notify(params?: P): void;
 };
 
+/**
+ * A served typed-query value from an external source: `notify(query)`
+ * recomputes that question's one tuple (encoded through the declaration's
+ * codec, so it is the tuple a read of the question holds).
+ */
+export type ServedExternalQueryValue<T, Q> = ServedValue<T, LiveQueryParams> & {
+  notify(query: Q): void;
+};
+
+/**
+ * A served paged value (always external): `notify(query)` recomputes every
+ * page of that question a tab holds right now.
+ */
+export type ServedPagedValue<Item, Meta, Q> = ServedValue<
+  LivePage<Item, Meta>,
+  LivePageParams
+> & {
+  notify(query: Q): void;
+};
+
 /** Any other worktree value: its `serveValue` takes no `preloadParams`. */
 type PlainValue<T, P extends Record<string, string>> = LiveValue<T, P> & {
   preloadsParams?: never;
+  query?: undefined;
 };
 
 /**
@@ -85,7 +112,52 @@ interface PreloadParamsOption<P> {
  * });
  * refHeadServed.notify({ refName });
  * ```
+ *
+ * A typed-query value's options take the DECODED question (`loader(query)`,
+ * `whileSubscribed(query, notify)`, `notify(query)`); a paged value's loader is
+ * asked one page — `loader(query, { cursor, limit })` → `{ items, nextCursor,
+ * meta }` — and it is external only (a paged `"db"` value is a tsc error):
+ *
+ * ```ts
+ * export const metricQueryServed = serveValue(metricQuery, {
+ *   source: "external",
+ *   loader: (q) => runQuery(q),
+ *   whileSubscribed: (q, notify) => watch(q.metric, notify),
+ * });
+ * export const detailsServed = serveValue(metricDetails, {
+ *   source: "external",
+ *   loader: (q, { cursor, limit }) => page(q, cursor, limit),
+ * });
+ * ```
  */
+export function serveValue<
+  Item,
+  Meta,
+  Q,
+  QIn,
+  const R extends readonly ExternalServed[] = [],
+>(
+  value: LivePagedValue<Item, Meta, Q, QIn>,
+  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R>,
+): ServedPagedValue<Item, Meta, Q>;
+export function serveValue<
+  T,
+  Q,
+  QIn,
+  const R extends readonly ExternalServed[] = [],
+>(
+  value: LiveQueryValue<T, Q, QIn>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "db", R>,
+): ServedValue<T, LiveQueryParams>;
+export function serveValue<
+  T,
+  Q,
+  QIn,
+  const R extends readonly ExternalServed[] = [],
+>(
+  value: LiveQueryValue<T, Q, QIn>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "external", R>,
+): ServedExternalQueryValue<T, Q>;
 export function serveValue<
   T,
   P extends Record<string, string>,
@@ -125,8 +197,8 @@ export function serveValue<
   },
 ): ServedExternalValue<T, P>;
 export function serveValue<T, P extends Record<string, string>>(
-  value: LiveValue<T, P> & { preloadsParams?: true },
-  opts: ServeValueOptions<T, P, LiveValueSource, readonly ExternalServed[]> & {
+  value: LiveValue<T, P> & { preloadsParams?: true; query?: unknown },
+  opts: AnyServeOptions & {
     preloadParams?: () => P[] | Promise<P[]>;
   },
 ): ServedValue<T, P> | ServedExternalValue<T, P> {
@@ -142,7 +214,9 @@ export function serveValue<T, P extends Record<string, string>>(
             `parameterized value declared \`preload\`.`,
     );
   }
-  const { resource, compiled } = registerValue(
+  // Erased: the overloads checked the options against the declaration's
+  // form, and the compilation dispatches on the declaration itself.
+  const { resource, compiled } = registerValueOf<T, P, unknown>(
     { defineResource, defineExternalResource },
     value,
     opts,
@@ -200,12 +274,20 @@ export function serveValue<T, P extends Record<string, string>>(
     ] as [ReturnType<typeof ResourceContribution.Declare>],
   };
   if ("notify" in resource && compiled.external) {
+    const queried = (value as { query?: unknown }).query !== undefined;
     const served: ServedExternalValue<T, P> = {
       ...base,
       // Only the params: `affectedIds` is a keyed concept. The runtime
       // canonicalizes them, so a notify reaches the tuple a read subscribed
       // however an absent optional param is spelled (`undefined`, `""`, left out).
-      notify: (params?: P) => resource.notify(params),
+      // A query or paged value is notified by its QUESTION, which reaches the
+      // tuples the codec spells it as (every subscribed page, for a paged one).
+      notify: queried
+        ? (query?: unknown) => {
+            for (const tuple of compiled.tuplesOf(query))
+              resource.notify(tuple);
+          }
+        : (params?: P) => resource.notify(params),
     };
     return served;
   }

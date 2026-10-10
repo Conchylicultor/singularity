@@ -62,10 +62,13 @@ MetricsServer.Source({
   so no day boundary is ever re-derived in SQL (no `date_trunc`). `empty` is the
   value of an interval no row falls in: 0 for a count or sum, `null` for a
   median or ratio.
-- **Freshness:** `metricRevision({ sourceId })` (core) is served external; `rev`
-  = `<bootId>:<n>`, bumped by the source's `changes` while a browser watches it
-  and at the start of every subscription span (nothing watches in between). A
-  metric query keyed by `rev` refetches — no polling.
+- **Freshness:** a source's `changes` → one refcounted watch per source
+  (`server/internal/source-watch.ts`) → each held tuple's `notify`. Every
+  served query and drill-down page watches its metric's source while a tab
+  holds it (`whileSubscribed`); the first starts `changes`, a change refetches
+  all of them (throttled, 1 s), and the last release stops it. Nothing watches
+  between spans, and nothing needs to — the runtime opens every subscription
+  span with a fresh version. No revision tick, no polling.
 
 ## The engine (core)
 
@@ -85,14 +88,26 @@ that is wrong for distinct counts, medians and ratios.
 `MetricQuery` is `{ split }` XOR `{ compare }`: a previous-period line only
 reads against one total, so the pair has no spelling.
 
-## Endpoints
+## Reads — live values (`core/live.ts`)
 
-- `GET /api/metrics/catalog` — sources (with param specs), metrics, breakdowns; fixed per boot.
-- `POST /api/metrics/query` — a `MetricQuery` → `MetricResult` (`series` for a metric, `breakdown` for a breakdown).
-- `POST /api/metrics/details` — the records behind one bucket (optionally one split key), paged.
+- `metrics.catalog` — sources (with param specs), metrics, breakdowns; fixed
+  per process (never notified — a restart re-subscribes).
+- `metrics.query` — a typed-query value: a `MetricQuery` → `MetricResult`
+  (`series` for a metric, `breakdown` for a breakdown). On-demand: each tab
+  refetches after a change.
+- `metrics.details` — a cursor-paged value over a `DetailsSelector` (metric,
+  interval, split, params): the records behind one bucket (optionally one
+  split key), paged by the provider's own cursor, `meta.total` the bucket's
+  count. The provider's `details` still returns a `DrillPage`
+  (`{ items, total, nextCursor }`); the served loader maps it.
 
-Unknown ids, splits and params, a bad range, and details on a metric without
-them are all a 400 naming the problem.
+`web/internal/use-metric.ts`: `useMetricCatalog()`, `useMetric(query)` and
+`useMetricDetails(selector)` (a 5-record preview, then pages of `DRILL_PAGE`)
+are `useLive` reads — the query names its metric, and the server resolves the
+source. Unknown ids, splits and params, a bad range, and details on a metric
+without them are a `MetricQueryError` — a `ResourceRefusal` — naming the
+problem: the card's error arm shows that message (`refused`), and nothing is
+reported as a server failure.
 
 ## Boards
 
@@ -105,12 +120,13 @@ selected tile and the table toggle are device-local, never part of the spec.
 
 ## Plugin reference
 
-- Description: Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails (ResourceResult reads — the details one paged — keyed by the source's metricRevision, so a source change refetches without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig). Metrics engine: the MetricsServer.Source contribution (a source's metrics and breakdowns bound to their evaluators), the catalog / query / details endpoints evaluating any of them through the one tz-aware bucketing engine, the sqlFlow / sqlLevel helpers joining a table against the engine's intervals, and the metricRevision live value each source's `changes` moves.
+- Description: Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails (live reads of the served metrics values — the details one a live chain of cursor pages — so a change the metric's source announces refetches what is on screen, without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig). Metrics engine: the MetricsServer.Source contribution (a source's metrics and breakdowns bound to their evaluators), the served metrics.catalog / metrics.query / metrics.details live values evaluating any of them through the one tz-aware bucketing engine — each query and drill-down page watching its source's `changes` through one refcounted subscription per source — and the sqlFlow / sqlLevel helpers joining a table against the engine's intervals.
 - Server:
-  - Contributes: `resource.declare` "metrics.revision"
+  - Contributes:
+    - `resource.declare` "metrics.catalog"
+    - `resource.declare` "metrics.details"
+    - `resource.declare` "metrics.query"
   - Uses:
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
     - `network/live.serveValue`
     - `primitives/data-view/view-core.buildViewConfigRegistrations`
   - Exports (types):
@@ -129,22 +145,20 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `serveMetric`
     - `sqlFlow`
     - `sqlLevel`
-  - Resources: `metrics.revision` (push)
-  - Routes:
-    - `GET /api/metrics/catalog`
-    - `POST /api/metrics/query`
-    - `POST /api/metrics/details`
+  - Resources:
+    - `metrics.catalog` (push)
+    - `metrics.details` (invalidate)
+    - `metrics.query` (invalidate)
 - Web:
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×9
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `primitives/data-view/view-core` ×4
+    - `primitives/live-state` ×4
     - `primitives/metrics/chart-kit` ×3
+    - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/toggle-chip` ×2
     - `apps-core/tabs.navigate`
-    - `infra/endpoints.fetchEndpoint`
-    - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
@@ -213,10 +227,11 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `CatalogSource`
     - `DeclParams`
     - `Delta`
-    - `DetailsQuery`
+    - `DetailsSelector`
     - `DisplayChart`
     - `DisplayError`
     - `DrillItem`
+    - `DrillMeta`
     - `DrillPage`
     - `EngineQuery`
     - `EntityLink`
@@ -230,7 +245,6 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `MetricQuery`
     - `MetricRef`
     - `MetricResult`
-    - `MetricRevision`
     - `MetricSourceDecl`
     - `ParamSpec`
     - `ParamSpecs`
@@ -267,10 +281,12 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `defineMetric`
     - `defineMetricSource`
     - `delta`
-    - `DetailsQuerySchema`
+    - `DetailsSelectorSchema`
     - `DISPLAY_CHARTS`
     - `displayError`
+    - `DRILL_PAGE`
     - `DrillItemSchema`
+    - `DrillMetaSchema`
     - `DrillPageSchema`
     - `EntityLinkSchema`
     - `enumOf`
@@ -281,11 +297,12 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `isTimeZone`
     - `MAX_BUCKETS`
     - `MEASURES`
+    - `metricCatalog`
+    - `metricDetails`
+    - `metricQuery`
     - `MetricQuerySchema`
     - `MetricRefSchema`
     - `MetricResultSchema`
-    - `metricRevision`
-    - `MetricRevisionSchema`
     - `paramSpecsToWire`
     - `ParamSpecWireSchema`
     - `parseParams`

@@ -25,7 +25,7 @@ export interface MetricRegistry {
   /** Fixed for the life of the process. */
   readonly catalog: Catalog;
   lookup(id: string): RegistryEntry;
-  /** Throws on an unknown id: a revision is only ever asked for a source the catalog named. */
+  /** Throws on an unknown id: a source is only ever watched for a metric that names it. */
   source(id: string): SourceImpl;
 }
 

@@ -24,8 +24,7 @@ import type { ResourceResult } from "./use-resource";
  * The error is classified through the same `toResourceError` a live read's is,
  * so a surface renders both failures alike. The result is memoized on the
  * query's data / error identity, like `useResource`'s. The mapping is
- * `useQueryResource`'s (`queryResult`) — the read for a POST endpoint, whose
- * body is the question. Query options (`staleTime`, …) pass through, except
+ * `useQueryResource`'s (`queryResult`). Query options (`staleTime`, …) pass through, except
  * `enabled`: a disabled read would be `loading` forever.
  *
  * Lives here, not in endpoints, for the same reason `hydrateEndpoint` does:

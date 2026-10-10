@@ -33,10 +33,11 @@ describe("central serveValue — recomputeOn (T15)", () => {
         loader: () => ({ n: 0 }),
         recomputeOn: [external],
       });
+      // An overloaded call reports it at the call.
+      // @ts-expect-error — a db value has no `notify`: not an upstream
       serveValue(central, {
         source: "external",
         loader: () => ({ n: 0 }),
-        // @ts-expect-error — a db value has no `notify`: not an upstream
         recomputeOn: [db],
       });
     };

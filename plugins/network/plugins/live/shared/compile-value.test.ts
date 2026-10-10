@@ -13,7 +13,11 @@ import {
 } from "@plugins/framework/plugins/resource-runtime/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import {
+  compilePagedValue,
+  compileQueryValue,
   compileValue,
+  registerPagedValue,
+  registerQueryValue,
   registerValue,
   type ServedValueBase,
   type StopFn,
@@ -399,5 +403,194 @@ describe("revalidate", () => {
       revalidate,
     });
     expect(compiled.options.revalidate).toBe(revalidate);
+  });
+});
+
+describe("typed-query values", () => {
+  const Query = z.object({ metric: z.string(), days: z.number().default(7) });
+
+  test("the loader and whileSubscribed get the decoded question; notify(q) recomputes exactly its tuple", async () => {
+    const h = harness();
+    const v = liveValue(key("query"), { schema: Count, query: Query });
+    const seen: unknown[] = [];
+    const started: unknown[] = [];
+    let n = 1;
+    const { resource, compiled } = registerQueryValue(h.runtime, v, {
+      source: "external",
+      loader: (q) => {
+        seen.push(q);
+        return { n: n * q.days };
+      },
+      whileSubscribed: (q) => {
+        started.push(q);
+        return () => {};
+      },
+    });
+    const a = v.query.encode({ metric: "a" });
+    const b = v.query.encode({ metric: "b", days: 2 });
+    await h.subscribe(v.key, a);
+    await h.subscribe(v.key, b);
+    expect(seen).toContainEqual({ metric: "a", days: 7 });
+    expect(started).toEqual([
+      { metric: "a", days: 7 },
+      { metric: "b", days: 2 },
+    ]);
+    // notify(q) → that question's one tuple, encoded by the declaration's codec.
+    expect(compiled.tuplesOf({ metric: "a", days: 7 })).toEqual([a]);
+    n = 3;
+    for (const t of compiled.tuplesOf({ metric: "a", days: 7 })) {
+      (resource as { notify(p: unknown): void }).notify(t);
+    }
+    await h.until(() => h.of("update", v.key).length > 0, "update");
+    await sleep(20);
+    expect(h.of("update", v.key)).toEqual([
+      expect.objectContaining({ params: a, value: { n: 21 } }),
+    ]);
+  });
+
+  test("types: the loader takes the question's output, a mapped recomputeOn returns a question", () => {
+    const v = liveValue(key("t-query"), { schema: Count, query: Query });
+    const typeOnly = () =>
+      compileQueryValue(v, {
+        source: "external",
+        // `days` is defaulted: present on the output.
+        loader: (q) => ({ n: q.days }),
+      });
+    const typeOnly2 = () =>
+      compileQueryValue(v, {
+        source: "external",
+        // @ts-expect-error — the loader is handed the question, not `{ q }`
+        loader: (p: { q: string }) => ({ n: p.q.length }),
+      });
+    expect(typeof typeOnly).toBe("function");
+    expect(typeof typeOnly2).toBe("function");
+  });
+});
+
+describe("paged values", () => {
+  const Item = z.object({ id: z.string() });
+  const Selector = z.object({ metric: z.string() });
+  const Meta = z.object({ total: z.number() });
+
+  function pagedValue(name: string) {
+    return liveValue(key(name), {
+      query: Selector,
+      paged: { item: Item, id: "id", meta: Meta, limit: 3 },
+    });
+  }
+
+  test("the loader gets the question and { cursor, limit }", async () => {
+    const h = harness();
+    const v = pagedValue("paged");
+    const asks: unknown[] = [];
+    registerPagedValue(h.runtime, v, {
+      source: "external",
+      loader: (q, page) => {
+        asks.push([q, page]);
+        return {
+          items: [{ id: `${q.metric}-${page.cursor ?? 0}` }],
+          nextCursor: page.cursor === null ? "c1" : null,
+          meta: { total: 2 },
+        };
+      },
+    });
+    await h.subscribe(
+      v.key,
+      v.query.encode({ metric: "m" }, { cursor: null, limit: 2 }),
+    );
+    await h.subscribe(
+      v.key,
+      v.query.encode({ metric: "m" }, { cursor: "c1", limit: 3 }),
+    );
+    expect(asks).toEqual([
+      [{ metric: "m" }, { cursor: null, limit: 2 }],
+      [{ metric: "m" }, { cursor: "c1", limit: 3 }],
+    ]);
+  });
+
+  test("notify(q) reaches every subscribed page of that question, and none of another", async () => {
+    const h = harness();
+    const v = pagedValue("paged-notify");
+    let loads = 0;
+    const { resource, compiled } = registerPagedValue(h.runtime, v, {
+      source: "external",
+      loader: (_q, page) => {
+        loads++;
+        return {
+          items: [],
+          nextCursor: page.cursor === null ? "c1" : null,
+          meta: { total: loads },
+        };
+      },
+    });
+    const p0 = v.query.encode({ metric: "m" }, { cursor: null, limit: 3 });
+    const p1 = v.query.encode({ metric: "m" }, { cursor: "c1", limit: 3 });
+    const other = v.query.encode({ metric: "x" }, { cursor: null, limit: 3 });
+    await h.subscribe(v.key, p0);
+    await h.subscribe(v.key, p1);
+    await h.subscribe(v.key, other);
+    expect(compiled.tuplesOf({ metric: "m" })).toEqual([p0, p1]);
+    for (const t of compiled.tuplesOf({ metric: "m" })) {
+      (resource as { notify(p: unknown): void }).notify(t);
+    }
+    await h.until(() => h.of("update", v.key).length >= 2, "updates");
+    await sleep(20);
+    expect(h.of("update", v.key).map((f) => f.params)).toEqual([p0, p1]);
+    // Unsubscribed pages are forgotten.
+    h.unsubscribe(v.key, p1);
+    expect(compiled.tuplesOf({ metric: "m" })).toEqual([p0]);
+  });
+
+  test("whileSubscribed pairs per page tuple", async () => {
+    const h = harness();
+    const v = pagedValue("paged-life");
+    const log: string[] = [];
+    registerPagedValue(h.runtime, v, {
+      source: "external",
+      loader: () => ({ items: [], nextCursor: null, meta: { total: 0 } }),
+      whileSubscribed: (q) => {
+        log.push(`start ${q.metric}`);
+        return () => log.push(`stop ${q.metric}`);
+      },
+    });
+    const p0 = v.query.encode({ metric: "m" }, { cursor: null, limit: 3 });
+    const p1 = v.query.encode({ metric: "m" }, { cursor: "c1", limit: 3 });
+    await h.subscribe(v.key, p0);
+    await h.subscribe(v.key, p1);
+    expect(log).toEqual(["start m", "start m"]);
+    h.unsubscribe(v.key, p1);
+    expect(log).toEqual(["start m", "start m", "stop m"]);
+  });
+
+  test("a page with more than n items fails loudly", async () => {
+    const v = pagedValue("paged-over");
+    const compiled = compilePagedValue(v, {
+      source: "external",
+      loader: () => ({
+        items: [{ id: "a" }, { id: "b" }],
+        nextCursor: null,
+        meta: { total: 2 },
+      }),
+    });
+    const params = v.query.encode({ metric: "m" }, { cursor: null, limit: 1 });
+    const failure = await Promise.resolve(compiled.options.loader(params)).then(
+      () => null,
+      (err: unknown) => err,
+    );
+    expect(failure).toBeInstanceOf(Error);
+    expect((failure as Error).message).toMatch(
+      /2 items for a page of at most 1/,
+    );
+  });
+
+  test("types: a paged value is external only", () => {
+    const v = pagedValue("t-paged");
+    const typeOnly = () =>
+      compilePagedValue(v, {
+        // @ts-expect-error — a paged Postgres list is a liveCollection
+        source: "db",
+        loader: () => ({ items: [], nextCursor: null, meta: { total: 0 } }),
+      });
+    expect(typeof typeOnly).toBe("function");
   });
 });

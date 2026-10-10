@@ -31,7 +31,9 @@
     - `POST /api/debug/live-state-emit/stop`
     - `GET /api/debug/live-state-emit/status`
 - Exemptions:
-  - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `server/internal/emitter.ts` (sanctioned)
+  - Exempts itself from:
+    - `detached-work-safety/no-raw-set-interval` — `server/internal/emitter.ts` (sanctioned)
+    - `live/no-endpoint-read` — `web/components/emit-pane.tsx` (debt)
 - Core:
   - Exports (types):
     - `EmitStartOptions`

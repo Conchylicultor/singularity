@@ -37,6 +37,8 @@
     - `GET /api/debug/profiling/build/:worktree/:buildId`
 - Cross-plugin:
   - Imported by: `debug/profiling/ops`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/build-detail.tsx`, `web/components/build-section.tsx` (debt)
 - Shared:
   - Exports (values): `getBuildProfiling`
 

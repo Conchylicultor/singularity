@@ -33,6 +33,7 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { z } from "zod";
+import { toResourceError } from "../resource-error";
 import {
   createTransportHub,
   type FakeWebSocket,
@@ -784,6 +785,36 @@ describe("NotificationsClient — HTTP fetch path", () => {
       expect(store.result.current).toEqual([
         { key: "hist", reason: "contract-mismatch", verdict: "skew" },
       ]);
+    });
+
+    test("a 422 refusal carries the server's message, is terminal, and marks nothing", async () => {
+      const { client, fetchQueue } = await setup();
+      const store = renderHook(() => useResourceContractMismatches());
+      client.observe("k", {}, undefined, pushSchema);
+      fetchQueue.push(
+        makeResponse({
+          status: 422,
+          body: { reason: "refused", detail: 'unknown metric "x"' },
+        }),
+      );
+      let err: unknown;
+      try {
+        await client.fetchOverHttp("k", {}, undefined, pushSchema, "fallback");
+      } catch (e) {
+        err = e;
+      }
+      expect(err).toMatchObject({
+        status: 422,
+        reason: "refused",
+        detail: 'unknown metric "x"',
+      });
+      expect(toResourceError(err)).toMatchObject({
+        kind: "refused",
+        message: 'unknown metric "x"',
+      });
+      expect(isTerminalResourceError(err)).toBe(true);
+      store.rerender();
+      expect(store.result.current).toEqual([]);
     });
 
     test("a 500 loader failure stays retryable and marks nothing", async () => {

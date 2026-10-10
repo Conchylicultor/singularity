@@ -5,9 +5,17 @@ import type {
   ResourceContract,
   ServerResourceOptions,
 } from "@plugins/framework/plugins/resource-runtime/core";
-import type {
-  LiveValue,
-  LiveValueOrigin,
+import {
+  isLivePageCursor,
+  type LivePage,
+  type LivePagedValue,
+  type LivePageParams,
+  type LivePageRequest,
+  type LivePlainValue,
+  type LiveQueryParams,
+  type LiveQueryValue,
+  type LiveValue,
+  type LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
 
 // The option compilation behind BOTH `serveValue`s — the worktree one
@@ -36,6 +44,13 @@ import type {
 //                         pair, owned here so a start without a stop cannot be
 //                         written (see `pairLifecycle`).
 // - `revalidate`        → passed through.
+//
+// A typed-query value (`liveValue(key, { query })`) and a paged one
+// (`{ query, paged }`) are served by the same options, over their DECODED
+// question: the loader, `whileSubscribed`, a mapped `recomputeOn` and
+// `notify` take the question `Q` (the paged loader adds the page asked,
+// `{ cursor, limit }`), and this file decodes each wire tuple through the
+// declaration's own codec — the one the params gate and the browser's read use.
 
 /** Where a value's truth lives: Postgres (change feed) or anything else (`notify`). */
 export type LiveValueSource = "db" | "external";
@@ -143,16 +158,22 @@ type WhileSubscribedArm<Src extends LiveValueSource, P> = Src extends "external"
       whileSubscribed?: (params: P) => StopFn | Promise<StopFn>;
     };
 
-export type ServeValueOptions<
+/**
+ * The options every served value takes, over `S` — the SUBJECT its hooks are
+ * handed: the params tuple of a plain value, the decoded question of a
+ * typed-query or paged one — and `L`, its loader.
+ */
+type ServeOptionsBase<
   T,
-  P extends Record<string, string>,
+  S,
   Src extends LiveValueSource,
-  R extends readonly ExternalServed[] = [],
+  R extends readonly ExternalServed[],
+  L,
 > = {
   /** Where the value's truth lives (see the header). Required. */
   source: Src;
-  /** Read the value for one params tuple. Parsed against the declaration's schema. */
-  loader: (params: P) => Promise<T> | T;
+  /** Read the value for one tuple. Parsed against the declaration's schema. */
+  loader: L;
   /**
    * Flush this value at most once per window (ms): the first change arms a
    * trailing timer that later changes do not re-arm, so a burst (a rebase
@@ -164,15 +185,46 @@ export type ServeValueOptions<
    * Upstream served values whose change recomputes this one — see
    * {@link RecomputeEntry}.
    */
-  recomputeOn?: RecomputeOn<R, P>;
+  recomputeOn?: RecomputeOn<R, S>;
+} & BoundArm<Src, T> &
+  WhileSubscribedArm<Src, S>;
+
+export type ServeValueOptions<
+  T,
+  P,
+  Src extends LiveValueSource,
+  R extends readonly ExternalServed[] = [],
+> = ServeOptionsBase<T, P, Src, R, (params: P) => Promise<T> | T> & {
   /**
    * Conditional-revalidation signature (an ETag): a cheap over-approximation
    * of "did the value change?" the read path compares before running the
    * loader. Read path only.
    */
   revalidate?: (params: P) => Promise<string>;
-} & BoundArm<Src, T> &
-  WhileSubscribedArm<Src, P>;
+};
+
+/**
+ * A paged value's options: external only (a paged Postgres list is a
+ * `liveCollection`), its loader asked one page of a question. Every hook
+ * takes the question `Q`: `whileSubscribed` runs per PAGE tuple (each loaded
+ * page is its own subscription), and `notify(query)` reaches every subscribed
+ * page of it.
+ */
+export type ServePagedValueOptions<
+  Item,
+  Meta,
+  Q,
+  R extends readonly ExternalServed[] = [],
+> = ServeOptionsBase<
+  LivePage<Item, Meta>,
+  Q,
+  "external",
+  R,
+  (
+    query: Q,
+    page: LivePageRequest,
+  ) => Promise<LivePage<Item, Meta>> | LivePage<Item, Meta>
+> & { revalidate?: never };
 
 /**
  * A value's two-arg runtime options: never routed (`reach`) — a value's
@@ -185,10 +237,17 @@ type ValueOptions<T, P extends Record<string, string>> = ServerResourceOptions<
 > & { reach?: never };
 
 /** The runtime's two-arg options for a value, plus which factory registers it. */
-export interface CompiledValue<T, P extends Record<string, string>> {
+export interface CompiledValue<T, P extends Record<string, string>, S = P> {
   options: ValueOptions<T, P>;
   external: boolean;
   unbounded?: { reason: string };
+  /**
+   * The wire tuples a change to `subject` recomputes: the params themselves
+   * for a plain value, the one `{ q }` of a typed-query value, every
+   * currently-subscribed page of a paged one. What `notify(subject)` and a
+   * mapped `recomputeOn` reach.
+   */
+  tuplesOf(subject: S): P[];
   /**
    * Hand the compiled `whileSubscribed` the registered resource's `notify` (the
    * external arm's second argument). Called once, right after registration; a
@@ -277,9 +336,119 @@ function pairLifecycle<P extends Record<string, string>>(
 }
 
 /**
+ * How a value's wire tuples map to the subject its hooks are handed, per
+ * declaration form: a plain value's subject IS its params; a typed-query
+ * value's is the decoded question (one tuple per question); a paged value's is
+ * the decoded question too, but one question has many page tuples — the ones
+ * subscribed right now are tracked here, from the runtime's own 0→1 / N→0
+ * hooks, so `notify(question)` reaches every page a tab holds.
+ */
+interface Subjects<P extends Record<string, string>, S> {
+  of(params: P): S;
+  tuplesOf(subject: S): P[];
+  /** Runs on each tuple's first subscriber / last unsubscribe (a paged value's tracking). */
+  track?: { add(params: P): void; remove(params: P): void };
+}
+
+function subjectsOf<P extends Record<string, string>, S>(
+  value: LiveValue<unknown, P, LiveValueOrigin>,
+): Subjects<P, S> {
+  const decl = value as unknown as
+    | { query?: undefined }
+    | LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin>
+    | LivePagedValue<unknown, unknown, unknown, unknown, LiveValueOrigin>;
+  if (decl.query === undefined) {
+    return {
+      of: (params) => params as unknown as S,
+      tuplesOf: (s) => [s as unknown as P],
+    };
+  }
+  if (decl.paged === undefined) {
+    const codec = decl.query;
+    return {
+      of: (params) => codec.decode(params) as S,
+      tuplesOf: (s) => [codec.encode(s) as unknown as P],
+    };
+  }
+  const codec = decl.query;
+  // q → (tuple key → tuple), for the pages subscribed now.
+  const pages = new Map<string, Map<string, P>>();
+  return {
+    of: (params) => codec.decode(params).query as S,
+    // The question's output re-encodes to its own `q`: a query value's schema
+    // must parse idempotently, or no tuple of it passes the gate.
+    tuplesOf: (s) => [
+      ...(pages.get(codec.encodeQuery(s)) ?? new Map()).values(),
+    ],
+    track: {
+      add(params) {
+        const q = (params as unknown as LivePageParams).q;
+        let tuples = pages.get(q);
+        if (tuples === undefined) pages.set(q, (tuples = new Map()));
+        tuples.set(tupleKey(params), params);
+      },
+      remove(params) {
+        const q = (params as unknown as LivePageParams).q;
+        const tuples = pages.get(q);
+        tuples?.delete(tupleKey(params));
+        if (tuples?.size === 0) pages.delete(q);
+      },
+    },
+  };
+}
+
+/**
+ * The runtime loader for one value form: a plain loader is handed the params;
+ * a typed-query one the decoded question; a paged one the decoded question and
+ * the page asked — and its page is checked against the tuple (at most `n`
+ * items, a cursor the next tuple can carry), so an over-long page fails loudly
+ * here rather than as a client that pages wrong.
+ */
+function loaderOf<T, P extends Record<string, string>>(
+  value: LiveValue<T, P, LiveValueOrigin>,
+  loader: (...args: never[]) => unknown,
+): (params: P) => Promise<T> | T {
+  const decl = value as unknown as
+    | { query?: undefined }
+    | LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin>
+    | LivePagedValue<unknown, unknown, unknown, unknown, LiveValueOrigin>;
+  const call = loader as unknown as (...args: unknown[]) => Promise<T> | T;
+  if (decl.query === undefined) return (params) => call(params);
+  if (decl.paged === undefined) {
+    const codec = decl.query;
+    return (params) => call(codec.decode(params));
+  }
+  const codec = decl.query;
+  return async (params) => {
+    const { query, cursor, limit } = codec.decode(params);
+    const page = (await call(query, { cursor, limit })) as LivePage<
+      unknown,
+      unknown
+    >;
+    if (page.items.length > limit) {
+      throw new Error(
+        `serveValue("${value.key}"): the loader returned ${page.items.length} ` +
+          `items for a page of at most ${limit}.`,
+      );
+    }
+    if (page.nextCursor !== null && !isLivePageCursor(page.nextCursor)) {
+      throw new Error(
+        `serveValue("${value.key}"): nextCursor ${JSON.stringify(page.nextCursor)} ` +
+          `is empty or over LIVE_PAGE_CURSOR_MAX_BYTES — the next page's tuple ` +
+          `could not carry it.`,
+      );
+    }
+    return page as T;
+  };
+}
+
+/**
  * Derive the runtime options for a value without registering it — so a test
  * can register them on its own `createResourceRuntime` (the
- * `compileCollection` pattern; `registerValue` does both).
+ * `compileCollection` pattern; `registerValue` does both). A typed-query value
+ * is `compileQueryValue` (its options over the decoded question), a paged one
+ * `compilePagedValue` — one function per form rather than overloads, so a
+ * wrong option is reported on its own property, not as "no overload matches".
  */
 export function compileValue<
   T,
@@ -288,11 +457,56 @@ export function compileValue<
   O extends LiveValueOrigin,
   const R extends readonly ExternalServed[] = [],
 >(
-  value: LiveValue<T, P, O>,
+  value: LivePlainValue<T, P, O>,
   // `NoInfer`: `T` / `P` come from the declaration alone — a loader returning
   // `{}` must not widen `T` past the bound rule.
   opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, Src, R>,
 ): CompiledValue<T, P> {
+  return compileValueOf<T, P, P>(value, opts as AnyServeOptions);
+}
+
+/** {@link compileValue} for a typed-query value: every hook takes the decoded question `Q`. */
+export function compileQueryValue<
+  T,
+  Q,
+  QIn,
+  Src extends LiveValueSource,
+  O extends LiveValueOrigin,
+  const R extends readonly ExternalServed[] = [],
+>(
+  value: LiveQueryValue<T, Q, QIn, O>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, Src, R>,
+): CompiledValue<T, LiveQueryParams, Q> {
+  return compileValueOf<T, LiveQueryParams, Q>(value, opts as AnyServeOptions);
+}
+
+/** {@link compileValue} for a paged value: external only, its loader asked one page. */
+export function compilePagedValue<
+  Item,
+  Meta,
+  Q,
+  QIn,
+  O extends LiveValueOrigin,
+  const R extends readonly ExternalServed[] = [],
+>(
+  value: LivePagedValue<Item, Meta, Q, QIn, O>,
+  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R>,
+): CompiledValue<LivePage<Item, Meta>, LivePageParams, Q> {
+  return compileValueOf<LivePage<Item, Meta>, LivePageParams, Q>(
+    value,
+    opts as AnyServeOptions,
+  );
+}
+
+/**
+ * The one compilation behind every form, erased: the declaration says which
+ * form it is (`query`, `paged`), and the typed entry points above have
+ * already checked the options against it.
+ */
+export function compileValueOf<T, P extends Record<string, string>, S>(
+  value: LiveValue<T, P, LiveValueOrigin>,
+  opts: AnyServeOptions,
+): CompiledValue<T, P, S> {
   const unbounded = (opts as { unbounded?: { reason: string } }).unbounded;
   if (unbounded !== undefined && unbounded.reason.trim() === "") {
     throw new Error(
@@ -301,6 +515,15 @@ export function compileValue<
     );
   }
   const external = opts.source === "external";
+  const paged = (value as { paged?: unknown }).paged !== undefined;
+  if (paged && !external) {
+    // Unreachable from typed code (a paged value's options are external only).
+    throw new Error(
+      `serveValue("${value.key}"): a paged value is served \`source: "external"\` — ` +
+        `a paged Postgres list is a liveCollection.`,
+    );
+  }
+  const subjects = subjectsOf<P, S>(value);
 
   let notify: ((params: P) => void) | undefined;
   const notifyFor = (params: P) => () => {
@@ -312,26 +535,43 @@ export function compileValue<
     notify(params);
   };
   const whileSubscribed = opts.whileSubscribed as
-    ((params: P, notify: () => void) => StopFn | Promise<StopFn>) | undefined;
-  const lifecycle =
+    ((subject: S, notify: () => void) => StopFn | Promise<StopFn>) | undefined;
+  const paired =
     whileSubscribed === undefined
-      ? {}
+      ? undefined
       : pairLifecycle<P>((params) =>
-          // The db arm's hook takes the params only; the extra argument is
+          // The db arm's hook takes the subject only; the extra argument is
           // never passed to it.
           external
-            ? whileSubscribed(params, notifyFor(params))
-            : (whileSubscribed as (params: P) => StopFn | Promise<StopFn>)(
-                params,
+            ? whileSubscribed(subjects.of(params), notifyFor(params))
+            : (whileSubscribed as (subject: S) => StopFn | Promise<StopFn>)(
+                subjects.of(params),
               ),
         );
+  const track = subjects.track;
+  const lifecycle =
+    track === undefined
+      ? (paired ?? {})
+      : {
+          onFirstSubscribe(params: P) {
+            track.add(params);
+            return paired?.onFirstSubscribe(params);
+          },
+          onLastUnsubscribe(params: P) {
+            track.remove(params);
+            paired?.onLastUnsubscribe(params);
+          },
+        };
 
-  const dependsOn = compileRecomputeOn<P>(
+  const dependsOn = compileRecomputeOn<P, S>(
     value,
-    (opts.recomputeOn ?? []) as readonly RecomputeEntry<ExternalServed, P>[],
+    (opts.recomputeOn ?? []) as readonly RecomputeEntry<ExternalServed, S>[],
+    subjects,
   );
 
-  const loader = opts.loader;
+  const loader = loaderOf(value, opts.loader as (...args: never[]) => unknown);
+  const revalidate = opts.revalidate as
+    ((subject: S) => Promise<string>) | undefined;
   return {
     options: {
       // Read off the DECLARATION (`liveValue`'s `load`), never a serve option:
@@ -342,15 +582,35 @@ export function compileValue<
       loader: (params: P) => loader(params),
       ...(opts.throttleMs !== undefined ? { debounceMs: opts.throttleMs } : {}),
       ...(dependsOn.length > 0 ? { dependsOn } : {}),
-      ...(opts.revalidate !== undefined ? { revalidate: opts.revalidate } : {}),
+      ...(revalidate === undefined
+        ? {}
+        : (value as { query?: unknown }).query === undefined
+          ? {
+              revalidate: revalidate as unknown as (
+                params: P,
+              ) => Promise<string>,
+            }
+          : { revalidate: (params: P) => revalidate(subjects.of(params)) }),
       ...lifecycle,
     },
     external,
     ...(unbounded !== undefined ? { unbounded } : {}),
+    tuplesOf: (subject) => subjects.tuplesOf(subject),
     bindNotify(fn) {
       notify = fn;
     },
   };
+}
+
+/** The options of any form, erased — the implementation signatures' view. */
+export interface AnyServeOptions {
+  source: LiveValueSource;
+  loader: unknown;
+  throttleMs?: number;
+  recomputeOn?: readonly unknown[];
+  revalidate?: unknown;
+  whileSubscribed?: unknown;
+  unbounded?: { reason: string };
 }
 
 /**
@@ -359,20 +619,23 @@ export function compileValue<
  * whether or not a tab holds it right now: an L2-persisted value, or one a
  * downstream maps, must follow its upstream with no subscriber. (A tab's old
  * copy needs no recompute to be refused: the runtime opens every subscription
- * span with a fresh version.)
+ * span with a fresh version.) A mapped entry names a SUBJECT (a question, for a
+ * query value), recomputing the tuples it reaches.
  */
-function compileRecomputeOn<P extends Record<string, string>>(
+function compileRecomputeOn<P extends Record<string, string>, S>(
   value: { key: string; params: readonly string[] },
-  entries: readonly RecomputeEntry<ExternalServed, P>[],
+  entries: readonly RecomputeEntry<ExternalServed, S>[],
+  subjects: Subjects<P, S>,
 ): DependsOnEntry<P>[] {
   return entries.map((entry): DependsOnEntry<P> => {
     if ("value" in entry) {
-      const toParams = entry.params;
+      const toSubject = entry.params;
       return {
         resource: entry.value,
-        map: (upstreamParams: unknown) => [
-          toParams(upstreamParams as UpstreamParams<ExternalServed>),
-        ],
+        map: (upstreamParams: unknown) =>
+          subjects.tuplesOf(
+            toSubject(upstreamParams as UpstreamParams<ExternalServed>),
+          ),
       };
     }
     const upstream = entry as ExternalServed;
@@ -395,13 +658,59 @@ export function registerValue<
   const R extends readonly ExternalServed[] = [],
 >(
   runtime: ValueRuntime,
-  value: LiveValue<T, P, O>,
+  value: LivePlainValue<T, P, O>,
   opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, Src, R>,
-): {
-  resource: Resource<T, P> | ExternalResource<T, P>;
-  compiled: CompiledValue<T, P>;
-} {
-  const compiled = compileValue(value, opts);
+): Registered<T, P> {
+  return registerValueOf<T, P, P>(runtime, value, opts as AnyServeOptions);
+}
+
+/** {@link registerValue} for a typed-query value (see {@link compileQueryValue}). */
+export function registerQueryValue<
+  T,
+  Q,
+  QIn,
+  O extends LiveValueOrigin,
+  Src extends LiveValueSource,
+  const R extends readonly ExternalServed[] = [],
+>(
+  runtime: ValueRuntime,
+  value: LiveQueryValue<T, Q, QIn, O>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, Src, R>,
+): Registered<T, LiveQueryParams, Q> {
+  return registerValueOf<T, LiveQueryParams, Q>(
+    runtime,
+    value,
+    opts as AnyServeOptions,
+  );
+}
+
+/** {@link registerValue} for a paged value (see {@link compilePagedValue}). */
+export function registerPagedValue<
+  Item,
+  Meta,
+  Q,
+  QIn,
+  O extends LiveValueOrigin,
+  const R extends readonly ExternalServed[] = [],
+>(
+  runtime: ValueRuntime,
+  value: LivePagedValue<Item, Meta, Q, QIn, O>,
+  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R>,
+): Registered<LivePage<Item, Meta>, LivePageParams, Q> {
+  return registerValueOf<LivePage<Item, Meta>, LivePageParams, Q>(
+    runtime,
+    value,
+    opts as AnyServeOptions,
+  );
+}
+
+/** The registration behind every form, erased (see {@link compileValueOf}). */
+export function registerValueOf<T, P extends Record<string, string>, S>(
+  runtime: ValueRuntime,
+  value: LiveValue<T, P, LiveValueOrigin>,
+  opts: AnyServeOptions,
+): Registered<T, P, S> {
+  const compiled = compileValueOf<T, P, S>(value, opts);
   // A `LiveValue` is structurally a non-keyed `ResourceContract` (`keyed?: never`).
   const contract = value as ResourceContract<T, P> & { keyed?: never };
   if (compiled.external) {
@@ -411,4 +720,10 @@ export function registerValue<
   }
   const resource = runtime.defineResource(contract, compiled.options);
   return { resource, compiled };
+}
+
+/** What `registerValue` returns: the runtime resource and its compiled options. */
+export interface Registered<T, P extends Record<string, string>, S = P> {
+  resource: Resource<T, P> | ExternalResource<T, P>;
+  compiled: CompiledValue<T, P, S>;
 }

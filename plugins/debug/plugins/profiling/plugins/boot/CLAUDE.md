@@ -22,6 +22,8 @@
 - Server:
   - Uses: `infra/endpoints.implement`
   - Routes: `GET /api/debug/profiling/boot`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/boot-section.tsx` (debt)
 - Shared:
   - Exports (values): `getBootProfiling`
 

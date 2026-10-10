@@ -72,6 +72,8 @@ The fold/unfold-this-subtree button is not the explorer's to ship either: the
     - `apps/studio/explorer/excluded`
     - `apps/studio/explorer/load-bearing`
     - `apps/studio/explorer/membership`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/explorer-view.tsx` (debt)
 - Sub-plugins:
   - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
   - **`collapsed`** — Collapsed badge in the explorer plugin tree row.

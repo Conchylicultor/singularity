@@ -3,6 +3,13 @@
 Status: plan · 2026-09-30 · parent plan `research/2026-09-30-global-metrics-primitive.md`
 (page `block-131804df-…`) · prototype `proto-1790501215-euqp`
 
+> **Superseded (2026-10-09) — freshness and the read path.** `metricRevision`, the three
+> endpoints and the revision-keyed queries are gone. The reads are live values
+> (`metrics.catalog`, the typed-query `metrics.query`, the cursor-paged `metrics.details`),
+> and freshness is a source's `changes` → one refcounted watch per source → each held
+> tuple's `notify`. See `research/2026-10-09-global-live-structured-paged-values.md` and
+> `plugins/primitives/plugins/metrics/CLAUDE.md`.
+
 ## Context
 
 Every chart in `plugins/stats` hand-rolls its endpoint shape, its bucketing (`keyFor` in

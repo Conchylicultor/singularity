@@ -20,6 +20,8 @@
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
   - Routes: `GET /api/studio/tables/:tableName/columns`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/columns-section.tsx` (debt)
 - Shared:
   - Exports (values): `getTableColumns`
 

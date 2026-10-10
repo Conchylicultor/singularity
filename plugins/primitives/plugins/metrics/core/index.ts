@@ -79,7 +79,8 @@ export {
   CatalogMetricSchema,
   CatalogSchema,
   CatalogSourceSchema,
-  DetailsQuerySchema,
+  DetailsSelectorSchema,
+  DrillMetaSchema,
   DrillItemSchema,
   DrillPageSchema,
   EntityLinkSchema,
@@ -97,7 +98,8 @@ export type {
   CatalogBreakdown,
   CatalogMetric,
   CatalogSource,
-  DetailsQuery,
+  DetailsSelector,
+  DrillMeta,
   DrillItem,
   DrillPage,
   EntityLink,
@@ -121,5 +123,4 @@ export type {
   CardRef,
   MetricRef,
 } from "./board";
-export { MetricRevisionSchema, metricRevision } from "./revision";
-export type { MetricRevision } from "./revision";
+export { DRILL_PAGE, metricCatalog, metricDetails, metricQuery } from "./live";

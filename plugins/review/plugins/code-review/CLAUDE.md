@@ -35,6 +35,8 @@
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/use-push-files.ts` (debt)
 - Shared:
   - Exports (values): `reviewConfig`
 

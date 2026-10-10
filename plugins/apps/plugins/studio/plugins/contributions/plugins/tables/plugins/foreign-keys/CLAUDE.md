@@ -22,6 +22,8 @@
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
   - Routes: `GET /api/studio/tables/:tableName/foreign-keys`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/foreign-keys-section.tsx` (debt)
 - Shared:
   - Exports (values): `getTableForeignKeys`
 

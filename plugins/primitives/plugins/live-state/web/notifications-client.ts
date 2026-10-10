@@ -78,7 +78,9 @@ function noteContractRefusal(
 export function isTerminalResourceError(err: unknown): boolean {
   return (
     err instanceof ResourceHttpError &&
-    (err.reason === "contract-mismatch" || err.reason === "unknown-key")
+    (err.reason === "contract-mismatch" ||
+      err.reason === "unknown-key" ||
+      err.reason === "refused")
   );
 }
 
@@ -296,6 +298,8 @@ type ServerMsg =
       params: ResourceParams;
       reason: SubErrorReason;
       verdict?: ContractVerdict;
+      /** On `refused`: the refusal's message (the HTTP fallback carries it too). */
+      message?: string;
     }
   // `flushOpenMs`: how long the server's running flush pass has been open (0
   // when idle). Absent from a server that predates it — read as 0.
@@ -878,7 +882,12 @@ export class NotificationsClient {
    */
   private noteQueryError(event: QueryCacheNotifyEvent): void {
     if (event.type !== "updated" && event.type !== "removed") return;
-    const error = event.type === "removed" ? null : event.query.state.error;
+    const raw = event.type === "removed" ? null : event.query.state.error;
+    // A refused read is not failing: the server answered — "this question
+    // cannot be asked like that" — and the read renders that answer. It is no
+    // page-health problem and nothing to report.
+    const error =
+      raw !== null && toResourceError(raw).kind === "refused" ? null : raw;
     if (error === null && this.failing.size === 0) return;
     const tuple = resourceTupleOf(event.query.queryKey);
     if (tuple === null) return;
@@ -1278,6 +1287,7 @@ export class NotificationsClient {
         res.status,
         errBody?.reason,
         errBody?.verdict,
+        errBody?.detail,
       );
     }
     const body = (await res.json()) as {
@@ -1707,8 +1717,13 @@ export class NotificationsClient {
       const verdictTag =
         msg.verdict !== undefined ? ` verdict=${msg.verdict}` : "";
       // A skewed contract is the expected face of a deploy under an open tab —
-      // the Reload advice says so; it is not a console error.
-      if (msg.verdict === "skew") {
+      // the Reload advice says so; it is not a console error. Nor is a refusal:
+      // the server answered the question, with "cannot be asked like that".
+      if (msg.reason === "refused") {
+        console.info(
+          `[notifications] sub-error key=${msg.key} reason=refused: ${msg.message ?? ""}`,
+        );
+      } else if (msg.verdict === "skew") {
         console.warn(
           `[notifications] sub-error key=${msg.key} reason=${msg.reason}${verdictTag}`,
         );

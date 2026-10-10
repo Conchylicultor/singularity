@@ -17,11 +17,19 @@ import type {
   LiveGroupQuery,
   LiveGroupValue,
   LiveQuery,
+  LivePagedValue,
+  LivePlainValue,
+  LiveQueryValue,
   LiveRowsCollection,
   LiveValue,
   LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
 import { isPointId } from "@plugins/network/plugins/live/core";
+import {
+  useLivePages,
+  type LivePagesOptions,
+  type LivePagesResult,
+} from "./use-live-pages";
 import { withoutWindowFields } from "./window-fields";
 
 // The read half of a `liveCollection`. A consumer asks a QUERY — a window
@@ -237,8 +245,30 @@ export function useLive<Row>(
  *   id) is a settled answer the caller renders or throws on itself, never a
  *   `null` read left spinning.
  */
+/**
+ * - `useLive(pagedValue, query, { first? })` — a cursor-paged value
+ *   (`liveValue(key, { query, paged })`): a live chain of pages,
+ *   `LivePagesResult<Item, Meta>` — `PagedResourceResult<Item>` plus the first
+ *   page's `meta` and `truncated`. `null` reads nothing (loading).
+ */
+export function useLive<Item, Meta, Q, QIn>(
+  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin>,
+  query: NoInfer<QIn> | null,
+  options?: LivePagesOptions,
+): LivePagesResult<Item, Meta>;
+/**
+ * - `useLive(queryValue, query)` — a typed-query value
+ *   (`liveValue(key, { query })`): the question is the schema's INPUT, encoded
+ *   to its one canonical tuple (so an inline literal is fine). `null` reads
+ *   nothing (pending), as for a param'd value; a changed question is a new
+ *   tuple and shows loading.
+ */
+export function useLive<T, Q, QIn>(
+  value: LiveQueryValue<T, Q, QIn, LiveValueOrigin>,
+  query: NoInfer<QIn> | null,
+): ResourceResult<T>;
 export function useLive<T, P extends Record<string, string>>(
-  value: LiveValue<T, P, LiveValueOrigin>,
+  value: LivePlainValue<T, P, LiveValueOrigin>,
   // `NoInfer`: `P` is the declaration's — a `{ path } | null` argument must not
   // narrow it past a declared optional param.
   ...params: LiveValueArgs<NoInfer<P>>
@@ -258,7 +288,11 @@ export function useLive<Row, F, S extends string>(
     | LiveAllSelect<Row, unknown>
     | Record<string, string>
     | null,
-): LiveListResult<unknown> | ResourceResult<unknown> {
+  options?: LivePagesOptions,
+):
+  | LiveListResult<unknown>
+  | ResourceResult<unknown>
+  | LivePagesResult<unknown, unknown> {
   // A declaration never changes kind between renders (it is a module-level
   // const), so the branch below keeps the hook order stable. No source is the
   // count overload's skip (the only one that takes `null`).
@@ -267,6 +301,18 @@ export function useLive<Row, F, S extends string>(
     return useCount(null, null);
   }
   if ("live" in source) {
+    const decl = source as
+      | LiveValue<unknown, Record<string, string>, LiveValueOrigin>
+      | LiveQueryValue<unknown, unknown, unknown, LiveValueOrigin>
+      | LivePagedValue<unknown, unknown, unknown, unknown, LiveValueOrigin>;
+    if ("query" in decl && decl.query !== undefined) {
+      if (decl.paged !== undefined) {
+        // eslint-disable-next-line react-hooks/rules-of-hooks -- see below: fixed per call site
+        return useLivePages(decl, query as unknown, options);
+      }
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- see below: fixed per call site
+      return useQueryValue(decl, query as unknown);
+    }
     // `null` is the substrate's skip; `useResource` canonicalizes the params
     // (an absent optional one is one tuple however it is spelled).
     // eslint-disable-next-line react-hooks/rules-of-hooks -- the declaration's kind is fixed for a call site: a module-level const never switches between a value and a collection
@@ -300,6 +346,20 @@ export function useLive<Row, F, S extends string>(
     (query ?? undefined) as
       LiveQuery<F, S> | LiveGroupQuery<F> | LiveIdsQuery | undefined,
   );
+}
+
+/**
+ * A typed-query value: the question encoded through the declaration's own
+ * codec (the one its params gate and serve half decode with) — memoized on
+ * the encoding, so an inline literal names one tuple across renders.
+ */
+function useQueryValue<T, Q, QIn>(
+  value: LiveQueryValue<T, Q, QIn, LiveValueOrigin>,
+  query: QIn | null,
+): ResourceResult<T> {
+  const q = query === null ? null : value.query.encode(query).q;
+  const params = useMemo(() => (q === null ? null : { q }), [q]);
+  return useResource(value, params);
 }
 
 /**

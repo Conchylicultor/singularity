@@ -63,6 +63,8 @@ names git. Plan: `research/2026-10-02-apps-file-explorer-git-and-code-explorer-r
   - Register: `defineFileWatcher('file-explorer.git-status')`
   - Resources: `file-explorer.git-status` (push)
   - Routes: `GET /api/file-explorer/git/checkout`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-git.ts` (debt)
 - Cross-plugin:
   - Endpoint callers: `places`
 

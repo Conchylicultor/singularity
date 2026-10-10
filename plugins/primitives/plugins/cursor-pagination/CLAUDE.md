@@ -78,6 +78,8 @@ See `research/2026-07-03-infinite-scroll-error-gate.md` for the full rationale.
     - `debug/queue`
     - `primitives/data-view`
     - `shell/notifications`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web` (sanctioned)
 - Core:
   - Exports (types): `CursorPage`
   - Exports (values): `cursorPageSchema`

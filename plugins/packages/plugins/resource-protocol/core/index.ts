@@ -2,6 +2,7 @@ export {
   BUILD_GRAPH_HEADER,
   DEV_BUILD,
   ResourceContractError,
+  ResourceRefusal,
   contractVerdict,
   parseResourceHttpErrorBody,
 } from "./internal/protocol";

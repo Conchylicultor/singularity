@@ -29,6 +29,8 @@
     - `infra/endpoints.defineEndpoint`
     - `primitives/commit-list.CommitRowSchema`
   - Exports (values): `getBuildRunCommits`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/build-commits-section.tsx` (debt)
 - Shared:
   - Exports (values): `getBuildRunCommits`
 

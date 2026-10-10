@@ -12,7 +12,7 @@ future home of the plugin marketplace.
 - Sub-plugins:
   - **`compositions`** — Compositions pane: list named compositions and open a composition's detail pane, whose sections (draft, closure, release) are contributed by sub-plugins.
     - Plugins:
-      - **`closure-tree`** — Closure section in the composition detail pane: the plugin tree tinted by the active composition's membership.
+      - **`closure-tree`** [exempt] — Closure section in the composition detail pane: the plugin tree tinted by the active composition's membership.
       - **`contributors`** — Contributor selection section in the composition detail pane: toggle the available frontier with per-chip impact cost.
       - **`draft-actions`** — Draft persistence section in the composition detail pane: editable name plus Save / Delete / Clear.
       - **`entry-points`** — Entry-point editor section in the composition detail pane: the draft's entry plugins, with add / remove.
@@ -21,17 +21,17 @@ future home of the plugin marketplace.
         - Plugins:
           - **`release-artifact`** — Artifact path plus local preview (start/stop + live link) section in the release detail pane.
           - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.
-          - **`release-logs`** — Live + persisted release log stream section in the release detail pane.
-  - **`contributions`** — Central view of all plugin contributions aggregated by type.
+          - **`release-logs`** [exempt] — Live + persisted release log stream section in the release detail pane.
+  - **`contributions`** [exempt] — Central view of all plugin contributions aggregated by type.
     - Plugins:
       - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
         - Plugins:
-          - **`columns`** — Table column definitions section in the table detail view.
-          - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
-          - **`indexes`** — Table indexes section in the table detail view.
-          - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
-          - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
-  - **`explorer`** — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
+          - **`columns`** [exempt] — Table column definitions section in the table detail view.
+          - **`foreign-keys`** [exempt] — FK relationships section (outgoing and incoming) in the table detail view.
+          - **`indexes`** [exempt] — Table indexes section in the table detail view.
+          - **`row-count`** [exempt] — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
+          - **`sample-rows`** [exempt] — Sample rows section (first 10 rows) in the table detail view.
+  - **`explorer`** [exempt] — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
     - Plugins:
       - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
       - **`collapsed`** — Collapsed badge in the explorer plugin tree row.

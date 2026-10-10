@@ -99,9 +99,11 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `plugin-meta` ×19
     - `apps` ×2
     - `active-data/plugin-link`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/panes.tsx` (debt)
 - Sub-plugins:
   - **`dependencies`** — Deduped cargo-tree-style dependency trees in the plugin detail pane: 'Depends on' (recursive forward deps) and 'Used by' (recursive reverse dependents), each marking soft slot-contributions and…
-  - **`file-tree`** — File tree explorer for the plugin's own files in the plugin detail pane.
+  - **`file-tree`** [exempt] — File tree explorer for the plugin's own files in the plugin detail pane.
   - **`inclusion`** — Composition-membership section in the plugin detail pane: state badge, why-included edge path, select/prune impact, and a pin-as-root affordance.
   - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
   - **`source-path`** — Displays the plugin's source path in the plugin detail pane.

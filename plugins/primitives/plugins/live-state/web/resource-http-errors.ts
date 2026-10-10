@@ -18,6 +18,8 @@ export class ResourceHttpError extends Error {
     public readonly reason?: SubErrorReason,
     /** On `contract-mismatch` / `unknown-key`: whether the tab is out of date. */
     public readonly verdict?: ContractVerdict,
+    /** The server's detail — on `refused`, the refusal's user-readable message. */
+    public readonly detail?: string,
   ) {
     super(
       `Resource ${key} fetch failed: ${status}${reason !== undefined ? ` (${reason}${verdict !== undefined ? `, ${verdict}` : ""})` : ""}`,

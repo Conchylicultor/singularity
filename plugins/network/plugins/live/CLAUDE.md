@@ -741,6 +741,13 @@ useLive(pluginChanges, id === null ? null : { conversationId: id });  // no subj
     never gets `up-to-date` for a value it read before it (`resource-runtime/CLAUDE.md`).
   - **`revalidate`** (both arms): the ETag signature, passed through
     (read path only; co-produce it with the loader, e.g. `createSignedMemo`).
+  - **A refused question is `ResourceRefusal`.** A loader that cannot answer
+    well-formed params as asked (an unknown id, an empty range) throws
+    `ResourceRefusal` (`packages/resource-protocol`; subclass it per domain).
+    The reader's error arm is `kind: "refused"` with the server's message
+    (`ResourceErrorInline` shows it, offers no Retry); it is never retried,
+    never counted as a failing read and never reported as a server failure.
+    Anything else a loader throws is `loader-failed`, reported.
   - Not spelled: `ackChannel` (an optimistic reader asks for acks on its own
     subscription), a read-side `select`, row-scoped `recomputeOn` edges (an
     upstream's change recomputes whole tuples) — see
@@ -767,6 +774,112 @@ useLive(pluginChanges, id === null ? null : { conversationId: id });  // no subj
     (`{ id: x ?? "" }`), subscribed a real tuple the server loaded for nothing;
     the `live/no-sentinel-param` lint rejects it at a `useLive` /
     `useLiveRow` call.
+
+## Typed-query values — `liveValue(key, { query })`
+
+Design: `research/2026-10-09-global-live-structured-paged-values.md` §1. A
+value whose question is STRUCTURED — a range union, a tz, a split or compare,
+typed params — declares a zod `query` schema instead of `params`:
+
+```ts
+// core/
+export const metricQuery = liveValue("metrics.query", {
+  schema: MetricResultSchema,
+  query: MetricQuerySchema,      // any JSON-safe zod schema
+  load: "on-demand",
+});
+// server/ — every hook takes the DECODED question
+export const metricQueryServed = serveValue(metricQuery, {
+  source: "external",
+  loader: (q) => runQuery(q),
+  whileSubscribed: (q, notify) => watch(q.metric, notify),
+});
+metricQueryServed.notify(q);     // recomputes that question's one tuple
+// web/ — the question is the schema's INPUT (defaults optional)
+useLive(metricQuery, query);     // ResourceResult<T>; null reads nothing
+```
+
+- **Wire.** One param, `{ q }`: the canonical JSON (`canonicalJson`,
+  `packages/canonical-params` — keys sorted at every depth, non-JSON refused)
+  of the schema's PARSED value, so `{}` and `{ x: <its default> }` are one
+  tuple. Everything below the declaration (the runtime, WS frames, the HTTP
+  fallback's URL, tuple keys, ETags, the query cache) still sees
+  `Record<string, string>`. The descriptor is `LiveQueryValue<T, Q, QIn>`
+  (`live: "value"`, `params: ["q"]`) carrying its codec as `query`
+  (`core/internal/query-value.ts`) — the ONE codec the params gate, `useLive`
+  and the served half (`shared/compile-value.ts`) use.
+- **The gate is strict.** `q` must be the only key, parse as JSON, pass the
+  schema, and re-encode byte-identically (`canonicalJson(parsed) === q`) —
+  else `contract-mismatch` (`ResourceContractError`). The equality is what
+  makes one question one tuple, and it refuses a schema whose parse is not
+  idempotent (a transform that moves its own output: every read of it is a
+  mismatch) without walking the zod tree. A refinement passes.
+- **Size.** `LIVE_QUERY_MAX_BYTES` (2 KiB) on the encoded `q`: encoding past it
+  throws (a plain `Error`, at the read), and the gate refuses it. A question
+  that big is a request body, not a tuple.
+- **Types (tsc).** `query` excludes `params` and `preload` (no default tuple);
+  `origin: "central"` is allowed. `useLive(v, query | null)` is chosen by the
+  descriptor's `query`; `useLive(v)` without it, or with a `{ q }` wire tuple,
+  is an error. The serve overloads type the loader, `whileSubscribed`, a
+  mapped `recomputeOn` and `notify` over the decoded `Q` (`ServeValueOptions<T,
+  Q, Src>`); `compileQueryValue` is `compileValue` for this form.
+- A changed question is a new tuple: the read shows loading. An
+  `invalidate` (on-demand) refetch keeps the previous answer on screen.
+
+## Paged values — `liveValue(key, { query, paged })`
+
+Design: same plan, §2. A read paged by an EXTERNAL source's opaque cursor (git,
+a file archive, a provider's own paging) is a chain of live pages — every
+loaded page its own tuple, each invalidated and refetched on its own. A paged
+Postgres list is a `liveCollection` (`scroll: true`), never this.
+
+```ts
+export const metricDetails = liveValue("metrics.details", {
+  query: DetailsSelectorSchema,  // the question, without cursor / limit
+  paged: {
+    item: DrillItemSchema,
+    id: "id",                    // dedupe across page boundaries (a string field — tsc)
+    meta: z.object({ total: z.number() }),  // optional: a per-question fact page 0 carries
+    limit: 50,                   // page size; the read may ask a smaller first page
+  },
+  load: "on-demand",
+});
+serveValue(metricDetails, {
+  source: "external",            // the only arm (a "db" paged value is a tsc error)
+  loader: (q, { cursor, limit }) => ({ items, nextCursor, meta: { total } }),
+  whileSubscribed,               // per PAGE tuple
+});
+useLive(metricDetails, selector, { first: 5 }); // → LivePagesResult<Item, Meta>
+```
+
+- **One page, one tuple** `{ q, n, c? }`: the question, the page size and the
+  server's cursor (absent on the first page). The wire schema is derived —
+  `{ items: item[], nextCursor: string | null, meta }` — so a paged value
+  declares no `schema`. The gate also checks `n` (canonical decimal, `1..limit`)
+  and `c` (non-empty, ≤ `LIVE_PAGE_CURSOR_MAX_BYTES` = 1 KiB). The served
+  loader's page is checked against its tuple: more than `n` items, or a
+  `nextCursor` the next tuple could not carry, fails loudly.
+- **`notify(q)`** recomputes every page of that question a tab holds right now
+  — `shared/compile-value.ts` tracks the subscribed page tuples per `q` from
+  the runtime's own 0→1 / N→0 hooks.
+- **The chain** is pure data (`shared/page-chain.ts`, the twin of
+  `scroll-plan.ts`); `web/internal/use-live-pages.ts` reads it through
+  live-state's `useResources`. Page 0 is `{ q, n: first ?? limit }`; page k+1
+  is `{ q, n: limit, c: page_k.nextCursor }`, minted only by `loadMore()`.
+  - **Re-mint.** A refreshed page whose `nextCursor` moved re-mints its
+    successor from it; the page it replaces stays read and rendered until the
+    new one settles (the scroll's handoff), so the chain never flips back to
+    loading. A page that now answers `nextCursor: null` drops the pages after
+    it.
+  - **Dedupe** by `id`, first occurrence kept (data that shifted across a
+    boundary). `meta` comes from page 0.
+  - **Cap.** `MAX_LIVE_PAGES` (32): `canGrow` false, `truncated: true`.
+- **Result** `LivePagesResult<Item, Meta>` = live-state's
+  `PagedResourceResult<Item>` with `meta` (ready arm; error arm when known) and
+  `truncated`. A failed page is the error arm with every item already held as
+  `stale`; a changed question (or `first`) starts over, loading; `null` reads
+  nothing.
+- Not spelled: preload, limit growth, a paged `"db"` value.
 
 ## Old spellings — lint `no-legacy-resource-spelling`
 
@@ -795,6 +908,20 @@ debt entry remains. **Never add an entry for new code** — declare it with
 `liveValue` / `liveCollection`. A file-level entry whose file no longer
 imports an old spelling is reported `(unused-exemption)` by the type-check
 worker (`framework/tooling/exempt`), so a stale one cannot linger.
+
+**Request/response reads — lint `live/no-endpoint-read`.** In `web/` code
+(tests out of scope) it flags `useEndpoint`, `useEndpointResource`, TanStack's
+`useQuery` / `useInfiniteQuery` / `useSuspenseQuery` (and their
+`Suspense*` / `useQueries` siblings) — resolved like the rule above — and a
+`fetchEndpoint(...)` call inside a `queryFn` property. A server read is a
+`liveValue` (`params`, a typed `query`, or `paged`) or a `liveCollection`, read
+with `useLive`; an imperative `fetchEndpoint` (a mutation, a handler) is a
+write and is not flagged. Sanctioned: the substrate that defines or wraps these
+hooks (`infra/endpoints`, `primitives/live-state`, `network/live`,
+`primitives/cursor-pagination`). Every other current site is a file-level
+`debt` entry (task-1791560308-woqgfi) in its plugin's `exempt/index.ts`
+(`./singularity exempt list --rule live/no-endpoint-read --debt`): migrate,
+never add one.
 
 ## Internals
 
@@ -844,15 +971,18 @@ worker (`framework/tooling/exempt`), so a stale one cannot linger.
 - `all`: `{}` — the set has no query, so it has one tuple; any param is a
   `contract-mismatch` (`ResourceContractError`). An `all` collection's `:rows`
   takes the point params like any other.
-- Decode is STRICT for both: the filter through `decodeFilter` (throws unless
-  exactly canonical), the rest by re-encoding — so one logical query can never
-  name two subscriptions.
+- Typed-query value: `{ q: string }` — the question's `canonicalJson`. Paged
+  value: `{ q: string; n: string; c?: string }` — plus the page size and the
+  server's cursor (absent on the first page).
+- Decode is STRICT for all of them: the filter through `decodeFilter` (throws
+  unless exactly canonical), the rest by re-encoding — so one logical query
+  can never name two subscriptions.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means, and useLiveScroll (a scroll collection read as live segments — bounded windows tiling the order by server-minted row-key cuts, grown, split, merged and collapsed so the rendered rows stay a gap-free prefix). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+- Description: Unified live-resource API, read half: useLive (a collection's bounded window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, paged the same way, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple) and a cursor-paged one (a live chain of pages — re-minted when a boundary moves, deduped by id, capped at MAX_LIVE_PAGES); and useLiveScroll (a scroll collection read as live segments — bounded windows tiling the order by server-minted row-key cuts, grown, split, merged and collapsed so the rendered rows stay a gap-free prefix). Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a cursor-paged one — external only — is loaded one page at a time, notify(q) reaching every subscribed page) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
 - Web:
   - Uses:
     - `primitives/live-state.PagedResourceResult`
@@ -866,6 +996,8 @@ worker (`framework/tooling/exempt`), so a stale one cannot linger.
     - `LiveAllSelect`
     - `LiveIdsQuery`
     - `LiveListResult`
+    - `LivePagesOptions`
+    - `LivePagesResult`
     - `LiveRowResult`
     - `LiveScrollOptions`
     - `LiveScrollResult`
@@ -873,6 +1005,7 @@ worker (`framework/tooling/exempt`), so a stale one cannot linger.
     - `ScrollTruncation`
   - Exports (values):
     - `mapRow`
+    - `MAX_LIVE_PAGES`
     - `useLive`
     - `useLiveRow`
     - `useLiveScroll`
@@ -897,10 +1030,13 @@ worker (`framework/tooling/exempt`), so a stale one cannot linger.
     - `ServedAllCollection`
     - `ServedCollection`
     - `ServedColumns`
+    - `ServedExternalQueryValue`
     - `ServedExternalValue`
     - `ServedLookupCollection`
+    - `ServedPagedValue`
     - `ServedScopedColumns`
     - `ServedValue`
+    - `ServePagedValueOptions`
     - `ServeUnionOptions`
     - `ServeValueOptions`
     - `UnionArmBinding`
@@ -909,6 +1045,8 @@ worker (`framework/tooling/exempt`), so a stale one cannot linger.
     - `UnionFieldBinding`
   - Exports (values):
     - `compileCollection`
+    - `compilePagedValue`
+    - `compileQueryValue`
     - `compileValue`
     - `LiveColumns`
     - `serveCollection`
@@ -925,6 +1063,7 @@ worker (`framework/tooling/exempt`), so a stale one cannot linger.
     - `network/live/filter.Filterable`
     - `network/live/filter.FilterScalar`
     - `network/live/filter.LIST_MAX`
+    - `packages/canonical-params.canonicalJson`
     - `packages/resource-protocol.ResourceContractError`
     - `primitives/live-state.PointParams`
     - `primitives/live-state.registerResourceDescriptor`
@@ -976,11 +1115,24 @@ worker (`framework/tooling/exempt`), so a stale one cannot linger.
     - `LiveNoWindowCollection`
     - `LiveNoWindowSpec`
     - `LiveOrderBy`
+    - `LivePage`
+    - `LivePageCodec`
+    - `LivePagedSpec`
+    - `LivePagedValue`
+    - `LivePagedValueSpec`
+    - `LivePageParams`
+    - `LivePageRequest`
     - `LiveParamValueSpec`
+    - `LivePlainValue`
     - `LivePreload`
     - `LivePreloadedParamValue`
     - `LivePreloadedParamValueSpec`
     - `LiveQuery`
+    - `LiveQueryCodec`
+    - `LiveQueryParams`
+    - `LiveQuerySchema`
+    - `LiveQueryValue`
+    - `LiveQueryValueSpec`
     - `LiveReservedColumn`
     - `LiveRowSchema`
     - `LiveRowsCollection`
@@ -1003,8 +1155,11 @@ worker (`framework/tooling/exempt`), so a stale one cannot linger.
     - `ScopedColumnMember`
     - `WithContributedColumns`
   - Exports (values):
+    - `isLivePageCursor`
     - `isPointId`
     - `LIVE_COLUMNS_KEY`
+    - `LIVE_PAGE_CURSOR_MAX_BYTES`
+    - `LIVE_QUERY_MAX_BYTES`
     - `LIVE_ROW_KEY`
     - `LIVE_ROW_KEY_MAX_BYTES`
     - `LIVE_SCOPED_KEY`
@@ -1040,17 +1195,91 @@ worker (`framework/tooling/exempt`), so a stale one cannot linger.
     - `stats/responsiveness`
     - `ui/icons/sprites`
 - Exemptions:
-  - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
+  - Exempts itself from:
+    - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+    - `live/no-endpoint-read` — `web` (sanctioned)
   - Exempted by:
+    - `active-data/plugin-link` (2 debt)
+    - `apps-core/surface/floating/wallpaper` (1 debt)
+    - `apps/deploy/analytics/dashboard` (1 debt)
+    - `apps/events/events-core` (1 debt)
+    - `apps/file-explorer/browser` (4 debt)
+    - `apps/file-explorer/git` (1 debt)
+    - `apps/file-explorer/places` (2 debt)
+    - `apps/mail/reading-pane` (1 debt)
+    - `apps/mail/search` (1 debt)
+    - `apps/pages/history` (1 debt)
+    - `apps/pages/page-tree` (1 debt)
+    - `apps/studio/compositions/closure-tree` (1 debt)
+    - `apps/studio/compositions/release/release-logs` (1 debt)
+    - `apps/studio/contributions` (1 debt)
+    - `apps/studio/contributions/tables/columns` (1 debt)
+    - `apps/studio/contributions/tables/foreign-keys` (1 debt)
+    - `apps/studio/contributions/tables/indexes` (1 debt)
+    - `apps/studio/contributions/tables/row-count` (1 debt)
+    - `apps/studio/contributions/tables/sample-rows` (1 debt)
+    - `apps/studio/explorer` (1 debt)
+    - `build/build-commits` (1 debt)
+    - `build/build-fix` (1 debt)
+    - `build/build-info` (1 debt)
+    - `build/build-logs` (1 debt)
+    - `build/build-profiling` (1 debt)
+    - `build/deployment` (1 debt)
+    - `build/serve-composition` (1 debt)
+    - `code-explorer/commit-detail` (2 debt)
+    - `code-explorer/file-resolve` (1 debt)
+    - `config_v2/settings` (4 debt)
+    - `debug/boot-profile` (2 debt)
+    - `debug/broadcasts` (1 debt)
+    - `debug/config-orphans` (2 debt)
+    - `debug/health-monitor` (1 debt)
+    - `debug/heap-snapshot` (1 debt)
+    - `debug/live-state-churn/emit` (1 debt)
+    - `debug/live-state-health` (1 debt)
+    - `debug/memory` (1 debt)
+    - `debug/profiling/boot` (1 debt)
+    - `debug/profiling/build` (2 debt)
+    - `debug/profiling/runtime` (1 debt)
+    - `debug/profiling/stats` (1 debt)
+    - `debug/read-set` (1 debt)
+    - `debug/slow-ops/pane` (1 debt)
+    - `debug/trace/pane` (2 debt)
     - `framework/central-core` (0 debt)
     - `framework/resource-runtime` (0 debt)
     - `framework/server-core` (0 debt)
+    - `history/dialog` (1 debt)
+    - `infra/claude-cli` (1 debt)
+    - `infra/endpoints` (0 debt)
     - `infra/query-resource` (0 debt)
     - `network/live` (0 debt)
+    - `page/place` (1 debt)
+    - `plugin-meta/composition` (1 debt)
+    - `plugin-meta/plugin-view` (1 debt)
+    - `plugin-meta/plugin-view/file-tree` (1 debt)
+    - `primitives/cursor-pagination` (0 debt)
+    - `primitives/diff-view` (1 debt)
+    - `primitives/file-viewer` (3 debt)
+    - `primitives/file-viewer/image` (1 debt)
+    - `primitives/folder-picker` (1 debt)
     - `primitives/live-state` (0 debt)
     - `primitives/optimistic-mutation` (0 debt)
+    - `review/code-review` (1 debt)
+    - `search/quick-find` (1 debt)
+    - `stats/commits` (4 debt)
+    - `stats/cost` (8 debt)
+    - `stats/pushes` (3 debt)
+    - `stats/tasks` (2 debt)
+    - `tasks/reports-investigation` (1 debt)
+    - `tasks/task-attachments` (1 debt)
+    - `tasks/task-category` (1 debt)
+    - `tasks/task-events` (1 debt)
+    - `tasks/task-source-url` (1 debt)
+    - `ui/theme-engine/saved-themes` (1 debt)
+    - `ui/tweakcn/community-browser` (1 debt)
 - Central:
-  - Exports (types): `CentralServedValue`
+  - Exports (types):
+    - `CentralServedQueryValue`
+    - `CentralServedValue`
   - Exports (values): `serveValue`
 - Test helpers:
   - Server: `@plugins/network/plugins/live/server/testing`

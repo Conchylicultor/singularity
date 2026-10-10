@@ -247,6 +247,8 @@ override where it survives.
     - `GET /api/stats/cost/avg-per-conversation`
 - Cross-plugin:
   - Imported by: `conversations/usage`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/avg-cost-per-conversation-chart.tsx`, `web/components/cost-distribution-chart.tsx`, `web/components/cost-kpis.tsx`, `web/components/cumulative-cost-chart.tsx`, `web/components/daily-cost-chart.tsx`, `web/components/model-usage-chart.tsx`, `web/components/token-mix-chart.tsx`, `web/components/top-conversations-table.tsx` (debt)
 - Core:
   - Exports (types):
     - `CountedUsage`

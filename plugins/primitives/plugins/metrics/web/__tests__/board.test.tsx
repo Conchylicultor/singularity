@@ -28,16 +28,16 @@ const fake = vi.hoisted(() => ({
   catalog: PENDING as unknown,
   answers: {} as Record<string, unknown>,
   details: {} as Record<string, unknown>,
-  queries: [] as { source: string; query: unknown }[],
+  queries: [] as { query: unknown }[],
 }));
 vi.mock("../internal/use-metric", () => ({
   useMetricCatalog: () => fake.catalog,
-  useMetric: (source: string, query: { metric: string }) => {
-    fake.queries.push({ source, query });
+  useMetric: (query: { metric: string }) => {
+    fake.queries.push({ query });
     return fake.answers[query.metric] ?? PENDING;
   },
-  useMetricDetails: (_source: string, query: { metric: string }) =>
-    fake.details[query.metric] ?? PENDING,
+  useMetricDetails: (selector: { metric: string }) =>
+    fake.details[selector.metric] ?? PENDING,
 }));
 
 import {
@@ -248,20 +248,16 @@ describe("BoardView", () => {
     fake.details["tasks.completed"] = {
       ...ok([
         {
-          items: [
-            {
-              id: "t1",
-              title: "Fix the rail",
-              at: "2026-09-01T10:00:00.000Z",
-              link: { href: "/tasks/t1" },
-            },
-          ],
-          total: 7,
-          nextCursor: "c1",
+          id: "t1",
+          title: "Fix the rail",
+          at: "2026-09-01T10:00:00.000Z",
+          link: { href: "/tasks/t1" },
         },
       ]),
+      meta: { total: 7 },
       canGrow: true,
       growing: false,
+      truncated: false,
       loadMore: vi.fn(),
     };
     renderBoard(focusSpec);

@@ -590,6 +590,7 @@ is the opt-in `stale` on the `error` arm, never what a `.data` read reaches.
 | `not-found` | a 404 (or `unknown-key` on the same build) | a bug |
 | `loader-failed` | any other HTTP failure, a `same-build` contract mismatch, anything else thrown | retry, else a bug |
 | `transport` | `fetch`'s `TypeError`, a lost version race (`ResourceStaleReadError`) | retry heals it |
+| `refused` | a loader's `ResourceRefusal` (`packages/resource-protocol`): HTTP 422 `refused`, its `detail` the message | none — the message IS the answer (an unknown id, an empty range); `ResourceErrorInline` offers no Retry, it is never retried, never counted as failing (health row), never reported |
 
 There is no boolean that lumps loading and error together: `status` is the only
 state a result carries, and neither the loading arm nor the ready arm has an
@@ -662,7 +663,7 @@ destructive default button modes). Three lint rules keep it out:
   hand-written `status: "loading" | "error"` result arm or result union: derive
   with `mapResource` / `combineResources` so the typed error, `stale` and
   `refetch` survive; a TanStack query becomes a result through
-  `useQueryResource` / `useInfiniteQueryResource` (below). Its message lists
+  `useEndpointResource` / `useQueryResource` (below). Its message lists
   every sanctioned constructor from ONE table, `lint/result-constructors.ts`
   (`{ name, from, use }`), which also derives the owning plugins; a new clean
   form is one row there, and `result-constructors.test.ts` fails if a row names
@@ -713,31 +714,31 @@ default mode, and especially never the destructive one — and the error variant
 when the read failed.
 
 **A TanStack query is read through an adapter, never returned raw.** A read
-that is not a live resource — a GET endpoint, a POST endpoint whose body is
-the question, any `queryFn` — still renders through the result vocabulary:
+of the SERVER is live — a `liveValue` (`params`, a typed `query`, or
+cursor-`paged`) or a `liveCollection`, read with `useLive` (`network/live`),
+so it refreshes itself; the `live/no-endpoint-read` lint ratchets the
+remaining request/response reads. What is left renders through the result
+vocabulary too:
 
 ```ts
-useEndpointResource(getCatalog, {}, { staleTime: Infinity }); // a GET endpoint
-useQueryResource({ queryKey, queryFn: ({ signal }) =>          // any query, e.g. a POST
-  fetchEndpoint(queryMetric, {}, { body, signal }) });
-useQueryResource(rev, (r) => ({ queryKey: [..., r], queryFn })); // keyed by another read
-useInfiniteQueryResource({ queryKey, queryFn, initialPageParam, getNextPageParam });
+useEndpointResource(getCatalog, {}, { staleTime: Infinity }); // a GET endpoint (legacy — being migrated)
+useQueryResource({ queryKey, queryFn: () => import("./x") });  // a LOCAL async load, never a server read
 ```
 
-All three — and `useResource` itself — map (data, error) through one
+Both — and `useResource` itself — map (data, error) through one
 `queryResult` (`web/query-result.ts`; `useResource` passes its own "a value
 landed" flag, because a selector may answer `undefined` for a landed value): `error` whenever the last
 fetch failed (the previous value as `stale`), `loading` while nothing landed,
 `ready` otherwise; the failure goes through `toResourceError` (an
 `EndpointError` 404 → `not-found`, other status → `loader-failed`). `enabled`
-is not an option — a disabled query is `loading` forever; the dependent form
-takes the dependency's result instead, standing on its loading arm, failing
-with it when it failed before ever landing, and keying by its `stale` value
-when it failed after. The paged form's data is the page list, and its ready arm
-carries the paging handles (`ResourcePaging`: `canGrow` / `growing` /
-`loadMore` — the same type `useLive`'s window result uses, whose
-`LiveListResult<Row>` is `PagedResourceResult<Row>`); a
-failed next page is the error arm with the pages already held as `stale`.
+is not an option — a disabled query is `loading` forever. There is no form
+keyed by another read's value (a revision tick, the hand-made freshness
+`network/live` replaced), and no paged form: a cursor-paged server read is a
+paged `liveValue`. A paged read's ready arm carries the paging handles
+(`ResourcePaging`: `canGrow` / `growing` / `loadMore` — `useLive`'s window,
+whose `LiveListResult<Row>` is `PagedResourceResult<Row>`, and its paged
+value's `LivePagesResult`); a failed next page is the error arm with what was
+already held as `stale`.
 Returning a raw `UseQueryResult` hands the caller `isPending` / `isError` and a
 `data` it can read without asking — the collapse this section exists to ban.
 
@@ -864,7 +865,7 @@ keeps every row's identity rather than re-minting each moved row.
 
 ## Plugin reference
 
-- Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource / useInfiniteQueryResource read a plain TanStack query (e.g. a POST endpoint via fetchEndpoint) as a ResourceResult.
+- Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
 - Load-bearing: yes
 - Web:
   - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
@@ -890,7 +891,6 @@ keeps every row's identity rather than re-minting each moved row.
     - `GateDataOf`
     - `GateInput`
     - `HttpStaleDropReport`
-    - `InfiniteQueryResourceOptions`
     - `LiveStateSocketKind`
     - `MatchResourceHandlers`
     - `MissedFrame`
@@ -948,7 +948,6 @@ keeps every row's identity rather than re-minting each moved row.
     - `useCombinedResources`
     - `useEndpointResource`
     - `useFailingResources`
-    - `useInfiniteQueryResource`
     - `useNotificationsChannelStatuses`
     - `useNotificationsClient`
     - `useNotificationsStatus`
@@ -985,6 +984,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `endpoints/no-raw-web-fetch` — `web/use-resource.ts` (sanctioned)
     - `endpoints/no-raw-web-fetch` — `web/notifications-client.ts` (sanctioned)
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+    - `live/no-endpoint-read` — `web` (sanctioned)
 - Core:
   - Exports (types):
     - `PointParams`

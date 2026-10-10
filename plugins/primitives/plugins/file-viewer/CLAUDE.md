@@ -113,6 +113,8 @@ checkout file.
     - `primitives/file-viewer/markdown`
     - `primitives/file-viewer/media`
     - `primitives/file-viewer/pdf`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/no-preview.tsx`, `web/internal/use-file-bytes.ts`, `web/internal/use-file-text.ts` (debt)
 - Sub-plugins:
   - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
   - **`diff`** — Side-by-side diff of a changed file vs its checkout's base — a contextual tab, offered only when the host passes git context (checkout, path, status) with a non-clean status, wherever the file's…

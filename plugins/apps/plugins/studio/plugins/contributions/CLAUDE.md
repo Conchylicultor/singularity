@@ -32,6 +32,8 @@
     - `primitives/pane.useOpenPane`
     - `primitives/search.SearchInput`
     - `ui/icons.Icon`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/contributions-view.tsx` (debt)
 - Sub-plugins:
   - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
 

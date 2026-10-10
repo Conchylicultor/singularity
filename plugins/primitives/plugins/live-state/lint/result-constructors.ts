@@ -40,12 +40,7 @@ export const RESULT_CONSTRUCTORS: readonly ResultConstructor[] = [
   {
     name: "useQueryResource",
     from: "@plugins/primitives/plugins/live-state/web",
-    use: "wrap any TanStack query (e.g. a POST endpoint read via fetchEndpoint) — never return the raw UseQueryResult",
-  },
-  {
-    name: "useInfiniteQueryResource",
-    from: "@plugins/primitives/plugins/live-state/web",
-    use: "wrap a cursor-paged TanStack infinite query",
+    use: "wrap a local async load (a code-split module — never a server read) — never return the raw UseQueryResult",
   },
   {
     name: "useOptimisticResource",

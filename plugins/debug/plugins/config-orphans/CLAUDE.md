@@ -42,6 +42,8 @@
     - `reports.recordReport`
     - `reports.ReportKind`
   - Routes: `GET /api/debug/config-orphans`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/config-orphans-panel.tsx`, `web/components/stranded-config-notice.tsx` (debt)
 - Shared:
   - Exports (values): `configOrphans`
 

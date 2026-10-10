@@ -20,6 +20,8 @@
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
   - Routes: `GET /api/studio/tables/:tableName/row-count`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/row-count-section.tsx` (debt)
 - Shared:
   - Exports (values): `getTableRowCount`
 

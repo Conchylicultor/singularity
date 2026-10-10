@@ -95,6 +95,8 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `apps-core/surface/floating/wallpaper/openverse`
     - `apps-core/surface/floating/wallpaper/upload`
   - Endpoint callers: `floating`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/wallpaper-search-panel.tsx` (debt)
 - Sub-plugins:
   - **`from-url`** — From-URL wallpaper source: contributes the From URL tab to the desktop wallpaper picker, emitting a pasted image URL the picker imports (and the server validates) via the import-url endpoint.
   - **`openverse`** — Openverse wallpaper source: contributes the Openverse tab to the desktop wallpaper picker, reusing the shared search panel over the server-side `openverse` provider. Openverse wallpaper search…

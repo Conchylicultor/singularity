@@ -31,6 +31,8 @@
   - Routes:
     - `GET /api/stats/tasks/cumulative`
     - `GET /api/stats/tasks/daily`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/tasks-cumulative-chart.tsx`, `web/components/tasks-velocity-chart.tsx` (debt)
 - Shared:
   - Exports (values):
     - `getTasksCumulative`

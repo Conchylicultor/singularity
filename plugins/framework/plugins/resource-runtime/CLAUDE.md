@@ -769,6 +769,18 @@ after a deploy, a tab still running the previous bundle. Only the flat
   programmer errors and must crash loudly. Pinned by
   `runtime-contract-mismatch.test.ts`.
 
+## Refusals — `ResourceRefusal`
+
+A loader throws `ResourceRefusal` (`packages/resource-protocol`) for an
+EXPECTED, caller-caused refusal: well-formed params, a question that cannot be
+answered as asked (an unknown metric id, an empty interval). It is not a server
+failure: `reportLoaderError` only logs it (`console.info`, never
+`opts.reportError`), the sub-ack read sends `sub-error reason:"refused"` with
+the refusal's `message`, and the HTTP read answers 422 `{ reason: "refused",
+detail }`. The client surfaces the message as the read's error (kind
+`refused`), so `ResourceErrorInline` shows it. Any other loader throw is
+unchanged: `loader-failed`, reported. Pinned by `runtime-refusal.test.ts`.
+
 ## Profiling seams (all optional; central binds none)
 
 The server binds each of these to a profiler span in `server-core/core/resources.ts`:
@@ -882,6 +894,7 @@ and those plugins' `CLAUDE.md`.
     - `packages/resource-protocol.ContractVerdict`
     - `packages/resource-protocol.ResourceContractError`
     - `packages/resource-protocol.ResourceHttpErrorBody`
+    - `packages/resource-protocol.ResourceRefusal`
     - `packages/resource-protocol.SubErrorFrame`
     - `packages/semaphore.createSemaphore`
   - Exports (types):

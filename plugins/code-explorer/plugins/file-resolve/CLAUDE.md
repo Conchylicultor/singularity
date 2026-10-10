@@ -32,6 +32,8 @@ A path that names an existing file answers `exact` with where its bytes live: `g
   - Routes: `GET /api/code/:worktree/resolve`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/code/file-pane`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-resolved-file.ts` (debt)
 - Shared:
   - Exports (values): `resolveFile`
 

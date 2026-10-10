@@ -40,6 +40,8 @@
   - Exports (values):
     - `BuildLogsResponseSchema`
     - `getBuildRunLogs`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/build-log-section.tsx` (debt)
 - Shared:
   - Exports (types):
     - `BuildLogsResponse`

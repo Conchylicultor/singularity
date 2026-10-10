@@ -42,6 +42,8 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
     - `infra/paths.CLAUDE_PROJECTS_DIR`
     - `infra/worktree.ensureMainWorktreeRoot`
   - Routes: `GET /api/debug/memory`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/memory-panel.tsx` (debt)
 - Shared:
   - Exports (values):
     - `listMemoryFiles`

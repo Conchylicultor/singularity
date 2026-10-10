@@ -1,21 +1,21 @@
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import {
-  skipToken,
-  useInfiniteQuery,
   useQuery,
-  type InfiniteData,
   type QueryKey,
-  type UseInfiniteQueryOptions,
   type UseQueryOptions,
 } from "@tanstack/react-query";
 import { queryResult } from "./query-result";
 import type { ResourceResult } from "./use-resource";
 
 /**
- * A plain TanStack query read as a `ResourceResult` — for a read that is
- * neither a live resource (`useResource` / `useLive`) nor a GET endpoint
- * (`useEndpointResource`): typically a POST endpoint whose structured body is
- * the question, read with `fetchEndpoint` in the `queryFn`.
+ * A LOCAL async load read as a `ResourceResult` — a code-split module
+ * (`plugin-meta/exhibits` loads its exhibits this way), a browser API, any
+ * promise that is not a read of the server. It is NOT a server read: a read of
+ * server data is live — a `liveValue` (with `params`, a typed `query`, or
+ * cursor-`paged`) or a `liveCollection`, read with `useLive`
+ * (`network/live`) — so it refreshes itself when the data changes. There is
+ * deliberately no form keyed by another read (a revision tick): that was the
+ * hand-made freshness `network/live` replaced.
  *
  * React Query's own result hands `data: undefined` both while loading and
  * after a first-load failure, and its `isPending` / `isError` booleans let a
@@ -28,15 +28,8 @@ import type { ResourceResult } from "./use-resource";
  * - `loading` while no value has landed and nothing failed;
  * - `ready` otherwise (a `placeholderData` the caller opted into included).
  *
- * The failure is classified by `toResourceError`, as a live read's is
- * (an endpoint's HTTP 404 → `not-found`, another status → `loader-failed`, a
- * `fetch` that got no answer → `transport`, a response the schema rejects →
- * `client-outdated`).
- *
  * `enabled` is not an option: a disabled query is `loading` forever, the
- * spin-on-a-read-that-will-never-load bug. A query keyed by ANOTHER read's
- * value takes that read as `dep` and builds its options from the value — see
- * the second overload.
+ * spin-on-a-read-that-will-never-load bug.
  */
 export type QueryResourceOptions<
   TQueryFnData,
@@ -45,27 +38,8 @@ export type QueryResourceOptions<
 > = Omit<UseQueryOptions<TQueryFnData, Error, TData, TQueryKey>, "enabled">;
 
 /**
- * The paged twin's options: one page per fetch, `getNextPageParam` naming the
- * next. No `select` — the result's data is the page list itself.
- */
-export type InfiniteQueryResourceOptions<
-  TPage,
-  TPageParam,
-  TQueryKey extends QueryKey = QueryKey,
-> = Omit<
-  UseInfiniteQueryOptions<
-    TPage,
-    Error,
-    InfiniteData<TPage, TPageParam>,
-    TQueryKey,
-    TPageParam
-  >,
-  "enabled" | "select"
->;
-
-/**
  * What a paged read adds to its ready arm — one vocabulary for every grow-able
- * read: `useInfiniteQueryResource`'s cursor pages and `useLive`'s window.
+ * read: `useLive`'s window and its cursor-paged value's chain of pages.
  */
 export interface ResourcePaging {
   /** There is more to load — `loadMore()` would add some. */
@@ -86,174 +60,17 @@ export type PagedResourceResult<Item> =
   | Extract<ResourceResult<Item[]>, { status: "error" }>
   | (Extract<ResourceResult<Item[]>, { status: "ready" }> & ResourcePaging);
 
-/** The key a dependent query sits on while its dependency has no value. */
-const BLOCKED_KEY = ["\0query-resource-blocked"];
-
-/**
- * The dependency's value to build options from, or — when there is none — the
- * result to return instead: its loading arm, or its failure when it failed
- * before ever landing (there is nothing to key the query by, and saying
- * `loading` would spin forever). A dependency that failed AFTER landing keys
- * the query by its last value: the answer stays as current as that value.
- */
-type DepKey<D> =
-  | { has: true; value: D }
-  | {
-      has: false;
-      result: Extract<ResourceResult<never>, { status: "loading" | "error" }>;
-    };
-
-function depKey<D>(dep: ResourceResult<D>): DepKey<D> {
-  switch (dep.status) {
-    case "ready":
-      return { has: true, value: dep.data };
-    case "loading":
-      return { has: false, result: dep };
-    case "error":
-      return dep.stale !== undefined
-        ? { has: true, value: dep.stale }
-        : {
-            has: false,
-            result: { status: "error", error: dep.error, refetch: dep.refetch },
-          };
-  }
-}
-
-/** A TanStack query as a `ResourceResult`. */
+/** A local async load (a TanStack query) as a `ResourceResult`. */
 export function useQueryResource<
   TQueryFnData,
   TData = TQueryFnData,
   TQueryKey extends QueryKey = QueryKey,
 >(
   options: QueryResourceOptions<TQueryFnData, TData, TQueryKey>,
-): ResourceResult<TData>;
-/**
- * A query keyed by another read's value (a revision, an id): `options` is
- * built from `dep`'s value once it has one. Until then the result is `dep`'s
- * own loading arm, or its failure — never a disabled query pending forever.
- */
-export function useQueryResource<
-  D,
-  TQueryFnData,
-  TData = TQueryFnData,
-  TQueryKey extends QueryKey = QueryKey,
->(
-  dep: ResourceResult<D>,
-  options: (value: D) => QueryResourceOptions<TQueryFnData, TData, TQueryKey>,
-): ResourceResult<TData>;
-export function useQueryResource<
-  D,
-  TQueryFnData,
-  TData,
-  TQueryKey extends QueryKey,
->(
-  first:
-    QueryResourceOptions<TQueryFnData, TData, TQueryKey> | ResourceResult<D>,
-  build?: (value: D) => QueryResourceOptions<TQueryFnData, TData, TQueryKey>,
 ): ResourceResult<TData> {
-  const dep = build === undefined ? null : (first as ResourceResult<D>);
-  // Memoized on the dependency's (memoized) result, so the blocked arm keeps
-  // one identity while the dependency does.
-  const key = useMemo(() => (dep === null ? null : depKey(dep)), [dep]);
-  const options =
-    build === undefined
-      ? (first as QueryResourceOptions<TQueryFnData, TData, TQueryKey>)
-      : key!.has
-        ? build(key!.value)
-        : ({
-            queryKey: BLOCKED_KEY,
-            queryFn: skipToken,
-          } as unknown as QueryResourceOptions<TQueryFnData, TData, TQueryKey>);
-  const { data, error, refetch: refetchQuery } = useQuery(options);
-  const blocked = key !== null && !key.has ? key.result : null;
+  const { data, error, refetch } = useQuery(options);
   return useMemo(
-    (): ResourceResult<TData> =>
-      blocked ?? queryResult(data, error, refetchQuery),
-    [blocked, data, error, refetchQuery],
+    (): ResourceResult<TData> => queryResult(data, error, refetch),
+    [data, error, refetch],
   );
-}
-
-/** A paged TanStack query as a `PagedResourceResult` — data is the page list. */
-export function useInfiniteQueryResource<
-  TPage,
-  TPageParam,
-  TQueryKey extends QueryKey = QueryKey,
->(
-  options: InfiniteQueryResourceOptions<TPage, TPageParam, TQueryKey>,
-): PagedResourceResult<TPage>;
-/** The dependent form — see `useQueryResource`'s. */
-export function useInfiniteQueryResource<
-  D,
-  TPage,
-  TPageParam,
-  TQueryKey extends QueryKey = QueryKey,
->(
-  dep: ResourceResult<D>,
-  options: (
-    value: D,
-  ) => InfiniteQueryResourceOptions<TPage, TPageParam, TQueryKey>,
-): PagedResourceResult<TPage>;
-export function useInfiniteQueryResource<
-  D,
-  TPage,
-  TPageParam,
-  TQueryKey extends QueryKey,
->(
-  first:
-    | InfiniteQueryResourceOptions<TPage, TPageParam, TQueryKey>
-    | ResourceResult<D>,
-  build?: (
-    value: D,
-  ) => InfiniteQueryResourceOptions<TPage, TPageParam, TQueryKey>,
-): PagedResourceResult<TPage> {
-  const dep = build === undefined ? null : (first as ResourceResult<D>);
-  // Memoized on the dependency's (memoized) result, so the blocked arm keeps
-  // one identity while the dependency does.
-  const key = useMemo(() => (dep === null ? null : depKey(dep)), [dep]);
-  const options =
-    build === undefined
-      ? (first as InfiniteQueryResourceOptions<TPage, TPageParam, TQueryKey>)
-      : key!.has
-        ? build(key!.value)
-        : ({
-            queryKey: BLOCKED_KEY,
-            queryFn: skipToken,
-            initialPageParam: null,
-            getNextPageParam: () => undefined,
-          } as unknown as InfiniteQueryResourceOptions<
-            TPage,
-            TPageParam,
-            TQueryKey
-          >);
-  const q = useInfiniteQuery(options);
-  const { data, error, refetch: refetchQuery, fetchNextPage } = q;
-  const { hasNextPage, isFetchingNextPage } = q;
-  const blocked = key !== null && !key.has ? key.result : null;
-  const loadMore = useCallback(() => {
-    void fetchNextPage();
-  }, [fetchNextPage]);
-  return useMemo((): PagedResourceResult<TPage> => {
-    if (blocked !== null) return blocked;
-    const r = queryResult(data?.pages, error, refetchQuery);
-    switch (r.status) {
-      case "loading":
-      case "error":
-        return r;
-      case "ready":
-        return {
-          ...r,
-          canGrow: hasNextPage && !isFetchingNextPage,
-          growing: isFetchingNextPage,
-          loadMore,
-        };
-    }
-  }, [
-    blocked,
-    data,
-    error,
-    refetchQuery,
-    hasNextPage,
-    isFetchingNextPage,
-    loadMore,
-  ]);
 }

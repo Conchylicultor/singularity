@@ -51,10 +51,12 @@ await mutateAsync({ id }, { body: { name: "new" } });
 
 Use `fetchEndpoint` for imperative fetches outside React. Non-2xx responses throw `EndpointError(status, body)`.
 
+**Endpoints are for writes, and for reads sanctioned to stay request/response.** A server read a surface renders is a live resource — a `liveValue` (`params`, a typed `query`, or cursor-`paged`) or a `liveCollection`, read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`). The `live/no-endpoint-read` lint flags, in `web/` code, `useEndpoint`, `useEndpointResource`, TanStack's `useQuery` family, and `fetchEndpoint` inside a `queryFn`; imperative `fetchEndpoint` (a mutation, a handler) is untouched. The read hooks below remain for the existing sites — the rule's debt burndown (`./singularity exempt list --rule live/no-endpoint-read --debt`) — never for new code.
+
 **A read that a surface renders is a `ResourceResult`, not React Query's own result** (whose `isPending` / `isError` let a surface read `data ?? []` without asking which state it is in). From `@plugins/primitives/plugins/live-state/web` (live-state sits downstream of endpoints, so the adapters live there):
 
 - a GET — `useEndpointResource(endpoint, params, opts)` instead of `useEndpoint`;
-- a POST read (a structured body is the question, so `useEndpoint` cannot carry it) — `useQueryResource({ queryKey, queryFn: ({ signal }) => fetchEndpoint(ep, params, { body, signal }) })`, or `useInfiniteQueryResource` for a cursor-paged one. A query keyed by another read's value (a revision, an id) passes that read first: `useQueryResource(dep, (value) => options)`.
+- a structured question (once a POST body) is a typed-query `liveValue` (`{ query }`), and a cursor-paged read a paged one (`{ query, paged }`) — never a TanStack query over `fetchEndpoint`. The revision-keyed and infinite query adapters are deleted; `useQueryResource` remains only for local async loads (a code-split module), never a server read.
 
 An `EndpointError` maps to `not-found` on a 404 and `loader-failed` otherwise, with the server's message; a `fetch` that got no answer to `transport`; a response the schema rejects to `client-outdated`.
 
@@ -213,14 +215,14 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `isCodec`
     - `multipart`
 - Cross-plugin:
-  - Imported by: 228 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 227 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×59
     - `conversations` ×26
     - `debug` ×26
     - `infra` ×17
     - `tasks` ×17
     - `page` ×14
-    - `primitives` ×13
+    - `primitives` ×12
     - `build` ×9
     - `ui` ×6
     - `auth` ×5
@@ -241,7 +243,9 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `screenshot`
     - `shell/notifications`
 - Exemptions:
-  - Exempts itself from: `endpoints/no-raw-web-fetch` — `web` (sanctioned)
+  - Exempts itself from:
+    - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
+    - `live/no-endpoint-read` — `web` (sanctioned)
   - Exempted by:
     - `apps/pages/page-tree` (0 debt)
     - `apps/sonata/playback-history` (0 debt)

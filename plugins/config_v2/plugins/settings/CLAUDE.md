@@ -169,6 +169,8 @@ renderer, which only the running app has.
     - `config_v2/config-link`
     - `config_v2/settings/conflict-agent`
     - `debug/config-orphans`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/config-detail.tsx`, `web/components/config-nav.tsx`, `web/components/conflict-diff.tsx`, `web/components/invalid-diff.tsx` (debt)
 - Sub-plugins:
   - **`conflict-agent`** — Ask-an-agent button inside the config detail's conflict banners: opens the standard task-draft popover pre-filled with a factual description of the conflict (which fields disagree, and how).
 

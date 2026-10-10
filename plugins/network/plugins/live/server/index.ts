@@ -23,11 +23,21 @@ export type {
   ServedColumns,
   ServedScopedColumns,
 } from "./internal/serve-columns";
-export { compileValue } from "../shared/compile-value";
-export type { ServedExternalValue, ServedValue } from "./internal/serve-value";
+export {
+  compilePagedValue,
+  compileQueryValue,
+  compileValue,
+} from "../shared/compile-value";
+export type {
+  ServedExternalQueryValue,
+  ServedExternalValue,
+  ServedPagedValue,
+  ServedValue,
+} from "./internal/serve-value";
 export type {
   CompiledValue,
   LiveValueSource,
+  ServePagedValueOptions,
   ServeValueOptions,
 } from "../shared/compile-value";
 export type {
@@ -49,5 +59,5 @@ export type {
 
 export default {
   description:
-    "Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: \"on-demand\"`) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql.",
+    "Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: \"on-demand\"`; a typed-query value's hooks and notify take the decoded question, and a cursor-paged one — external only — is loaded one page at a time, notify(q) reaching every subscribed page) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a `contributed` collection compiles at boot, folding every LiveColumns.Serve contribution naming it — serveColumns(handle, { join }) — into its rows' `$columns`); every filter compiles through the filter language's filterSql.",
 } satisfies ServerPluginDefinition;

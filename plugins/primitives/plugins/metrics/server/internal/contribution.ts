@@ -73,14 +73,15 @@ export interface SourceImpl {
   breakdowns?: readonly BreakdownImpl[];
   /**
    * What makes this source's numbers stale: subscribe `bump` to it and return
-   * the unsubscribe. Runs only while a browser watches the source's revision.
+   * the unsubscribe. Runs only while a tab holds a query or drill-down of the
+   * source — once, however many (`source-watch.ts`); each bump refetches them.
    * Absent = the numbers change only with the range (nothing to watch).
    */
   changes?: (bump: () => void) => () => void;
 }
 
 // One contribution per metric source. Consumers never import a provider: the
-// catalog, query and details endpoints read this collection generically.
+// served catalog, query and details values read this collection generically.
 export const MetricsServer = {
   Source: defineServerContribution<SourceImpl>("metrics.source", {
     docLabel: (s) => s.source.id,

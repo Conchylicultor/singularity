@@ -22,7 +22,7 @@ export function BreakdownCard({
   entry,
   context,
 }: BreakdownCardProps): ReactNode {
-  const result = useMetric(entry.source, breakdownQuery(entry, context));
+  const result = useMetric(breakdownQuery(entry, context));
   return (
     <CardFrame title={entry.label} data-metric-card={entry.id}>
       {matchChart(result, entry.label.toLowerCase(), (data) =>

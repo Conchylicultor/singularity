@@ -20,6 +20,8 @@
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
   - Routes: `GET /api/studio/tables/:tableName/indexes`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/indexes-section.tsx` (debt)
 - Shared:
   - Exports (values): `getTableIndexes`
 

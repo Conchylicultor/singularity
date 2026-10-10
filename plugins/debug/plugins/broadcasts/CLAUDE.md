@@ -36,6 +36,8 @@
   - Routes:
     - `GET /api/debug/broadcasts`
     - `PUT /api/debug/broadcasts`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/broadcasts-panel.tsx` (debt)
 - Shared:
   - Exports (types): `WriteBroadcastsBody`
   - Exports (values):

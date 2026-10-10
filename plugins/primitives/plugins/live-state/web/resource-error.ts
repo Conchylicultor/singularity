@@ -40,6 +40,11 @@ function classify(raw: unknown): ResourceError {
 
 function kindOf(raw: unknown): { kind: ResourceErrorKind; message: string } {
   if (raw instanceof ResourceHttpError) {
+    // A refusal is the server's answer, written for the reader: its message
+    // IS the error's.
+    if (raw.reason === "refused") {
+      return { kind: "refused", message: raw.detail ?? raw.message };
+    }
     // A contract refusal means this bundle does not speak the resource's
     // contract. Unless the server can prove both run the SAME build (then the
     // client's own encoding is a real bug — reloading would not help), the
@@ -59,8 +64,8 @@ function kindOf(raw: unknown): { kind: ResourceErrorKind; message: string } {
     if (raw.status === 404) return { kind: "not-found", message: raw.message };
     return { kind: "loader-failed", message: raw.message };
   }
-  // A typed endpoint read (`useEndpointResource`, `useQueryResource` over
-  // `fetchEndpoint`) that got an HTTP answer: the server's own message.
+  // A typed endpoint read (`useEndpointResource`) that got an HTTP answer:
+  // the server's own message.
   if (raw instanceof EndpointError) {
     const message = getEndpointErrorMessage(raw);
     if (raw.status === 404) return { kind: "not-found", message };

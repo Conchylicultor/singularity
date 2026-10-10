@@ -17,6 +17,8 @@
 - Server:
   - Uses: `infra/endpoints.implement`
   - Routes: `GET /api/debug/profiling/stats`
+- Exemptions:
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/stats-section.tsx` (debt)
 - Shared:
   - Exports (values): `getStatsProfiling`
 

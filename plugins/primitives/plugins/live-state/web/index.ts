@@ -16,13 +16,9 @@ export {
 } from "./use-resource";
 export { hydrateEndpoint } from "./hydrate-endpoint";
 export { useEndpointResource } from "./use-endpoint-resource";
-export {
-  useQueryResource,
-  useInfiniteQueryResource,
-} from "./use-query-resource";
+export { useQueryResource } from "./use-query-resource";
 export type {
   QueryResourceOptions,
-  InfiniteQueryResourceOptions,
   PagedResourceResult,
   ResourcePaging,
 } from "./use-query-resource";
@@ -97,7 +93,7 @@ export type {
 
 export default {
   description:
-    "Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource / useInfiniteQueryResource read a plain TanStack query (e.g. a POST endpoint via fetchEndpoint) as a ResourceResult.",
+    "Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.",
   loadBearing: true,
   contributions: [],
 } satisfies PluginDefinition;

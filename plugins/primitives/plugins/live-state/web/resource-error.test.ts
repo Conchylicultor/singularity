@@ -17,6 +17,20 @@ import {
 const kindOf = (raw: unknown) => toResourceError(raw).kind;
 
 describe("toResourceError", () => {
+  test("a refusal is `refused`, its message the server's own", () => {
+    const e = toResourceError(
+      new ResourceHttpError(
+        "k",
+        422,
+        "refused",
+        undefined,
+        'unknown metric "x"',
+      ),
+    );
+    expect(e.kind).toBe("refused");
+    expect(e.message).toBe('unknown metric "x"');
+  });
+
   test("a contract refusal is client-outdated unless both sides run the same build", () => {
     expect(
       kindOf(new ResourceHttpError("k", 409, "contract-mismatch", "skew")),

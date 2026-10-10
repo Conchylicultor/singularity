@@ -16,9 +16,17 @@ type WireParams = Record<string, string>;
  * - `contract-mismatch` — the params do not match the resource's declaration
  *   (a required param missing, an unknown one, a non-canonical encoding). The
  *   read is refused before it registers, so no push reruns it.
+ * - `refused` — the loader threw a `ResourceRefusal`: the params are well
+ *   formed, but the question cannot be answered as asked (an unknown id, an
+ *   empty range). Expected and caller-caused — never a server fault, never
+ *   reported — and it carries a user-readable message.
  */
 export type SubErrorReason =
-  "unknown-key" | "unauthorized" | "loader-failed" | "contract-mismatch";
+  | "unknown-key"
+  | "unauthorized"
+  | "loader-failed"
+  | "contract-mismatch"
+  | "refused";
 
 /**
  * Whose fault a contract mismatch is, judged from the build the client says it
@@ -41,12 +49,15 @@ export interface SubErrorFrame {
   reason: SubErrorReason;
   /** Present on `contract-mismatch` and `unknown-key` — both are what skew looks like. */
   verdict?: ContractVerdict;
+  /** Present on `refused`: the refusal's user-readable message. */
+  message?: string;
 }
 
 /**
  * The JSON body of a failed `GET /api/resources/:key` (404 unknown key, 409
- * contract mismatch, 500 loader failure), so the client's error carries a
- * typed reason instead of a bare status.
+ * contract mismatch, 422 refused — `detail` its message —, 500 loader
+ * failure), so the client's error carries a typed reason instead of a bare
+ * status.
  */
 export interface ResourceHttpErrorBody {
   reason: SubErrorReason;
@@ -80,6 +91,22 @@ export class ResourceContractError extends Error {
 }
 
 /**
+ * An EXPECTED, caller-caused refusal a loader throws: the params are well
+ * formed, but the question cannot be answered as asked (a metric id no source
+ * contributes, an interval that ends before it starts). The runtime sends its
+ * `message` to the reader — `refused` on the HTTP read (422, `detail`) and the
+ * `sub-error` frame (`message`) — and does NOT report it as a server failure.
+ * Anything else a loader throws stays `loader-failed`, reported. Subclass it
+ * for a domain's refusals (`MetricQueryError`).
+ */
+export class ResourceRefusal extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ResourceRefusal";
+  }
+}
+
+/**
  * Judge a contract mismatch: `clientBuild` is the graph the client said it runs
  * (absent from a bundle that predates the field), `serverGraph` the graph this
  * server serves (`null` when unknown).
@@ -108,6 +135,7 @@ const REASONS: ReadonlySet<string> = new Set<SubErrorReason>([
   "unauthorized",
   "loader-failed",
   "contract-mismatch",
+  "refused",
 ]);
 const VERDICTS: ReadonlySet<string> = new Set<ContractVerdict>([
   "skew",
