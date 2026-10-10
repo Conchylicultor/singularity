@@ -20,6 +20,7 @@ import {
 
 export {
   loadPageTags,
+  loadTagVocabularyNames,
   resolveTagNames,
   setPageTags,
   writeResolvedPageTags,

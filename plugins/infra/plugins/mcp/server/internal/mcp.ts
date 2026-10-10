@@ -12,7 +12,18 @@ export type McpToolResult = {
 
 export interface McpTool<T extends z.ZodRawShape = z.ZodRawShape> {
   name: string;
+  /** The fixed text of the tool's description. */
   description: string;
+  /**
+   * A LIVE section appended to {@link description} (after a blank line):
+   * rendered per request, and only for a request that lists the tools
+   * (`tools/list`), so it states the data as of the moment the client listed
+   * them — typically once, at connect. For facts an agent needs while using the
+   * tool that live in the database (a vocabulary to pick from), where a fixed
+   * string would go stale. `null` (or blank) contributes nothing. A render that
+   * throws fails the listing — loud, never a silently missing section.
+   */
+  liveDescription?: (ctx: McpToolContext) => Promise<string | null>;
   inputSchema: T;
   handler: (
     args: z.objectOutputType<T, z.ZodTypeAny>,

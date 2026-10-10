@@ -68,6 +68,7 @@
     - `TagResolution`
   - Exports (values):
     - `loadPageTags`
+    - `loadTagVocabularyNames`
     - `resolveTagNames`
     - `setPageTags`
     - `writeResolvedPageTags`

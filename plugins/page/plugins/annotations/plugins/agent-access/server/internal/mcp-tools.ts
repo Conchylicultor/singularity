@@ -14,6 +14,7 @@ import {
   splitPageMeta,
 } from "@plugins/page/plugins/markdown-apply/core";
 import {
+  loadTagVocabularyNames,
   resolveTagNames,
   writeResolvedPageTags,
 } from "@plugins/page/plugins/tags/server";
@@ -595,7 +596,8 @@ malformed is refused. Anchor \`old_string\` below it. A header leading
 read) is dropped before matching, with the one leading \`new_string\`.
 
 **Tags.** A page's tags are its status and labels ("In progress", "Planned",
-"Done", …), drawn from ONE shared vocabulary. **Status belongs in tags, never in
+"Done", …), drawn from ONE shared vocabulary — listed at the END of this
+description, as of when you loaded it. **Status belongs in tags, never in
 a \`[…]\` prefix in the title** — a rename to such a title is refused. To change
 a page's tags, edit its \`<tags>\` section like any other text — one
 \`<tag name="…"/>\` line per tag, in the order the page shows them;
@@ -734,6 +736,20 @@ byte-identical — including the \`# Title\` line of a page its author wrote (on
 agent page, editing it renames the page, above), every \`<page id="…"/>\` and
 \`<agent-page id="…"/>\` pointer, and every \`<human>\` / \`<todo>\` card, which is
 the author's even when it sits in yours.`,
+  // The vocabulary lives in the database, so it cannot be part of the fixed
+  // text: it is rendered when the client lists the tools (at connect), which is
+  // what an agent sees on loading this tool. A tag created since is still
+  // accepted by name; an unknown one's refusal lists the vocabulary as of then.
+  liveDescription: async () => {
+    const names = await loadTagVocabularyNames();
+    return names.length === 0
+      ? "**Page tags that exist now:** none yet."
+      : `**Page tags that exist now:** ${names
+          .map((n) => JSON.stringify(n))
+          .join(
+            ", ",
+          )}. Use one of these; create a new tag only when none fits.`;
+  },
   inputSchema: {
     block_id: z
       .string()

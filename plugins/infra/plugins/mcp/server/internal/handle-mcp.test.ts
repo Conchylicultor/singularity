@@ -144,3 +144,58 @@ describe("Mcp.instructions", () => {
     expect(() => contribute("dup", "y")).toThrow('"dup" already registered');
   });
 });
+
+describe("Mcp.tool liveDescription", () => {
+  let liveRenders = 0;
+
+  function liveTool(name: string, section: string | null): void {
+    void Mcp.tool({
+      name,
+      description: "Fixed.",
+      liveDescription: () => {
+        liveRenders += 1;
+        return Promise.resolve(section);
+      },
+      inputSchema: {},
+      handler: () => ({ content: [{ type: "text", text: "ok" }] }),
+    }).register();
+  }
+
+  async function listed(): Promise<Map<string, string>> {
+    const res = await post({ jsonrpc: "2.0", id: 2, method: "tools/list" });
+    const json = (await res.json()) as {
+      result: { tools: Array<{ name: string; description: string }> };
+    };
+    return new Map(json.result.tools.map((t) => [t.name, t.description]));
+  }
+
+  beforeEach(() => {
+    liveRenders = 0;
+  });
+
+  test("tools/list appends the live section after a blank line", async () => {
+    liveTool("live", "Known: A, B.");
+    const tools = await listed();
+    expect(tools.get("live")).toBe("Fixed.\n\nKnown: A, B.");
+    expect(tools.get("echo")).toBe("Echo");
+  });
+
+  test("a null section leaves the fixed description", async () => {
+    liveTool("live", null);
+    expect((await listed()).get("live")).toBe("Fixed.");
+  });
+
+  test("only tools/list renders it", async () => {
+    liveTool("live", "Known.");
+    await post(initialize);
+    await post({
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: { name: "live", arguments: {} },
+    });
+    expect(liveRenders).toBe(0);
+    await listed();
+    expect(liveRenders).toBe(1);
+  });
+});

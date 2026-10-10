@@ -516,12 +516,12 @@ Spec: `e2e/agent-access-verify.ts`.
 
 - Description: The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine.
 - Server:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/annotations/instructions` ×6
     - `page/markdown-apply` ×5
     - `page/editor` ×3
+    - `page/tags` ×3
     - `database` ×2
-    - `page/tags` ×2
     - `infra/endpoints.HttpError`
     - `infra/mcp.Mcp`
     - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`

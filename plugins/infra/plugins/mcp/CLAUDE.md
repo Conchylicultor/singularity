@@ -11,6 +11,11 @@ Both factories return a `Registration` token that goes in the plugin's server
 
 - `Mcp.tool({ name, description, inputSchema, handler })` — a tool the agent
   can call.
+  Optional `liveDescription(ctx)` appends a LIVE section to the fixed
+  `description` (after a blank line), rendered only for a `tools/list` request
+  — i.e. the data as of when the client listed the tools, typically at connect.
+  For facts held in the database that an agent needs while using the tool (a
+  vocabulary to pick from). `null` adds nothing; a throw fails the listing.
 - `Mcp.instructions({ id, render })` — a section of the server instructions.
   `render(ctx)` returns the section text, or `null` to contribute nothing for
   that conversation.

@@ -37,6 +37,16 @@ async function loadVocabulary(executor: DbExecutor): Promise<VocabularyTag[]> {
 }
 
 /**
+ * The vocabulary's names, oldest first — what an agent is shown to pick from
+ * (`edit_page`'s live description). `[]` when no tag exists yet.
+ */
+export async function loadTagVocabularyNames(
+  executor: DbExecutor = db,
+): Promise<string[]> {
+  return (await loadVocabulary(executor)).map((t) => t.name);
+}
+
+/**
  * The tags `pageId` carries, in the order the page shows them — `[]` for a page
  * with no tags. What the `<page-meta>` header states.
  */

@@ -1,6 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { isInitializeBody, renderInstructions } from "./instructions";
+import {
+  bodyMessages,
+  hasInitialize,
+  hasToolsList,
+  renderInstructions,
+} from "./instructions";
+import type { McpTool, McpToolContext } from "./mcp";
 import { registry } from "./registry";
 
 export async function handleMcpRequest(
@@ -14,9 +20,15 @@ export async function handleMcpRequest(
 
   // Server instructions only ride the initialize result, so only initialize
   // pays for rendering them. A throwing contribution fails initialize loudly.
-  const instructions = (await isInitializeBody(req))
+  const messages = await bodyMessages(req);
+  const instructions = hasInitialize(messages)
     ? await renderInstructions({ conversationId })
     : undefined;
+  // Live description sections likewise render only for the request that lists
+  // the tools; a tool call never pays for them.
+  const descriptions = hasToolsList(messages)
+    ? await renderDescriptions({ conversationId })
+    : null;
 
   const server = new McpServer(
     {
@@ -30,7 +42,7 @@ export async function handleMcpRequest(
     server.registerTool(
       tool.name,
       {
-        description: tool.description,
+        description: descriptions?.get(tool.name) ?? tool.description,
         inputSchema: tool.inputSchema,
       },
       async (args: Record<string, unknown>) => {
@@ -52,4 +64,27 @@ export async function handleMcpRequest(
     // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget I/O cleanup (closing the MCP server in finally)
     void server.close();
   }
+}
+
+/**
+ * Every tool's description with its live section appended — keyed by tool
+ * name, for the tools that declare one. Rendered in parallel; a throwing
+ * render rejects the listing.
+ */
+async function renderDescriptions(
+  ctx: McpToolContext,
+): Promise<Map<string, string>> {
+  const live = [...registry.values()].filter(
+    (t): t is McpTool & Required<Pick<McpTool, "liveDescription">> =>
+      t.liveDescription !== undefined,
+  );
+  const sections = await Promise.all(live.map((t) => t.liveDescription(ctx)));
+  const out = new Map<string, string>();
+  live.forEach((tool, i) => {
+    const section = sections[i];
+    if (section !== null && section !== undefined && section.trim() !== "") {
+      out.set(tool.name, `${tool.description}\n\n${section}`);
+    }
+  });
+  return out;
 }
