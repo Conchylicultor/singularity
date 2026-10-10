@@ -25,6 +25,30 @@ describe("scanIconNames", () => {
     });
   });
 
+  it("collects from a file reaching the constructors by a relative path inside the icons plugin", () => {
+    expect(
+      scanIconNames(
+        `import { symbol } from "./icon-ref";\nexport const navIcons = { newTab: symbol("open-in-new") };`,
+        "plugins/ui/plugins/icons/core/nav-icons.ts",
+      ),
+    ).toEqual({ symbols: ["open-in-new"], brands: [], seti: [] });
+    expect(
+      scanIconNames(
+        `import { symbol } from "../../core";\nconst a = symbol("close");`,
+        "plugins/ui/plugins/icons/web/internal/x.tsx",
+      ).symbols,
+    ).toEqual(["close"]);
+  });
+
+  it("ignores a symbol imported from an unrelated relative module", () => {
+    expect(
+      scanIconNames(
+        `import { symbol } from "./other";\nsymbol("x");`,
+        "plugins/tasks/core/b.ts",
+      ),
+    ).toEqual({ symbols: [], brands: [], seti: [] });
+  });
+
   it("ignores member calls, declarations, comments and strings", () => {
     expect(
       scanIconNames(

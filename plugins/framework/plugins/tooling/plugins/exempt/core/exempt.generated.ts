@@ -134,6 +134,7 @@ export const exemptEntries: CollectedEntry[] = [
   { pluginPath: "shell/plugins/notifications", id: "shell.notifications", loader: () => import("@plugins/shell/plugins/notifications/exempt"), dependsOn: [] },
   { pluginPath: "tasks/plugins/task-graph", id: "tasks.task-graph", loader: () => import("@plugins/tasks/plugins/task-graph/exempt"), dependsOn: [] },
   { pluginPath: "tasks/plugins/tasks-core", id: "tasks.tasks-core", loader: () => import("@plugins/tasks/plugins/tasks-core/exempt"), dependsOn: [] },
+  { pluginPath: "ui/plugins/icons", id: "ui.icons", loader: () => import("@plugins/ui/plugins/icons/exempt"), dependsOn: [] },
   { pluginPath: "ui/plugins/theme-engine/plugins/saved-themes", id: "ui.theme-engine.saved-themes", loader: () => import("@plugins/ui/plugins/theme-engine/plugins/saved-themes/exempt"), dependsOn: [] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/exempt"), dependsOn: [] },
 ];

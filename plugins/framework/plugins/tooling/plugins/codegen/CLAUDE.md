@@ -24,7 +24,7 @@ rather than reading as "not preloaded". Pinned by `core/eager-tier-gen.test.ts`.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/plugin-id` ×12
     - `plugin-meta/parse-utils` ×12
     - `config_v2` ×11
@@ -46,6 +46,7 @@ rather than reading as "not preloaded". Pinned by `core/eager-tier-gen.test.ts`.
     - `plugin-meta/facets/contributions.contributionsFacetDef`
     - `plugin-meta/facets/exemptions.exemptionsFacetDef`
     - `plugin-meta/facets/slots.slotsFacetDef`
+    - `ui/icons.isIconRefModule`
   - Exports (types):
     - `AuthoredOverrideSeedResult`
     - `CodegenStep`

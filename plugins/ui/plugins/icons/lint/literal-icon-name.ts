@@ -1,11 +1,10 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { isIconRefModule } from "../core";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
-/** The barrel `symbol` / `brand` / `seti` are imported from. */
-const ICONS_CORE = "@plugins/ui/plugins/icons/core";
 const MARKERS = new Set(["symbol", "brand", "seti"]);
 
 /**
@@ -42,7 +41,7 @@ export default createRule({
   create(context) {
     return {
       ImportDeclaration(node: TSESTree.ImportDeclaration) {
-        if (node.source.value !== ICONS_CORE) return;
+        if (!isIconRefModule(context.filename, node.source.value)) return;
         for (const spec of node.specifiers) {
           if (spec.type === "ImportNamespaceSpecifier") {
             context.report({ node: spec, messageId: "namespace" });

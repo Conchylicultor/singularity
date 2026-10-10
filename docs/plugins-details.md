@@ -19216,7 +19216,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `TYPE_CHECK_WORKER_UNITS`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 80 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 81 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `framework/plugin-id` ×12
               - `plugin-meta/parse-utils` ×12
               - `config_v2` ×11
@@ -19238,6 +19238,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/facets/contributions.contributionsFacetDef`
               - `plugin-meta/facets/exemptions.exemptionsFacetDef`
               - `plugin-meta/facets/slots.slotsFacetDef`
+              - `ui/icons.isIconRefModule`
             - Exports (types):
               - `AuthoredOverrideSeedResult`
               - `CodegenStep`
@@ -37026,7 +37027,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Cross-plugin:
-        - Imported by: 300 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 301 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×62
           - `conversations` ×55
           - `page` ×40
@@ -37045,12 +37046,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup` ×2
           - `config_v2` ×2
           - `shell` ×2
+          - `framework/tooling/codegen`
           - `fullscreen`
           - `improve`
           - `infra/events-test`
           - `layouts/miller`
           - `reports/launch-fix`
           - `screenshot`
+      - Exemptions:
+        - Exempts itself from: `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
+        - Exempted by: `ui/icons` (0 debt)
       - Web:
         - Exports (types):
           - `IconProps`
@@ -37110,6 +37115,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ICON_SHAPES`
           - `ICON_WEIGHTS`
           - `iconifyName`
+          - `isIconRefModule`
           - `isSpriteKey`
           - `isStyleKey`
           - `LUCIDE_MAP`

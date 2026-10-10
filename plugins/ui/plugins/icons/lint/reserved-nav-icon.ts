@@ -1,11 +1,9 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { isIconRefModule } from "../core";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
-
-/** The barrel `symbol` is imported from. */
-const ICONS_CORE = "@plugins/ui/plugins/icons/core";
 
 /** Each reserved glyph → the `navIcons` key that owns it (`core/nav-icons.ts`). */
 const RESERVED: Record<string, string> = {
@@ -37,7 +35,7 @@ export default createRule({
   create(context) {
     return {
       ImportDeclaration(node: TSESTree.ImportDeclaration) {
-        if (node.source.value !== ICONS_CORE) return;
+        if (!isIconRefModule(context.filename, node.source.value)) return;
         for (const spec of node.specifiers) {
           if (spec.type !== "ImportSpecifier") continue;
           const imported =

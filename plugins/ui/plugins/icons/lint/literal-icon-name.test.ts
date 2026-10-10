@@ -27,6 +27,12 @@ ruleTester.run(
       { code: `import { symbol } from "./other";\nsymbol(name);` },
     ],
     invalid: [
+      // Inside the icons plugin the constructors are reached relatively.
+      {
+        code: `import { symbol } from "../../core";\nconst a = symbol(name);`,
+        filename: "/repo/plugins/ui/plugins/icons/web/internal/x.ts",
+        errors: [{ messageId: "notLiteral" }],
+      },
       {
         code: `${IMPORT}\nconst a = symbol(name);`,
         errors: [{ messageId: "notLiteral" }],
