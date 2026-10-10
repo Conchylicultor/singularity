@@ -17,6 +17,8 @@ import { useRailGuard } from "@plugins/primitives/plugins/css/plugins/rail/web";
 import { OverlayBoundary } from "@plugins/primitives/plugins/overlay/plugins/overlay-boundary/web";
 import { useScrollFade } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/use-scroll-fade";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
+import { IconScopeProvider } from "@plugins/ui/plugins/icons/web";
+import { usePortalThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-theme-scope";
 
 /** Pins the sticky header at the panel's true top edge, through its block
  *  padding (see the header below). */
@@ -142,6 +144,11 @@ export function OverlayPanel({
     onScroll?.(e);
     measureScroll();
   };
+  // The theme scope this panel's portal re-stamps (the popup bag): the icons
+  // inside draw in THAT scope's style, so a popup that wears a different theme
+  // from its trigger (a `PopupTheme`, e.g. the app launcher's chrome grid)
+  // draws its icons in that theme's family too.
+  const popupScope = usePortalThemeScope();
   return (
     <div
       ref={panelRef}
@@ -198,7 +205,7 @@ export function OverlayPanel({
               {header}
             </div>
           )}
-          {children}
+          <IconScopeProvider scope={popupScope}>{children}</IconScopeProvider>
         </OverlayBoundary>
       </SingleLineProvider>
     </div>

@@ -7889,12 +7889,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `AppShell.Brand` "Brand" → `AppBrand`
           - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
-        - Uses: 31 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
+        - Uses: 32 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
           - `apps-core/tabs` ×5
           - `apps-core` ×4
           - `apps-core/app-icon` ×2
           - `primitives/app-shell` ×2
           - `primitives/css/fill` ×2
+          - `primitives/css/theme-boundary` ×2
           - `primitives/css/ui-kit` ×2
           - `primitives/data-view` ×2
           - `reorder` ×2
@@ -7902,7 +7903,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/line.Line`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
-          - `primitives/css/theme-boundary.Theme`
           - `primitives/embed.isChromelessDocument`
           - `primitives/link-gesture.linkProps`
           - `primitives/overlay/hover-popover.HoverPopover`
@@ -29256,7 +29256,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TYPE_ROLES`
               - `TYPE_SUBSCALE`
               - `typeVar`
-        - **`theme-boundary`** — Theme-boundary primitive: <Theme name surface> is the one element that says 'everything below here wears theme X', complete — the data-theme-scope attribute, the PortalThemeScopeProvider that carries it across portals, and the canvas it paints, which no site can now forget because `surface` is required. Plus the no-adhoc-theme-scope lint rule that keeps the three halves from being hand-assembled apart again.
+        - **`theme-boundary`** — Theme-boundary primitive: <Theme name surface> is the one element that says 'everything below here wears theme X', complete — the data-theme-scope attribute, the PortalThemeScopeProvider that carries it across portals, and the canvas it paints, which no site can now forget because `surface` is required. And <PopupTheme name>: the popups opened from a region wear theme X while the region keeps its own. Plus the no-adhoc-theme-scope lint rule that keeps the three halves from being hand-assembled apart again.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
@@ -29265,9 +29265,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.SURFACE_LEVELS`
               - `ui/icons.IconScopeProvider`
             - Exports (types):
+              - `PopupThemeProps`
               - `ThemeProps`
               - `ThemeSurface`
             - Exports (values):
+              - `PopupTheme`
               - `Theme`
               - `useEnclosingAppThemeScope`
           - Cross-plugin:
@@ -29335,6 +29337,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/shortcuts.ShortcutDescriptor`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `ui/icons.Icon`
+              - `ui/icons.IconScopeProvider`
             - Exports (types):
               - `ButtonIconSize`
               - `ControlSize`

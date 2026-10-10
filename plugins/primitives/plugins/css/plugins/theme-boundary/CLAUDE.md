@@ -74,6 +74,16 @@ Reading them from the nearest app boundary (via `apps-core/theme-scope`'s
 `useAppSettingsScope`) makes them follow the same region the colours do: a pane
 wears its home app's settings in whichever app hosts it.
 
+### `<PopupTheme name>`: only the popups
+
+`<PopupTheme name={…}>` themes the popups opened from inside it — popovers,
+menus, tooltips, dialogs — and nothing else: no element, no paint, the region
+keeps the theme around it. The inverse of a sub-theme, whose token reaches the
+region but not its popups. The case is a control that lives in an app but
+opens part of the frame: the app launcher's button sits in the app's header (app
+theme) and its grid is the chrome (`apps-core/app-launcher`). The popup's icons
+follow it — `OverlayPanel` draws its icons in the scope its portal re-stamps.
+
 ### The four surfaces
 
 | `surface` | paints | for |
@@ -162,7 +172,7 @@ the code:
 
 ## Plugin reference
 
-- Description: Theme-boundary primitive: <Theme name surface> is the one element that says 'everything below here wears theme X', complete — the data-theme-scope attribute, the PortalThemeScopeProvider that carries it across portals, and the canvas it paints, which no site can now forget because `surface` is required. Plus the no-adhoc-theme-scope lint rule that keeps the three halves from being hand-assembled apart again.
+- Description: Theme-boundary primitive: <Theme name surface> is the one element that says 'everything below here wears theme X', complete — the data-theme-scope attribute, the PortalThemeScopeProvider that carries it across portals, and the canvas it paints, which no site can now forget because `surface` is required. And <PopupTheme name>: the popups opened from a region wear theme X while the region keeps its own. Plus the no-adhoc-theme-scope lint rule that keeps the three halves from being hand-assembled apart again.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
@@ -171,9 +181,11 @@ the code:
     - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `ui/icons.IconScopeProvider`
   - Exports (types):
+    - `PopupThemeProps`
     - `ThemeProps`
     - `ThemeSurface`
   - Exports (values):
+    - `PopupTheme`
     - `Theme`
     - `useEnclosingAppThemeScope`
 - Cross-plugin:

@@ -48,12 +48,13 @@ never draw their own header (the shell places it; see
   - Contributes:
     - `AppShell.Brand` "Brand" → `AppBrand`
     - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×5
     - `apps-core` ×4
     - `apps-core/app-icon` ×2
     - `primitives/app-shell` ×2
     - `primitives/css/fill` ×2
+    - `primitives/css/theme-boundary` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/data-view` ×2
     - `reorder` ×2
@@ -61,7 +62,6 @@ never draw their own header (the shell places it; see
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/theme-boundary.Theme`
     - `primitives/embed.isChromelessDocument`
     - `primitives/link-gesture.linkProps`
     - `primitives/overlay/hover-popover.HoverPopover`

@@ -60,19 +60,24 @@ export function usePortalThemeScope(): string | undefined {
 
 export function PortalThemeScopeProvider({
   scope,
+  popupsOnly = false,
   children,
 }: {
   scope: string | undefined;
+  /** Forward the scope to popups opened from here only — the region itself
+   *  (and content relocated within it) keeps the scope from above. */
+  popupsOnly?: boolean;
   children: ReactNode;
 }) {
   // A sub-theme is region-only: a popup opened from inside it wears the theme
   // around the sub-theme, while content relocated within the region keeps it.
+  const reach = popupsOnly
+    ? "popups"
+    : scope !== undefined && isSubThemeScope(scope)
+      ? "region"
+      : "all";
   return (
-    <PortalForwardProvider
-      name={THEME_SCOPE_ATTR}
-      value={scope}
-      regionOnly={scope !== undefined && isSubThemeScope(scope)}
-    >
+    <PortalForwardProvider name={THEME_SCOPE_ATTR} value={scope} reach={reach}>
       {children}
     </PortalForwardProvider>
   );

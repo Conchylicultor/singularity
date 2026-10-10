@@ -36,7 +36,20 @@ gap (`controlGapMd`). A pill's rounded ends add 2px (`shape`'s
 joined end 10px. Count chips (the bell's badge) are `tag-compact` at 9.5px on
 a 16px line, `fontWeightTagStrong` 650. The `2xl` shadow tier is the
 chrome's floating shadow (`0 10px 30px -8px` at 60% black + `0 2px 6px` at
-35%), worn by the floating bar's glass capsule and nothing else.
+35%), worn by the floating bar's glass capsule and, as `shadow-popover`, by
+every popover opened from the chrome.
+
+**Popovers are the bar's material.** A popover, menu or tooltip opened from
+the chrome wears the bar's ground (`popover` = the ground, opaque), the bar's
+ring (`popoverBorder`: the text at 9%), its hover (`popoverHover`: the text at
+8% — a tint, not an opaque step), the floating shadow and 14px corners
+(`radiusPopover`), so it reads as more of the bar rather than as a lighter
+second surface. `card` stays the one-step-lighter panel tone. The app
+launcher's grid is chrome too, from every app: its button sits in the app's
+header, so it opens through `<PopupTheme name={chromeThemeScope}>`
+(`theme-boundary`) — the popup wears the chrome, the button keeps the app's
+theme. Designed in the "Chrome popovers" prototype
+(`proto-1791550209-ma722m`, its `solid` surface).
 
 Its one accent is the signal blue (the build spinner, the focus ring): it is also the
 chrome's `primary`, so a primary action or a switched-on attach chip in a

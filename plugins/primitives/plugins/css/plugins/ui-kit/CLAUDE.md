@@ -434,6 +434,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/shortcuts.ShortcutDescriptor`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `ui/icons.Icon`
+    - `ui/icons.IconScopeProvider`
   - Exports (types):
     - `ButtonIconSize`
     - `ControlSize`

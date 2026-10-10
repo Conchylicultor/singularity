@@ -28,6 +28,8 @@ import type {
   HostedToolbarParts,
 } from "@plugins/primitives/plugins/data-view/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { PopupTheme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
+import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { AppShellBrandForm } from "@plugins/primitives/plugins/app-shell/web";
 
@@ -112,6 +114,10 @@ function LauncherMark({
  * the compact icons DataView (the tile Home draws), the current one marked as
  * the selected row. Picking a tile switches app exactly as the rail does
  * (`useActivateApp`).
+ *
+ * The button is drawn in the app it sits in, but the grid it opens is the
+ * chrome (`PopupTheme`): switching apps belongs to the frame, so the grid looks
+ * the same from every app — and the same as the action bar's popovers.
  */
 export function AppLauncher({ form }: { form: AppShellBrandForm }) {
   const apps = Apps.App.useContributions();
@@ -125,61 +131,63 @@ export function AppLauncher({ form }: { form: AppShellBrandForm }) {
   const galleryLink = appLinkProps(gallery.app.basePath);
 
   return (
-    <HoverPopover
-      label="Apps"
-      side="bottom"
-      align="start"
-      width="picker"
-      padding="sm"
-      trigger={
-        <Button
-          variant="ghost"
-          aspect="icon"
-          aria-label="All apps"
-          {...galleryLink}
-          className="aria-expanded:bg-hover-fill"
-        >
-          <LauncherMark
-            app={active}
-            className={cn(
-              form === "header" ? "size-sidebar-brand-mark" : "size-5",
-              "transition-transform duration-200 ease-[cubic-bezier(.34,1.56,.64,1)] motion-safe:group-hover/button:scale-110 motion-safe:group-aria-expanded/button:scale-110 motion-safe:group-active/button:scale-95",
-            )}
-          />
-        </Button>
-      }
-      content={({ close }) => (
-        <FooterContext.Provider
-          value={
-            <Button
-              variant="ghost"
-              {...galleryLink}
-              onClick={(e) => {
-                close();
-                galleryLink.onClick(e);
-              }}
-            >
-              <Icon icon={allAppsIcon} />
-              All apps
-            </Button>
-          }
-        >
-          <DataView<ActiveApp>
-            rows={launchable}
-            rowKey={(a) => a.id}
-            fields={appFields}
-            views={["icons"]}
-            defaultView="icons"
-            density="compact"
-            toolbar={LAUNCHER_TOOLBAR}
-            searchPlaceholder="Search apps"
-            storageKey={LAUNCHER_VIEW}
-            selectedRowId={activeId}
-            rowActivation={(entry) => afterOpen(activate(entry), close)}
-            emptyState="No app matches."
-          />
-        </FooterContext.Provider>
-      )}
-    />
+    <PopupTheme name={chromeThemeScope}>
+      <HoverPopover
+        label="Apps"
+        side="bottom"
+        align="start"
+        width="picker"
+        padding="sm"
+        trigger={
+          <Button
+            variant="ghost"
+            aspect="icon"
+            aria-label="All apps"
+            {...galleryLink}
+            className="aria-expanded:bg-hover-fill"
+          >
+            <LauncherMark
+              app={active}
+              className={cn(
+                form === "header" ? "size-sidebar-brand-mark" : "size-5",
+                "transition-transform duration-200 ease-[cubic-bezier(.34,1.56,.64,1)] motion-safe:group-hover/button:scale-110 motion-safe:group-aria-expanded/button:scale-110 motion-safe:group-active/button:scale-95",
+              )}
+            />
+          </Button>
+        }
+        content={({ close }) => (
+          <FooterContext.Provider
+            value={
+              <Button
+                variant="ghost"
+                {...galleryLink}
+                onClick={(e) => {
+                  close();
+                  galleryLink.onClick(e);
+                }}
+              >
+                <Icon icon={allAppsIcon} />
+                All apps
+              </Button>
+            }
+          >
+            <DataView<ActiveApp>
+              rows={launchable}
+              rowKey={(a) => a.id}
+              fields={appFields}
+              views={["icons"]}
+              defaultView="icons"
+              density="compact"
+              toolbar={LAUNCHER_TOOLBAR}
+              searchPlaceholder="Search apps"
+              storageKey={LAUNCHER_VIEW}
+              selectedRowId={activeId}
+              rowActivation={(entry) => afterOpen(activate(entry), close)}
+              emptyState="No app matches."
+            />
+          </FooterContext.Provider>
+        )}
+      />
+    </PopupTheme>
   );
 }

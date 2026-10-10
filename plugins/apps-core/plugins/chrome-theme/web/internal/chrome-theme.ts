@@ -14,7 +14,7 @@ import { shadowGroup } from "@plugins/ui/plugins/tokens/plugins/shadow/core";
 // accent on screen belongs to the app in the surface — so every tone below is
 // grey except the status colours.
 const GROUND = "oklch(0.2303 0.0083 264.40)"; // the rail and the tab bar
-const PANEL = "oklch(0.2718 0.0102 260.70)"; // a popover opened from them
+const PANEL = "oklch(0.2718 0.0102 260.70)"; // a card: one step off the ground
 const TEXT = "oklch(0.8910 0.0059 264.53)";
 const DIM = "oklch(0.6493 0.0128 264.48)"; // idle icons, inactive tabs
 const HAIRLINE = "oklch(0.3126 0.0115 264.39)";
@@ -39,6 +39,17 @@ const WHITE = "oklch(1 0 0)";
 // (22% black over it), so the box you type in reads as a well rather than as
 // another raised card.
 const WELL = "oklch(0 0 0 / 0.22)";
+// A popover opened from the chrome is the chrome: the bar's own ground (opaque —
+// the bar's glass blur would cost legibility over a busy app), the floating
+// bar's ring (the text at 9%) and its hover (the text at 8%, a tint rather than
+// an opaque step, so it reads the same over any fill inside the panel).
+const POPOVER_RING = "color-mix(in oklab, var(--foreground) 9%, transparent)";
+const POPOVER_HOVER = "color-mix(in oklab, var(--foreground) 8%, transparent)";
+// The chrome's floating tier, worn by the floating bar's glass capsule and by
+// every popover opened from the chrome, so the panel lifts off the app exactly
+// as the bar it hangs from does.
+const FLOATING_SHADOW =
+  "0 10px 30px -8px oklch(0 0 0 / 0.6), 0 2px 6px 0px oklch(0 0 0 / 0.35)";
 
 /**
  * The app chrome's theme — the rail, the tab strip, the action bar and the
@@ -64,8 +75,10 @@ export const chromeTheme = defineFixedTheme({
         foreground: TEXT,
         card: PANEL,
         cardForeground: TEXT,
-        popover: PANEL,
+        popover: GROUND,
         popoverForeground: TEXT,
+        popoverBorder: POPOVER_RING,
+        popoverHover: POPOVER_HOVER,
         secondary: ACTIVE,
         secondaryForeground: TEXT,
         muted: HOVER,
@@ -136,15 +149,19 @@ export const chromeTheme = defineFixedTheme({
     fontFamilyGroup.fragment(both({ fontSmoothing: "antialiased" })),
     // A pill's rounded ends take 2px more than a rectangle's sides: the
     // Improve pill's outer end sits 12px from its sparkle, its joined end 10px.
-    shapeGroup.fragment(both({ pillPadExtra: "0.125rem" })),
+    // A popover's corners are 14px: rounder than an app's panels, closer to
+    // the capsule it opens from.
+    shapeGroup.fragment(
+      both({ pillPadExtra: "0.125rem", radiusPopover: "0.875rem" }),
+    ),
     // The chrome's floating tier: a bar that floats over arbitrary app content
     // (the fullscreen action bar's glass capsule) casts a deep, soft shadow so
-    // it lifts off light and dark apps alike. Nothing else in the chrome uses
-    // the 2xl tier.
+    // it lifts off light and dark apps alike — and so does every popover
+    // opened from the chrome.
     shadowGroup.fragment(
       both({
-        "shadow-2xl":
-          "0 10px 30px -8px oklch(0 0 0 / 0.6), 0 2px 6px 0px oklch(0 0 0 / 0.35)",
+        "shadow-2xl": FLOATING_SHADOW,
+        "shadow-popover": FLOATING_SHADOW,
       }),
     ),
     // The chrome draws Lucide: every `symbol("…")` on the rail, the tab bar,
