@@ -5,7 +5,8 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { plural, readToolSearch, type ToolName } from "../internal/tool-search";
+import type { ToolName } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { plural, readToolSearch } from "../internal/tool-search";
 
 const names = (tools: ToolName[]) => tools.map((t) => t.name).join(", ");
 

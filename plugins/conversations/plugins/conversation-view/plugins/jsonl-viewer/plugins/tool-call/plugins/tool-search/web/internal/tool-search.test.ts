@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { readToolSearch, toolName } from "./tool-search";
+import { readToolSearch } from "./tool-search";
 
 const call = (
   input: unknown,
@@ -12,20 +12,6 @@ const call = (
   name: "ToolSearch",
   input,
   result: result && { at: "2026-09-29T00:00:01.000Z", ...result },
-});
-
-describe("toolName", () => {
-  test("splits an MCP tool into its name and server", () => {
-    expect(toolName("mcp__singularity__add_task")).toEqual({
-      id: "mcp__singularity__add_task",
-      name: "add_task",
-      server: "singularity",
-    });
-  });
-
-  test("keeps a built-in tool whole", () => {
-    expect(toolName("WebFetch")).toEqual({ id: "WebFetch", name: "WebFetch" });
-  });
 });
 
 describe("readToolSearch", () => {

@@ -67,7 +67,9 @@
 - Core:
   - Exports (types):
     - `ToolCallEvent`
+    - `ToolName`
     - `ToolRendererProps`
+  - Exports (values): `toolName`
 - Sub-plugins:
   - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
   - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).

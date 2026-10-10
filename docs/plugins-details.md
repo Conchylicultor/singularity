@@ -12201,7 +12201,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Core:
                 - Exports (types):
                   - `ToolCallEvent`
+                  - `ToolName`
                   - `ToolRendererProps`
+                - Exports (values): `toolName`
               - Plugins:
                 - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
                   - Web:

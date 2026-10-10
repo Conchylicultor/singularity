@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import type { ToolCallEvent } from "../../core";
+import { toolName, type ToolCallEvent } from "../../core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -10,7 +10,9 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 
 interface ToolCallFrameProps {
-  /** The tool's name, drawn as the card's identity badge. */
+  /** The tool's name as the model calls it, drawn as the card's identity
+   *  badge. An MCP tool (`mcp__<server>__<tool>`) reads `<server>:<tool>`, its
+   *  server dimmed; the raw name stays on hover. */
   name: string;
   summary?: ReactNode;
   /** Muted middot-led count after the identity (`· 3 matches`) — the card's
@@ -62,6 +64,7 @@ export function ToolCallFrame({
   isError,
   running,
 }: ToolCallFrameProps) {
+  const tool = toolName(name);
   return (
     <CollapsibleCard
       error={isError}
@@ -82,6 +85,7 @@ export function ToolCallFrame({
                 ? "bg-destructive/15 text-destructive"
                 : "bg-primary/10 text-primary-text"
             }
+            title={tool.server ? tool.id : undefined}
             // The badge's shape is the tool-badge tokens (density
             // `padToolBadge*`, shape `radiusToolBadge` / `borderToolBadge`);
             // its words are the `tag` role at its strong weight, pinned so the
@@ -92,7 +96,14 @@ export function ToolCallFrame({
               "font-mono p-tool-badge text-tag font-tag-strong rounded-tool-badge hairline-tool-badge border-current/28",
             )}
           >
-            {name}
+            {tool.server ? (
+              <>
+                <span className="opacity-60">{tool.server}:</span>
+                {tool.name}
+              </>
+            ) : (
+              tool.name
+            )}
           </Badge>
           {/* Interactive chip sits inside the (click-through) label, so it opts
               back into pointer events via CardHeaderAction to keep its onClick. */}
