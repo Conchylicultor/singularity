@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { pageMetaHeader, splitPageMeta, type PageMeta } from "./page-meta";
 
 const META: PageMeta = {
+  kind: "agent-page",
   created: new Date("2026-07-14T09:12:34.567Z"),
   edited: new Date("2026-10-07T18:02:59Z"),
   breadcrumb: [
@@ -26,7 +27,7 @@ describe("pageMetaHeader", () => {
   test("states the breadcrumb root first and the times to the minute, UTC", () => {
     expect(pageMetaHeader(META)).toBe(
       [
-        '<page-meta created="2026-07-14T09:12Z" edited="2026-10-07T18:02Z">',
+        '<page-meta kind="agent-page" created="2026-07-14T09:12Z" edited="2026-10-07T18:02Z">',
         "  <tags>",
         '    <tag name="In progress"/>',
         '    <tag name="Say \\"hi\\""/>',
@@ -55,6 +56,7 @@ describe("splitPageMeta", () => {
     if (!split.ok) return;
     expect(split.rest).toBe(DOC);
     expect(split.meta?.attrs).toEqual({
+      kind: "agent-page",
       created: "2026-07-14T09:12Z",
       edited: "2026-10-07T18:02Z",
     });

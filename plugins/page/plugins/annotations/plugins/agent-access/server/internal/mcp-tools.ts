@@ -276,7 +276,7 @@ sub-blocks. A page's id gives the whole page, opening with a \`# Title\` line.
 **Every read opens with a \`<page-meta>\` header** saying where the content
 comes from:
 
-    <page-meta created="2026-07-14T09:12Z" edited="2026-10-07T18:02Z">
+    <page-meta kind="page" created="2026-07-14T09:12Z" edited="2026-10-07T18:02Z">
       <tags>
         <tag name="In progress"/>
       </tags>
@@ -288,6 +288,16 @@ comes from:
         <page id="…" title="A page linking here"/>
       </backlinks>
     </page-meta>
+
+\`kind\` says whose page holds what you read, and so what you may write in it:
+
+- \`kind="page"\` — the author's page. Its prose is theirs and read-only to you;
+  you write only inside \`<agent-inline>\` cards on it (or agent pages under it).
+- \`kind="agent-page"\` — an AGENT PAGE: the whole page is yours to write,
+  prose included, except \`<human>\` and \`<todo>\` cards. Text you find on it
+  may still be the author's — they can type on an agent page — so treat changing
+  or deleting lines you did not write as you would on their page: only when asked.
+- \`kind="instructions"\` — the author's standing instructions; read-only to you.
 
 The breadcrumb runs from the root page down to the page holding what you read
 (the last entry), including when you read a block inside it. The backlinks are
@@ -585,7 +595,8 @@ block that already exists:
 
 \`block_id\` is only the SCOPE the edit applies to (a page id for the whole
 page); what is allowed is judged by what the resulting diff TOUCHED, not by which
-id you passed. Scoped to an agent page's own id, every block in it is yours.
+id you passed. Scoped to an agent page's own id, every block in it is yours —
+the \`<page-meta>\` header's \`kind="agent-page"\` says you are on one.
 
 **The \`<page-meta>\` header** that opens every \`read_page\` output is not part
 of the page. Its \`<tags>\` section is the page's TAGS, and is writable; the

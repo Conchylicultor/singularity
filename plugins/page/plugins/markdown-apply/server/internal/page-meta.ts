@@ -6,6 +6,7 @@ import {
   PAGE_BLOCK_TYPE,
   readPageEditedAt,
 } from "@plugins/page/plugins/editor/server";
+import { pageData, pageKindOf } from "@plugins/page/plugins/editor/core";
 import { loadBacklinkSources } from "@plugins/page/plugins/links/server";
 import { loadPageTags } from "@plugins/page/plugins/tags/server";
 import type { PageMeta } from "../../core";
@@ -13,14 +14,15 @@ import type { PageMeta } from "../../core";
 const ChainRowSchema = z.object({
   id: z.string(),
   title: z.string().nullable(),
+  data: z.unknown(),
   created_at: z.coerce.date(),
   depth: z.number(),
 });
 
 /**
  * The facts a `<page-meta>` header states about `pageId` (`core/page-meta.ts`):
- * its ancestry, root first and ending with the page itself, its created and
- * edited times, the pages linking to it, and its tags.
+ * its kind, its ancestry, root first and ending with the page itself, its
+ * created and edited times, the pages linking to it, and its tags.
  *
  * The chain walks `page_blocks.page_id` upward — a page row's `page_id` is the
  * page it is DISPLAYED in, i.e. its parent page — the server twin of the Pages
@@ -42,16 +44,16 @@ export async function loadPageMeta(
     row: ChainRowSchema,
     query: sql`
       WITH RECURSIVE chain AS (
-        SELECT b.id, b.page_id, b.data->>'title' AS title, b.created_at, 0 AS depth
+        SELECT b.id, b.page_id, b.data->>'title' AS title, b.data, b.created_at, 0 AS depth
         FROM page_blocks b
         WHERE b.id = ${pageId} AND b.type = ${PAGE_BLOCK_TYPE} AND b.deleted_at IS NULL
         UNION ALL
-        SELECT p.id, p.page_id, p.data->>'title', p.created_at, c.depth + 1
+        SELECT p.id, p.page_id, p.data->>'title', p.data, p.created_at, c.depth + 1
         FROM page_blocks p
         JOIN chain c ON p.id = c.page_id
         WHERE p.deleted_at IS NULL AND c.depth < 10000
       )
-      SELECT id, title, created_at, depth FROM chain ORDER BY depth DESC
+      SELECT id, title, data, created_at, depth FROM chain ORDER BY depth DESC
     `,
   });
   const self = rows.at(-1);
@@ -63,6 +65,7 @@ export async function loadPageMeta(
     throw new Error(`page-meta: ${pageId} has no edit time`);
   }
   return {
+    kind: pageKindOf(pageData(self)).kind,
     created: self.created_at,
     edited: edited.editedAt,
     breadcrumb: rows.map((r) => ({ id: r.id, title: r.title ?? "" })),

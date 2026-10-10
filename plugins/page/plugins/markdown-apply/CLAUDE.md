@@ -103,7 +103,7 @@ and the title handling adds **zero authority of its own**.
 just a page — with a header stating where it comes from:
 
 ```
-<page-meta created="2026-07-14T09:12Z" edited="2026-10-07T18:02Z">
+<page-meta kind="page" created="2026-07-14T09:12Z" edited="2026-10-07T18:02Z">
   <tags>                             ← `<tags/>` when the page has none
     <tag name="In progress"/>
   </tags>
@@ -143,6 +143,11 @@ just a page — with a header stating where it comes from:
   page linking here, self-link excluded) — the edges the Backlinks panel lists.
   No snippet: it is text of ANOTHER page, read without that page's audience
   policy, so an agent wanting the context reads the source page itself.
+- `kind` is the holding page's `pageKindOf` (`page` / `agent-page` /
+  `instructions`). A page-rooted read shows no tag for the page itself, so this
+  is the only place an agent reading its own agent page by id learns the page
+  is one — without it, the page's prose reads as the human's while the write
+  rule treats it as the agent's.
 - `edited` is the editor's `readPageEditedAt`, the value behind the page's
   "Edited" label, so the two never disagree.
 
@@ -515,8 +520,8 @@ annotation in the key would make every status change look like a new block.
     - `readPageAsMarkdown`
     - `serverMarkdownContext`
 - Core:
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page/editor` ×27
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/editor` ×28
     - `primitives/rank.Rank`
   - Exports (types):
     - `BoundaryViolation`

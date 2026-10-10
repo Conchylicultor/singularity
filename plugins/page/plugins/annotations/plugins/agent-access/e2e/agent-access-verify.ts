@@ -826,8 +826,9 @@ await withBrowser(async (h) => {
   {
     const meta = readParts(markdown);
     r.ok(
-      "P1: read_page opens with a <page-meta> header: the breadcrumb ends at the page, no backlinks to a fresh page, times to the minute",
-      meta.breadcrumb.at(-1)?.id === pageId &&
+      "P1: read_page opens with a <page-meta> header: the human's page kind, the breadcrumb ends at the page, no backlinks to a fresh page, times to the minute",
+      meta.attrs.kind === "page" &&
+        meta.breadcrumb.at(-1)?.id === pageId &&
         meta.breadcrumb.at(-1)?.title === TITLE &&
         meta.backlinks.length === 0 &&
         /^\d{4}-\d\d-\d\dT\d\d:\d\dZ$/.test(meta.attrs.created ?? "") &&
@@ -1373,8 +1374,9 @@ await withBrowser(async (h) => {
 
   const pageMarkdown = await mustCall("read_page", { block_id: agentPageId });
   r.ok(
-    "P9: read_page on the page's own id is its whole content, title banner first",
-    readParts(pageMarkdown).body.startsWith(`# ${AGENT_PAGE_TITLE}`) &&
+    'P9: read_page on the page\'s own id is its whole content, title banner first, its header saying kind="agent-page"',
+    readParts(pageMarkdown).attrs.kind === AGENT_PAGE_TAG &&
+      readParts(pageMarkdown).body.startsWith(`# ${AGENT_PAGE_TITLE}`) &&
       readParts(pageMarkdown)
         .breadcrumb.slice(-2)
         .map((c) => c.id)

@@ -25842,8 +25842,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readPageAsMarkdown`
           - `serverMarkdownContext`
       - Core:
-        - Uses: 28 symbols — full list in [`plugins/page/plugins/markdown-apply/REFERENCE.md`](../plugins/page/plugins/markdown-apply/REFERENCE.md)
-          - `page/editor` ×27
+        - Uses: 29 symbols — full list in [`plugins/page/plugins/markdown-apply/REFERENCE.md`](../plugins/page/plugins/markdown-apply/REFERENCE.md)
+          - `page/editor` ×28
           - `primitives/rank.Rank`
         - Exports (types):
           - `BoundaryViolation`

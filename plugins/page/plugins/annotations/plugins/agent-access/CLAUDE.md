@@ -318,6 +318,11 @@ read_page(parent)   <agent-page id="block-…" title="Findings"/>          ← a
 read_page / edit_page / write_agent_note (block_id = the page)          ← its whole content
 ```
 
+- **A read rooted at the page says it is one.** The page's own row has no tag in
+  a page-rooted read, so `<page-meta kind="agent-page">` is the agent's only
+  signal that the prose in front of it is writable. Without it an agent took an
+  agent page's prose for the human's, and its "page-editing check" looked broken
+  when the check was right.
 - **A page's content is written by its own id.** The pointer never carries a body:
   one with a body, or with any attribute but `title`, is refused (a planner
   `ref-out-of-scope`, and a parse error for the attribute). The result's

@@ -27,7 +27,7 @@
 //
 // Shape:
 //
-//     <page-meta created="2026-07-14T09:12Z" edited="2026-10-07T18:02Z">
+//     <page-meta kind="page" created="2026-07-14T09:12Z" edited="2026-10-07T18:02Z">
 //       <tags>
 //         <tag name="In progress"/>
 //       </tags>
@@ -39,6 +39,13 @@
 //         <page id="block-…" title="Roadmap"/>
 //       </backlinks>
 //     </page-meta>
+//
+// `kind` is the page's own kind (`pageKindOf`): `page` (the human's),
+// `agent-page` (an agent may write all of it) or `instructions`. A read rooted
+// at a page shows no tag for the page itself, so without it an agent reading its
+// own agent page by id could not tell it from a human's page — and would take
+// the page's prose for the human's while the write rule treats it as its own.
+// Always stated, `page` included, for the reason `<backlinks/>` is.
 //
 // `<backlinks/>` (self-closing) when no page links here, and `<tags/>` when the
 // page carries none: the header states an empty list rather than leaving the
@@ -52,7 +59,11 @@
 // escapes it, `core/markdown.ts`), so no block's line can be mistaken for the
 // header's first line.
 
-import { formatTagLine, parseTagLine } from "@plugins/page/plugins/editor/core";
+import {
+  formatTagLine,
+  parseTagLine,
+  type PageKind,
+} from "@plugins/page/plugins/editor/core";
 
 const META_TAG = "page-meta";
 const TAGS_TAG = "tags";
@@ -89,6 +100,8 @@ export interface PageCrumb {
 
 /** What a header states about the page a read was taken from. */
 export interface PageMeta {
+  /** The kind of the page holding the read — whose words its prose is. */
+  kind: PageKind["kind"];
   /** When the page row was created. */
   created: Date;
   /** When the page or any of its live blocks last changed. */
@@ -201,7 +214,11 @@ export function pageMetaHeader(meta: PageMeta): string {
   const lines = [
     formatTagLine(
       META_TAG,
-      { created: minuteIso(meta.created), edited: minuteIso(meta.edited) },
+      {
+        kind: meta.kind,
+        created: minuteIso(meta.created),
+        edited: minuteIso(meta.edited),
+      },
       false,
     ),
     ...tagLines(meta.tags),
