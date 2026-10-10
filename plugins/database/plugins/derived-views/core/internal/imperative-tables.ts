@@ -153,6 +153,20 @@ export const ATTEMPT_CONV_AGG_TABLE = "attempt_conv_agg";
 export const ATTEMPT_PUSH_AGG_TABLE = "attempt_push_agg";
 
 /**
+ * A trigger-maintained materialized rollup ("hand-rolled IVM"): per page, the
+ * newest `updated_at` over its live content blocks (`page_id = P`, sub-page
+ * rows included), which the `pages.tree` set joins to give every page row its
+ * `editedAt`. Maintained incrementally by STATEMENT triggers on `page_blocks`
+ * and reconciled from source on boot. Created imperatively by
+ * `rebuildDerivedTables` (from the `defineRollup` declaration in
+ * `plugins/page/plugins/editor/server/internal/rollup-spec.ts`). Not present in
+ * the drizzle snapshot; the orphaned-db-tables check treats it as declared.
+ * `defineRollup` generates its `CREATE TABLE` from the read handle, so the line
+ * carries `assertImperativePublicTable(…)` instead of this constant.
+ */
+export const PAGE_CONTENT_EDITED_AT_TABLE = "page_content_edited_at";
+
+/**
  * The full allowlist of public tables created imperatively (outside drizzle),
  * keyed BY THE NAME OF THE CONSTANT that holds each table name.
  *
@@ -187,6 +201,7 @@ export const IMPERATIVE_PUBLIC_TABLES = {
   TASK_LATEST_CONVERSATION_TABLE,
   ATTEMPT_CONV_AGG_TABLE,
   ATTEMPT_PUSH_AGG_TABLE,
+  PAGE_CONTENT_EDITED_AT_TABLE,
 } as const satisfies Record<string, string>;
 
 /**

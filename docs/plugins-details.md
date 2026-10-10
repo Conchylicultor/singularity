@@ -3817,6 +3817,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog.VersionHistoryDialog`
               - `infra/endpoints.useEndpoint`
               - `network/live.useLive`
+              - `network/live.useLiveRow`
               - `page/editor.BLOCK_INSET`
               - `page/editor.PageIcon`
               - `page/read-only-view.ReadOnlyBlocks`
@@ -4176,7 +4177,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/text.Text`
                   - `primitives/pane.useOpenPane`
                   - `ui/icons.Icon`
-            - **`recent-pages`** — Recent-pages section for the Pages landing surface: the most recently updated pages as clickable rows.
+            - **`recent-pages`** — Recent-pages section for the Pages landing surface: the most recently edited pages (by each page row's `editedAt`: its row and its content together) as clickable rows.
               - Web:
                 - Contributes: `PagesWelcome.Section` → `RecentPagesSection`
                 - Uses:
@@ -14401,6 +14402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/change-feed`
           - `database/live-state-snapshot`
           - `database/migrations`
+          - `page/editor`
           - `tasks/tasks-core`
       - Test helpers:
         - Server: `@plugins/database/plugins/derived-tables/server/testing`
@@ -14474,6 +14476,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LIVE_STATE_SNAPSHOT_TABLE`
           - `LIVE_STATE_TRIGGER_STATE_TABLE`
           - `MIGRATIONS_TABLE_NAME`
+          - `PAGE_CONTENT_EDITED_AT_TABLE`
           - `TASK_LATEST_CONVERSATION_TABLE`
           - `topoSortViews`
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
@@ -25034,15 +25037,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `ids.kind` "block"
           - `resource.declare` "page-blocks"
-          - `resource.declare` "page-edited-at"
           - `resource.declare` "pages.tree"
           - `resource.declare` "pages.tree:rows"
+          - `derived-table` "page_content_edited_at"
           - `page.block-data` "page"
           - `page.block-annotation`
         - Uses:
           - `database.currentTxId`
           - `database.db`
           - `database.DbExecutor`
+          - `database/derived-tables.DerivedTable`
           - `database/derived-updated-at.deriveUpdatedAt`
           - `database/sql-column.parsedJson`
           - `ids.IdKinds`
@@ -25058,6 +25062,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/rank.rankAdjacentTo`
           - `primitives/rank.rankAfterSibling`
         - DB schema:
+          - `plugins/page/plugins/editor/server/internal/rollup-table.ts`
           - `plugins/page/plugins/editor/server/internal/tables-events.ts`
           - `plugins/page/plugins/editor/server/internal/tables.ts`
         - Exports (types):
@@ -25105,7 +25110,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTrashSource('page-blocks')`
         - Resources:
           - `page-blocks` (push, unbounded: one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window)
-          - `page-edited-at` (push)
           - `pages.tree` (keyed)
           - `pages.tree:rows` (keyed, point)
         - Routes:
@@ -25257,7 +25261,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageCoverSchema`
           - `pageData`
           - `PageDataSchema`
-          - `pageEditedAt`
           - `pageKindOf`
           - `PageKindSchema`
           - `PageRowSchema`

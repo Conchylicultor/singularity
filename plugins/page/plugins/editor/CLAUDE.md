@@ -111,9 +111,24 @@ for one page (header, cover, kind control, pane resolvers and titles,
 - **Order is `createdAt` because it never moves**: a `doc_rank` re-mint is then
   an in-place refill of the re-minted rows, never an `orderOf`. A surface that
   renders the tree sorts by `docRank` itself.
+- **`editedAt` — when the page was last edited**, over its row AND its
+  content (a content edit stamps only the edited block's row, never the page
+  row). It is `pageEditedAtSql` (`server/internal/page-rows.ts`, the one
+  spelling): `greatest(page row updated_at, rollup edited_at)`, where the
+  rollup is `page_content_edited_at` (`server/internal/rollup-spec.ts`, a
+  `derived-tables` rollup: per page, `max(updated_at)` over its live blocks
+  with `page_id` = it, sub-page rows included), LEFT-joined on the page id and
+  routed through its one source, `page_blocks` carrying `page_id`.
+  `readPageEditedAt` (markdown-apply's `<page-meta>`) reads the same
+  expression over the same rollup, so the header's "Edited" label
+  (`useLiveRow(pagesTree, id).editedAt`), the sidebar's Recent section, the
+  Welcome page's Recent pages and `<page-meta>` cannot disagree. A typing
+  write re-aggregates one page (`page_blocks_page_id_idx`) and refills its one
+  row.
 - **Costs**, pinned per step by `server/internal/pages-tree-oracle.test.ts` on
-  the tree oracle: a content block's write (the typing projection) loads
-  nothing; a rename / icon / cover / kind write is that page's refill; a toggle
+  the tree oracle: a content block's write (the typing projection) is its
+  page's refill (its `editedAt` moved), a write the rollup does not read (a
+  fold toggle) nothing; a rename / icon / cover / kind write is that page's refill; a toggle
   drag refills exactly the pages the reconcile re-minted; a create or restore
   is one refill and one `orderOf`; a trash an exit after a one-id probe (the
   `where` reads `deleted_at`).
@@ -4304,15 +4319,16 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Contributes:
     - `ids.kind` "block"
     - `resource.declare` "page-blocks"
-    - `resource.declare` "page-edited-at"
     - `resource.declare` "pages.tree"
     - `resource.declare` "pages.tree:rows"
+    - `derived-table` "page_content_edited_at"
     - `page.block-data` "page"
     - `page.block-annotation`
   - Uses:
     - `database.currentTxId`
     - `database.db`
     - `database.DbExecutor`
+    - `database/derived-tables.DerivedTable`
     - `database/derived-updated-at.deriveUpdatedAt`
     - `database/sql-column.parsedJson`
     - `ids.IdKinds`
@@ -4328,6 +4344,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/rank.rankAdjacentTo`
     - `primitives/rank.rankAfterSibling`
   - DB schema:
+    - `plugins/page/plugins/editor/server/internal/rollup-table.ts`
     - `plugins/page/plugins/editor/server/internal/tables-events.ts`
     - `plugins/page/plugins/editor/server/internal/tables.ts`
   - Exports (types):
@@ -4375,7 +4392,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `defineTrashSource('page-blocks')`
   - Resources:
     - `page-blocks` (push, unbounded: one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window)
-    - `page-edited-at` (push)
     - `pages.tree` (keyed)
     - `pages.tree:rows` (keyed, point)
   - Routes:
@@ -4527,7 +4543,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `PageCoverSchema`
     - `pageData`
     - `PageDataSchema`
-    - `pageEditedAt`
     - `pageKindOf`
     - `PageKindSchema`
     - `PageRowSchema`

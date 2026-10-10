@@ -1,4 +1,4 @@
-import { and, asc, eq, max, or } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db, type DbExecutor } from "@plugins/database/server";
 import {
@@ -7,11 +7,22 @@ import {
 } from "@plugins/network/plugins/live/server";
 import { Rank, withRank } from "@plugins/primitives/plugins/rank/core";
 import { PAGE_BLOCK_TYPE } from "../../core/schemas";
-import { pagesTree, pageBlocks, pageEditedAt } from "../../core/resources";
+import { pagesTree, pageBlocks } from "../../core/resources";
 import type { Block, PageRow } from "../../core/schemas";
 import { liveBlocks } from "./live-blocks";
-import { pageRowsServeOptions } from "./page-rows";
+import { pageEditedAtSql, pageRowsServeOptions } from "./page-rows";
+import { _pageContentEditedAt } from "./rollup-table";
 import { BLOCK_WIRE_COLUMNS } from "./wire-columns";
+
+/**
+ * A page row's edit time as a select field: {@link pageEditedAtSql} over the
+ * row's own `updated_at` and the LEFT-joined `page_content_edited_at` rollup —
+ * the expression the `pagesTree` set's `editedAt` field compiles.
+ */
+const editedAtOf = () =>
+  pageEditedAtSql(liveBlocks.updatedAt, _pageContentEditedAt.editedAt).mapWith(
+    _pageContentEditedAt.editedAt,
+  );
 
 /**
  * All live pages (`type="page"` blocks), each carrying its stored `docRank`,
@@ -35,9 +46,17 @@ export async function loadPages(
   executor: NodePgDatabase = db,
 ): Promise<PageRow[]> {
   const rows = await executor
-    .select({ ...BLOCK_WIRE_COLUMNS, docRank: liveBlocks.docRank })
+    .select({
+      ...BLOCK_WIRE_COLUMNS,
+      docRank: liveBlocks.docRank,
+      editedAt: editedAtOf(),
+    })
     // Trashed pages are not pages any reader lists (`liveBlocks`).
     .from(liveBlocks)
+    .leftJoin(
+      _pageContentEditedAt,
+      eq(_pageContentEditedAt.pageId, liveBlocks.id),
+    )
     .where(eq(liveBlocks.type, PAGE_BLOCK_TYPE))
     .orderBy(asc(liveBlocks.pageId), asc(liveBlocks.docRank));
   return rows.map(({ docRank, ...row }) => {
@@ -51,8 +70,9 @@ export async function loadPages(
 }
 
 // Every live page and its `:rows` point sibling, routed over the `page_blocks`
-// table (`./page-rows.ts`): a page-row write is that row's refill, a content
-// block's write — the typing projection included — loads nothing.
+// table and the `page_content_edited_at` rollup (`./page-rows.ts`): a page-row
+// write is that row's refill, a content block's write — the typing projection
+// included — the refill of its page's one row (its `editedAt` moved).
 export const pagesTreeServed = serveCollection(pagesTree, pageRowsServeOptions);
 
 // A page's content forest: EVERY block whose nearest page ancestor is `pageId`,
@@ -86,43 +106,29 @@ export const pageBlocksServed = serveValue(pageBlocks, {
   },
 });
 
-// The newest `updated_at` over the page row and its live content. Two indexed
-// reads (the page row by id, then a `max` over `page_id`); a db-arm value, so
-// any write to the page's blocks recomputes it and push drops an unchanged
-// result. Live rows only, like every read here: a deleted block's own stamp
-// leaves with it (the trash is its record).
-export const pageEditedAtServed = serveValue(pageEditedAt, {
-  source: "db",
-  loader: ({ pageId }) => readPageEditedAt(pageId),
-});
-
 /**
  * When a page was last edited: the newest `updated_at` over the page row AND
  * its live content blocks — the page row alone moves only on a rename, a cover
  * or a kind change, never on a content edit. `null` when `pageId` names no live
- * page (the live value's own "no such page" arm).
+ * page.
  *
- * The one definition of a page's edit time, read by the page-detail "Edited"
- * label (through {@link pageEditedAtServed}) and by `markdown-apply`'s
- * `<page-meta>` header, so the two can never state different times.
+ * The same definition as the `pagesTree` row's `editedAt` (one expression,
+ * {@link pageEditedAtSql}, over the same rollup), read by `markdown-apply`'s
+ * `<page-meta>` header — so the header, the page's "Edited" label and the
+ * Recent lists can never state different times.
  */
 export async function readPageEditedAt(
   pageId: string,
   executor: DbExecutor = db,
 ): Promise<{ editedAt: Date } | null> {
-  const [page] = await executor
-    .select({ id: liveBlocks.id })
+  const [row] = await executor
+    .select({ editedAt: editedAtOf() })
     .from(liveBlocks)
+    .leftJoin(
+      _pageContentEditedAt,
+      eq(_pageContentEditedAt.pageId, liveBlocks.id),
+    )
     .where(and(eq(liveBlocks.id, pageId), eq(liveBlocks.type, PAGE_BLOCK_TYPE)))
     .limit(1);
-  if (!page) return null;
-  const [row] = await executor
-    .select({ editedAt: max(liveBlocks.updatedAt) })
-    .from(liveBlocks)
-    .where(or(eq(liveBlocks.id, pageId), eq(liveBlocks.pageId, pageId)));
-  // The page row itself matched, so the max is never null here.
-  if (!row?.editedAt) {
-    throw new Error(`page ${pageId} is live but has no updated_at`);
-  }
-  return { editedAt: row.editedAt };
+  return row ?? null;
 }

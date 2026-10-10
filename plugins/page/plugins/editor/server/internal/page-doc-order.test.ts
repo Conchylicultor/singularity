@@ -42,6 +42,7 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
+import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
 import { recordTrashEntry } from "@plugins/infra/plugins/trash/server";
 import {
   collectContributions,
@@ -58,6 +59,7 @@ import { docOrderPaths } from "./page-doc-order";
 import { reconcileDocRanksAtBoot } from "./doc-rank-boot";
 import { loadPages } from "./resources";
 import { pageRowsServeOptions } from "./page-rows";
+import { pageContentEditedAt } from "./rollup-spec";
 
 // Stand-ins for the content block types the seeds nest sub-pages under. The
 // concrete `page/text` + `page/toggle` plugins import THIS plugin, so importing
@@ -78,6 +80,9 @@ let t: TestDb;
 beforeAll(async () => {
   t = await createTestDb({ prefix: "page_doc_order_test" });
   await runMigrations(t.db);
+  // `loadPages` reads each page's `editedAt` off the content rollup, which a
+  // backend installs at boot (`rebuildDerivedTables`) — the same path.
+  await installRollups(t.db, [pageContentEditedAt]);
   collectContributions([
     {
       id: "page-doc-order-test",

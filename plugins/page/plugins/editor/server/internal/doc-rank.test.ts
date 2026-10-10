@@ -37,6 +37,7 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
+import { installRollups } from "@plugins/database/plugins/derived-tables/server/testing";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { TrashEntrySchema } from "@plugins/infra/plugins/trash/core";
@@ -67,6 +68,7 @@ import {
 import { planPartitionDocRanks } from "./doc-rank";
 import { reconcileDocRanksAtBoot } from "./doc-rank-boot";
 import { loadPages } from "./resources";
+import { pageContentEditedAt } from "./rollup-spec";
 
 // Stand-ins for the concrete block types (each imports this plugin, so
 // importing them back would be a cycle). `para` is the default text type, so
@@ -118,6 +120,9 @@ let countingDb: NodePgDatabase;
 beforeAll(async () => {
   t = await createTestDb({ prefix: "page_doc_rank_test" });
   await runMigrations(t.db);
+  // `loadPages` reads each page's `editedAt` off the content rollup, which a
+  // backend installs at boot (`rebuildDerivedTables`) — the same path.
+  await installRollups(t.db, [pageContentEditedAt]);
   countingPool = new Pool({
     connectionString: t.connectionString,
     max: 1,

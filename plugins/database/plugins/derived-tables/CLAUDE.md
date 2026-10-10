@@ -235,6 +235,7 @@ is recomputed in `onReady`.
     - `database/change-feed`
     - `database/live-state-snapshot`
     - `database/migrations`
+    - `page/editor`
     - `tasks/tasks-core`
 - Test helpers:
   - Server: `@plugins/database/plugins/derived-tables/server/testing`

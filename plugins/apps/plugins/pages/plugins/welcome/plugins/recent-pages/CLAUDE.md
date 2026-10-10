@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Recent-pages section for the Pages landing surface: the most recently updated pages as clickable rows.
+- Description: Recent-pages section for the Pages landing surface: the most recently edited pages (by each page row's `editedAt`: its row and its content together) as clickable rows.
 - Web:
   - Contributes: `PagesWelcome.Section` → `RecentPagesSection`
   - Uses:

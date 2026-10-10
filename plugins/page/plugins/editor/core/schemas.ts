@@ -87,7 +87,19 @@ export type Block = z.infer<typeof BlockSchema>;
 // while the server mints the real `rank` against the complete sibling set. The
 // SAME row read through `pageBlocks` carries no `docRank` — that resource orders
 // by `rank`, within one `(parent_id, rank)` space, where it is meaningful.
-export const PageRowSchema = BlockSchema.extend({ docRank: RankSchema });
+//
+// `editedAt` is when the page was last EDITED: the newest `updatedAt` over the
+// page row and its live content (every live block whose nearest page is this
+// one, sub-page rows included). The row's own `updatedAt` moves only on a
+// rename, a cover or a kind change — a content edit stamps only the edited
+// block's row — so a "recently edited" surface reads `editedAt`. Served from a
+// trigger-maintained rollup (`../server/internal/rollup-spec.ts`), so a content
+// write refills its page's one row. The header's "Edited" label, the sidebar's
+// Recent section and the Welcome page's Recent pages all read this field.
+export const PageRowSchema = BlockSchema.extend({
+  docRank: RankSchema,
+  editedAt: z.coerce.date(),
+});
 export type PageRow = z.infer<typeof PageRowSchema>;
 
 // The reserved block type for a page node.

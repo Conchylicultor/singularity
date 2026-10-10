@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -10,7 +10,7 @@ import {
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { VersionHistoryDialog } from "@plugins/history/plugins/dialog/web";
 import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
-import { pageEditedAt } from "@plugins/page/plugins/editor/core";
+import { pagesTree } from "@plugins/page/plugins/editor/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { PageVersionPreview } from "./page-version-preview";
 
@@ -24,16 +24,18 @@ const historyIcon = symbol("history");
  * affordance, not a label plus a separate History button: "when was this
  * edited" and "what changed" are the same question asked at two depths.
  *
- * The time is the editor's `pageEditedAt` — the newest `updatedAt` across the
- * page row AND its content blocks. The page row alone is not enough: a content
- * edit stamps only the edited block's own row and never touches the page row,
- * which moves only on a rename, a cover or a kind change.
+ * The time is the page row's `editedAt` (`pagesTree`) — the newest `updatedAt`
+ * across the page row AND its content blocks. The page row's own `updatedAt` is
+ * not enough: a content edit stamps only the edited block's own row and never
+ * touches the page row, which moves only on a rename, a cover or a kind change.
+ * The same field of the same row the sidebar's Recent section and the Welcome
+ * page's Recent pages sort by, so the three cannot disagree.
  *
  * Not known yet renders a placeholder, never a time.
  */
 export function EditedHistoryAction() {
   const { pageId } = pageDetailPane.useParams();
-  const result = useLive(pageEditedAt, { pageId });
+  const result = useLiveRow(pagesTree, pageId);
   const [open, setOpen] = useState(false);
   switch (result.status) {
     case "loading":
@@ -51,7 +53,7 @@ export function EditedHistoryAction() {
     case "ready":
       // No such live page (deleted under the pane): no edit time to tell and
       // no history to open; the pane itself renders the missing page.
-      if (result.data === null) return null;
+      if (!result.found) return null;
       return (
         <>
           {/* 8px more air after it than between the bar's actions: the time
@@ -65,7 +67,7 @@ export function EditedHistoryAction() {
                 style={{ marginRight: "var(--space-sm)" }}
                 onClick={() => setOpen(true)}
               >
-                Edited <RelativeTime date={result.data.editedAt} />
+                Edited <RelativeTime date={result.row.editedAt} />
               </Button>
             </WithTooltip>
           </ControlSizeProvider>

@@ -237,16 +237,17 @@ export function PagesSidebar() {
               },
             },
             {
-              // When the page was last edited — the page row's `updatedAt`,
-              // the same "recent" the Welcome page's Recent pages reads (a
-              // derived timestamp that ignores icon changes and doc-rank
-              // re-mints). A sort/filter dimension only: the Recent section
-              // orders and windows on it, and `visibleFields` keeps it off
-              // every row.
-              id: "updatedAt",
+              // When the page was last edited — the row's `editedAt`: the
+              // newest `updatedAt` over the page row AND its content, the same
+              // field the Welcome page's Recent pages and the page header's
+              // "Edited" label read (derived timestamps that ignore icon
+              // changes, fold toggles and doc-rank re-mints). A sort/filter
+              // dimension only: the Recent section orders and windows on it,
+              // and `visibleFields` keeps it off every row.
+              id: "editedAt",
               label: "Edited",
               type: "date",
-              value: (b) => b.updatedAt,
+              value: (b) => b.editedAt,
             },
           ]}
           rowKey={(b) => b.id}

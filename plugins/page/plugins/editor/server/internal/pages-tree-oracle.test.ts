@@ -21,18 +21,28 @@
  * - each `pageId` group of the set, sorted by `docRank`, is document order —
  *   `docOrderRows` + `compareDocOrder`, the order the old `pages` loader
  *   derived on every load (parity);
+ * - every row's `editedAt` is its page's edit time recomputed from scratch —
+ *   the newest `updated_at` over the page row and its live content — and the
+ *   `page_content_edited_at` rollup has no drift from its aggregate;
  * - both readers' costs are exact: a keystroke's projection on a content block
- *   loads nothing; a rename is that page's refill; a toggle drag refills
- *   exactly the pages the reconcile re-minted; an insert or a restore is one
- *   refill and one `orderOf`; a trash an exit after its one-id probe;
+ *   is the refill of its page's one row (its `editedAt` moved); a rename is
+ *   that page's refill, plus its parent page's (the sub-page row is content of
+ *   it); a toggle drag refills exactly the pages the reconcile re-minted and
+ *   the page holding the toggle; an insert or a restore is one refill and one
+ *   `orderOf`; a trash an exit after its one-id probe;
  * - nothing is ever loaded FULL after the subscribe.
+ *
+ * The `editedAt` steps: an edit moves its page's `editedAt` forward, trashing
+ * the block holding the newest stamp moves it back, and a block moving
+ * between pages refills both, each recomputed.
  *
  * The A, P tuple then walks P through every membership edge: a value-only
  * write to P while it is no member loads NOTHING in it (the point tuple drops
  * a value-only change to an id it does not hold); turning P into a page is an
  * entrant (the positive control), a write to it then a refill, turning it back
  * an exit, and a trash / restore of it as content stays membership — probed,
- * and nothing enters.
+ * and nothing enters. Every write to P as content refills W, the page whose
+ * content it is (never in either point tuple, so neither loads it).
  *
  * Then C39: a tab still running a bundle that subscribed the old key `pages`
  * is refused `unknown-key`, a `skew` verdict (the Reload prompt).
@@ -81,6 +91,7 @@ import { applyPageBlockOp } from "./handle-apply-block-op";
 import { compareDocOrder, docOrderRows } from "./page-doc-order";
 import { withPageForest } from "./page-forest";
 import { pageRowsServeOptions } from "./page-rows";
+import { pageContentEditedAt } from "./rollup-spec";
 import { parseBlockData } from "./parse-block-data";
 import { _blocks } from "./tables";
 
@@ -195,11 +206,55 @@ async function documentOrder(): Promise<Record<string, string[]>> {
   );
 }
 
+/**
+ * Every live page's edit time recomputed from scratch, by id: the newest
+ * `updated_at` over the page row and its live content — `readPageEditedAt`'s
+ * definition, spelled here without the rollup it reads.
+ */
+async function editedFromScratch(): Promise<Record<string, number>> {
+  const res = await oracle.db.execute<{ id: string; edited_at: Date }>(
+    sql.raw(`
+      SELECT p.id, greatest(p.updated_at, (
+               SELECT max(c.updated_at) FROM page_blocks c
+                WHERE c.page_id = p.id AND c.deleted_at IS NULL
+             )) AS edited_at
+        FROM page_blocks p
+       WHERE p.type = 'page' AND p.deleted_at IS NULL`),
+  );
+  return Object.fromEntries(
+    res.rows.map((r) => [r.id, new Date(r.edited_at).getTime()]),
+  );
+}
+
+/** The keys whose rollup row differs from its aggregate (none, when exact). */
+async function rollupDrift(): Promise<string[]> {
+  const res = await oracle.db.execute<{ keys: string[] }>(
+    sql.raw(pageContentEditedAt.driftSql),
+  );
+  return res.rows[0]!.keys;
+}
+
+/** The set's `editedAt` per page, as epoch ms. */
+function viewEdited(): Record<string, number> {
+  return Object.fromEntries(
+    PageRowSchema.array()
+      .parse(oracle.view(KEY))
+      .map((r) => [r.id, r.editedAt.getTime()]),
+  );
+}
+
 async function expectParity(label: string): Promise<void> {
   const view = PageRowSchema.array().parse(oracle.view(KEY));
-  expect({ step: label, order: setOrder(view) }).toEqual({
+  expect({
+    step: label,
+    order: setOrder(view),
+    edited: viewEdited(),
+    drift: await rollupDrift(),
+  }).toEqual({
     step: label,
     order: await documentOrder(),
+    edited: await editedFromScratch(),
+    drift: [],
   });
 }
 
@@ -289,9 +344,12 @@ beforeAll(async () => {
       ],
     },
   ]);
+  // The content rollup `editedAt` reads, installed through the boot path; its
+  // source (`page_blocks`) carries the route.
   oracle = await createTreeOracle({
     prefix: "pages_tree_oracle",
     persisted: [],
+    rollups: [pageContentEditedAt],
   });
   // The derived `updated_at` trigger, as a backend installs it at boot: a
   // rename moves `updatedAt` in the same row, as in production.
@@ -347,10 +405,11 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
     const baseline = oracle.loadsOf(KEY).length;
 
     // A keystroke burst's `data.text` projection on a content block: no page
-    // row changed, so nothing loads — the cost the legacy loader paid twice
-    // (membership select + doc-order CTE) on every one. Nor in the A, P tuple,
-    // which requests P: a `data`-only write moves no column its membership
-    // reads, and P is no member, so the point tuple drops it.
+    // row changed, but W's content did — its `editedAt` moves, so W's one row
+    // refills (never the legacy loader's membership select + doc-order CTE).
+    // Not in the A, P tuple, which requests P: a `data`-only write moves no
+    // column its membership reads, P is no member, and W is not held.
+    const beforeTyping = viewEdited()[W]!;
     await runSql(
       {
         label: "typing",
@@ -358,10 +417,25 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
           `UPDATE page_blocks SET data = '{"text":[{"text":"typing…"}]}'::jsonb WHERE id = '${P}'`,
         ],
       },
+      { loads: [{ ids: [W] }], orderOf: 0, rowLoads: [] },
+    );
+    // The edit moved W's edit time forward (recomputed by `expectParity`).
+    expect(viewEdited()[W]!).toBeGreaterThan(beforeTyping);
+
+    // A fold toggle on a content block moves no column the rollup reads
+    // (`updated_at` is derived and ignores `expanded`): nothing loads.
+    await runSql(
+      {
+        label: "fold",
+        statements: [
+          `UPDATE page_blocks SET expanded = NOT expanded WHERE id = '${T}'`,
+        ],
+      },
       NOTHING,
     );
 
-    // A rename is the page row's refill, in both readers.
+    // A rename is the page row's refill, in both readers — and W's, whose
+    // content the sub-page row D is.
     await runSql(
       {
         label: "rename",
@@ -369,7 +443,7 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
           `UPDATE page_blocks SET data = '${pagePayload("renamed")}'::jsonb WHERE id = '${D}'`,
         ],
       },
-      { loads: [{ ids: [D] }], orderOf: 0, rowLoads: [{ ids: [D] }] },
+      { loads: [{ ids: [D, W].sort() }], orderOf: 0, rowLoads: [{ ids: [D] }] },
     );
 
     // Drag the toggle (holding A and B) after D: no page row is named, yet
@@ -394,7 +468,12 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
       .filter((id) => after.get(id) !== before.get(id))
       .sort();
     expect(reminted.length).toBeGreaterThan(0);
-    expect(drag.loads).toEqual([{ ids: reminted }]);
+    // Plus W, whose content T is (the move stamps T's `updated_at`), and T
+    // itself: the writer's later statements on T arrive while W's refill is
+    // pending, so the set is no longer quiescent and the runtime keeps T's
+    // value-only change rather than dropping it (a non-member: its one-id
+    // probe finds nothing to load).
+    expect(drag.loads).toEqual([{ ids: [...reminted, W, T].sort() }]);
     // Each point tuple refills the re-minted pages it holds; the sync fold
     // toggle on P costs the A, P tuple nothing (a value-only write, no member).
     const heldBy = (ids: readonly string[]): TreeLoad[] => {
@@ -411,7 +490,8 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
     ]);
 
     // A page created at the end of W, as a writer emits it: the row, then its
-    // `doc_rank`, in one transaction. One refill and one `orderOf`.
+    // `doc_rank`, in one transaction. One refill and one `orderOf` — the
+    // refill W's too, whose content the new sub-page row is.
     const lastKey = [...(await docRanks()).entries()]
       .filter(([id]) => [A, B, D].includes(id as typeof A))
       .map(([, k]) => k!)
@@ -428,7 +508,7 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
           "COMMIT",
         ],
       },
-      { loads: [{ ids: [E] }], orderOf: 1, rowLoads: [] },
+      { loads: [{ ids: [E, W].sort() }], orderOf: 1, rowLoads: [] },
     );
 
     // A trash is a where-flip exit: the row is probed by id (the base
@@ -467,7 +547,11 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
                   doc_rank = '${firstInW}' WHERE id = '${P}'`,
         ],
       },
-      { loads: [{ ids: [P] }], orderOf: 1, rowLoads: [{ ids: [P] }] },
+      {
+        loads: [{ ids: [P, W].sort() }],
+        orderOf: 1,
+        rowLoads: [{ ids: [P] }],
+      },
     );
     expect(rowIds(contentParams)).toEqual([P, A].sort());
 
@@ -479,7 +563,7 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
           `UPDATE page_blocks SET data = '${pagePayload("P typed")}'::jsonb WHERE id = '${P}'`,
         ],
       },
-      { loads: [{ ids: [P] }], orderOf: 0, rowLoads: [{ ids: [P] }] },
+      { loads: [{ ids: [P, W].sort() }], orderOf: 0, rowLoads: [{ ids: [P] }] },
     );
 
     // Back into content: a where-flip exit — one one-id probe in each reader,
@@ -493,13 +577,16 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
            WHERE id = '${P}'`,
         ],
       },
-      { loads: [{ ids: [P] }], orderOf: 0, rowLoads: [{ ids: [P] }] },
+      { loads: [{ ids: [P, W].sort() }], orderOf: 0, rowLoads: [{ ids: [P] }] },
     );
     expect(rowIds(contentParams)).toEqual([A]);
 
     // A trash and a restore of P as content: `deleted_at` is a column the
     // membership reads, so each stays a membership change — probed by id in
     // the set and the tuple — yet P is no page either way, so nothing enters.
+    // P holds W's newest stamp (it was just written), so trashing it moves
+    // W's `editedAt` BACK to the newest of what is left.
+    const beforeTrash = viewEdited()[W]!;
     await runSql(
       {
         label: "P.trash",
@@ -507,8 +594,9 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
           `UPDATE page_blocks SET deleted_at = now(), trash_entry_id = 'te-p' WHERE id = '${P}'`,
         ],
       },
-      { loads: [{ ids: [P] }], orderOf: 0, rowLoads: [{ ids: [P] }] },
+      { loads: [{ ids: [P, W].sort() }], orderOf: 0, rowLoads: [{ ids: [P] }] },
     );
+    expect(viewEdited()[W]!).toBeLessThan(beforeTrash);
     await runSql(
       {
         label: "P.restore",
@@ -516,11 +604,12 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
           `UPDATE page_blocks SET deleted_at = NULL, trash_entry_id = NULL WHERE id = '${P}'`,
         ],
       },
-      { loads: [{ ids: [P] }], orderOf: 0, rowLoads: [{ ids: [P] }] },
+      { loads: [{ ids: [P, W].sort() }], orderOf: 0, rowLoads: [{ ids: [P] }] },
     );
     expect(rowIds(contentParams)).toEqual([A]);
 
-    // And typing into P, a non-member again: nothing, in either reader.
+    // And typing into P, a non-member again: W's refill (its content moved),
+    // nothing in either point tuple.
     await runSql(
       {
         label: "P.typing-again",
@@ -528,8 +617,24 @@ describe("pages.tree — an `all` collection on the tree oracle", () => {
           `UPDATE page_blocks SET data = '{"text":[{"text":"typing again…"}]}'::jsonb WHERE id = '${P}'`,
         ],
       },
-      NOTHING,
+      { loads: [{ ids: [W] }], orderOf: 0, rowLoads: [] },
     );
+
+    // P moves from W to the root page X: `page_id` is the rollup's carry, so
+    // both pages re-aggregate and refill — X gains P's stamp, W loses it.
+    const beforeMove = viewEdited();
+    await runSql(
+      {
+        label: "P.move-to-X",
+        statements: [
+          `UPDATE page_blocks SET parent_id = '${X}', page_id = '${X}' WHERE id = '${P}'`,
+        ],
+      },
+      { loads: [{ ids: [W, X].sort() }], orderOf: 0, rowLoads: [] },
+    );
+    const afterMove = viewEdited();
+    expect(afterMove[X]!).toBeGreaterThan(beforeMove[X]!);
+    expect(afterMove[W]!).toBeLessThan(beforeMove[W]!);
 
     expect(
       oracle

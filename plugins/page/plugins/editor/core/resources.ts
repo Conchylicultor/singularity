@@ -17,7 +17,10 @@ import { BlockSchema, PageRowSchema } from "./schemas";
 // a rename, an icon, cover or kind change is that page's refill, a re-mint the
 // refill of exactly the re-minted pages, a create / restore an entrant, a trash
 // an exit — and a write to a CONTENT block (the ~1s `data.text` typing
-// projection) loads nothing, since no page row changed.
+// projection) the refill of its page's ONE row: every row carries `editedAt`
+// (`PageRowSchema`), read off a trigger-maintained rollup of its content's
+// newest `updated_at` (`../server/internal/rollup-spec.ts`), so the edit moves
+// it. A write the rollup does not read (a fold toggle) loads nothing.
 //
 // The key is NEW (`pages.tree`; it was the legacy push resource `pages`): a
 // tab still running a bundle that subscribed the old key gets `unknown-key` — a
@@ -45,16 +48,5 @@ export const pagesTree = liveCollection("pages.tree", {
 // one table's rows. Not known yet is `pending` — there is no `[]` placeholder.
 export const pageBlocks = liveValue("page-blocks", {
   schema: z.array(BlockSchema),
-  params: ["pageId"],
-});
-
-// When the page was last edited: the newest `updatedAt` across the page row AND
-// every live block of its content.
-// The page row alone would not do: a content edit stamps only the edited
-// block's own row (`page_blocks.updated_at` is per row), never the page row.
-// `null` when no such live page exists. A scalar per page, recomputed by the
-// change feed on any write to the page's blocks.
-export const pageEditedAt = liveValue("page-edited-at", {
-  schema: z.object({ editedAt: z.coerce.date() }).nullable(),
   params: ["pageId"],
 });

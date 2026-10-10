@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { defineTrashSource } from "@plugins/infra/plugins/trash/server";
 import { IdKinds } from "@plugins/ids/server";
+import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
 import { blockIdKind } from "../core/block-id";
 import { handleListPages } from "./internal/handle-list-pages";
 import { handleListBlocks } from "./internal/handle-list-blocks";
@@ -14,11 +15,8 @@ import { handleTurnIntoPage } from "./internal/handle-turn-into-page";
 import { handleSetPageKind } from "./internal/handle-set-page-kind";
 import { handleApplyBlockOp } from "./internal/handle-apply-block-op";
 import { handlePatchBlocks } from "./internal/handle-patch-blocks";
-import {
-  pagesTreeServed,
-  pageBlocksServed,
-  pageEditedAtServed,
-} from "./internal/resources";
+import { pagesTreeServed, pageBlocksServed } from "./internal/resources";
+import { pageContentEditedAt } from "./internal/rollup-spec";
 import {
   restoreTrashedBlocks,
   purgeTrashedBlocks,
@@ -162,7 +160,8 @@ export default {
     IdKinds.Kind({ kind: blockIdKind }),
     ...pagesTreeServed.declare,
     ...pageBlocksServed.declare,
-    ...pageEditedAtServed.declare,
+    // The per-page content edit time `pagesTree`'s `editedAt` reads.
+    DerivedTable(pageContentEditedAt),
     // `page` is owned here, not by the `sub-page` renderer: page rows are written
     // directly by turn-into-page / restorePageContent, so their validation must not
     // depend on the sub-page plugin being enabled. sub-page contributes only its web

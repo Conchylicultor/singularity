@@ -155,6 +155,7 @@ and re-export it from `core/index.ts`. See
     - `LIVE_STATE_SNAPSHOT_TABLE`
     - `LIVE_STATE_TRIGGER_STATE_TABLE`
     - `MIGRATIONS_TABLE_NAME`
+    - `PAGE_CONTENT_EDITED_AT_TABLE`
     - `TASK_LATEST_CONVERSATION_TABLE`
     - `topoSortViews`
 

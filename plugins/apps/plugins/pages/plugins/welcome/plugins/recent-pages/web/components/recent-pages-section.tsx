@@ -51,7 +51,9 @@ export function RecentPagesSection(): ReactElement | null {
 
   const recent = result.data
     .slice()
-    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    // `editedAt`, not `updatedAt`: a content edit moves only the former (the
+    // page row's own stamp moves on a rename, a cover or a kind change).
+    .sort((a, b) => b.editedAt.getTime() - a.editedAt.getTime())
     .slice(0, RECENT_LIMIT);
 
   return (
@@ -86,7 +88,7 @@ export function RecentPagesSection(): ReactElement | null {
                     <Text variant="body">{title || "Untitled"}</Text>
                   </Fill>
                   <RelativeTime
-                    date={page.updatedAt}
+                    date={page.editedAt}
                     className={cn(
                       rigidClass(),
                       "text-caption text-muted-foreground",

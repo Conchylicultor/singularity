@@ -148,8 +148,9 @@ just a page — with a header stating where it comes from:
   is the only place an agent reading its own agent page by id learns the page
   is one — without it, the page's prose reads as the human's while the write
   rule treats it as the agent's.
-- `edited` is the editor's `readPageEditedAt`, the value behind the page's
-  "Edited" label, so the two never disagree.
+- `edited` is the editor's `readPageEditedAt` — the same expression over the
+  same rollup as the `pagesTree` row's `editedAt` behind the page's "Edited"
+  label and the Recent lists, so they never disagree.
 
 `BlockScope` carries `title` because `loadBlockScope` is the only place it exists
 without a second query — a page's own row is not in its content partition. It

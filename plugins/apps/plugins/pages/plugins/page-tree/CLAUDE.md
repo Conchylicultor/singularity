@@ -60,7 +60,9 @@ other's keys.
 
 "Edited 2h ago" in the title bar is contributed by `apps/pages/history`, not
 here: the label is the page's version-history entry point (click → the history
-dialog), so it lives with the history UI. It reads the editor's `pageEditedAt`.
+dialog), so it lives with the history UI. It reads the page row's `editedAt`
+(`useLiveRow(pagesTree, pageId)`) — the newest `updatedAt` over the page row and
+its content, served off the editor's `page_content_edited_at` rollup.
 
 ## One row-action registry, no `rowMenu`
 
@@ -82,8 +84,9 @@ a flat `list` view, so that is the normal non-tree case, not a failure.
 `config/apps/pages/page-tree/pages-sidebar.jsonc` is on screen at once, stacked
 under its own collapsible header — **Favorites** (a `list` of starred pages),
 **Private** (the tree, `origin is user`), **Recent** (a `list` of the user's
-pages edited in the past week, sorted on the `updatedAt` field the sidebar
-declares — the same page-row edit time the Welcome page's Recent pages reads)
+pages edited in the past week, sorted on the `editedAt` field the sidebar
+declares — the page's edit time over its row AND its content, the same field
+the Welcome page's Recent pages and the header's "Edited" label read)
 and **Scratch** (the tree, `origin is agent`). Private and Scratch split the
 tree with `filterScope: "roots"`, so a subtree stays whole in one of them;
 Favorites, Recent and Scratch are `hideWhenEmpty`.
