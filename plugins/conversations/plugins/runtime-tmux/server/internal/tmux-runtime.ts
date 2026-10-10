@@ -37,6 +37,7 @@ import { parseInputDraft } from "./input-draft";
 import { PANE_ROW_FORMAT, parsePaneRows, type TmuxPane } from "./pane-rows";
 import { asLaunchMessage } from "./launch-message";
 import {
+  LAUNCH_CLI_SETTINGS,
   mergeLaunchSettings,
   settingsFlag,
   launchHookSettings,
@@ -686,12 +687,13 @@ export const tmuxRuntime: ConversationRuntime = {
     const effortFlag = opts?.effort
       ? resolveEffortFlag(opts.effort)
       : undefined;
-    // One `--settings` object for the whole launch: the thinking mode (if any)
-    // and the question hooks that touch this conversation's signal file (see
+    // One `--settings` object for the whole launch: the thinking mode (if any),
+    // the fixed CLI preferences and the question hooks that touch this conversation's signal file (see
     // launch-settings.ts). Resume launches through here too, so a resumed
     // session gets the hooks as well.
     const settings = mergeLaunchSettings(
       opts?.effort ? resolveEffortSettings(opts.effort) : undefined,
+      LAUNCH_CLI_SETTINGS,
       launchHookSettings({
         signalDir: tmuxSignalsDir.ensure(),
         relay: relayHookEntry(),

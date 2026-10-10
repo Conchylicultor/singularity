@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { resolveEffortSettings } from "@plugins/conversations/plugins/effort-provider/core";
 import type { RelayHookEntry } from "@plugins/conversations/plugins/question-relay/core";
 import {
+  LAUNCH_CLI_SETTINGS,
   launchHookSettings,
   mergeLaunchSettings,
   settingsFlag,
@@ -27,6 +28,11 @@ const TOUCH = {
 };
 
 describe("launch settings", () => {
+  test("disables prompt suggestions, whose side query can call AskUserQuestion", () => {
+    const merged = mergeLaunchSettings(LAUNCH_CLI_SETTINGS, hooks());
+    expect(merged.promptSuggestionEnabled).toBe(false);
+  });
+
   test("merges the thinking mode with the question hooks in one object", () => {
     const merged = mergeLaunchSettings(
       resolveEffortSettings("ultracode"),

@@ -1,9 +1,9 @@
 import type { RelayHookEntry } from "@plugins/conversations/plugins/question-relay/core";
 import { signalDirForCommands } from "./tmux-hooks";
 
-// The one `--settings` object a launch hands Claude Code. Two contributors share
-// it: the thinking mode (`{"ultracode":true}`, from effort-provider) and the
-// hooks below. One object, one flag — two `--settings` flags would leave which
+// The one `--settings` object a launch hands Claude Code. Three contributors
+// share it: the thinking mode (`{"ultracode":true}`, from effort-provider), the
+// fixed CLI preferences (`LAUNCH_CLI_SETTINGS`) and the hooks below. One object, one flag — two `--settings` flags would leave which
 // one wins to the CLI.
 //
 // The hooks are the question's push signal. Nothing on disk says an
@@ -24,6 +24,20 @@ import { signalDirForCommands } from "./tmux-hooks";
 // (a released question) — the one moment nothing else signals.
 
 const QUESTION_TOOL = "AskUserQuestion";
+
+/**
+ * CLI preferences every app-launched agent runs with.
+ *
+ * `promptSuggestionEnabled: false` — after each turn the CLI runs a side query
+ * predicting the user's next message. That query can call tools, and when it
+ * calls AskUserQuestion the PreToolUse relay below cannot tell it from the
+ * agent's own call, so the web shows a held "Should I stay silent?" card the
+ * agent never asked. Users drive these agents from the web, not the pane's
+ * prompt, so the ghost text the query feeds is never seen anyway.
+ */
+export const LAUNCH_CLI_SETTINGS: Record<string, unknown> = {
+  promptSuggestionEnabled: false,
+};
 
 /**
  * The hooks settings fragment for a pane whose signal file lives in
